@@ -1,0 +1,19 @@
+// My first CHTL file
+html {
+    head {
+        title {
+            text { "Welcome to CHTL" }
+        }
+    }
+    body {
+        div {
+            id: "main-content";
+            class: "container";
+
+            h1 {
+                text { "Hello, World!" }
+            }
+            # This is a generator comment that should appear in the HTML
+        }
+    }
+}

@@ -1,0 +1,21 @@
+# Build artifacts and directories
+/build/
+
+# Test outputs
+*.html
+
+# CMake user files
+CMakeUserPresets.json
+*.cbp
+*.depend
+*.layout
+*.aps
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Executables
+*.exe
