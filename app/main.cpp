@@ -5,9 +5,14 @@
 #include <vector>
 #include <stdexcept>
 
-#include "CHTL/CHTLLexer/CHTLLexer.h"
-#include "CHTL/CHTLParser/CHTLParser.h"
-#include "CHTL/CHTLGenerator/CHTLGenerator.h"
+#include "Scanner/CHTLUnifiedScanner.h"
+#include "CompilerDispatcher/CompilerDispatcher.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <stdexcept>
 
 // Helper function to read a file's content into a single string.
 std::string readFile(const std::string& filepath) {
@@ -51,19 +56,16 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        // 2. Lexing: Convert source code to a stream of tokens.
-        CHTL::CHTLLexer lexer(source);
-        std::vector<CHTL::Token> tokens = lexer.getAllTokens();
+        // 2. Scanning: Separate CHTL from other language blocks (e.g., script)
+        CHTL::CHTLUnifiedScanner scanner(source);
+        CHTL::ScannedFragments fragments = scanner.scan();
 
-        // 3. Parsing: Build an Abstract Syntax Tree from the tokens.
-        CHTL::CHTLParser parser(tokens);
-        std::unique_ptr<CHTL::ElementNode> ast = parser.parse();
+        // 3. Dispatching: Send fragments to their respective compilers
+        CHTL::CompilerDispatcher dispatcher(fragments);
+        std::string html_output = dispatcher.dispatch();
 
-        // 4. Generation: Traverse the AST to produce the final HTML string.
-        CHTL::CHTLGenerator generator;
-        std::string html_output = generator.generate(*ast);
-
-        // 5. Output the result.
+        // 4. Output the result.
+        // In the future, a CodeMerger would combine the JS parts back in.
         if (!outputFile.empty()) {
             writeFile(outputFile, html_output);
             std::cout << "Successfully compiled " << inputFile << " to " << outputFile << std::endl;

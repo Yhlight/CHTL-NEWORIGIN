@@ -8,6 +8,10 @@ namespace CHTL {
 static const std::map<std::string, TokenType> KEYWORDS = {
     {"style", TokenType::KEYWORD_STYLE},
     {"script", TokenType::KEYWORD_SCRIPT},
+    {"Template", TokenType::KEYWORD_TEMPLATE},
+    {"Custom", TokenType::KEYWORD_CUSTOM},
+    {"delete", TokenType::KEYWORD_DELETE},
+    {"Import", TokenType::KEYWORD_IMPORT},
     {"from", TokenType::KEYWORD_FROM},
     {"as", TokenType::KEYWORD_AS},
 };

@@ -18,6 +18,7 @@ public:
     // We will need to return a value from the visitor, so it's not a const method.
     // For now, let's keep it simple. A real implementation might return a variant type.
     virtual void accept(ExpressionVisitor& visitor) = 0;
+    virtual std::unique_ptr<ExpressionNode> clone() const = 0;
 };
 
 

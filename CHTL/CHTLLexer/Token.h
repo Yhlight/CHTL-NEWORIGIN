@@ -57,6 +57,10 @@ enum class TokenType {
     // Keywords (will be expanded)
     KEYWORD_STYLE,
     KEYWORD_SCRIPT,
+    KEYWORD_TEMPLATE,
+    KEYWORD_CUSTOM,
+    KEYWORD_DELETE,
+    KEYWORD_IMPORT,
     KEYWORD_FROM,
     KEYWORD_AS
 };

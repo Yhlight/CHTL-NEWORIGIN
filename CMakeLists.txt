@@ -22,6 +22,9 @@ add_library(chtl_lib STATIC
     CHTL/CHTLParser/CHTLParser.cpp
     CHTL/CHTLGenerator/CHTLGenerator.cpp
     CHTL/ExpressionEvaluator.cpp
+    CHTL/CHTLLoader/CHTLLoader.cpp
+    Scanner/CHTLUnifiedScanner.cpp
+    CompilerDispatcher/CompilerDispatcher.cpp
 )
 
 # Ensure that the library's include directories are available.

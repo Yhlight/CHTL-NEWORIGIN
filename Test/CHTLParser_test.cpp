@@ -2,11 +2,13 @@
 #include "CHTL/CHTLLexer/CHTLLexer.h"
 #include "CHTL/CHTLParser/CHTLParser.h"
 #include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLContext.h"
 
 TEST(ParserTest, ParsesSimpleElement) {
     std::string source = "html {}";
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto root = parser.parse();
 
     ASSERT_NE(root, nullptr);
@@ -22,7 +24,8 @@ TEST(ParserTest, ParsesSimpleElement) {
 TEST(ParserTest, ParsesNestedElements) {
     std::string source = "div { span {} }";
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto root = parser.parse();
 
     ASSERT_NE(root, nullptr);
@@ -39,7 +42,8 @@ TEST(ParserTest, ParsesNestedElements) {
 TEST(ParserTest, ParsesAttributes) {
     std::string source = "a { href: \"/index.html\"; }";
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto root = parser.parse();
 
     ASSERT_NE(root, nullptr);
@@ -54,7 +58,8 @@ TEST(ParserTest, ParsesAttributes) {
 TEST(ParserTest, ThrowsOnMalformedInput) {
     std::string source = "div {"; // Missing closing brace
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
 
     EXPECT_THROW(parser.parse(), std::runtime_error);
 }

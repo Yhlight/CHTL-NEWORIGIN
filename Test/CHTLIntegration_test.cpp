@@ -2,6 +2,9 @@
 #include "CHTL/CHTLLexer/CHTLLexer.h"
 #include "CHTL/CHTLParser/CHTLParser.h"
 #include "CHTL/CHTLGenerator/CHTLGenerator.h"
+#include "CHTL/CHTLContext.h"
+#include "Scanner/CHTLUnifiedScanner.h"
+#include "CompilerDispatcher/CompilerDispatcher.h"
 #include <string>
 #include <algorithm>
 #include <cctype>
@@ -34,7 +37,8 @@ TEST(IntegrationTest, FullCompilationSimple) {
     )";
 
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto ast = parser.parse();
 
     ASSERT_NE(ast, nullptr);
@@ -44,6 +48,131 @@ TEST(IntegrationTest, FullCompilationSimple) {
 
     EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
 }
+
+TEST(IntegrationTest, HandlesCustomStyleTemplate) {
+    std::string source = R"(
+        [Template] @Style Base {
+            color: blue;
+            font-size: 16px;
+            border: 1px solid black;
+        }
+
+        [Custom] @Style Derived {
+            @Style Base {
+                delete font-size;
+            }
+            border: 2px dotted green;
+        }
+
+        p {
+            style {
+                @Style Derived;
+            }
+        }
+    )";
+
+    // Final style should be: color:blue; border:1px solid black; border:2px dotted green;
+    // The second border overrides the first.
+    std::string expected_html = R"(
+        <p style="color:blue;border:1pxsolidblack;border:2pxdottedgreen;"></p>
+    )";
+
+    CHTL::CHTLLexer lexer(source);
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
+    auto ast = parser.parse();
+    CHTL::CHTLGenerator generator;
+    std::string result_html = generator.generate(*ast);
+
+    EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
+}
+
+TEST(IntegrationTest, HandlesStyleTemplate) {
+    std::string source = R"(
+        [Template] @Style DefaultBox {
+            width: 100px;
+            height: 100px;
+        }
+
+        div {
+            style {
+                @Style DefaultBox;
+                background-color: red;
+            }
+        }
+    )";
+
+    std::string expected_html = R"(
+        <div style="width:100px;height:100px;background-color:red;">
+        </div>
+    )";
+
+    CHTL::CHTLLexer lexer(source);
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
+    auto ast = parser.parse();
+    CHTL::CHTLGenerator generator;
+    std::string result_html = generator.generate(*ast);
+
+    EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
+}
+
+TEST(IntegrationTest, HandlesFileImport) {
+    std::string source = R"(
+        [Import] @Chtl from "../imports/base.chtl"
+
+        p {
+            style {
+                @Style BaseStyles;
+            }
+        }
+    )";
+
+    std::string expected_html = R"(
+        <p style="color:green;font-weight:bold;"></p>
+    )";
+
+    CHTL::CHTLLexer lexer(source);
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
+    auto ast = parser.parse();
+    CHTL::CHTLGenerator generator;
+    std::string result_html = generator.generate(*ast);
+
+    EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
+}
+
+TEST(UnifiedScannerTest, ReplacesScriptBlockWithPlaceholder) {
+    std::string source = R"(
+        div {
+            script {
+                console.log("hello");
+            }
+        }
+    )";
+
+    // The scanner replaces the script block with a placeholder.
+    // The generator should render that placeholder in the output.
+    std::string expected_html = R"(
+        <div>
+            __CHTL_SCRIPT_PLACEHOLDER_0__
+        </div>
+    )";
+
+    CHTL::CHTLUnifiedScanner scanner(source);
+    CHTL::ScannedFragments fragments = scanner.scan();
+
+    CHTL::CompilerDispatcher dispatcher(fragments);
+    std::string result_html = dispatcher.dispatch();
+
+    EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
+
+    // Also check that the script content was correctly extracted.
+    ASSERT_EQ(fragments.scriptBlocks.size(), 1);
+    EXPECT_NE(fragments.scriptBlocks.find("__CHTL_SCRIPT_PLACEHOLDER_0__"), fragments.scriptBlocks.end());
+    EXPECT_NE(fragments.scriptBlocks["__CHTL_SCRIPT_PLACEHOLDER_0__"].find("console.log"), std::string::npos);
+}
+
 
 TEST(IntegrationTest, HandlesStyleBlocks) {
     std::string source = R"(
@@ -64,7 +193,8 @@ TEST(IntegrationTest, HandlesStyleBlocks) {
     )";
 
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto ast = parser.parse();
     CHTL::CHTLGenerator generator;
     std::string result_html = generator.generate(*ast);
@@ -88,7 +218,8 @@ TEST(IntegrationTest, HandlesPropertyArithmetic) {
     )";
 
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto ast = parser.parse();
     CHTL::CHTLGenerator generator;
     std::string result_html = generator.generate(*ast);
@@ -100,14 +231,15 @@ TEST(IntegrationTest, TextAttributeIsEquivalentToTextBlock) {
     std::string source_attr = R"(div { text: "hello"; })";
     std::string source_block = R"(div { text { "hello" } })";
 
+    auto context = std::make_shared<CHTL::CHTLContext>();
     CHTL::CHTLLexer lexer_attr(source_attr);
-    CHTL::CHTLParser parser_attr(lexer_attr.getAllTokens());
+    CHTL::CHTLParser parser_attr(lexer_attr.getAllTokens(), context);
     auto ast_attr = parser_attr.parse();
     CHTL::CHTLGenerator generator;
     std::string result_attr = generator.generate(*ast_attr);
 
     CHTL::CHTLLexer lexer_block(source_block);
-    CHTL::CHTLParser parser_block(lexer_block.getAllTokens());
+    CHTL::CHTLParser parser_block(lexer_block.getAllTokens(), context);
     auto ast_block = parser_block.parse();
     std::string result_block = generator.generate(*ast_block);
 
@@ -132,7 +264,8 @@ TEST(IntegrationTest, HandlesVoidElements) {
     )";
 
     CHTL::CHTLLexer lexer(source);
-    CHTL::CHTLParser parser(lexer.getAllTokens());
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
     auto ast = parser.parse();
     CHTL::CHTLGenerator generator;
     std::string result_html = generator.generate(*ast);

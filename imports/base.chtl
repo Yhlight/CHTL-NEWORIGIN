@@ -1,0 +1,6 @@
+// This is the base file to be imported.
+
+[Template] @Style BaseStyles {
+    color: green;
+    font-weight: bold;
+}
