@@ -2,8 +2,10 @@
 
 #include "BaseNode.h"
 #include "AstVisitor.h"
+#include "./Expression/ExprNode.h"
 #include <string>
 #include <map>
+#include <memory>
 
 namespace CHTL
 {
@@ -13,10 +15,10 @@ namespace CHTL
     class StyleNode : public BaseNode
     {
     public:
-        std::map<std::string, std::string> properties;
+        std::map<std::string, std::unique_ptr<ExprNode>> properties;
 
-        void addProperty(const std::string& key, const std::string& value) {
-            properties[key] = value;
+        void addProperty(const std::string& key, std::unique_ptr<ExprNode> value) {
+            properties[key] = std::move(value);
         }
 
         void accept(AstVisitor &visitor) override

@@ -39,6 +39,28 @@ namespace CHTL
         case ';':
             tokens.push_back(makeToken(TokenType::TOKEN_SEMICOLON));
             break;
+        case '+':
+            tokens.push_back(makeToken(TokenType::TOKEN_PLUS));
+            break;
+        case '-':
+            tokens.push_back(makeToken(TokenType::TOKEN_MINUS));
+            break;
+        case '%':
+            tokens.push_back(makeToken(TokenType::TOKEN_PERCENT));
+            break;
+        case '(':
+            tokens.push_back(makeToken(TokenType::TOKEN_LEFT_PAREN));
+            break;
+        case ')':
+            tokens.push_back(makeToken(TokenType::TOKEN_RIGHT_PAREN));
+            break;
+        case '.':
+            tokens.push_back(makeToken(TokenType::TOKEN_DOT));
+            break;
+        case '*':
+            tokens.push_back(makeToken(match('*') ? TokenType::TOKEN_STAR_STAR : TokenType::TOKEN_STAR));
+            break;
+
 
         // Comments and special characters
         case '/':
@@ -65,9 +87,7 @@ namespace CHTL
             }
             else
             {
-                // NOTE: Division is not a feature of CHTL attributes yet.
-                // For now, treat '/' as an unknown character.
-                tokens.push_back(makeToken(TokenType::TOKEN_UNKNOWN));
+                tokens.push_back(makeToken(TokenType::TOKEN_SLASH));
             }
             break;
         case '#':
@@ -158,8 +178,8 @@ namespace CHTL
 
     void Lexer::handleIdentifierOrLiteral()
     {
-        // CHTL identifiers/literals can contain letters, numbers, hyphens, and dots.
-        while (isAlphaNumeric(peek()) || peek() == '-' || peek() == '.')
+        // CHTL identifiers/literals can contain letters, numbers, and hyphens.
+        while (isAlphaNumeric(peek()) || peek() == '-')
             advance();
 
         std::string text = source.substr(start, current - start);

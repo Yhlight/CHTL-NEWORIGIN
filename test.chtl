@@ -1,18 +1,13 @@
 html {
     id = "main-page";
 
-    // A generator comment that should appear in the output
-    # This is a test comment.
-
     div {
         class: "content-wrapper";
         style {
-            color: red;
-            font-size: 16px;
-        }
-
-        text {
-            "Welcome to CHTL!"
+            width: (100px + 50) * 2; // Should be 300px
+            height: 200px - 50px; // Should be 150px
+            font-size: 16px; // Should remain 16px
+            color: "red"; // Should remain "red"
         }
     }
 }

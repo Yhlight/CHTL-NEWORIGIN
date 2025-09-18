@@ -9,6 +9,10 @@ namespace CHTL
     class TextNode;
     class CommentNode;
     class StyleNode;
+    class LiteralExprNode;
+    class BinaryOpExprNode;
+    class PropertyAccessExprNode;
+    class GroupExprNode;
 
     // The AstVisitor interface declares a set of visiting methods that
     // can be used to traverse the AST.
@@ -21,5 +25,9 @@ namespace CHTL
         virtual void visit(TextNode &node) = 0;
         virtual void visit(CommentNode &node) = 0;
         virtual void visit(StyleNode &node) = 0;
+        virtual void visit(LiteralExprNode &node) = 0;
+        virtual void visit(BinaryOpExprNode &node) = 0;
+        virtual void visit(PropertyAccessExprNode &node) = 0;
+        virtual void visit(GroupExprNode &node) = 0;
     };
 }

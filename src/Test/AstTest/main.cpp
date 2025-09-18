@@ -17,6 +17,8 @@ html {
     div {
         style {
             color: red;
+            width: (10px + 50px) * 2;
+            height: box.height;
         }
     }
 }

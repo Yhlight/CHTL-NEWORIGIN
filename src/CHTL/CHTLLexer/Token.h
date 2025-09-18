@@ -17,6 +17,17 @@ namespace CHTL
         TOKEN_COLON,       // :
         TOKEN_EQUAL,       // =
         TOKEN_SEMICOLON,   // ;
+        TOKEN_LEFT_PAREN,  // (
+        TOKEN_RIGHT_PAREN, // )
+        TOKEN_DOT,         // .
+
+        // Operators
+        TOKEN_PLUS,        // +
+        TOKEN_MINUS,       // -
+        TOKEN_STAR,        // *
+        TOKEN_SLASH,       // /
+        TOKEN_PERCENT,     // %
+        TOKEN_STAR_STAR,   // **
 
         // Literals
         TOKEN_IDENTIFIER,       // div, id, my_class

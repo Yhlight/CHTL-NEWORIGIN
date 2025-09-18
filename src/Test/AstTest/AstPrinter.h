@@ -6,6 +6,10 @@
 #include <vector>
 #include <memory>
 #include "../../CHTL/CHTLNode/BaseNode.h"
+#include "../../CHTL/CHTLNode/Expression/LiteralExprNode.h"
+#include "../../CHTL/CHTLNode/Expression/BinaryOpExprNode.h"
+#include "../../CHTL/CHTLNode/Expression/PropertyAccessExprNode.h"
+#include "../../CHTL/CHTLNode/Expression/GroupExprNode.h"
 
 
 namespace CHTL
@@ -21,6 +25,10 @@ namespace CHTL
         void visit(TextNode &node) override;
         void visit(CommentNode &node) override;
         void visit(StyleNode &node) override;
+        void visit(LiteralExprNode &node) override;
+        void visit(BinaryOpExprNode &node) override;
+        void visit(PropertyAccessExprNode &node) override;
+        void visit(GroupExprNode &node) override;
 
     private:
         void indent();

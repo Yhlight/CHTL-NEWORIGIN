@@ -1,5 +1,9 @@
 #include "Parser.h"
 #include <iostream>
+#include "../CHTLNode/Expression/LiteralExprNode.h"
+#include "../CHTLNode/Expression/BinaryOpExprNode.h"
+#include "../CHTLNode/Expression/PropertyAccessExprNode.h"
+#include "../CHTLNode/Expression/GroupExprNode.h"
 
 namespace CHTL
 {
@@ -126,8 +130,10 @@ namespace CHTL
         {
             const Token& key = consume(TokenType::TOKEN_IDENTIFIER, "Expected style property key.");
             consume(TokenType::TOKEN_COLON, "Expected ':' after style property key.");
-            const Token& value = consume(TokenType::TOKEN_IDENTIFIER, "Expected style property value.");
-            styleNode->addProperty(key.lexeme, value.lexeme);
+
+            auto valueExpression = parseExpression();
+            styleNode->addProperty(key.lexeme, std::move(valueExpression));
+
             consume(TokenType::TOKEN_SEMICOLON, "Expected ';' after style property.");
         }
 
@@ -139,6 +145,79 @@ namespace CHTL
     {
         const Token& token = consume(TokenType::TOKEN_GENERATOR_COMMENT, "Expected comment.");
         return std::make_unique<CommentNode>(token.lexeme, CommentNode::Type::GENERATOR);
+    }
+
+    // --- Expression Parsing Methods ---
+
+    std::unique_ptr<ExprNode> Parser::parseExpression(int precedence)
+    {
+        auto left = parsePrefix();
+
+        while (precedence < getPrecedence(peek().type))
+        {
+            left = parseInfix(std::move(left));
+        }
+
+        return left;
+    }
+
+    std::unique_ptr<ExprNode> Parser::parsePrefix()
+    {
+        if (match(TokenType::TOKEN_IDENTIFIER) || match(TokenType::TOKEN_QUOTED_STRING))
+        {
+            return std::make_unique<LiteralExprNode>(previous());
+        }
+
+        if (match(TokenType::TOKEN_LEFT_PAREN))
+        {
+            auto expr = parseExpression();
+            consume(TokenType::TOKEN_RIGHT_PAREN, "Expected ')' after expression.");
+            return std::make_unique<GroupExprNode>(std::move(expr));
+        }
+
+        throw std::runtime_error("Expected expression.");
+        return nullptr; // Should not be reached
+    }
+
+    std::unique_ptr<ExprNode> Parser::parseInfix(std::unique_ptr<ExprNode> left)
+    {
+        if (check(TokenType::TOKEN_PLUS) || check(TokenType::TOKEN_MINUS) ||
+            check(TokenType::TOKEN_STAR) || check(TokenType::TOKEN_SLASH) ||
+            check(TokenType::TOKEN_PERCENT) || check(TokenType::TOKEN_STAR_STAR))
+        {
+            const Token& op = advance();
+            int precedence = getPrecedence(op.type);
+            auto right = parseExpression(precedence);
+            return std::make_unique<BinaryOpExprNode>(std::move(left), op, std::move(right));
+        }
+
+        if (match(TokenType::TOKEN_DOT))
+        {
+            const Token& property = consume(TokenType::TOKEN_IDENTIFIER, "Expected property name after '.'.");
+            return std::make_unique<PropertyAccessExprNode>(std::move(left), property);
+        }
+
+        return nullptr; // Should not happen if called correctly
+    }
+
+    int Parser::getPrecedence(TokenType type)
+    {
+        switch (type)
+        {
+            case TokenType::TOKEN_PLUS:
+            case TokenType::TOKEN_MINUS:
+                return 1;
+            case TokenType::TOKEN_STAR:
+            case TokenType::TOKEN_SLASH:
+            case TokenType::TOKEN_PERCENT:
+                return 2;
+            case TokenType::TOKEN_STAR_STAR:
+                return 3;
+            case TokenType::TOKEN_DOT:
+                return 4;
+            default:
+                return 0;
+        }
     }
 
     // --- Helper Methods ---

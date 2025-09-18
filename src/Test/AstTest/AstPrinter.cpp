@@ -64,8 +64,50 @@ namespace CHTL
         indent();
         for (const auto &prop : node.properties)
         {
-            std::cout << indentation << prop.first << ": " << prop.second << ";" << std::endl;
+            std::cout << indentation << prop.first << ":" << std::endl;
+            indent();
+            prop.second->accept(*this);
+            unindent();
         }
+        unindent();
+    }
+
+    void AstPrinter::visit(LiteralExprNode &node)
+    {
+        std::cout << indentation << "Literal: " << node.literal.lexeme << std::endl;
+    }
+
+    void AstPrinter::visit(BinaryOpExprNode &node)
+    {
+        std::cout << indentation << "Binary Op: " << node.op.lexeme << std::endl;
+        indent();
+        std::cout << indentation << "Left:" << std::endl;
+        indent();
+        node.left->accept(*this);
+        unindent();
+        std::cout << indentation << "Right:" << std::endl;
+        indent();
+        node.right->accept(*this);
+        unindent();
+        unindent();
+    }
+
+    void AstPrinter::visit(PropertyAccessExprNode &node)
+    {
+        std::cout << indentation << "Property Access: " << node.property.lexeme << std::endl;
+        indent();
+        std::cout << indentation << "Object:" << std::endl;
+        indent();
+        node.object->accept(*this);
+        unindent();
+        unindent();
+    }
+
+    void AstPrinter::visit(GroupExprNode &node)
+    {
+        std::cout << indentation << "Group:" << std::endl;
+        indent();
+        node.expression->accept(*this);
         unindent();
     }
 

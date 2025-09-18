@@ -22,13 +22,19 @@ namespace CHTL
 
     private:
         // Main parsing functions for different CHTL constructs
+        // Statement-level parsing
         std::unique_ptr<BaseNode> parseStatement();
         std::unique_ptr<ElementNode> parseElement();
         std::unique_ptr<TextNode> parseTextNode();
         std::unique_ptr<StyleNode> parseStyleNode();
         std::unique_ptr<CommentNode> parseCommentNode();
-        // A generic parseBlock method might be useful for element and text bodies
-        // For now, let's keep it specific.
+
+        // Expression-level parsing (Pratt Parser)
+        std::unique_ptr<ExprNode> parseExpression(int precedence = 0);
+        std::unique_ptr<ExprNode> parsePrefix();
+        std::unique_ptr<ExprNode> parseInfix(std::unique_ptr<ExprNode> left);
+        int getPrecedence(TokenType type);
+
 
         // Token stream navigation and consumption helpers
         const Token &advance();
