@@ -1,0 +1,35 @@
+# This is a CHTL document that will be compiled.
+
+// This is a single-line comment and should be ignored by the generator.
+/*
+  This is a multi-line comment.
+  It should also be ignored.
+*/
+
+html {
+    lang = "en";
+
+    head {
+        title {
+            text { "My First CHTL Page" }
+        }
+    }
+
+    body {
+        id: "main-body";
+
+        div {
+            class: "container";
+
+            h1 {
+                text { "Welcome to CHTL!" }
+            }
+
+            p {
+                text {
+                    "This is a paragraph generated from our new CHTL compiler."
+                }
+            }
+        }
+    }
+}
