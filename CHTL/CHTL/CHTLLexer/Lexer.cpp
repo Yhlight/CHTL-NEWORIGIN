@@ -88,6 +88,15 @@ Token Lexer::nextToken() {
         case '}':
             tok = {TokenType::RIGHT_BRACE, "}", m_line};
             break;
+        case ':':
+            tok = {TokenType::COLON, ":", m_line};
+            break;
+        case '=':
+            tok = {TokenType::EQUALS, "=", m_line};
+            break;
+        case ';':
+            tok = {TokenType::SEMICOLON, ";", m_line};
+            break;
         case '"':
             // This case handles the start of a string literal
             return readString();

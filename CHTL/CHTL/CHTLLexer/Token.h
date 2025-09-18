@@ -17,7 +17,12 @@ enum class TokenType {
     STRING,
 
     // Keywords
-    TEXT
+    TEXT,
+
+    // Punctuators
+    COLON,
+    EQUALS,
+    SEMICOLON
 };
 
 struct Token {

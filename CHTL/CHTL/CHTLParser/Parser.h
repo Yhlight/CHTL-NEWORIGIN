@@ -2,6 +2,7 @@
 
 #include "../CHTLLexer/Lexer.h"
 #include "../CHTLNode/Node.h"
+#include "../CHTLNode/ElementNode.h" // Include the ElementNode definition
 #include <vector>
 #include <string>
 
@@ -28,7 +29,7 @@ private:
     NodePtr parseStatement();
     NodePtr parseElementStatement();
     NodePtr parseTextStatement();
-    std::vector<NodePtr> parseBlock();
+    void parseAttribute(std::shared_ptr<ElementNode> node);
 
     Lexer& m_lexer;
     Token m_curToken;

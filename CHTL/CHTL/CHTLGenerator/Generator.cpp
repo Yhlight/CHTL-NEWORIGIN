@@ -34,7 +34,14 @@ void Generator::visitElementNode(ElementNode* node) {
     const bool isTextElement = (node->m_tagName == "text");
 
     if (!isProgramRoot && !isTextElement) {
-        m_out << "<" << node->m_tagName << ">";
+        m_out << "<" << node->m_tagName;
+
+        // Render attributes
+        for (const auto& attr : node->m_attributes) {
+            m_out << " " << attr.first << "=\"" << attr.second << "\"";
+        }
+
+        m_out << ">";
     }
 
     // Recursively visit all children of the current element.

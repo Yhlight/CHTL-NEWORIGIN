@@ -4,8 +4,6 @@
 #include <string>
 
 Parser::Parser(Lexer& lexer) : m_lexer(lexer) {
-    // Prime the parser by loading the first two tokens.
-    // m_curToken and m_peekToken will be set.
     nextToken();
     nextToken();
 }
@@ -26,8 +24,6 @@ bool Parser::expectPeek(TokenType t) {
 }
 
 NodePtr Parser::parseProgram() {
-    // A CHTL program is a series of statements. For now, we'll parse them
-    // and create a single root "program" node to hold them.
     auto programNode = std::make_shared<ElementNode>(Token{TokenType::IDENTIFIER, "program", 0}, "program");
 
     while (m_curToken.type != TokenType::END_OF_FILE) {
@@ -51,65 +47,90 @@ NodePtr Parser::parseStatement() {
     }
 }
 
-std::vector<NodePtr> Parser::parseBlock() {
-    std::vector<NodePtr> statements;
+void Parser::parseAttribute(std::shared_ptr<ElementNode> node) {
+    // Current token is IDENTIFIER (the attribute key)
+    std::string key = m_curToken.literal;
 
-    // The opening '{' is consumed by the caller.
-    // We parse until we find the closing '}'.
-    while (m_curToken.type != TokenType::RIGHT_BRACE && m_curToken.type != TokenType::END_OF_FILE) {
-        NodePtr stmt = parseStatement();
-        if (stmt) {
-            statements.push_back(stmt);
-        } else {
-            // If parseStatement returns null, it's an unexpected token.
-            m_errors.push_back("Error: Unexpected token '" + m_curToken.literal + "' on line " + std::to_string(m_curToken.line));
-        }
-        nextToken();
+    // Advance past the key to the ':' or '='
+    nextToken();
+
+    // Advance past ':' or '=' to the value
+    nextToken();
+
+    std::string value;
+    if (m_curToken.type == TokenType::STRING || m_curToken.type == TokenType::IDENTIFIER) {
+        value = m_curToken.literal;
+    } else {
+        m_errors.push_back("Attribute value for key '" + key + "' must be a string or an identifier.");
+        return;
     }
-    // The loop terminates with m_curToken being '}' or EOF. The caller will handle it.
-    return statements;
+
+    node->m_attributes[key] = value;
+
+    if (m_peekToken.type != TokenType::SEMICOLON) {
+        m_errors.push_back("Expected ';' after attribute value for key '" + key + "'.");
+        return; // Let's not advance so the main loop can see the problem token
+    }
+    nextToken(); // Consume the value
+    // curToken is now ';'
 }
 
 NodePtr Parser::parseElementStatement() {
     auto node = std::make_shared<ElementNode>(m_curToken, m_curToken.literal);
 
     if (!expectPeek(TokenType::LEFT_BRACE)) {
-        return nullptr; // Error already logged by expectPeek
+        return nullptr;
     }
+    nextToken(); // Consume '{'
 
-    // Consume the '{' and move to the first token of the block.
-    nextToken();
+    while (m_curToken.type != TokenType::RIGHT_BRACE && m_curToken.type != TokenType::END_OF_FILE) {
+        if (m_curToken.type == TokenType::TEXT) {
+            NodePtr child = parseTextStatement();
+            if (child) {
+                node->m_children.push_back(child);
+            }
+        } else if (m_curToken.type == TokenType::IDENTIFIER) {
+            if (m_peekToken.type == TokenType::COLON || m_peekToken.type == TokenType::EQUALS) {
+                parseAttribute(node);
+            } else if (m_peekToken.type == TokenType::LEFT_BRACE) {
+                NodePtr child = parseElementStatement();
+                if (child) {
+                    node->m_children.push_back(child);
+                }
+            } else {
+                m_errors.push_back("Unexpected token '" + m_peekToken.literal + "' after identifier '" + m_curToken.literal + "'.");
+            }
+        } else {
+            m_errors.push_back("Unexpected token in element block: '" + m_curToken.literal + "'.");
+            // To prevent infinite loops, advance the token
+            nextToken();
+            continue;
+        }
 
-    node->m_children = parseBlock();
-
-    // After parseBlock, m_curToken is the '}'. We don't need to consume it here,
-    // as the main loop in parseProgram will call nextToken().
+        // Advance to the next statement/attribute/token
+        nextToken();
+    }
 
     return node;
 }
 
 NodePtr Parser::parseTextStatement() {
-    // The current token is 'text'. Create an ElementNode for it.
     auto textElementNode = std::make_shared<ElementNode>(m_curToken, m_curToken.literal);
 
     if (!expectPeek(TokenType::LEFT_BRACE)) {
         return nullptr;
     }
-    // m_curToken is now '{'
 
     if (!expectPeek(TokenType::STRING)) {
         return nullptr;
     }
-    // m_curToken is now the STRING token
 
-    // The content of the text element is a TextNode.
     auto textValueNode = std::make_shared<TextNode>(m_curToken, m_curToken.literal);
     textElementNode->m_children.push_back(textValueNode);
 
     if (!expectPeek(TokenType::RIGHT_BRACE)) {
         return nullptr;
     }
-    // m_curToken is now '}'
 
     return textElementNode;
 }

@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 
 class ElementNode : public Node {
 public:
@@ -19,6 +20,14 @@ public:
     std::string toString() const override {
         std::string out;
         out.append(m_token.literal);
+
+        // Append attributes for debugging.
+        out.append(" [");
+        for (const auto& attr : m_attributes) {
+            out.append(" " + attr.first + "=\"" + attr.second + "\"");
+        }
+        out.append(" ]");
+
         out.append(" { ");
         for (const auto& child : m_children) {
             out.append(child->toString());
@@ -30,4 +39,5 @@ public:
     Token m_token;
     std::string m_tagName;
     std::vector<NodePtr> m_children;
+    std::map<std::string, std::string> m_attributes;
 };

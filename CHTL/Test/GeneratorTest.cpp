@@ -21,24 +21,43 @@ html {
 }
 )";
 
-    // The generator will produce a compact string with no extra whitespace.
     std::string expectedHtml = "<html><body><div>Hello World</div></body></html>";
 
-    // 1. Lex the input
     Lexer l(input);
-
-    // 2. Parse the tokens into an AST
     Parser p(l);
     NodePtr program = p.parseProgram();
-    checkParserErrors(p); // Ensure the AST is valid before generating.
+    checkParserErrors(p);
 
-    // 3. Generate HTML from the AST
     Generator g;
     std::string actualHtml = g.generate(program);
 
-    // 4. Assert that the generated HTML matches the expected output.
     assert(actualHtml == expectedHtml);
+    std::cout << "  ...Passed" << std::endl;
+}
 
+void testAttributeGeneration() {
+    std::cout << "  Testing Attribute Generation..." << std::endl;
+
+    std::string input = R"(
+div {
+    class: "container";
+    id = "main";
+}
+)";
+
+    // Note: std::map will sort keys, so the output order is predictable.
+    // class will come before id.
+    std::string expectedHtml = R"(<div class="container" id="main"></div>)";
+
+    Lexer l(input);
+    Parser p(l);
+    NodePtr program = p.parseProgram();
+    checkParserErrors(p);
+
+    Generator g;
+    std::string actualHtml = g.generate(program);
+
+    assert(actualHtml == expectedHtml);
     std::cout << "  ...Passed" << std::endl;
 }
 
@@ -46,5 +65,6 @@ html {
 void RunGeneratorTests() {
     std::cout << "--- Running Generator Tests ---" << std::endl;
     testHtmlGeneration();
+    testAttributeGeneration();
     std::cout << "-----------------------------" << std::endl;
 }

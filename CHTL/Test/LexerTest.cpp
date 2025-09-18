@@ -1,4 +1,4 @@
-#include "CHTL/CHTLLexer/Lexer.h"
+#include "../CHTL/CHTLLexer/Lexer.h"
 #include <iostream>
 #include <vector>
 #include <cassert>
@@ -80,8 +80,44 @@ html {
     std::cout << "  ...Passed" << std::endl;
 }
 
+void testAttributeTokenization() {
+    std::cout << "  Testing Attribute Tokenization..." << std::endl;
+
+    std::string input = R"(
+div {
+    id = "main-content";
+    class: "container";
+}
+)";
+
+    std::vector<Token> expectedTokens = {
+        {TokenType::IDENTIFIER, "div", 2},
+        {TokenType::LEFT_BRACE, "{", 2},
+        {TokenType::IDENTIFIER, "id", 3},
+        {TokenType::EQUALS, "=", 3},
+        {TokenType::STRING, "main-content", 3},
+        {TokenType::SEMICOLON, ";", 3},
+        {TokenType::IDENTIFIER, "class", 4},
+        {TokenType::COLON, ":", 4},
+        {TokenType::STRING, "container", 4},
+        {TokenType::SEMICOLON, ";", 4},
+        {TokenType::RIGHT_BRACE, "}", 5},
+        {TokenType::END_OF_FILE, "", 6}
+    };
+
+    Lexer l(input);
+
+    for (const auto& expected : expectedTokens) {
+        Token tok = l.nextToken();
+        assertTokenEqual(tok, expected);
+    }
+
+    std::cout << "  ...Passed" << std::endl;
+}
+
 void RunLexerTests() {
     std::cout << "--- Running Lexer Tests ---" << std::endl;
     testBasicSyntax();
+    testAttributeTokenization();
     std::cout << "--------------------------" << std::endl;
 }
