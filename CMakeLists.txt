@@ -25,6 +25,10 @@ add_library(chtl_lib STATIC
     CHTL/CHTLLoader/CHTLLoader.cpp
     Scanner/CHTLUnifiedScanner.cpp
     CompilerDispatcher/CompilerDispatcher.cpp
+    CodeMerger/CodeMerger.cpp
+    "CHTL JS/CHTLJSLexer/CHTLJSLexer.cpp"
+    "CHTL JS/CHTLJSParser/CHTLJSParser.cpp"
+    "CHTL JS/CHTLJSGenerator/CHTLJSGenerator.cpp"
 )
 
 # Ensure that the library's include directories are available.
@@ -46,6 +50,7 @@ add_executable(run_tests
     Test/CHTLLexer_test.cpp
     Test/CHTLParser_test.cpp
     Test/CHTLIntegration_test.cpp
+    Test/CHTLJSCompiler_test.cpp
 )
 
 # Link the test executable with our library and Google Test

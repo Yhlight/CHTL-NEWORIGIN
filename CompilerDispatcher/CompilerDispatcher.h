@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../Scanner/CHTLUnifiedScanner.h"
+#include "../CodeMerger/CodeMerger.h"
+#include "../CHTL JS/CHTLJSGenerator/CHTLJSGenerator.h"
 #include <string>
 
 namespace CHTL {

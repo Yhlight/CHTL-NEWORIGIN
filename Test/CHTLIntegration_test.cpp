@@ -142,20 +142,19 @@ TEST(IntegrationTest, HandlesFileImport) {
     EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
 }
 
-TEST(UnifiedScannerTest, ReplacesScriptBlockWithPlaceholder) {
+TEST(CodeMergerTest, MergesScriptIntoHtml) {
     std::string source = R"(
         div {
             script {
-                console.log("hello");
+                const my_div = {{.my-class}};
+                my_div.textContent = "Hello from JS!";
             }
         }
     )";
 
-    // The scanner replaces the script block with a placeholder.
-    // The generator should render that placeholder in the output.
     std::string expected_html = R"(
         <div>
-            __CHTL_SCRIPT_PLACEHOLDER_0__
+            <script>const my_div = document.querySelector('.my-class'); my_div.textContent = "Hello from JS!";</script>
         </div>
     )";
 
@@ -166,11 +165,6 @@ TEST(UnifiedScannerTest, ReplacesScriptBlockWithPlaceholder) {
     std::string result_html = dispatcher.dispatch();
 
     EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
-
-    // Also check that the script content was correctly extracted.
-    ASSERT_EQ(fragments.scriptBlocks.size(), 1);
-    EXPECT_NE(fragments.scriptBlocks.find("__CHTL_SCRIPT_PLACEHOLDER_0__"), fragments.scriptBlocks.end());
-    EXPECT_NE(fragments.scriptBlocks["__CHTL_SCRIPT_PLACEHOLDER_0__"].find("console.log"), std::string::npos);
 }
 
 
