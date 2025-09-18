@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BaseNode.h"
-#include "../CHTLNode/ASTVisitor.h"
+#include "ASTVisitor.h"
 #include <string>
 
 namespace CHTL {
@@ -12,8 +12,8 @@ public:
 
     TextNode(const std::string& content) : content(content) {}
 
-    void accept(ASTVisitor& visitor) override {
-        visitor.visit(*this);
+    std::string accept(ASTVisitor& visitor) override {
+        return visitor.visit(*this);
     }
     NodeType getType() const override { return NodeType::Text; }
 };

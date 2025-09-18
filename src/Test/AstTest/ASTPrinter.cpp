@@ -3,52 +3,41 @@
 #include "../../CHTL/CHTLNode/TextNode.h"
 #include "../../CHTL/CHTLNode/CommentNode.h"
 #include "../../CHTL/CHTLNode/AttributeNode.h"
+#include <sstream>
 
 namespace CHTL {
 
 std::string ASTPrinter::print(NodePtr& node) {
-    node->accept(*this);
-    return out.str();
+    if (!node) return "(null)";
+    return node->accept(*this);
 }
 
-void ASTPrinter::parenthesize(const std::string& name, const std::vector<NodePtr>& nodes) {
-    out << "(" << name;
-    for (const auto& node : nodes) {
-        out << " ";
-        node->accept(*this);
-    }
-    out << ")";
-}
+std::string ASTPrinter::visit(ElementNode& node) {
+    std::stringstream ss;
+    ss << "(" << node.tagName;
 
-void ASTPrinter::visit(ElementNode& node) {
-    // A bit of a hack to visit attributes first if they exist
-    std::stringstream temp_out;
     for (const auto& attr : node.attributes) {
-        attr->accept(*this);
-        temp_out << " " << out.str();
-        out.str(""); // clear the stream
+        ss << " " << attr->accept(*this);
     }
-
-    out << "(" << node.tagName << temp_out.str();
 
     for (const auto& child : node.children) {
-        out << " ";
-        child->accept(*this);
+        ss << " " << child->accept(*this);
     }
 
-    out << ")";
+    ss << ")";
+    return ss.str();
 }
 
-void ASTPrinter::visit(TextNode& node) {
-    out << "(text \"" << node.content << "\")";
+std::string ASTPrinter::visit(TextNode& node) {
+    return "(text \"" + node.content + "\")";
 }
 
-void ASTPrinter::visit(CommentNode& node) {
-    out << "(comment \"" << node.content << "\")";
+std::string ASTPrinter::visit(CommentNode& node) {
+    return "(comment \"" + node.content + "\")";
 }
 
-void ASTPrinter::visit(AttributeNode& node) {
-    out << "(attr " << node.key << "=\"" << node.value << "\")";
+std::string ASTPrinter::visit(AttributeNode& node) {
+    return "(attr " + node.key + "=\"" + node.value + "\")";
 }
 
 } // namespace CHTL

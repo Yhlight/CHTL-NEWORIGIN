@@ -30,6 +30,11 @@ int main() {
     runTest("Simple Element", "div {}", "(root (div))");
     runTest("Nested Elements", "html { body { span {} } }", "(root (html (body (span))))");
     runTest("Peer Elements", "div { p {} img {} }", "(root (div (p) (img)))");
+    runTest("Element with Attributes", "div { id: \"main\"; class: content; }", "(root (div (attr id=\"main\") (attr class=\"content\")))");
+    runTest("Element with Text Node", "p { text { \"hello world\" } }", "(root (p (text \"hello world\")))");
+    runTest("Element with Unquoted Text", "p { text { hello } }", "(root (p (text \"hello\")))");
+    runTest("Mixed Content", "div { id: app; text { Welcome } p { text { More text } } }", "(root (div (attr id=\"app\") (text \"Welcome\") (p (text \"More text\"))))");
+
 
     std::cout << "\nAll parser tests passed!" << std::endl;
 

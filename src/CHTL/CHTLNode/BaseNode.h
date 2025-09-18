@@ -19,7 +19,7 @@ enum class NodeType {
 class BaseNode {
 public:
     virtual ~BaseNode() = default;
-    virtual void accept(ASTVisitor& visitor) = 0;
+    virtual std::string accept(ASTVisitor& visitor) = 0;
     virtual NodeType getType() const = 0;
 };
 

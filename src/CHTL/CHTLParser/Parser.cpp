@@ -1,7 +1,10 @@
 #include "Parser.h"
 #include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/AttributeNode.h"
+#include "../CHTLNode/TextNode.h"
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace CHTL {
 
@@ -16,7 +19,6 @@ NodePtr Parser::parse() {
                 root->addChild(std::move(child));
             }
         } catch (const ParseError& error) {
-            // A thrown error is a fatal one for a rule, but we can try to recover.
             synchronize();
         }
     }
@@ -41,17 +43,18 @@ Token Parser::consume(TokenType type, const std::string& message) {
     throw error(peek(), message);
 }
 
-
 // --- Grammar Rule Implementations ---
 
 NodePtr Parser::declaration() {
-    if (match({TokenType::IDENTIFIER})) {
+    if (check(TokenType::IDENTIFIER) && (peekNext().type == TokenType::COLON || peekNext().type == TokenType::EQUALS)) {
+        throw error(peek(), "Attributes can only be defined inside an element block.");
+    } else if (match({TokenType::KEYWORD_TEXT})) {
+        return textNode();
+    } else if (match({TokenType::IDENTIFIER})) {
         return element();
     }
 
-    // If it's not a known declaration, it's a syntax error.
-    // We throw, and the main parse loop will catch and synchronize.
-    throw error(peek(), "Expect a declaration (e.g., an element).");
+    throw error(peek(), "Expect a declaration (e.g., an element or text block).");
 }
 
 NodePtr Parser::element() {
@@ -61,8 +64,14 @@ NodePtr Parser::element() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after element name.");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        // Any error inside an element will propagate up to the main parse loop.
-        node->addChild(declaration());
+        if (check(TokenType::IDENTIFIER) && (peekNext().type == TokenType::COLON || peekNext().type == TokenType::EQUALS)) {
+            parseAttribute(*node);
+        } else {
+            NodePtr child = declaration();
+            if (child) {
+                node->addChild(std::move(child));
+            }
+        }
     }
 
     consume(TokenType::RIGHT_BRACE, "Expect '}' after element block.");
@@ -70,6 +79,46 @@ NodePtr Parser::element() {
     return node;
 }
 
+void Parser::parseAttribute(ElementNode& owner) {
+    Token key = consume(TokenType::IDENTIFIER, "Expect attribute name.");
+
+    if (!match({TokenType::COLON, TokenType::EQUALS})) {
+        throw error(peek(), "Expect ':' or '=' after attribute name.");
+    }
+
+    Token value;
+    if (match({TokenType::IDENTIFIER, TokenType::STRING_LITERAL, TokenType::NUMBER_LITERAL})) {
+        value = previous();
+    } else {
+        throw error(peek(), "Expect attribute value.");
+    }
+
+    consume(TokenType::SEMICOLON, "Expect ';' after attribute value.");
+
+    owner.addAttribute(std::make_unique<AttributeNode>(key.lexeme, value.lexeme));
+}
+
+NodePtr Parser::textNode() {
+    consume(TokenType::LEFT_BRACE, "Expect '{' after 'text' keyword.");
+
+    std::string content_str;
+    // Handle a single, quoted string literal separately
+    if (check(TokenType::STRING_LITERAL)) {
+        content_str = consume(TokenType::STRING_LITERAL, "").lexeme;
+    } else {
+        // Consume all tokens until the closing brace for unquoted literals
+        while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+            if (!content_str.empty()) {
+                content_str += " ";
+            }
+            content_str += advance().lexeme;
+        }
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after text content.");
+
+    return std::make_unique<TextNode>(content_str);
+}
 
 // --- Token Stream Helpers ---
 
@@ -79,6 +128,13 @@ bool Parser::isAtEnd() {
 
 Token Parser::peek() {
     return tokens[current];
+}
+
+Token Parser::peekNext() {
+    if (current + 1 >= tokens.size()) {
+        return tokens.back(); // Should be EOF
+    }
+    return tokens[current + 1];
 }
 
 Token Parser::previous() {
@@ -108,18 +164,12 @@ bool Parser::match(const std::vector<TokenType>& types) {
 }
 
 void Parser::synchronize() {
-    advance(); // Consume the token that caused the error to avoid getting stuck.
+    advance();
     while (!isAtEnd()) {
         if (previous().type == TokenType::SEMICOLON) return;
-
         switch (peek().type) {
-            // Resynchronize to the beginning of the next likely declaration
             case TokenType::KEYWORD_TEMPLATE:
             case TokenType::KEYWORD_CUSTOM:
-            case TokenType::KEYWORD_ORIGIN:
-            case TokenType::KEYWORD_IMPORT:
-            case TokenType::KEYWORD_NAMESPACE:
-            case TokenType::KEYWORD_CONFIGURATION:
             case TokenType::IDENTIFIER:
                 return;
             default:

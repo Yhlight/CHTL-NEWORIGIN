@@ -2,7 +2,7 @@
 
 #include "BaseNode.h"
 #include "AttributeNode.h"
-#include "../CHTLNode/ASTVisitor.h"
+#include "ASTVisitor.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -25,8 +25,8 @@ public:
         children.push_back(std::move(child));
     }
 
-    void accept(ASTVisitor& visitor) override {
-        visitor.visit(*this);
+    std::string accept(ASTVisitor& visitor) override {
+        return visitor.visit(*this);
     }
     NodeType getType() const override { return NodeType::Element; }
 };
