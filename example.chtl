@@ -1,0 +1,12 @@
+html {
+    head {
+        title {
+            text { "My First CHTL Page" }
+        }
+    }
+    body {
+        div {
+            text { "Welcome to the world of CHTL!" }
+        }
+    }
+}
