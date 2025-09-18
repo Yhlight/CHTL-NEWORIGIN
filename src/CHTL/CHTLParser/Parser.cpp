@@ -3,6 +3,7 @@
 #include "../CHTLNode/AttributeNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/StyleNode.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -51,13 +52,15 @@ NodePtr Parser::declaration() {
         throw error(peek(), "Attributes can only be defined inside an element block.");
     } else if (match({TokenType::KEYWORD_TEXT})) {
         return textNode();
+    } else if (match({TokenType::KEYWORD_STYLE})) {
+        return styleBlock();
     } else if (match({TokenType::GENERATOR_COMMENT})) {
         return std::make_unique<CommentNode>(previous().lexeme, CommentType::Generator);
     } else if (match({TokenType::IDENTIFIER})) {
         return element();
     }
 
-    throw error(peek(), "Expect a declaration (e.g., an element, text block, or generator comment).");
+    throw error(peek(), "Expect a declaration.");
 }
 
 NodePtr Parser::element() {
@@ -67,7 +70,6 @@ NodePtr Parser::element() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after element name.");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        // Ignore non-generator comments
         if (match({TokenType::LINE_COMMENT, TokenType::BLOCK_COMMENT})) {
             continue;
         }
@@ -95,7 +97,7 @@ void Parser::parseAttribute(ElementNode& owner) {
     }
 
     Token value;
-    if (match({TokenType::IDENTIFIER, TokenType::STRING_LITERAL, TokenType::NUMBER_LITERAL})) {
+    if (match({TokenType::IDENTIFIER, TokenType::STRING_LITERAL, TokenType::NUMBER_LITERAL, TokenType::DIMENSION})) {
         value = previous();
     } else {
         throw error(peek(), "Expect attribute value.");
@@ -115,7 +117,6 @@ NodePtr Parser::textNode() {
     } else {
         while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
             content_str += advance().lexeme;
-            // Add a space if the next token isn't punctuation or the end of the block.
             TokenType next_type = peek().type;
             if (next_type != TokenType::RIGHT_BRACE && next_type != TokenType::DOT && next_type != TokenType::COMMA && next_type != TokenType::SEMICOLON) {
                  content_str += " ";
@@ -126,6 +127,29 @@ NodePtr Parser::textNode() {
     consume(TokenType::RIGHT_BRACE, "Expect '}' after text content.");
 
     return std::make_unique<TextNode>(content_str);
+}
+
+NodePtr Parser::styleBlock() {
+    auto styleNode = std::make_unique<StyleNode>();
+    consume(TokenType::LEFT_BRACE, "Expect '{' after 'style' keyword.");
+
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
+        consume(TokenType::COLON, "Expect ':' after style property name.");
+
+        std::string value_str;
+        while(!check(TokenType::SEMICOLON) && !isAtEnd()) {
+            if (!value_str.empty()) {
+                value_str += " ";
+            }
+            value_str += advance().lexeme;
+        }
+        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        styleNode->addProperty(key.lexeme, value_str);
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
+    return styleNode;
 }
 
 // --- Token Stream Helpers ---

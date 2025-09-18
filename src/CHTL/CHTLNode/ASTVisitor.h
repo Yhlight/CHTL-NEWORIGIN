@@ -8,6 +8,7 @@ namespace CHTL {
     class TextNode;
     class CommentNode;
     class AttributeNode;
+    class StyleNode;
 }
 
 namespace CHTL {
@@ -19,6 +20,7 @@ public:
     virtual std::string visit(TextNode& node) = 0;
     virtual std::string visit(CommentNode& node) = 0;
     virtual std::string visit(AttributeNode& node) = 0;
+    virtual std::string visit(StyleNode& node) = 0;
 };
 
 } // namespace CHTL

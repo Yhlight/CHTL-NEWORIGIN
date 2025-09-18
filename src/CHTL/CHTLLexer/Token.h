@@ -12,9 +12,10 @@ enum class TokenType {
 
     // Literals
     IDENTIFIER,         // e.g., div, my-class, width
-    UNQUOTED_LITERAL,   // e.g., red, 100px, HelloWorld
+    UNQUOTED_LITERAL,   // e.g., red, HelloWorld
     STRING_LITERAL,     // e.g., "hello world", 'some text'
     NUMBER_LITERAL,     // e.g., 100, 3.14
+    DIMENSION,          // e.g., 100px, 50%
 
     // Punctuation & Brackets
     LEFT_BRACE,         // {

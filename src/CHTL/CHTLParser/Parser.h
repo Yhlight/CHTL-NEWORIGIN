@@ -32,6 +32,7 @@ private:
     NodePtr declaration();
     NodePtr element();
     NodePtr textNode();
+    NodePtr styleBlock();
     void parseAttribute(ElementNode& owner);
 
     void synchronize(); // For error recovery

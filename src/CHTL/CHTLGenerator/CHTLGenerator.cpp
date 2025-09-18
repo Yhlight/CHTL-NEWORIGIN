@@ -3,9 +3,11 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/AttributeNode.h"
+#include "../CHTLNode/StyleNode.h"
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <map>
 
 namespace CHTL {
 
@@ -25,8 +27,6 @@ std::string CHTLGenerator::generate(NodePtr& ast) {
 }
 
 std::string CHTLGenerator::visit(ElementNode& node) {
-    // The "root" node is a special case from the parser, we don't render it.
-    // We just render its children.
     if (node.tagName == "root") {
         std::stringstream ss;
         for (const auto& child : node.children) {
@@ -38,8 +38,29 @@ std::string CHTLGenerator::visit(ElementNode& node) {
     std::stringstream ss;
     ss << "<" << node.tagName;
 
+    // Print explicit attributes
     for (const auto& attr : node.attributes) {
         ss << " " << attr->key << "=\"" << attr->value << "\"";
+    }
+
+    // Collect styles from any child StyleNodes
+    std::map<std::string, std::string> inline_styles;
+    for (const auto& child : node.children) {
+        if (child->getType() == NodeType::Style) {
+            StyleNode* style_node = static_cast<StyleNode*>(child.get());
+            for (const auto& prop : style_node->properties) {
+                inline_styles[prop.first] = prop.second;
+            }
+        }
+    }
+
+    // Print collected inline styles
+    if (!inline_styles.empty()) {
+        ss << " style=\"";
+        for (auto it = inline_styles.begin(); it != inline_styles.end(); ++it) {
+            ss << it->first << ": " << it->second << ";";
+        }
+        ss << "\"";
     }
 
     if (isSelfClosing(node.tagName)) {
@@ -49,8 +70,11 @@ std::string CHTLGenerator::visit(ElementNode& node) {
 
     ss << ">";
 
+    // Render children that are not style nodes
     for (const auto& child : node.children) {
-        ss << child->accept(*this);
+        if (child->getType() != NodeType::Style) {
+            ss << child->accept(*this);
+        }
     }
 
     ss << "</" << node.tagName << ">";
@@ -58,7 +82,6 @@ std::string CHTLGenerator::visit(ElementNode& node) {
 }
 
 std::string CHTLGenerator::visit(TextNode& node) {
-    // Basic HTML escaping could be added here in a real implementation
     return node.content;
 }
 
@@ -66,12 +89,15 @@ std::string CHTLGenerator::visit(CommentNode& node) {
     if (node.commentType == CommentType::Generator) {
         return "<!-- " + node.content + " -->";
     }
-    return ""; // Other comments are ignored
+    return "";
 }
 
 std::string CHTLGenerator::visit(AttributeNode& node) {
-    // This should not be called directly, as attributes are handled
-    // by the ElementNode visitor.
+    return "";
+}
+
+std::string CHTLGenerator::visit(StyleNode& node) {
+    // StyleNodes are handled by their parent ElementNode, so they generate no output themselves.
     return "";
 }
 

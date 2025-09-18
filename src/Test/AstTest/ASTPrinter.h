@@ -15,6 +15,7 @@ public:
     std::string visit(TextNode& node) override;
     std::string visit(CommentNode& node) override;
     std::string visit(AttributeNode& node) override;
+    std::string visit(StyleNode& node) override;
 };
 
 } // namespace CHTL

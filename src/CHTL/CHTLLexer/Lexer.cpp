@@ -21,7 +21,7 @@ std::vector<Token> Lexer::tokenize() {
 
 Token Lexer::scanToken() {
     skipWhitespace();
-    if (isAtEnd()) return makeToken(TokenType::END_OF_FILE);
+    if (isAtEnd()) return makeToken(TokenType::END_OF_FILE, "");
 
     char c = advance();
 
@@ -67,6 +67,8 @@ Token Lexer::scanToken() {
                 return scanIdentifier();
             }
             if (std::isdigit(c)) {
+                // We consumed a digit, so backtrack to let scanNumberLiteral handle it
+                current--;
                 return scanNumberLiteral();
             }
     }
@@ -188,13 +190,13 @@ Token Lexer::scanStringLiteral(char quoteType) {
     if (isAtEnd()) {
         return errorToken("Unterminated string.");
     }
-    advance(); // Consume the closing quote
+    advance();
     std::string value = source.substr(start, current - start - 1);
     return makeToken(TokenType::STRING_LITERAL, value);
 }
 
 Token Lexer::scanNumberLiteral() {
-    size_t start = current - 1;
+    size_t start = current;
     while (std::isdigit(peek())) {
         advance();
     }
@@ -204,6 +206,20 @@ Token Lexer::scanNumberLiteral() {
             advance();
         }
     }
+
+    // Check for a unit suffix (e.g., px, em, %)
+    if (std::isalpha(peek()) || peek() == '%') {
+        while (std::isalpha(peek())) {
+            advance();
+        }
+        // Also handle the '%' case if it was the first char
+        if (source[start] != '%' && peek() == '%') {
+             advance();
+        }
+        std::string value = source.substr(start, current - start);
+        return makeToken(TokenType::DIMENSION, value);
+    }
+
     std::string value = source.substr(start, current - start);
     return makeToken(TokenType::NUMBER_LITERAL, value);
 }
@@ -236,7 +252,7 @@ Token Lexer::scanComment() {
         return makeToken(TokenType::BLOCK_COMMENT, value);
     }
     if (source[current-1] == '#') {
-        advance(); // consume the space
+        advance();
         size_t start = current;
         while (peek() != '\n' && !isAtEnd()) {
             advance();

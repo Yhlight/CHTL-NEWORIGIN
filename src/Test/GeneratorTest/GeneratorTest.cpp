@@ -34,6 +34,7 @@ int main() {
     runTest("Self-closing Tag", "img { src: \"image.png\"; }", "<img src=\"image.png\">");
     runTest("Generator Comment", "div { # This is a comment\n}", "<div><!-- This is a comment --></div>");
     runTest("Mixed Content", "body { h1 { text { Title } } p { text { Paragraph. } } img {} }", "<body><h1>Title</h1><p>Paragraph.</p><img></body>");
+    runTest("Element with Inline Styles", "div { style { font-size: 16px; color: red; } }", "<div style=\"color: red;font-size: 16px;\"></div>");
 
     std::cout << "\nAll generator tests passed!" << std::endl;
 

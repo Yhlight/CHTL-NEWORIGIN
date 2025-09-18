@@ -13,6 +13,7 @@ enum class NodeType {
     Element,
     Text,
     Comment,
+    Style,
     // ... other node types to be added
 };
 

@@ -36,8 +36,22 @@ std::string ASTPrinter::visit(CommentNode& node) {
     return "(comment \"" + node.content + "\")";
 }
 
+#include "../../CHTL/CHTLNode/StyleNode.h"
+
+// ...
+
 std::string ASTPrinter::visit(AttributeNode& node) {
     return "(attr " + node.key + "=\"" + node.value + "\")";
+}
+
+std::string ASTPrinter::visit(StyleNode& node) {
+    std::stringstream ss;
+    ss << "(style";
+    for (const auto& prop : node.properties) {
+        ss << " (" << prop.first << ": " << prop.second << ")";
+    }
+    ss << ")";
+    return ss.str();
 }
 
 } // namespace CHTL
