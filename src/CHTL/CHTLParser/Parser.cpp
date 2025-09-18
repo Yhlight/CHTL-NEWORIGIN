@@ -2,6 +2,7 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/AttributeNode.h"
 #include "../CHTLNode/TextNode.h"
+#include "../CHTLNode/CommentNode.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -50,11 +51,13 @@ NodePtr Parser::declaration() {
         throw error(peek(), "Attributes can only be defined inside an element block.");
     } else if (match({TokenType::KEYWORD_TEXT})) {
         return textNode();
+    } else if (match({TokenType::GENERATOR_COMMENT})) {
+        return std::make_unique<CommentNode>(previous().lexeme, CommentType::Generator);
     } else if (match({TokenType::IDENTIFIER})) {
         return element();
     }
 
-    throw error(peek(), "Expect a declaration (e.g., an element or text block).");
+    throw error(peek(), "Expect a declaration (e.g., an element, text block, or generator comment).");
 }
 
 NodePtr Parser::element() {
@@ -64,6 +67,11 @@ NodePtr Parser::element() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after element name.");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        // Ignore non-generator comments
+        if (match({TokenType::LINE_COMMENT, TokenType::BLOCK_COMMENT})) {
+            continue;
+        }
+
         if (check(TokenType::IDENTIFIER) && (peekNext().type == TokenType::COLON || peekNext().type == TokenType::EQUALS)) {
             parseAttribute(*node);
         } else {
@@ -102,16 +110,16 @@ NodePtr Parser::textNode() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after 'text' keyword.");
 
     std::string content_str;
-    // Handle a single, quoted string literal separately
     if (check(TokenType::STRING_LITERAL)) {
         content_str = consume(TokenType::STRING_LITERAL, "").lexeme;
     } else {
-        // Consume all tokens until the closing brace for unquoted literals
         while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-            if (!content_str.empty()) {
-                content_str += " ";
-            }
             content_str += advance().lexeme;
+            // Add a space if the next token isn't punctuation or the end of the block.
+            TokenType next_type = peek().type;
+            if (next_type != TokenType::RIGHT_BRACE && next_type != TokenType::DOT && next_type != TokenType::COMMA && next_type != TokenType::SEMICOLON) {
+                 content_str += " ";
+            }
         }
     }
 
