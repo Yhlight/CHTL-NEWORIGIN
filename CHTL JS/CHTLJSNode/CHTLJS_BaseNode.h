@@ -9,6 +9,7 @@ namespace CHTL_JS {
 // Forward declarations
 class EnhancedSelectorNode;
 class RawJSNode;
+class ListenNode;
 class CHTLJS_AstVisitor;
 
 // Base class for all nodes in a CHTL JS AST.
@@ -24,6 +25,7 @@ public:
     virtual ~CHTLJS_AstVisitor() = default;
     virtual void visit(EnhancedSelectorNode& node) = 0;
     virtual void visit(RawJSNode& node) = 0;
+    virtual void visit(ListenNode& node) = 0;
 };
 
 

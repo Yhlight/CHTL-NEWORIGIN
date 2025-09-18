@@ -32,6 +32,24 @@ public:
     void accept(NodeVisitor& visitor) const override {
         visitor.visit(*this);
     }
+
+    std::unique_ptr<BaseNode> clone() const override {
+        auto new_node = std::make_unique<ElementNode>();
+        new_node->tagName = this->tagName;
+        new_node->attributes = this->attributes; // Attributes are simple structs, shallow copy is fine.
+
+        // Deep copy styles
+        for (const auto& style : this->styles) {
+            new_node->styles.push_back(StyleProperty{style.key, style.value->clone()});
+        }
+
+        // Deep copy children
+        for (const auto& child : this->children) {
+            new_node->children.push_back(child->clone());
+        }
+
+        return new_node;
+    }
 };
 
 } // namespace CHTL

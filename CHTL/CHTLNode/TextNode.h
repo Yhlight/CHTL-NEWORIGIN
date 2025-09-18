@@ -13,6 +13,10 @@ public:
     void accept(NodeVisitor& visitor) const override {
         visitor.visit(*this);
     }
+
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<TextNode>(*this);
+    }
 };
 
 } // namespace CHTL

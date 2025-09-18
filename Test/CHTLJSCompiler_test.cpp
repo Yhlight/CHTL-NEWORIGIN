@@ -37,3 +37,17 @@ TEST(CHTLJSCompilerTest, PreservesRawJS) {
 
     EXPECT_EQ(removeWhitespace(result_js), removeWhitespace(source));
 }
+
+TEST(CHTLJSCompilerTest, TranslatesListenBlock) {
+    std::string source = "{{.btn}}->Listen { click: () => { console.log('Clicked!'); } }";
+
+    std::string expected_js = "document.querySelector('.btn').addEventListener('click',() => { console.log('Clicked!'); });";
+
+    CHTL_JS::CHTLJSLexer lexer(source);
+    CHTL_JS::CHTLJSParser parser(lexer.getAllTokens());
+    auto ast = parser.parse();
+    CHTL_JS::CHTLJSGenerator generator;
+    std::string result_js = generator.generate(ast);
+
+    EXPECT_EQ(removeWhitespace(result_js), removeWhitespace(expected_js));
+}

@@ -5,12 +5,16 @@
 
 namespace CHTL_JS {
 
+std::string CHTLJSGenerator::generateSubtree(CHTLJS_BaseNode& node) {
+    m_output = "";
+    node.accept(*this);
+    return m_output;
+}
+
 std::string CHTLJSGenerator::generate(std::vector<std::unique_ptr<CHTLJS_BaseNode>>& nodes) {
     std::stringstream ss;
     for (auto& node : nodes) {
-        m_output = ""; // Clear previous output
-        node->accept(*this);
-        ss << m_output;
+        ss << generateSubtree(*node);
     }
     return ss.str();
 }
@@ -24,5 +28,18 @@ void CHTLJSGenerator::visit(EnhancedSelectorNode& node) {
 void CHTLJSGenerator::visit(RawJSNode& node) {
     m_output = node.js_code;
 }
+
+void CHTLJSGenerator::visit(ListenNode& node) {
+    std::string target_code = generateSubtree(*node.target);
+    std::stringstream ss;
+
+    for (const auto& pair : node.events) {
+        const std::string& eventName = pair.first;
+        const std::string& functionBody = pair.second;
+        ss << target_code << ".addEventListener('" << eventName << "', " << functionBody << ");\n";
+    }
+    m_output = ss.str();
+}
+
 
 } // namespace CHTL_JS

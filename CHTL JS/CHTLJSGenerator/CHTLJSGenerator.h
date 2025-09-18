@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CHTLJSNode/CHTLJS_BaseNode.h"
+#include "../CHTLJSNode/ListenNode.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -13,8 +14,10 @@ public:
 
     void visit(EnhancedSelectorNode& node) override;
     void visit(RawJSNode& node) override;
+    void visit(ListenNode& node) override;
 
 private:
+    std::string generateSubtree(CHTLJS_BaseNode& node);
     std::string m_output;
 };
 

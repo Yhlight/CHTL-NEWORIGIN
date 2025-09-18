@@ -29,6 +29,8 @@ public:
 
     // The 'accept' method is the entry point for the Visitor pattern.
     virtual void accept(NodeVisitor& visitor) const = 0;
+    // The 'clone' method for creating deep copies of nodes (for template expansion).
+    virtual std::unique_ptr<BaseNode> clone() const = 0;
 };
 
 } // namespace CHTL

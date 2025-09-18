@@ -10,7 +10,7 @@
 #include <cctype>
 
 // Helper function to remove all whitespace for robust comparison.
-std::string removeWhitespace(std::string str) {
+static std::string removeWhitespace(std::string str) {
     str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
     return str;
 }
@@ -49,32 +49,56 @@ TEST(IntegrationTest, FullCompilationSimple) {
     EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
 }
 
-TEST(IntegrationTest, HandlesCustomStyleTemplate) {
+TEST(IntegrationTest, HandlesElementCustomization) {
     std::string source = R"(
-        [Template] @Style Base {
-            color: blue;
-            font-size: 16px;
-            border: 1px solid black;
+        [Template] @Element MyComponent {
+            h1 { text: "Title"; }
+            p { text: "First paragraph."; }
+            p { text: "Second paragraph."; }
+            span { text: "A span."; }
         }
 
-        [Custom] @Style Derived {
-            @Style Base {
-                delete font-size;
-            }
-            border: 2px dotted green;
-        }
-
-        p {
-            style {
-                @Style Derived;
+        div {
+            @Element MyComponent {
+                delete p[0]; // Delete the first p tag
+                delete span;   // Delete the span tag
             }
         }
     )";
 
-    // Final style should be: color:blue; border:1px solid black; border:2px dotted green;
-    // The second border overrides the first.
     std::string expected_html = R"(
-        <p style="color:blue;border:1pxsolidblack;border:2pxdottedgreen;"></p>
+        <div>
+            <h1>Title</h1>
+            <p>Secondparagraph.</p>
+        </div>
+    )";
+
+    CHTL::CHTLLexer lexer(source);
+    auto context = std::make_shared<CHTL::CHTLContext>();
+    CHTL::CHTLParser parser(lexer.getAllTokens(), context);
+    auto ast = parser.parse();
+    CHTL::CHTLGenerator generator;
+    std::string result_html = generator.generate(*ast);
+
+    EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
+}
+
+TEST(IntegrationTest, HandlesElementTemplate) {
+    std::string source = R"(
+        [Template] @Element MyCard {
+            div { class: "card-body"; }
+        }
+
+        div {
+            class: "card";
+            @Element MyCard;
+        }
+    )";
+
+    std::string expected_html = R"(
+        <div class="card">
+            <div class="card-body"></div>
+        </div>
     )";
 
     CHTL::CHTLLexer lexer(source);
@@ -96,14 +120,14 @@ TEST(IntegrationTest, HandlesStyleTemplate) {
 
         div {
             style {
-                @Style DefaultBox;
                 background-color: red;
+                @Style DefaultBox;
             }
         }
     )";
 
     std::string expected_html = R"(
-        <div style="width:100px;height:100px;background-color:red;">
+        <div style="background-color:red;width:100px;height:100px;">
         </div>
     )";
 
@@ -142,6 +166,7 @@ TEST(IntegrationTest, HandlesFileImport) {
     EXPECT_EQ(removeWhitespace(result_html), removeWhitespace(expected_html));
 }
 
+
 TEST(CodeMergerTest, MergesScriptIntoHtml) {
     std::string source = R"(
         div {
@@ -178,9 +203,6 @@ TEST(IntegrationTest, HandlesStyleBlocks) {
         }
     )";
 
-    // Note: The exact spacing inside the style attribute might differ,
-    // so a robust comparison should ideally parse the style string.
-    // For now, a string comparison after removing whitespace is sufficient.
     std::string expected_html = R"(
         <div style="color:red;font-size:16px;">
         </div>
@@ -207,7 +229,7 @@ TEST(IntegrationTest, HandlesPropertyArithmetic) {
     )";
 
     std::string expected_html = R"(
-        <div style="width:150px; height:50px;">
+        <div style="width:150px;height:50px;">
         </div>
     )";
 

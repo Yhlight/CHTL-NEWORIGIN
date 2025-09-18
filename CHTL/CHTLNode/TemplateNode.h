@@ -28,6 +28,14 @@ class StyleTemplateNode : public TemplateDefinitionNode {
 public:
     using TemplateDefinitionNode::TemplateDefinitionNode; // Inherit constructor
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto new_node = std::make_unique<StyleTemplateNode>(this->name);
+        for (const auto& style : this->styles) {
+            new_node->styles.push_back(StyleProperty{style.key, style.value->clone()});
+        }
+        return new_node;
+    }
+
     std::vector<StyleProperty> styles;
 };
 
@@ -36,6 +44,14 @@ public:
 class ElementTemplateNode : public TemplateDefinitionNode {
 public:
     using TemplateDefinitionNode::TemplateDefinitionNode; // Inherit constructor
+
+    std::unique_ptr<BaseNode> clone() const override {
+        auto new_node = std::make_unique<ElementTemplateNode>(this->name);
+        for (const auto& child : this->children) {
+            new_node->children.push_back(child->clone());
+        }
+        return new_node;
+    }
 
     std::vector<std::unique_ptr<BaseNode>> children;
 };

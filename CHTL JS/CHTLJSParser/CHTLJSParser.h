@@ -14,6 +14,10 @@ public:
     std::vector<std::unique_ptr<CHTLJS_BaseNode>> parse();
 
 private:
+    std::unique_ptr<CHTLJS_BaseNode> parseStatement();
+    std::unique_ptr<CHTLJS_BaseNode> parseEnhancedSelector();
+    std::unique_ptr<CHTLJS_BaseNode> parseListenBlock(std::unique_ptr<CHTLJS_BaseNode> target);
+
     const CHTLJSToken& currentToken() const;
     void advance();
 

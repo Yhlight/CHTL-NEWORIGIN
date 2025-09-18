@@ -18,6 +18,10 @@ private:
     char currentChar() const;
     char peekChar() const;
 
+    CHTLJSToken makeToken(CHTLJSTokenType type, const std::string& value);
+    CHTLJSToken identifier();
+    std::string parseFunctionBody();
+
     std::string m_source;
     size_t m_position = 0;
 };
