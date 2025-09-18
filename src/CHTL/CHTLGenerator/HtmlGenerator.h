@@ -33,6 +33,7 @@ namespace CHTL
 
     private:
         std::stringstream output;
+        const std::vector<std::unique_ptr<BaseNode>>* astContext = nullptr;
     };
 
 }

@@ -11,6 +11,7 @@ namespace CHTL
 
     std::string HtmlGenerator::generate(const std::vector<std::unique_ptr<BaseNode>> &nodes)
     {
+        this->astContext = &nodes;
         output.str(""); // Clear the stream
         output.clear();
         for (const auto &node : nodes)
@@ -31,7 +32,7 @@ namespace CHTL
             if (StyleNode* styleNode = dynamic_cast<StyleNode*>(child.get())) {
                 for (const auto &prop : styleNode->properties)
                 {
-                    EvaluatedValue val = evaluator.evaluate(*prop.second);
+                    EvaluatedValue val = evaluator.evaluate(*prop.second, this->astContext);
                     styleString += prop.first + ": ";
                     if (val.isNumeric) {
                         // Use a stringstream to avoid trailing zeros from double
