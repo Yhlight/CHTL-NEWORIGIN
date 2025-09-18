@@ -58,7 +58,7 @@ Token Lexer::scanToken() {
             if (peek() == ' ') {
                 return scanComment();
             }
-            break;
+            return makeToken(TokenType::POUND);
         case '"':
         case '\'':
             return scanStringLiteral(c);

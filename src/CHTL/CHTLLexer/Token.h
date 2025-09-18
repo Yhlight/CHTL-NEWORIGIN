@@ -31,6 +31,7 @@ enum class TokenType {
     DOT,                // .
     QUESTION,           // ?
     AT_SYMBOL,          // @
+    POUND,              // #
 
     // Operators
     PLUS,               // +

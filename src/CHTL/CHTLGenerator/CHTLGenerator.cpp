@@ -7,7 +7,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
-#include <map>
+#include <set>
 
 namespace CHTL {
 
@@ -21,9 +21,12 @@ bool isSelfClosing(const std::string& tagName) {
     return std::find(SELF_CLOSING_TAGS.begin(), SELF_CLOSING_TAGS.end(), tagName) != SELF_CLOSING_TAGS.end();
 }
 
-std::string CHTLGenerator::generate(NodePtr& ast) {
-    if (!ast) return "";
-    return ast->accept(*this);
+GeneratedResult CHTLGenerator::generate(NodePtr& ast) {
+    GeneratedResult result;
+    if (!ast) return result;
+    result.html = ast->accept(*this);
+    result.css = global_css.str();
+    return result;
 }
 
 std::string CHTLGenerator::visit(ElementNode& node) {
@@ -36,29 +39,75 @@ std::string CHTLGenerator::visit(ElementNode& node) {
     }
 
     std::stringstream ss;
-    ss << "<" << node.tagName;
+    std::string element_id;
+    std::set<std::string> element_classes;
+    std::vector<StyleProperty> inline_properties;
 
-    // Print explicit attributes
+    // First, find explicit id and class from attributes
     for (const auto& attr : node.attributes) {
-        ss << " " << attr->key << "=\"" << attr->value << "\"";
-    }
-
-    // Collect styles from any child StyleNodes
-    std::map<std::string, std::string> inline_styles;
-    for (const auto& child : node.children) {
-        if (child->getType() == NodeType::Style) {
-            StyleNode* style_node = static_cast<StyleNode*>(child.get());
-            for (const auto& prop : style_node->properties) {
-                inline_styles[prop.first] = prop.second;
+        if (attr->key == "id") {
+            element_id = attr->value;
+        } else if (attr->key == "class") {
+            // Simple split by space for multiple classes
+            std::stringstream class_stream(attr->value);
+            std::string class_name;
+            while (class_stream >> class_name) {
+                element_classes.insert(class_name);
             }
         }
     }
 
-    // Print collected inline styles
-    if (!inline_styles.empty()) {
+    // Collect styles and auto-add classes/ids from child StyleNodes
+    for (const auto& child : node.children) {
+        if (child->getType() == NodeType::Style) {
+            StyleNode* style_node = static_cast<StyleNode*>(child.get());
+            inline_properties.insert(inline_properties.end(), style_node->inline_properties.begin(), style_node->inline_properties.end());
+
+            for (const auto& rule : style_node->nested_rules) {
+                std::string selector = rule.selector;
+                if (selector.rfind('.', 0) == 0) { // starts with .
+                    element_classes.insert(selector.substr(1));
+                } else if (selector.rfind('#', 0) == 0) { // starts with #
+                    element_id = selector.substr(1);
+                }
+
+                // For now, just add the rule to global css. More complex selectors need more logic.
+                global_css << selector << " {\n";
+                for (const auto& prop : rule.properties) {
+                    global_css << "    " << prop.key << ": " << prop.value << ";\n";
+                }
+                global_css << "}\n";
+            }
+        }
+    }
+
+    // Build the element tag
+    ss << "<" << node.tagName;
+
+    if (!element_id.empty()) {
+        ss << " id=\"" << element_id << "\"";
+    }
+
+    if (!element_classes.empty()) {
+        ss << " class=\"";
+        for (auto it = element_classes.begin(); it != element_classes.end(); ++it) {
+            if (it != element_classes.begin()) ss << " ";
+            ss << *it;
+        }
+        ss << "\"";
+    }
+
+    // Print other explicit attributes that are not id or class
+    for (const auto& attr : node.attributes) {
+        if (attr->key != "id" && attr->key != "class") {
+            ss << " " << attr->key << "=\"" << attr->value << "\"";
+        }
+    }
+
+    if (!inline_properties.empty()) {
         ss << " style=\"";
-        for (auto it = inline_styles.begin(); it != inline_styles.end(); ++it) {
-            ss << it->first << ": " << it->second << ";";
+        for (const auto& prop : inline_properties) {
+            ss << prop.key << ": " << prop.value << ";";
         }
         ss << "\"";
     }
@@ -97,7 +146,6 @@ std::string CHTLGenerator::visit(AttributeNode& node) {
 }
 
 std::string CHTLGenerator::visit(StyleNode& node) {
-    // StyleNodes are handled by their parent ElementNode, so they generate no output themselves.
     return "";
 }
 

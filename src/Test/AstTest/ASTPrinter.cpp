@@ -3,6 +3,7 @@
 #include "../../CHTL/CHTLNode/TextNode.h"
 #include "../../CHTL/CHTLNode/CommentNode.h"
 #include "../../CHTL/CHTLNode/AttributeNode.h"
+#include "../../CHTL/CHTLNode/StyleNode.h"
 #include <sstream>
 
 namespace CHTL {
@@ -36,10 +37,6 @@ std::string ASTPrinter::visit(CommentNode& node) {
     return "(comment \"" + node.content + "\")";
 }
 
-#include "../../CHTL/CHTLNode/StyleNode.h"
-
-// ...
-
 std::string ASTPrinter::visit(AttributeNode& node) {
     return "(attr " + node.key + "=\"" + node.value + "\")";
 }
@@ -47,8 +44,15 @@ std::string ASTPrinter::visit(AttributeNode& node) {
 std::string ASTPrinter::visit(StyleNode& node) {
     std::stringstream ss;
     ss << "(style";
-    for (const auto& prop : node.properties) {
-        ss << " (" << prop.first << ": " << prop.second << ")";
+    for (const auto& prop : node.inline_properties) {
+        ss << " (prop " << prop.key << ": " << prop.value << ")";
+    }
+    for (const auto& rule : node.nested_rules) {
+        ss << " (rule " << rule.selector << " {";
+        for (const auto& prop : rule.properties) {
+            ss << " " << prop.key << ": " << prop.value << ";";
+        }
+        ss << " })";
     }
     ss << ")";
     return ss.str();

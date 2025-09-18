@@ -134,18 +134,46 @@ NodePtr Parser::styleBlock() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
-        consume(TokenType::COLON, "Expect ':' after style property name.");
+        if (peekNext().type == TokenType::COLON) {
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
+            consume(TokenType::COLON, "Expect ':' after style property name.");
 
-        std::string value_str;
-        while(!check(TokenType::SEMICOLON) && !isAtEnd()) {
-            if (!value_str.empty()) {
-                value_str += " ";
+            std::string value_str;
+            while(!check(TokenType::SEMICOLON) && !isAtEnd()) {
+                value_str += advance().lexeme;
+                if (peek().type != TokenType::SEMICOLON) {
+                    value_str += " ";
+                }
             }
-            value_str += advance().lexeme;
+            if (!value_str.empty() && value_str.back() == ' ') {
+                value_str.pop_back();
+            }
+            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            styleNode->addInlineProperty({key.lexeme, value_str});
+        } else {
+            NestedStyleRule rule;
+            std::string selector_str;
+            while (!check(TokenType::LEFT_BRACE) && !isAtEnd()) {
+                selector_str += advance().lexeme;
+            }
+            rule.selector = selector_str;
+
+            consume(TokenType::LEFT_BRACE, "Expect '{' after selector.");
+            while(!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
+                consume(TokenType::COLON, "Expect ':' after style property name.");
+                std::string value_str;
+                while(!check(TokenType::SEMICOLON) && !isAtEnd()) {
+                    value_str += advance().lexeme;
+                    if (peek().type != TokenType::SEMICOLON) value_str += " ";
+                }
+                if (!value_str.empty() && value_str.back() == ' ') value_str.pop_back();
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+                rule.properties.push_back({key.lexeme, value_str});
+            }
+            consume(TokenType::RIGHT_BRACE, "Expect '}' after nested rule block.");
+            styleNode->addNestedRule(rule);
         }
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-        styleNode->addProperty(key.lexeme, value_str);
     }
 
     consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
