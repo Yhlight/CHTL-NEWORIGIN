@@ -115,9 +115,78 @@ div {
     std::cout << "  ...Passed" << std::endl;
 }
 
+void testCommentTokenization() {
+    std::cout << "  Testing Comment Handling..." << std::endl;
+
+    std::string input = R"(
+// This is a single line comment.
+div { // Another comment
+    /* This is a
+     * multi-line comment.
+     */
+    # This is a generator comment
+}
+)";
+
+    std::vector<Token> expectedTokens = {
+        {TokenType::IDENTIFIER, "div", 3},
+        {TokenType::LEFT_BRACE, "{", 3},
+        {TokenType::GENERATOR_COMMENT, "This is a generator comment", 7},
+        {TokenType::RIGHT_BRACE, "}", 8},
+        {TokenType::END_OF_FILE, "", 9}
+    };
+
+    Lexer l(input);
+
+    for (const auto& expected : expectedTokens) {
+        Token tok = l.nextToken();
+        assertTokenEqual(tok, expected);
+    }
+
+    std::cout << "  ...Passed" << std::endl;
+}
+
+void testUnquotedLiteralTokenization() {
+    std::cout << "  Testing Unquoted Literal Tokenization..." << std::endl;
+
+    std::string input = R"(
+div {
+    width: 100px;
+    font-family: Arial-Sans-Serif;
+}
+)";
+
+    std::vector<Token> expectedTokens = {
+        {TokenType::IDENTIFIER, "div", 2},
+        {TokenType::LEFT_BRACE, "{", 2},
+        {TokenType::IDENTIFIER, "width", 3},
+        {TokenType::COLON, ":", 3},
+        {TokenType::IDENTIFIER, "100px", 3},
+        {TokenType::SEMICOLON, ";", 3},
+        {TokenType::IDENTIFIER, "font-family", 4},
+        {TokenType::COLON, ":", 4},
+        {TokenType::IDENTIFIER, "Arial-Sans-Serif", 4},
+        {TokenType::SEMICOLON, ";", 4},
+        {TokenType::RIGHT_BRACE, "}", 5},
+        {TokenType::END_OF_FILE, "", 6}
+    };
+
+    Lexer l(input);
+
+    for (const auto& expected : expectedTokens) {
+        Token tok = l.nextToken();
+        assertTokenEqual(tok, expected);
+    }
+
+    std::cout << "  ...Passed" << std::endl;
+}
+
+
 void RunLexerTests() {
     std::cout << "--- Running Lexer Tests ---" << std::endl;
     testBasicSyntax();
     testAttributeTokenization();
+    testCommentTokenization();
+    testUnquotedLiteralTokenization();
     std::cout << "--------------------------" << std::endl;
 }

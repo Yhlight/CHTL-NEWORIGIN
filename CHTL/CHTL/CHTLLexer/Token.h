@@ -22,7 +22,10 @@ enum class TokenType {
     // Punctuators
     COLON,
     EQUALS,
-    SEMICOLON
+    SEMICOLON,
+
+    // Comments
+    GENERATOR_COMMENT // # comment
 };
 
 struct Token {

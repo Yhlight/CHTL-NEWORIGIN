@@ -4,9 +4,12 @@
 #include <string>
 #include <sstream>
 
+#include "../CHTLNode/CommentNode.h"
+
 // Forward declare node types to avoid circular dependencies if they were in separate files.
 class ElementNode;
 class TextNode;
+class CommentNode;
 
 class Generator {
 public:
@@ -23,6 +26,7 @@ private:
     // Specific visitors for each node type.
     void visitElementNode(ElementNode* node);
     void visitTextNode(TextNode* node);
+    void visitCommentNode(CommentNode* node);
 
     // A stringstream to efficiently build the output string.
     std::stringstream m_out;

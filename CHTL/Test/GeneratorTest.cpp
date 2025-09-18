@@ -45,9 +45,30 @@ div {
 }
 )";
 
-    // Note: std::map will sort keys, so the output order is predictable.
-    // class will come before id.
     std::string expectedHtml = R"(<div class="container" id="main"></div>)";
+
+    Lexer l(input);
+    Parser p(l);
+    NodePtr program = p.parseProgram();
+    checkParserErrors(p);
+
+    Generator g;
+    std::string actualHtml = g.generate(program);
+
+    assert(actualHtml == expectedHtml);
+    std::cout << "  ...Passed" << std::endl;
+}
+
+void testCommentGeneration() {
+    std::cout << "  Testing Comment Generation..." << std::endl;
+
+    std::string input = R"(
+div {
+    # This is a comment
+}
+)";
+
+    std::string expectedHtml = R"(<div><!-- This is a comment --></div>)";
 
     Lexer l(input);
     Parser p(l);
@@ -66,5 +87,6 @@ void RunGeneratorTests() {
     std::cout << "--- Running Generator Tests ---" << std::endl;
     testHtmlGeneration();
     testAttributeGeneration();
+    testCommentGeneration();
     std::cout << "-----------------------------" << std::endl;
 }

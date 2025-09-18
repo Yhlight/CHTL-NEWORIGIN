@@ -1,6 +1,7 @@
 #include "CHTL/CHTLLexer/Lexer.h"
 #include <cctype>
 #include <unordered_map>
+#include <string>
 
 // Helper map to distinguish keywords from identifiers
 std::unordered_map<std::string, TokenType> keywords = {
@@ -30,30 +31,54 @@ char Lexer::peekChar() {
 }
 
 void Lexer::skipWhitespace() {
-    while (isspace(m_char)) {
-        if (m_char == '\n') {
-            m_line++;
+    while (true) {
+        if (isspace(m_char)) {
+            if (m_char == '\n') {
+                m_line++;
+            }
+            readChar();
+        } else if (m_char == '/') {
+            if (peekChar() == '/') { // Single-line comment
+                readChar(); readChar();
+                while (m_char != '\n' && m_char != 0) {
+                    readChar();
+                }
+            } else if (peekChar() == '*') { // Multi-line comment
+                readChar(); readChar();
+                while (m_char != 0) {
+                    if (m_char == '\n') m_line++;
+                    if (m_char == '*' && peekChar() == '/') {
+                        readChar(); readChar();
+                        break;
+                    }
+                    readChar();
+                }
+            } else {
+                break;
+            }
+        } else {
+            break;
         }
-        readChar();
     }
 }
 
+// This function now reads both standard identifiers and unquoted literals.
 Token Lexer::readIdentifier() {
     size_t startPosition = m_position;
-    // Identifiers can contain letters, numbers, and underscores, but can't start with a number.
-    // For CHTL element names, we'll stick to alphabetic characters for now.
-    while (isalpha(m_char)) {
+    // An identifier or unquoted literal is a sequence of characters
+    // that are not special delimiters.
+    while (m_char != 0 && !isspace(m_char) &&
+           m_char != '{' && m_char != '}' && m_char != ':' &&
+           m_char != '=' && m_char != ';' && m_char != '"' && m_char != '#') {
         readChar();
     }
     std::string literal = m_input.substr(startPosition, m_position - startPosition);
 
     auto it = keywords.find(literal);
     if (it != keywords.end()) {
-        // It's a keyword
         return {it->second, literal, m_line};
     }
 
-    // It's a user-defined identifier
     return {TokenType::IDENTIFIER, literal, m_line};
 }
 
@@ -62,12 +87,11 @@ Token Lexer::readString() {
     size_t startPosition = m_position;
 
     while (m_char != '"' && m_char != 0) {
-        if (m_char == '\n') m_line++; // Strings can be multi-line
+        if (m_char == '\n') m_line++;
         readChar();
     }
 
     if (m_char == 0) {
-        // Unterminated string
         return {TokenType::ILLEGAL, "Unterminated String", m_line};
     }
 
@@ -76,44 +100,41 @@ Token Lexer::readString() {
     return {TokenType::STRING, literal, m_line};
 }
 
+Token Lexer::readGeneratorComment() {
+    readChar(); // consume '#'
+    if (m_char != ' ') {
+        return {TokenType::ILLEGAL, "#", m_line};
+    }
+    readChar(); // consume ' '
+
+    size_t startPosition = m_position;
+    while (m_char != '\n' && m_char != 0) {
+        readChar();
+    }
+    std::string literal = m_input.substr(startPosition, m_position - startPosition);
+    return {TokenType::GENERATOR_COMMENT, literal, m_line};
+}
+
 Token Lexer::nextToken() {
     Token tok;
 
     skipWhitespace();
 
     switch (m_char) {
-        case '{':
-            tok = {TokenType::LEFT_BRACE, "{", m_line};
-            break;
-        case '}':
-            tok = {TokenType::RIGHT_BRACE, "}", m_line};
-            break;
-        case ':':
-            tok = {TokenType::COLON, ":", m_line};
-            break;
-        case '=':
-            tok = {TokenType::EQUALS, "=", m_line};
-            break;
-        case ';':
-            tok = {TokenType::SEMICOLON, ";", m_line};
-            break;
-        case '"':
-            // This case handles the start of a string literal
-            return readString();
-        case 0:
-            tok = {TokenType::END_OF_FILE, "", m_line};
-            break;
+        case '{': tok = {TokenType::LEFT_BRACE, "{", m_line}; break;
+        case '}': tok = {TokenType::RIGHT_BRACE, "}", m_line}; break;
+        case ':': tok = {TokenType::COLON, ":", m_line}; break;
+        case '=': tok = {TokenType::EQUALS, "=", m_line}; break;
+        case ';': tok = {TokenType::SEMICOLON, ";", m_line}; break;
+        case '"': return readString();
+        case '#': return readGeneratorComment();
+        case 0: tok = {TokenType::END_OF_FILE, "", m_line}; break;
         default:
-            if (isalpha(m_char)) {
-                // If it starts with a letter, it's either an identifier or a keyword
-                return readIdentifier();
-            } else {
-                // Unrecognized character
-                tok = {TokenType::ILLEGAL, std::string(1, m_char), m_line};
-            }
-            break;
+            // If it's not a special character, it must be the start of
+            // an identifier or an unquoted literal.
+            return readIdentifier();
     }
 
-    readChar(); // Move to the next character
+    readChar();
     return tok;
 }

@@ -14,6 +14,7 @@ private:
     void skipWhitespace();
     Token readIdentifier();
     Token readString();
+    Token readGeneratorComment();
 
     std::string m_input;
     size_t m_position;      // current position in input (points to current char)

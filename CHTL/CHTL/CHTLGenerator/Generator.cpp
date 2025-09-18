@@ -1,6 +1,7 @@
 #include "Generator.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
+#include "../CHTLNode/CommentNode.h"
 #include <stdexcept>
 
 std::string Generator::generate(NodePtr node) {
@@ -17,6 +18,8 @@ void Generator::visit(NodePtr node) {
         visitElementNode(element.get());
     } else if (auto text = std::dynamic_pointer_cast<TextNode>(node)) {
         visitTextNode(text.get());
+    } else if (auto comment = std::dynamic_pointer_cast<CommentNode>(node)) {
+        visitCommentNode(comment.get());
     } else {
         // This should not be reached with the current AST structure.
         // It's good practice to have a fallback for unexpected node types.
@@ -57,4 +60,8 @@ void Generator::visitElementNode(ElementNode* node) {
 void Generator::visitTextNode(TextNode* node) {
     // For a text node, simply append its string value to the output.
     m_out << node->m_value;
+}
+
+void Generator::visitCommentNode(CommentNode* node) {
+    m_out << "<!-- " << node->m_value << " -->";
 }

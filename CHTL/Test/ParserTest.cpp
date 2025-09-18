@@ -3,6 +3,7 @@
 #include "../CHTL/CHTLNode/Node.h"
 #include "../CHTL/CHTLNode/ElementNode.h"
 #include "../CHTL/CHTLNode/TextNode.h"
+#include "../CHTL/CHTLNode/CommentNode.h"
 #include <iostream>
 #include <cassert>
 
@@ -51,6 +52,7 @@ void testAttributeParsing() {
 div {
     id = "main";
     class: container;
+    font-size: 16px;
 }
 )";
 
@@ -66,11 +68,41 @@ div {
     assert(divNode != nullptr);
     assert(divNode->m_tagName == "div");
 
-    assert(divNode->m_attributes.size() == 2);
+    assert(divNode->m_attributes.size() == 3);
     assert(divNode->m_attributes.count("id") == 1);
     assert(divNode->m_attributes.at("id") == "main");
     assert(divNode->m_attributes.count("class") == 1);
     assert(divNode->m_attributes.at("class") == "container");
+    assert(divNode->m_attributes.count("font-size") == 1);
+    assert(divNode->m_attributes.at("font-size") == "16px");
+
+    std::cout << "  ...Passed" << std::endl;
+}
+
+void testCommentParsing() {
+    std::cout << "  Testing Comment Parsing..." << std::endl;
+
+    std::string input = R"(
+div {
+    # This is a comment
+}
+)";
+
+    Lexer l(input);
+    Parser p(l);
+    NodePtr program = p.parseProgram();
+    checkParserErrors(p);
+
+    auto root = std::dynamic_pointer_cast<ElementNode>(program);
+    assert(root->m_children.size() == 1);
+
+    auto divNode = std::dynamic_pointer_cast<ElementNode>(root->m_children[0]);
+    assert(divNode != nullptr);
+    assert(divNode->m_children.size() == 1);
+
+    auto commentNode = std::dynamic_pointer_cast<CommentNode>(divNode->m_children[0]);
+    assert(commentNode != nullptr);
+    assert(commentNode->m_value == "This is a comment");
 
     std::cout << "  ...Passed" << std::endl;
 }
@@ -80,5 +112,6 @@ void RunParserTests() {
     std::cout << "--- Running Parser Tests ---" << std::endl;
     testElementAndTextParsing();
     testAttributeParsing();
+    testCommentParsing();
     std::cout << "---------------------------" << std::endl;
 }

@@ -42,9 +42,15 @@ NodePtr Parser::parseStatement() {
             return parseElementStatement();
         case TokenType::TEXT:
             return parseTextStatement();
+        case TokenType::GENERATOR_COMMENT:
+            return parseCommentStatement();
         default:
             return nullptr;
     }
+}
+
+NodePtr Parser::parseCommentStatement() {
+    return std::make_shared<CommentNode>(m_curToken, m_curToken.literal);
 }
 
 void Parser::parseAttribute(std::shared_ptr<ElementNode> node) {
@@ -99,6 +105,11 @@ NodePtr Parser::parseElementStatement() {
                 }
             } else {
                 m_errors.push_back("Unexpected token '" + m_peekToken.literal + "' after identifier '" + m_curToken.literal + "'.");
+            }
+        } else if (m_curToken.type == TokenType::GENERATOR_COMMENT) {
+            NodePtr child = parseCommentStatement();
+            if (child) {
+                node->m_children.push_back(child);
             }
         } else {
             m_errors.push_back("Unexpected token in element block: '" + m_curToken.literal + "'.");
