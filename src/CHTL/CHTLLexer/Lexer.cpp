@@ -1,5 +1,7 @@
 #include "Lexer.h"
 #include <cctype>
+#include <map>
+#include <string>
 
 namespace CHTL {
 
@@ -7,7 +9,7 @@ Lexer::Lexer(const std::string& source) : source(source) {}
 
 std::vector<Token> Lexer::tokenize() {
     std::vector<Token> tokens;
-    while (!isAtEnd()) {
+    while (true) {
         Token token = scanToken();
         tokens.push_back(token);
         if (token.type == TokenType::END_OF_FILE) {
@@ -23,7 +25,6 @@ Token Lexer::scanToken() {
 
     char c = advance();
 
-    // For now, handling simple punctuation
     switch (c) {
         case '{': return makeToken(TokenType::LEFT_BRACE);
         case '}': return makeToken(TokenType::RIGHT_BRACE);
@@ -45,32 +46,22 @@ Token Lexer::scanToken() {
             return match('&') ? makeToken(TokenType::LOGICAL_AND) : errorToken("Unexpected character '&'. Did you mean '&&'?");
         case '|':
             return match('|') ? makeToken(TokenType::LOGICAL_OR) : errorToken("Unexpected character '|'. Did you mean '||'?");
-
         case '*':
             return match('*') ? makeToken(TokenType::POWER) : makeToken(TokenType::STAR);
         case '/':
-            // A slash could start a comment
             if (match('/') || match('*')) {
-                // Backtrack one char and let scanComment handle it
                 current--;
                 return scanComment();
             }
             return makeToken(TokenType::SLASH);
-
         case '#':
-            // A hash could start a generator comment
             if (peek() == ' ') {
                 return scanComment();
             }
-            // If not followed by space, it's something else (maybe an ID selector in CSS).
-            // For now, let's treat it as an UNKNOWN token in the lexer.
-            // The parser will give it context.
             break;
-
         case '"':
         case '\'':
             return scanStringLiteral(c);
-
         default:
             if (std::isalpha(c) || c == '_') {
                 return scanIdentifier();
@@ -79,7 +70,6 @@ Token Lexer::scanToken() {
                 return scanNumberLiteral();
             }
     }
-
     return errorToken("Unexpected character.");
 }
 
@@ -130,15 +120,8 @@ void Lexer::skipWhitespace() {
     }
 }
 
-#include <map>
-
-// ... inside namespace CHTL ...
-
 Token Lexer::makeToken(TokenType type) {
-    size_t length = 1; // Default for single-char tokens
-    // This logic is simplistic and will be improved.
-    // For now, it's better to use the version that takes a lexeme.
-    return {type, source.substr(current - 1, length), line, column};
+    return {type, source.substr(current - 1, 1), line, column};
 }
 
 Token Lexer::makeToken(TokenType type, const std::string& lexeme) {
@@ -149,7 +132,6 @@ Token Lexer::errorToken(const std::string& message) {
     return {TokenType::UNKNOWN, message, line, column};
 }
 
-// Helper to check for keywords
 TokenType Lexer::identifierType(const std::string& identifier) {
     static const std::map<std::string, TokenType> keywords = {
         {"text", TokenType::KEYWORD_TEXT},
@@ -166,9 +148,6 @@ TokenType Lexer::identifierType(const std::string& identifier) {
         {"except", TokenType::KEYWORD_EXCEPT},
         {"use", TokenType::KEYWORD_USE},
         {"html5", TokenType::KEYWORD_HTML5},
-        // Keywords with special characters are tricky.
-        // The parser should handle sequences like `[`, `Template`, `]`.
-        // The lexer will tokenize them separately.
         {"Custom", TokenType::KEYWORD_CUSTOM},
         {"Template", TokenType::KEYWORD_TEMPLATE},
         {"Origin", TokenType::KEYWORD_ORIGIN},
@@ -178,7 +157,6 @@ TokenType Lexer::identifierType(const std::string& identifier) {
         {"Info", TokenType::KEYWORD_INFO},
         {"Export", TokenType::KEYWORD_EXPORT},
     };
-
     auto it = keywords.find(identifier);
     if (it != keywords.end()) {
         return it->second;
@@ -186,9 +164,8 @@ TokenType Lexer::identifierType(const std::string& identifier) {
     return TokenType::IDENTIFIER;
 }
 
-
 Token Lexer::scanIdentifier() {
-    size_t start = current - 1; // We already consumed the first char
+    size_t start = current - 1;
     while (std::isalnum(peek()) || peek() == '_' || peek() == '-') {
         advance();
     }
@@ -203,20 +180,15 @@ Token Lexer::scanStringLiteral(char quoteType) {
             line++;
             column = 1;
         }
-        // Handle escaped quotes
         if (peek() == '\\' && peekNext() == quoteType) {
             advance();
         }
         advance();
     }
-
     if (isAtEnd()) {
         return errorToken("Unterminated string.");
     }
-
-    // Consume the closing quote
-    advance();
-
+    advance(); // Consume the closing quote
     std::string value = source.substr(start, current - start - 1);
     return makeToken(TokenType::STRING_LITERAL, value);
 }
@@ -226,24 +198,18 @@ Token Lexer::scanNumberLiteral() {
     while (std::isdigit(peek())) {
         advance();
     }
-
-    // Look for a fractional part.
     if (peek() == '.' && std::isdigit(peekNext())) {
-        // Consume the "."
         advance();
         while (std::isdigit(peek())) {
             advance();
         }
     }
-
     std::string value = source.substr(start, current - start);
     return makeToken(TokenType::NUMBER_LITERAL, value);
 }
 
 Token Lexer::scanComment() {
-    char previous = source[current - 2]; // The character before the one that triggered the comment scan
-
-    // Case: // comment
+    char previous = source[current - 2];
     if (previous == '/') {
         size_t start = current;
         while (peek() != '\n' && !isAtEnd()) {
@@ -252,8 +218,6 @@ Token Lexer::scanComment() {
         std::string value = source.substr(start, current - start);
         return makeToken(TokenType::LINE_COMMENT, value);
     }
-
-    // Case: /* comment */
     if (previous == '*') {
         size_t start = current;
         while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
@@ -263,19 +227,14 @@ Token Lexer::scanComment() {
             }
             advance();
         }
-
         if (isAtEnd()) {
             return errorToken("Unterminated block comment.");
         }
-
         std::string value = source.substr(start, current - start);
-        // Consume */
         advance();
         advance();
         return makeToken(TokenType::BLOCK_COMMENT, value);
     }
-
-    // Case: # comment
     if (source[current-1] == '#') {
         advance(); // consume the space
         size_t start = current;
@@ -285,7 +244,6 @@ Token Lexer::scanComment() {
         std::string value = source.substr(start, current - start);
         return makeToken(TokenType::GENERATOR_COMMENT, value);
     }
-
     return errorToken("Unrecognized comment starter.");
 }
 

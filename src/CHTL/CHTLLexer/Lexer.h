@@ -33,6 +33,7 @@ private:
     Token scanStringLiteral(char quoteType);
     Token scanNumberLiteral();
     Token scanComment();
+    TokenType identifierType(const std::string& identifier);
 };
 
 } // namespace CHTL
