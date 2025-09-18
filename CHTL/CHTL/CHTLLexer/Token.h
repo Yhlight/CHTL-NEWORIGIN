@@ -18,6 +18,7 @@ enum class TokenType {
 
     // Keywords
     TEXT,
+    STYLE,
 
     // Punctuators
     COLON,

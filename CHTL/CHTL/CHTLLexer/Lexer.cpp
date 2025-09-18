@@ -5,7 +5,8 @@
 
 // Helper map to distinguish keywords from identifiers
 std::unordered_map<std::string, TokenType> keywords = {
-    {"text", TokenType::TEXT}
+    {"text", TokenType::TEXT},
+    {"style", TokenType::STYLE}
 };
 
 Lexer::Lexer(const std::string& input)

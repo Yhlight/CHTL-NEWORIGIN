@@ -44,6 +44,15 @@ void Generator::visitElementNode(ElementNode* node) {
             m_out << " " << attr.first << "=\"" << attr.second << "\"";
         }
 
+        // Render inline styles
+        if (!node->m_inlineStyles.empty()) {
+            m_out << " style=\"";
+            for (const auto& style : node->m_inlineStyles) {
+                m_out << style.first << ": " << style.second << ";";
+            }
+            m_out << "\"";
+        }
+
         m_out << ">";
     }
 

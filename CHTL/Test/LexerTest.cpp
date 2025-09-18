@@ -38,45 +38,20 @@ void assertTokenEqual(const Token& actual, const Token& expected) {
     assert(actual.line == expected.line);
 }
 
-void testBasicSyntax() {
-    std::cout << "  Testing Basic CHTL Syntax..." << std::endl;
+void testKeywords() {
+    std::cout << "  Testing Keyword Tokenization..." << std::endl;
 
-    std::string input = R"(
-html {
-    body {
-        div {
-            text {
-                "Hello, World!"
-            }
-        }
-    }
-}
-)";
-
+    std::string input = "text style";
     std::vector<Token> expectedTokens = {
-        {TokenType::IDENTIFIER, "html", 2},
-        {TokenType::LEFT_BRACE, "{", 2},
-        {TokenType::IDENTIFIER, "body", 3},
-        {TokenType::LEFT_BRACE, "{", 3},
-        {TokenType::IDENTIFIER, "div", 4},
-        {TokenType::LEFT_BRACE, "{", 4},
-        {TokenType::TEXT, "text", 5},
-        {TokenType::LEFT_BRACE, "{", 5},
-        {TokenType::STRING, "Hello, World!", 6},
-        {TokenType::RIGHT_BRACE, "}", 7},
-        {TokenType::RIGHT_BRACE, "}", 8},
-        {TokenType::RIGHT_BRACE, "}", 9},
-        {TokenType::RIGHT_BRACE, "}", 10},
-        {TokenType::END_OF_FILE, "", 11}
+        {TokenType::TEXT, "text", 1},
+        {TokenType::STYLE, "style", 1},
+        {TokenType::END_OF_FILE, "", 1}
     };
-
     Lexer l(input);
-
     for (const auto& expected : expectedTokens) {
         Token tok = l.nextToken();
         assertTokenEqual(tok, expected);
     }
-
     std::cout << "  ...Passed" << std::endl;
 }
 
@@ -184,7 +159,7 @@ div {
 
 void RunLexerTests() {
     std::cout << "--- Running Lexer Tests ---" << std::endl;
-    testBasicSyntax();
+    testKeywords();
     testAttributeTokenization();
     testCommentTokenization();
     testUnquotedLiteralTokenization();

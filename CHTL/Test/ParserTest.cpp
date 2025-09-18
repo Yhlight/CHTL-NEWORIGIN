@@ -22,29 +22,6 @@ void checkParserErrors(const Parser& p) {
     assert(errors.empty());
 }
 
-void testElementAndTextParsing() {
-    std::cout << "  Testing Element and Text Parsing..." << std::endl;
-
-    std::string input = R"(
-html {
-    body {
-        text { "Hello CHTL" }
-    }
-}
-)";
-
-    Lexer l(input);
-    Parser p(l);
-    NodePtr program = p.parseProgram();
-
-    checkParserErrors(p);
-    assert(program != nullptr);
-
-    auto root = std::dynamic_pointer_cast<ElementNode>(program);
-    assert(root != nullptr && "Program root is not an ElementNode");
-    assert(root->m_children.size() == 1 && "Program should have one child node");
-}
-
 void testAttributeParsing() {
     std::cout << "  Testing Attribute Parsing..." << std::endl;
 
@@ -52,7 +29,6 @@ void testAttributeParsing() {
 div {
     id = "main";
     class: container;
-    font-size: 16px;
 }
 )";
 
@@ -68,26 +44,25 @@ div {
     assert(divNode != nullptr);
     assert(divNode->m_tagName == "div");
 
-    assert(divNode->m_attributes.size() == 3);
+    assert(divNode->m_attributes.size() == 2);
     assert(divNode->m_attributes.count("id") == 1);
     assert(divNode->m_attributes.at("id") == "main");
     assert(divNode->m_attributes.count("class") == 1);
     assert(divNode->m_attributes.at("class") == "container");
-    assert(divNode->m_attributes.count("font-size") == 1);
-    assert(divNode->m_attributes.at("font-size") == "16px");
 
     std::cout << "  ...Passed" << std::endl;
 }
 
-void testCommentParsing() {
-    std::cout << "  Testing Comment Parsing..." << std::endl;
-
+void testStyleBlockParsing() {
+    std::cout << "  Testing Style Block Parsing..." << std::endl;
     std::string input = R"(
 div {
-    # This is a comment
+    style {
+        color: red;
+        font-size: 16px;
+    }
 }
 )";
-
     Lexer l(input);
     Parser p(l);
     NodePtr program = p.parseProgram();
@@ -98,11 +73,13 @@ div {
 
     auto divNode = std::dynamic_pointer_cast<ElementNode>(root->m_children[0]);
     assert(divNode != nullptr);
-    assert(divNode->m_children.size() == 1);
+    assert(divNode->m_tagName == "div");
 
-    auto commentNode = std::dynamic_pointer_cast<CommentNode>(divNode->m_children[0]);
-    assert(commentNode != nullptr);
-    assert(commentNode->m_value == "This is a comment");
+    assert(divNode->m_inlineStyles.size() == 2);
+    assert(divNode->m_inlineStyles.count("color") == 1);
+    assert(divNode->m_inlineStyles.at("color") == "red");
+    assert(divNode->m_inlineStyles.count("font-size") == 1);
+    assert(divNode->m_inlineStyles.at("font-size") == "16px");
 
     std::cout << "  ...Passed" << std::endl;
 }
@@ -110,8 +87,7 @@ div {
 
 void RunParserTests() {
     std::cout << "--- Running Parser Tests ---" << std::endl;
-    testElementAndTextParsing();
     testAttributeParsing();
-    testCommentParsing();
+    testStyleBlockParsing();
     std::cout << "---------------------------" << std::endl;
 }

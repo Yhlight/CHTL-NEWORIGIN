@@ -28,6 +28,15 @@ public:
         }
         out.append(" ]");
 
+        // Append inline styles for debugging
+        if (!m_inlineStyles.empty()) {
+            out.append(" style={");
+            for (const auto& style : m_inlineStyles) {
+                out.append(" " + style.first + ": " + style.second + ";");
+            }
+            out.append(" }");
+        }
+
         out.append(" { ");
         for (const auto& child : m_children) {
             out.append(child->toString());
@@ -40,4 +49,5 @@ public:
     std::string m_tagName;
     std::vector<NodePtr> m_children;
     std::map<std::string, std::string> m_attributes;
+    std::map<std::string, std::string> m_inlineStyles;
 };

@@ -54,13 +54,8 @@ NodePtr Parser::parseCommentStatement() {
 }
 
 void Parser::parseAttribute(std::shared_ptr<ElementNode> node) {
-    // Current token is IDENTIFIER (the attribute key)
     std::string key = m_curToken.literal;
-
-    // Advance past the key to the ':' or '='
     nextToken();
-
-    // Advance past ':' or '=' to the value
     nextToken();
 
     std::string value;
@@ -75,10 +70,45 @@ void Parser::parseAttribute(std::shared_ptr<ElementNode> node) {
 
     if (m_peekToken.type != TokenType::SEMICOLON) {
         m_errors.push_back("Expected ';' after attribute value for key '" + key + "'.");
-        return; // Let's not advance so the main loop can see the problem token
+        return;
     }
-    nextToken(); // Consume the value
-    // curToken is now ';'
+    nextToken();
+}
+
+void Parser::parseStyleStatement(std::shared_ptr<ElementNode> node) {
+    if (!expectPeek(TokenType::LEFT_BRACE)) {
+        return;
+    }
+    nextToken();
+
+    while(m_curToken.type != TokenType::RIGHT_BRACE && m_curToken.type != TokenType::END_OF_FILE) {
+        if (m_curToken.type != TokenType::IDENTIFIER) {
+            m_errors.push_back("Expected identifier for style property name, got " + m_curToken.literal);
+            return;
+        }
+        std::string key = m_curToken.literal;
+
+        if (!expectPeek(TokenType::COLON)) {
+            m_errors.push_back("Expected ':' after style property name '" + key + "'.");
+            return;
+        }
+        nextToken();
+
+        std::string value;
+        if (m_curToken.type == TokenType::STRING || m_curToken.type == TokenType::IDENTIFIER) {
+            value = m_curToken.literal;
+        } else {
+            m_errors.push_back("Style property value for '" + key + "' must be a string or identifier.");
+            return;
+        }
+        node->m_inlineStyles[key] = value;
+
+        if (!expectPeek(TokenType::SEMICOLON)) {
+            m_errors.push_back("Expected ';' after style property value.");
+            return;
+        }
+        nextToken();
+    }
 }
 
 NodePtr Parser::parseElementStatement() {
@@ -87,7 +117,7 @@ NodePtr Parser::parseElementStatement() {
     if (!expectPeek(TokenType::LEFT_BRACE)) {
         return nullptr;
     }
-    nextToken(); // Consume '{'
+    nextToken();
 
     while (m_curToken.type != TokenType::RIGHT_BRACE && m_curToken.type != TokenType::END_OF_FILE) {
         if (m_curToken.type == TokenType::TEXT) {
@@ -95,6 +125,8 @@ NodePtr Parser::parseElementStatement() {
             if (child) {
                 node->m_children.push_back(child);
             }
+        } else if (m_curToken.type == TokenType::STYLE) {
+            parseStyleStatement(node);
         } else if (m_curToken.type == TokenType::IDENTIFIER) {
             if (m_peekToken.type == TokenType::COLON || m_peekToken.type == TokenType::EQUALS) {
                 parseAttribute(node);
@@ -113,12 +145,9 @@ NodePtr Parser::parseElementStatement() {
             }
         } else {
             m_errors.push_back("Unexpected token in element block: '" + m_curToken.literal + "'.");
-            // To prevent infinite loops, advance the token
             nextToken();
             continue;
         }
-
-        // Advance to the next statement/attribute/token
         nextToken();
     }
 

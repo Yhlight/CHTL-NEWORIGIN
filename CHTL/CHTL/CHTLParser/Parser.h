@@ -24,6 +24,7 @@ private:
     NodePtr parseTextStatement();
     NodePtr parseCommentStatement();
     void parseAttribute(std::shared_ptr<ElementNode> node);
+    void parseStyleStatement(std::shared_ptr<ElementNode> node);
 
     Lexer& m_lexer;
     Token m_curToken;
