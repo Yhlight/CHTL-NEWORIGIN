@@ -1,0 +1,17 @@
+html {
+    div {
+        id: "box";
+        style {
+            width: 300px;
+        }
+    }
+
+    div {
+        class: "content-wrapper";
+        style {
+            // Reference the width of the element with id "box"
+            width: box.width / 2; // Should be 150px
+            height: 200px;
+        }
+    }
+}
