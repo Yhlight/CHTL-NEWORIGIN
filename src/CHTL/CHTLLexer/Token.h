@@ -40,6 +40,7 @@ enum class TokenType {
     SLASH,              // /
     PERCENT,            // %
     POWER,              // **
+    AMPERSAND,          // &
     LOGICAL_AND,        // &&
     LOGICAL_OR,         // ||
 

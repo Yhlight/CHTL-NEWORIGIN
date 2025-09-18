@@ -60,6 +60,12 @@ int main() {
     std::string expected_css_id = "#main { border: 1px solid black; }";
     runTest("Automatic ID Generation", auto_id_source, expected_html_id, expected_css_id);
 
+    // New test for context deduction
+    std::string context_source = "a { class: link; style { &:hover { color: red; } } }";
+    std::string expected_html_context = "<a class=\"link\"></a>";
+    std::string expected_css_context = "a.link:hover { color: red; }";
+    runTest("Context Deduction (& Selector)", context_source, expected_html_context, expected_css_context);
+
 
     std::cout << "\nAll generator tests passed!" << std::endl;
 

@@ -21,6 +21,27 @@ bool isSelfClosing(const std::string& tagName) {
     return std::find(SELF_CLOSING_TAGS.begin(), SELF_CLOSING_TAGS.end(), tagName) != SELF_CLOSING_TAGS.end();
 }
 
+std::string buildBaseSelector(ElementNode& node, const std::string& element_id, const std::set<std::string>& element_classes) {
+    std::stringstream selector_ss;
+    selector_ss << node.tagName;
+    if (!element_id.empty()) {
+        selector_ss << "#" << element_id;
+    }
+    for (const auto& cls : element_classes) {
+        selector_ss << "." << cls;
+    }
+    return selector_ss.str();
+}
+
+void replaceAll(std::string& str, const std::string& from, const std::string& to) {
+    if (from.empty()) return;
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length();
+    }
+}
+
 GeneratedResult CHTLGenerator::generate(NodePtr& ast) {
     GeneratedResult result;
     if (!ast) return result;
@@ -43,12 +64,10 @@ std::string CHTLGenerator::visit(ElementNode& node) {
     std::set<std::string> element_classes;
     std::vector<StyleProperty> inline_properties;
 
-    // First, find explicit id and class from attributes
     for (const auto& attr : node.attributes) {
         if (attr->key == "id") {
             element_id = attr->value;
         } else if (attr->key == "class") {
-            // Simple split by space for multiple classes
             std::stringstream class_stream(attr->value);
             std::string class_name;
             while (class_stream >> class_name) {
@@ -57,7 +76,6 @@ std::string CHTLGenerator::visit(ElementNode& node) {
         }
     }
 
-    // Collect styles and auto-add classes/ids from child StyleNodes
     for (const auto& child : node.children) {
         if (child->getType() == NodeType::Style) {
             StyleNode* style_node = static_cast<StyleNode*>(child.get());
@@ -65,13 +83,15 @@ std::string CHTLGenerator::visit(ElementNode& node) {
 
             for (const auto& rule : style_node->nested_rules) {
                 std::string selector = rule.selector;
-                if (selector.rfind('.', 0) == 0) { // starts with .
+                if (selector.rfind('.', 0) == 0) {
                     element_classes.insert(selector.substr(1));
-                } else if (selector.rfind('#', 0) == 0) { // starts with #
+                } else if (selector.rfind('#', 0) == 0) {
                     element_id = selector.substr(1);
                 }
 
-                // For now, just add the rule to global css. More complex selectors need more logic.
+                std::string base_selector = buildBaseSelector(node, element_id, element_classes);
+                replaceAll(selector, "&", base_selector);
+
                 global_css << selector << " {\n";
                 for (const auto& prop : rule.properties) {
                     global_css << "    " << prop.key << ": " << prop.value << ";\n";
@@ -81,7 +101,6 @@ std::string CHTLGenerator::visit(ElementNode& node) {
         }
     }
 
-    // Build the element tag
     ss << "<" << node.tagName;
 
     if (!element_id.empty()) {
@@ -97,7 +116,6 @@ std::string CHTLGenerator::visit(ElementNode& node) {
         ss << "\"";
     }
 
-    // Print other explicit attributes that are not id or class
     for (const auto& attr : node.attributes) {
         if (attr->key != "id" && attr->key != "class") {
             ss << " " << attr->key << "=\"" << attr->value << "\"";
@@ -119,7 +137,6 @@ std::string CHTLGenerator::visit(ElementNode& node) {
 
     ss << ">";
 
-    // Render children that are not style nodes
     for (const auto& child : node.children) {
         if (child->getType() != NodeType::Style) {
             ss << child->accept(*this);

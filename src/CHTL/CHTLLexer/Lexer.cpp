@@ -43,7 +43,7 @@ Token Lexer::scanToken() {
         case '-': return makeToken(TokenType::MINUS);
         case '%': return makeToken(TokenType::PERCENT);
         case '&':
-            return match('&') ? makeToken(TokenType::LOGICAL_AND) : errorToken("Unexpected character '&'. Did you mean '&&'?");
+            return match('&') ? makeToken(TokenType::LOGICAL_AND) : makeToken(TokenType::AMPERSAND);
         case '|':
             return match('|') ? makeToken(TokenType::LOGICAL_OR) : errorToken("Unexpected character '|'. Did you mean '||'?");
         case '*':

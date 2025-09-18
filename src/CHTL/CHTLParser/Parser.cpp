@@ -134,7 +134,8 @@ NodePtr Parser::styleBlock() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        if (peekNext().type == TokenType::COLON) {
+        if (check(TokenType::IDENTIFIER) && peekNext().type == TokenType::COLON) {
+            // It's a simple property for the inline style.
             Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
             consume(TokenType::COLON, "Expect ':' after style property name.");
 
@@ -151,6 +152,7 @@ NodePtr Parser::styleBlock() {
             consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
             styleNode->addInlineProperty({key.lexeme, value_str});
         } else {
+            // Assume it's a nested rule.
             NestedStyleRule rule;
             std::string selector_str;
             while (!check(TokenType::LEFT_BRACE) && !isAtEnd()) {
