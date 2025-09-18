@@ -1,0 +1,18 @@
+html {
+    id = "main-page";
+
+    // A generator comment that should appear in the output
+    # This is a test comment.
+
+    div {
+        class: "content-wrapper";
+        style {
+            color: red;
+            font-size: 16px;
+        }
+
+        text {
+            "Welcome to CHTL!"
+        }
+    }
+}

@@ -1,0 +1,25 @@
+#pragma once
+
+namespace CHTL
+{
+    // Forward-declare all concrete AST node classes.
+    // This avoids circular dependencies, as the node classes
+    // will need to include this file.
+    class ElementNode;
+    class TextNode;
+    class CommentNode;
+    class StyleNode;
+
+    // The AstVisitor interface declares a set of visiting methods that
+    // can be used to traverse the AST.
+    class AstVisitor
+    {
+    public:
+        virtual ~AstVisitor() = default;
+
+        virtual void visit(ElementNode &node) = 0;
+        virtual void visit(TextNode &node) = 0;
+        virtual void visit(CommentNode &node) = 0;
+        virtual void visit(StyleNode &node) = 0;
+    };
+}
