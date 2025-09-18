@@ -1,4 +1,5 @@
 #include "CHTLGenerator.h"
+#include "../ExpressionEvaluator.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -42,6 +43,20 @@ void CHTLGenerator::visit(const ElementNode& node) {
 
     for (const auto& attr : node.attributes) {
         m_output << " " << attr.key << "=\"" << attr.value << "\"";
+    }
+
+    // Add inline styles from style {} blocks.
+    if (!node.styles.empty()) {
+        ExpressionEvaluator evaluator;
+        m_output << " style=\"";
+        for (size_t i = 0; i < node.styles.size(); ++i) {
+            std::string value = evaluator.evaluate(*node.styles[i].value);
+            m_output << node.styles[i].key << ": " << value << ";";
+            if (i < node.styles.size() - 1) {
+                m_output << " "; // Add space between properties for readability
+            }
+        }
+        m_output << "\"";
     }
 
     if (m_voidElements.count(node.tagName)) {

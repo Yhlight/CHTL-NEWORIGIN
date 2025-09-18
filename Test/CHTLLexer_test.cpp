@@ -56,12 +56,12 @@ TEST(LexerTest, TokenizesGeneratorComment) {
 }
 
 TEST(LexerTest, HandlesKeywords) {
-    std::string source = "text style script";
+    // "text" is intentionally not a keyword; it's handled by the parser contextually.
+    std::string source = "style script";
     CHTL::CHTLLexer lexer(source);
     std::vector<CHTL::Token> tokens = lexer.getAllTokens();
 
-    ASSERT_EQ(tokens.size(), 4);
-    EXPECT_EQ(tokens[0].type, CHTL::TokenType::KEYWORD_TEXT);
-    EXPECT_EQ(tokens[1].type, CHTL::TokenType::KEYWORD_STYLE);
-    EXPECT_EQ(tokens[2].type, CHTL::TokenType::KEYWORD_SCRIPT);
+    ASSERT_EQ(tokens.size(), 3);
+    EXPECT_EQ(tokens[0].type, CHTL::TokenType::KEYWORD_STYLE);
+    EXPECT_EQ(tokens[1].type, CHTL::TokenType::KEYWORD_SCRIPT);
 }

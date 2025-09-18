@@ -20,8 +20,15 @@ private:
     // Recursive-descent parsing methods for different grammar rules.
     std::unique_ptr<BaseNode> parseNode();
     std::unique_ptr<ElementNode> parseElement();
+    void parseStyleBlock(ElementNode& element);
     Attribute parseAttribute();
     std::unique_ptr<TextNode> parseTextNode();
+    std::unique_ptr<TextNode> parseTextAttributeAsNode();
+
+    // Expression parsing methods
+    std::unique_ptr<ExpressionNode> parseExpression(int precedence = 0);
+    std::unique_ptr<ExpressionNode> parsePrefix();
+    std::unique_ptr<ExpressionNode> parseInfix(std::unique_ptr<ExpressionNode> left);
 
     // Helper methods for token stream manipulation.
     const Token& currentToken() const;

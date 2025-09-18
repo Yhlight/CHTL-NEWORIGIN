@@ -6,7 +6,6 @@ namespace CHTL {
 
 // Map for simple keyword lookup.
 static const std::map<std::string, TokenType> KEYWORDS = {
-    {"text", TokenType::KEYWORD_TEXT},
     {"style", TokenType::KEYWORD_STYLE},
     {"script", TokenType::KEYWORD_SCRIPT},
     {"from", TokenType::KEYWORD_FROM},
@@ -68,7 +67,8 @@ void CHTLLexer::skipBlockComment() {
 Token CHTLLexer::identifier() {
     std::string value;
     int start_col = m_column;
-    while (isalnum(currentChar()) || currentChar() == '_') {
+    // Allow hyphens in identifiers for CSS properties like font-size.
+    while (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-') {
         value += currentChar();
         advance();
     }
@@ -154,6 +154,10 @@ Token CHTLLexer::getNextToken() {
             case ',': token = makeToken(TokenType::COMMA, currentChar()); break;
             case '.': token = makeToken(TokenType::DOT, currentChar()); break;
             case '@': token = makeToken(TokenType::AT, currentChar()); break;
+            case '+': token = makeToken(TokenType::PLUS, currentChar()); break;
+            case '-': token = makeToken(TokenType::MINUS, currentChar()); break;
+            case '*': token = makeToken(TokenType::STAR, currentChar()); break;
+            case '/': token = makeToken(TokenType::SLASH, currentChar()); break;
             default: token = makeToken(TokenType::UNKNOWN, currentChar()); break;
         }
         advance();

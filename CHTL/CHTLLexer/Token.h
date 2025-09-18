@@ -55,7 +55,6 @@ enum class TokenType {
     ARROW,              // ->
 
     // Keywords (will be expanded)
-    KEYWORD_TEXT,
     KEYWORD_STYLE,
     KEYWORD_SCRIPT,
     KEYWORD_FROM,
