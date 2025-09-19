@@ -1,0 +1,12 @@
+# This is a comment
+html {
+    body {
+        div {
+            id: main-div;
+            class: container;
+            text {
+                "Hello, CHTL!"
+            }
+        }
+    }
+}

@@ -1,0 +1,14 @@
+[Template] @Style DefaultText
+{
+	color: "black";
+	line-height: 1.6;
+}
+
+div
+{
+    style
+    {
+        @Style DefaultText;
+        font-size: 18px;
+    }
+}
