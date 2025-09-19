@@ -586,6 +586,14 @@ std::string UnifiedScanner::readIdentifier() {
     return result;
 }
 
+bool UnifiedScanner::isIdentifierStart(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+bool UnifiedScanner::isIdentifierChar(char c) {
+    return isIdentifierStart(c) || (c >= '0' && c <= '9');
+}
+
 std::string UnifiedScanner::readLineComment() {
     std::string result;
     advance(); advance(); // 跳过 //

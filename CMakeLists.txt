@@ -31,6 +31,8 @@ set(CHTL_SOURCES
     CHTL/CHTLLexer/CHTLLexer.cpp
     CHTL/CHTLLexer/Token.cpp
     CHTL/CHTLNode/BaseNode.cpp
+    CHTL/CHTLParser/CHTLParser.cpp
+    CHTL/CHTLGenerator/CHTLGenerator.cpp
     Util/StringUtil/StringUtil.cpp
     Util/FileSystem/FileSystem.cpp
 )

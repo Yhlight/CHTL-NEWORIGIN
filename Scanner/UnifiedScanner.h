@@ -118,6 +118,11 @@ public:
     // 恢复占位符
     std::string restorePlaceholders(const std::string& processedCode) const;
     
+    // 辅助方法
+    std::string readIdentifier();
+    bool isIdentifierStart(char c);
+    bool isIdentifierChar(char c);
+    
 private:
     // 选项
     bool enablePlaceholders_;

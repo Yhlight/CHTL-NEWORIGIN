@@ -223,6 +223,30 @@ chtl_compiler/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/build
 .PHONY : chtl_compiler/fast
 
+CHTL/CHTLGenerator/CHTLGenerator.o: CHTL/CHTLGenerator/CHTLGenerator.cpp.o
+.PHONY : CHTL/CHTLGenerator/CHTLGenerator.o
+
+# target to build an object file
+CHTL/CHTLGenerator/CHTLGenerator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLGenerator/CHTLGenerator.cpp.o
+.PHONY : CHTL/CHTLGenerator/CHTLGenerator.cpp.o
+
+CHTL/CHTLGenerator/CHTLGenerator.i: CHTL/CHTLGenerator/CHTLGenerator.cpp.i
+.PHONY : CHTL/CHTLGenerator/CHTLGenerator.i
+
+# target to preprocess a source file
+CHTL/CHTLGenerator/CHTLGenerator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLGenerator/CHTLGenerator.cpp.i
+.PHONY : CHTL/CHTLGenerator/CHTLGenerator.cpp.i
+
+CHTL/CHTLGenerator/CHTLGenerator.s: CHTL/CHTLGenerator/CHTLGenerator.cpp.s
+.PHONY : CHTL/CHTLGenerator/CHTLGenerator.s
+
+# target to generate assembly for a file
+CHTL/CHTLGenerator/CHTLGenerator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLGenerator/CHTLGenerator.cpp.s
+.PHONY : CHTL/CHTLGenerator/CHTLGenerator.cpp.s
+
 CHTL/CHTLLexer/CHTLLexer.o: CHTL/CHTLLexer/CHTLLexer.cpp.o
 .PHONY : CHTL/CHTLLexer/CHTLLexer.o
 
@@ -294,6 +318,30 @@ CHTL/CHTLNode/BaseNode.s: CHTL/CHTLNode/BaseNode.cpp.s
 CHTL/CHTLNode/BaseNode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLNode/BaseNode.cpp.s
 .PHONY : CHTL/CHTLNode/BaseNode.cpp.s
+
+CHTL/CHTLParser/CHTLParser.o: CHTL/CHTLParser/CHTLParser.cpp.o
+.PHONY : CHTL/CHTLParser/CHTLParser.o
+
+# target to build an object file
+CHTL/CHTLParser/CHTLParser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLParser/CHTLParser.cpp.o
+.PHONY : CHTL/CHTLParser/CHTLParser.cpp.o
+
+CHTL/CHTLParser/CHTLParser.i: CHTL/CHTLParser/CHTLParser.cpp.i
+.PHONY : CHTL/CHTLParser/CHTLParser.i
+
+# target to preprocess a source file
+CHTL/CHTLParser/CHTLParser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLParser/CHTLParser.cpp.i
+.PHONY : CHTL/CHTLParser/CHTLParser.cpp.i
+
+CHTL/CHTLParser/CHTLParser.s: CHTL/CHTLParser/CHTLParser.cpp.s
+.PHONY : CHTL/CHTLParser/CHTLParser.s
+
+# target to generate assembly for a file
+CHTL/CHTLParser/CHTLParser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/CHTL/CHTLParser/CHTLParser.cpp.s
+.PHONY : CHTL/CHTLParser/CHTLParser.cpp.s
 
 Scanner/UnifiedScanner.o: Scanner/UnifiedScanner.cpp.o
 .PHONY : Scanner/UnifiedScanner.o
@@ -414,6 +462,9 @@ help:
 	@echo "... SCANNER_LIB"
 	@echo "... UTIL_LIB"
 	@echo "... chtl_compiler"
+	@echo "... CHTL/CHTLGenerator/CHTLGenerator.o"
+	@echo "... CHTL/CHTLGenerator/CHTLGenerator.i"
+	@echo "... CHTL/CHTLGenerator/CHTLGenerator.s"
 	@echo "... CHTL/CHTLLexer/CHTLLexer.o"
 	@echo "... CHTL/CHTLLexer/CHTLLexer.i"
 	@echo "... CHTL/CHTLLexer/CHTLLexer.s"
@@ -423,6 +474,9 @@ help:
 	@echo "... CHTL/CHTLNode/BaseNode.o"
 	@echo "... CHTL/CHTLNode/BaseNode.i"
 	@echo "... CHTL/CHTLNode/BaseNode.s"
+	@echo "... CHTL/CHTLParser/CHTLParser.o"
+	@echo "... CHTL/CHTLParser/CHTLParser.i"
+	@echo "... CHTL/CHTLParser/CHTLParser.s"
 	@echo "... Scanner/UnifiedScanner.o"
 	@echo "... Scanner/UnifiedScanner.i"
 	@echo "... Scanner/UnifiedScanner.s"

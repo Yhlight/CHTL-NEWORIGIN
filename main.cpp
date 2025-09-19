@@ -6,13 +6,10 @@
 #include <sstream>
 #include "CHTL/CHTLLexer/CHTLLexer.h"
 #include "CHTL/CHTLLexer/Token.h"
+#include "CHTL/CHTLParser/CHTLParser.h"
+#include "CHTL/CHTLGenerator/CHTLGenerator.h"
 #include "Scanner/UnifiedScanner.h"
 #include "CHTL/CHTLNode/BaseNode.h"
-
-// 前向声明
-std::string generateHTML(const Scanner::ScanResult& scanResult, 
-                        const std::vector<Token>& tokens, 
-                        bool inlineMode);
 
 using namespace CHTL;
 
@@ -116,6 +113,32 @@ int main(int argc, char* argv[]) {
             std::cout << "Tokens generated: " << allTokens.size() << std::endl;
         }
         
+        // 使用CHTL解析器解析Token为AST
+        CHTLParser parser;
+        parser.setTokens(allTokens);
+        auto ast = parser.parse();
+        
+        if (!ast) {
+            std::cerr << "Error: Failed to parse CHTL code" << std::endl;
+            const auto& errors = parser.getErrors();
+            for (const auto& error : errors) {
+                std::cerr << "Parse error: " << error << std::endl;
+            }
+            return 1;
+        }
+        
+        if (debugMode) {
+            std::cout << "AST generated successfully" << std::endl;
+        }
+        
+        // 使用CHTL生成器生成HTML
+        CHTLGenerator generator;
+        generator.setInlineCSS(inlineMode);
+        generator.setInlineJS(inlineMode);
+        generator.setDefaultStructure(true);
+        
+        std::string htmlOutput = generator.generatePage(ast);
+        
         // 生成输出文件名
         if (outputFile.empty()) {
             size_t dotPos = inputFile.find_last_of('.');
@@ -125,9 +148,6 @@ int main(int argc, char* argv[]) {
                 outputFile = inputFile + ".html";
             }
         }
-        
-        // 生成HTML输出
-        std::string htmlOutput = generateHTML(scanResult, allTokens, inlineMode);
         
         // 写入输出文件
         std::ofstream outFile(outputFile);
@@ -152,77 +172,4 @@ int main(int argc, char* argv[]) {
     }
     
     return 0;
-}
-
-std::string generateHTML(const Scanner::ScanResult& scanResult, 
-                        const std::vector<Token>& tokens, 
-                        bool inlineMode) {
-    std::ostringstream html;
-    
-    // 生成HTML头部
-    html << "<!DOCTYPE html>\n";
-    html << "<html lang=\"en\">\n";
-    html << "<head>\n";
-    html << "    <meta charset=\"UTF-8\">\n";
-    html << "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
-    html << "    <title>CHTL Generated Page</title>\n";
-    
-    // 生成CSS
-    if (inlineMode) {
-        html << "    <style>\n";
-        for (const auto& fragment : scanResult.fragments) {
-            if (fragment.type == Scanner::FragmentType::CSS) {
-                html << fragment.content << "\n";
-            }
-        }
-        html << "    </style>\n";
-    } else {
-        // 生成外部CSS文件
-        std::string cssFile = "style.css";
-        std::ofstream cssOut(cssFile);
-        for (const auto& fragment : scanResult.fragments) {
-            if (fragment.type == Scanner::FragmentType::CSS) {
-                cssOut << fragment.content << "\n";
-            }
-        }
-        cssOut.close();
-        html << "    <link rel=\"stylesheet\" href=\"" << cssFile << "\">\n";
-    }
-    
-    html << "</head>\n";
-    html << "<body>\n";
-    
-    // 生成HTML内容
-    for (const auto& fragment : scanResult.fragments) {
-        if (fragment.type == Scanner::FragmentType::HTML) {
-            html << fragment.content << "\n";
-        }
-    }
-    
-    // 生成JavaScript
-    if (inlineMode) {
-        html << "    <script>\n";
-        for (const auto& fragment : scanResult.fragments) {
-            if (fragment.type == Scanner::FragmentType::JS) {
-                html << fragment.content << "\n";
-            }
-        }
-        html << "    </script>\n";
-    } else {
-        // 生成外部JS文件
-        std::string jsFile = "script.js";
-        std::ofstream jsOut(jsFile);
-        for (const auto& fragment : scanResult.fragments) {
-            if (fragment.type == Scanner::FragmentType::JS) {
-                jsOut << fragment.content << "\n";
-            }
-        }
-        jsOut.close();
-        html << "    <script src=\"" << jsFile << "\"></script>\n";
-    }
-    
-    html << "</body>\n";
-    html << "</html>\n";
-    
-    return html.str();
 }

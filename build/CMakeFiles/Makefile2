@@ -94,12 +94,12 @@ clean: CMakeFiles/chtl_compiler.dir/clean
 CMakeFiles/CHTL_LIB.dir/all: CMakeFiles/UTIL_LIB.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target CHTL_LIB"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target CHTL_LIB"
 .PHONY : CMakeFiles/CHTL_LIB.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/CHTL_LIB.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /workspace/build/CMakeFiles 9
+	$(CMAKE_COMMAND) -E cmake_progress_start /workspace/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/CHTL_LIB.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /workspace/build/CMakeFiles 0
 .PHONY : CMakeFiles/CHTL_LIB.dir/rule
@@ -111,7 +111,7 @@ CHTL_LIB: CMakeFiles/CHTL_LIB.dir/rule
 # codegen rule for target.
 CMakeFiles/CHTL_LIB.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/CHTL_LIB.dir/build.make CMakeFiles/CHTL_LIB.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=1,2,3,4,5,6 "Finished codegen for target CHTL_LIB"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Finished codegen for target CHTL_LIB"
 .PHONY : CMakeFiles/CHTL_LIB.dir/codegen
 
 # clean rule for target.
@@ -126,7 +126,7 @@ CMakeFiles/CHTL_LIB.dir/clean:
 CMakeFiles/UTIL_LIB.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/UTIL_LIB.dir/build.make CMakeFiles/UTIL_LIB.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/UTIL_LIB.dir/build.make CMakeFiles/UTIL_LIB.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=9,10,11 "Built target UTIL_LIB"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=11,12,13 "Built target UTIL_LIB"
 .PHONY : CMakeFiles/UTIL_LIB.dir/all
 
 # Build rule for subdir invocation for target.
@@ -143,7 +143,7 @@ UTIL_LIB: CMakeFiles/UTIL_LIB.dir/rule
 # codegen rule for target.
 CMakeFiles/UTIL_LIB.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/UTIL_LIB.dir/build.make CMakeFiles/UTIL_LIB.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=9,10,11 "Finished codegen for target UTIL_LIB"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=11,12,13 "Finished codegen for target UTIL_LIB"
 .PHONY : CMakeFiles/UTIL_LIB.dir/codegen
 
 # clean rule for target.
@@ -158,7 +158,7 @@ CMakeFiles/UTIL_LIB.dir/clean:
 CMakeFiles/SCANNER_LIB.dir/all: CMakeFiles/UTIL_LIB.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/SCANNER_LIB.dir/build.make CMakeFiles/SCANNER_LIB.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/SCANNER_LIB.dir/build.make CMakeFiles/SCANNER_LIB.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=7,8 "Built target SCANNER_LIB"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=9,10 "Built target SCANNER_LIB"
 .PHONY : CMakeFiles/SCANNER_LIB.dir/all
 
 # Build rule for subdir invocation for target.
@@ -175,7 +175,7 @@ SCANNER_LIB: CMakeFiles/SCANNER_LIB.dir/rule
 # codegen rule for target.
 CMakeFiles/SCANNER_LIB.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/SCANNER_LIB.dir/build.make CMakeFiles/SCANNER_LIB.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=7,8 "Finished codegen for target SCANNER_LIB"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=9,10 "Finished codegen for target SCANNER_LIB"
 .PHONY : CMakeFiles/SCANNER_LIB.dir/codegen
 
 # clean rule for target.
@@ -192,12 +192,12 @@ CMakeFiles/chtl_compiler.dir/all: CMakeFiles/UTIL_LIB.dir/all
 CMakeFiles/chtl_compiler.dir/all: CMakeFiles/SCANNER_LIB.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=12,13 "Built target chtl_compiler"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=14,15 "Built target chtl_compiler"
 .PHONY : CMakeFiles/chtl_compiler.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/chtl_compiler.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /workspace/build/CMakeFiles 13
+	$(CMAKE_COMMAND) -E cmake_progress_start /workspace/build/CMakeFiles 15
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/chtl_compiler.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /workspace/build/CMakeFiles 0
 .PHONY : CMakeFiles/chtl_compiler.dir/rule
@@ -209,7 +209,7 @@ chtl_compiler: CMakeFiles/chtl_compiler.dir/rule
 # codegen rule for target.
 CMakeFiles/chtl_compiler.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=12,13 "Finished codegen for target chtl_compiler"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/workspace/build/CMakeFiles --progress-num=14,15 "Finished codegen for target chtl_compiler"
 .PHONY : CMakeFiles/chtl_compiler.dir/codegen
 
 # clean rule for target.
