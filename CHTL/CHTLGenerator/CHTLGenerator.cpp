@@ -492,8 +492,17 @@ void CHTLGenerator::processStyleBlock(std::shared_ptr<BaseNode> styleNode) {
 }
 
 void CHTLGenerator::processLocalStyle(std::shared_ptr<BaseNode> styleNode, std::shared_ptr<BaseNode> parentElement) {
-    // 局部样式处理逻辑
-    // 这里需要根据局部样式内容进行相应的处理
+    // 处理局部样式
+    if (styleNode->getType() == NodeType::STYLE) {
+        // 生成内联样式
+        std::string inlineStyle = generateStyleProperties(styleNode);
+        if (!inlineStyle.empty()) {
+            parentElement->setAttribute("style", inlineStyle);
+        }
+        
+        // 处理局部样式块
+        processLocalStyleBlock(styleNode, parentElement);
+    }
 }
 
 void CHTLGenerator::processGlobalStyle(std::shared_ptr<BaseNode> styleNode) {
@@ -589,6 +598,221 @@ bool CHTLGenerator::validateJavaScript(const std::string& javascript) {
     // JavaScript验证逻辑
     // 这里可以添加JavaScript验证功能
     return true;
+}
+
+// 局部样式块处理
+void CHTLGenerator::processLocalStyleBlock(std::shared_ptr<BaseNode> styleNode, std::shared_ptr<BaseNode> parentElement) {
+    if (styleNode->getType() != NodeType::STYLE) {
+        return;
+    }
+    
+    // 处理局部样式块中的选择器和属性
+    for (const auto& child : styleNode->getChildren()) {
+        if (child->getType() == NodeType::STYLE) {
+            processStyleSelector(child, parentElement);
+        }
+    }
+    
+    // 处理内联样式
+    processLocalStyle(styleNode, parentElement);
+}
+
+void CHTLGenerator::processStyleSelector(std::shared_ptr<BaseNode> styleNode, std::shared_ptr<BaseNode> parentElement) {
+    // 获取选择器
+    std::string selector = styleNode->getAttribute("selector");
+    if (selector.empty()) {
+        return;
+    }
+    
+    // 处理不同类型的选择器
+    if (selector[0] == '.') {
+        // 类选择器
+        std::string className = processClassSelector(selector, parentElement);
+        if (!className.empty()) {
+            parentElement->setAttribute("class", className);
+        }
+    } else if (selector[0] == '#') {
+        // ID选择器
+        std::string idName = processIdSelector(selector, parentElement);
+        if (!idName.empty()) {
+            parentElement->setAttribute("id", idName);
+        }
+    } else if (selector[0] == '&') {
+        // 上下文选择器
+        processContextSelector(selector, parentElement);
+    } else {
+        // 标签选择器
+        // 直接使用标签名
+    }
+    
+    // 生成CSS规则
+    std::string cssRule = generateStyleRule(selector, styleNode->getAttributes());
+    if (!cssRule.empty()) {
+        css_ += cssRule + "\n";
+    }
+}
+
+void CHTLGenerator::processStylePropertyWithOperations(std::shared_ptr<BaseNode> styleNode) {
+    // 处理带有运算的属性
+    for (const auto& attr : styleNode->getAttributes()) {
+        if (attr.first == "selector") {
+            continue;
+        }
+        
+        std::string processedValue = processPropertyValue(attr.second);
+        styleNode->setAttribute(attr.first, processedValue);
+    }
+}
+
+std::string CHTLGenerator::processPropertyValue(const std::string& value) {
+    // 检查是否包含运算或条件表达式
+    if (value.find('+') != std::string::npos || value.find('-') != std::string::npos ||
+        value.find('*') != std::string::npos || value.find('/') != std::string::npos ||
+        value.find('%') != std::string::npos || value.find("**") != std::string::npos) {
+        return processPropertyArithmetic(value);
+    } else if (value.find('?') != std::string::npos) {
+        return processPropertyConditional(value);
+    } else if (value.find('.') != std::string::npos) {
+        return processPropertyReference(value);
+    }
+    
+    return value;
+}
+
+std::string CHTLGenerator::processPropertyExpression(const std::string& expression) {
+    // 处理复杂表达式
+    std::string result = expression;
+    
+    // 处理属性引用
+    size_t pos = 0;
+    while ((pos = result.find('.', pos)) != std::string::npos) {
+        if (pos > 0 && result[pos - 1] != ' ' && result[pos - 1] != '+' && result[pos - 1] != '-' &&
+            result[pos - 1] != '*' && result[pos - 1] != '/' && result[pos - 1] != '%') {
+            // 这是一个属性引用
+            std::string reference = processPropertyReference(result.substr(pos));
+            result.replace(pos, reference.length(), reference);
+        }
+        pos += 1;
+    }
+    
+    return result;
+}
+
+std::string CHTLGenerator::processPropertyReference(const std::string& reference) {
+    // 处理属性引用，例如 .box.width
+    if (reference[0] == '.') {
+        // 这是一个属性引用
+        return "var(--" + reference.substr(1) + ")";
+    }
+    
+    return reference;
+}
+
+std::string CHTLGenerator::processPropertyConditional(const std::string& conditional) {
+    // 处理条件表达式，例如 width > 50px ? "red" : "blue"
+    // 这里需要更复杂的解析逻辑
+    return conditional;
+}
+
+std::string CHTLGenerator::processPropertyArithmetic(const std::string& arithmetic) {
+    // 处理算术运算，例如 100px + 20px
+    // 这里需要更复杂的解析逻辑
+    return arithmetic;
+}
+
+// 选择器处理
+std::string CHTLGenerator::processClassSelector(const std::string& selector, std::shared_ptr<BaseNode> parentElement) {
+    if (selector[0] == '.') {
+        std::string className = selector.substr(1);
+        // 自动添加类名到父元素
+        return className;
+    }
+    return "";
+}
+
+std::string CHTLGenerator::processIdSelector(const std::string& selector, std::shared_ptr<BaseNode> parentElement) {
+    if (selector[0] == '#') {
+        std::string idName = selector.substr(1);
+        // 自动添加ID到父元素
+        return idName;
+    }
+    return "";
+}
+
+std::string CHTLGenerator::processPseudoSelector(const std::string& selector) {
+    // 处理伪选择器，例如 :hover, ::before
+    return selector;
+}
+
+std::string CHTLGenerator::processContextSelector(const std::string& selector, std::shared_ptr<BaseNode> parentElement) {
+    // 处理上下文选择器，例如 &:hover
+    if (selector[0] == '&') {
+        // 获取父元素的类名或ID
+        std::string parentClass = parentElement->getAttribute("class");
+        std::string parentId = parentElement->getAttribute("id");
+        
+        if (!parentId.empty()) {
+            return "#" + parentId + selector.substr(1);
+        } else if (!parentClass.empty()) {
+            return "." + parentClass + selector.substr(1);
+        } else {
+            return parentElement->getValue() + selector.substr(1);
+        }
+    }
+    return selector;
+}
+
+// 属性运算处理
+std::string CHTLGenerator::processArithmeticExpression(const std::string& expression) {
+    // 处理算术表达式
+    return expression;
+}
+
+std::string CHTLGenerator::processArithmeticTerm(const std::string& term) {
+    // 处理算术项
+    return term;
+}
+
+std::string CHTLGenerator::processArithmeticFactor(const std::string& factor) {
+    // 处理算术因子
+    return factor;
+}
+
+std::string CHTLGenerator::processArithmeticOperator(const std::string& op) {
+    // 处理算术操作符
+    return op;
+}
+
+// 属性条件表达式处理
+std::string CHTLGenerator::processConditionalExpression(const std::string& expression) {
+    // 处理条件表达式
+    return expression;
+}
+
+std::string CHTLGenerator::processConditionalTerm(const std::string& term) {
+    // 处理条件项
+    return term;
+}
+
+std::string CHTLGenerator::processConditionalFactor(const std::string& factor) {
+    // 处理条件因子
+    return factor;
+}
+
+std::string CHTLGenerator::processConditionalOperator(const std::string& op) {
+    // 处理条件操作符
+    return op;
+}
+
+// 引用属性处理
+std::string CHTLGenerator::processReferenceSelector(const std::string& selector) {
+    // 处理引用选择器
+    return selector;
+}
+
+std::string CHTLGenerator::processReferenceProperty(const std::string& property) {
+    // 处理引用属性
+    return property;
 }
 
 } // namespace CHTL

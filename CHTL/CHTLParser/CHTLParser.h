@@ -68,6 +68,38 @@ private:
     void parseStyleProperties(std::shared_ptr<BaseNode> styleNode);
     std::pair<std::string, std::string> parseStyleProperty();
     
+    // 局部样式块解析
+    void parseLocalStyleBlock(std::shared_ptr<BaseNode> parentElement);
+    void parseStyleSelector(std::shared_ptr<BaseNode> styleNode);
+    void parseStylePropertyWithOperations(std::shared_ptr<BaseNode> styleNode);
+    std::string parsePropertyValue();
+    std::string parsePropertyExpression();
+    std::string parsePropertyReference();
+    std::string parsePropertyConditional();
+    std::string parsePropertyArithmetic();
+    
+    // 选择器解析
+    std::string parseClassSelector();
+    std::string parseIdSelector();
+    std::string parsePseudoSelector();
+    std::string parseContextSelector();
+    
+    // 属性运算解析
+    std::string parseArithmeticExpression();
+    std::string parseArithmeticTerm();
+    std::string parseArithmeticFactor();
+    std::string parseArithmeticOperator();
+    
+    // 属性条件表达式解析
+    std::string parseConditionalExpression();
+    std::string parseConditionalTerm();
+    std::string parseConditionalFactor();
+    std::string parseConditionalOperator();
+    
+    // 引用属性解析
+    std::string parseReferenceSelector();
+    std::string parseReferenceProperty();
+    
     // 辅助方法
     bool isElementStart() const;
     bool isTemplateStart() const;

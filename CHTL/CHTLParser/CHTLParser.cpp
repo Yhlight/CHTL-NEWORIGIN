@@ -106,15 +106,10 @@ std::shared_ptr<BaseNode> CHTLParser::parseElement() {
     element->setValue(currentToken().value);
     advance();
     
-    // 解析属性
+    // 解析元素内容（包括属性和子元素）
     if (match(TokenType::LEFT_BRACE)) {
         advance();
         parseAttributes(element);
-    }
-    
-    // 解析子内容
-    if (match(TokenType::LEFT_BRACE)) {
-        advance();
         parseBlockContent(element);
         if (match(TokenType::RIGHT_BRACE)) {
             advance();
@@ -407,29 +402,26 @@ std::shared_ptr<BaseNode> CHTLParser::parseUse() {
 }
 
 void CHTLParser::parseAttributes(std::shared_ptr<BaseNode> element) {
+    // 只解析属性，不解析子元素
     while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE)) {
         if (match("style")) {
-            auto styleNode = parseStyleBlock();
-            if (styleNode) {
-                element->addChild(styleNode);
-            }
+            // 解析局部样式块
+            parseLocalStyleBlock(element);
         } else if (match("script")) {
             auto scriptNode = parseScriptBlock();
             if (scriptNode) {
                 element->addChild(scriptNode);
-            } else {
-                // 解析普通属性
-                auto attr = parseAttribute();
-                if (!attr.first.empty()) {
-                    element->setAttribute(attr.first, attr.second);
-                }
             }
-        } else {
-            // 解析普通属性
+        } else if (match(TokenType::IDENTIFIER) && 
+                   (peekToken().type == TokenType::COLON || peekToken().type == TokenType::ASSIGN)) {
+            // 解析普通属性（只有当下一个token是:或=时）
             auto attr = parseAttribute();
             if (!attr.first.empty()) {
                 element->setAttribute(attr.first, attr.second);
             }
+        } else {
+            // 不是属性，退出属性解析
+            break;
         }
         
         skipWhitespace();
@@ -461,9 +453,17 @@ std::pair<std::string, std::string> CHTLParser::parseAttribute() {
 
 void CHTLParser::parseStyleProperties(std::shared_ptr<BaseNode> styleNode) {
     while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE)) {
-        auto prop = parseStyleProperty();
-        if (!prop.first.empty()) {
-            styleNode->setAttribute(prop.first, prop.second);
+        // 检查是否是选择器
+        if (match(TokenType::DOT) || match(TokenType::HASH) || match(TokenType::AMPERSAND) || 
+            (match(TokenType::IDENTIFIER) && peekToken().type == TokenType::LEFT_BRACE)) {
+            // 解析选择器
+            parseStyleSelector(styleNode);
+        } else {
+            // 解析普通属性
+            auto prop = parseStyleProperty();
+            if (!prop.first.empty()) {
+                styleNode->setAttribute(prop.first, prop.second);
+            }
         }
         
         skipWhitespace();
@@ -481,11 +481,7 @@ std::pair<std::string, std::string> CHTLParser::parseStyleProperty() {
     if (match(TokenType::COLON)) {
         advance();
         
-        std::string value;
-        if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
-            value = currentToken().value;
-            advance();
-        }
+        std::string value = parsePropertyValue();
         
         return {name, value};
     }
@@ -637,6 +633,368 @@ void CHTLParser::parseNamespaceContent(std::shared_ptr<BaseNode> namespaceNode) 
 
 void CHTLParser::parseConfigurationContent(std::shared_ptr<BaseNode> configNode) {
     parseBlockContent(configNode);
+}
+
+// 局部样式块解析方法
+void CHTLParser::parseLocalStyleBlock(std::shared_ptr<BaseNode> parentElement) {
+    if (!match("style")) {
+        addError("Expected 'style' keyword");
+        return;
+    }
+    
+    auto styleNode = std::make_shared<BaseNode>(NodeType::STYLE);
+    advance();
+    
+    if (match(TokenType::LEFT_BRACE)) {
+        advance();
+        parseStyleProperties(styleNode);
+        if (match(TokenType::RIGHT_BRACE)) {
+            advance();
+        } else {
+            addError("Expected '}' after style block");
+        }
+    }
+    
+    parentElement->addChild(styleNode);
+}
+
+void CHTLParser::parseStyleSelector(std::shared_ptr<BaseNode> styleNode) {
+    // 解析选择器，支持类选择器、ID选择器、伪选择器等
+    std::string selector;
+    
+    while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE) && !match(TokenType::COLON) && !match(TokenType::ASSIGN)) {
+        if (match(TokenType::DOT)) {
+            // 类选择器
+            advance();
+            if (match(TokenType::IDENTIFIER)) {
+                selector += "." + currentToken().value;
+                advance();
+            }
+        } else if (match(TokenType::HASH)) {
+            // ID选择器
+            advance();
+            if (match(TokenType::IDENTIFIER)) {
+                selector += "#" + currentToken().value;
+                advance();
+            }
+        } else if (match(TokenType::AMPERSAND)) {
+            // 上下文选择器
+            advance();
+            selector += "&";
+        } else if (match(TokenType::IDENTIFIER)) {
+            // 标签选择器
+            selector += currentToken().value;
+            advance();
+        } else {
+            selector += currentToken().value;
+            advance();
+        }
+    }
+    
+    if (!selector.empty()) {
+        styleNode->setAttribute("selector", selector);
+    }
+}
+
+void CHTLParser::parseStylePropertyWithOperations(std::shared_ptr<BaseNode> styleNode) {
+    while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE)) {
+        auto prop = parseStyleProperty();
+        if (!prop.first.empty()) {
+            styleNode->setAttribute(prop.first, prop.second);
+        }
+        
+        skipWhitespace();
+    }
+}
+
+std::string CHTLParser::parsePropertyValue() {
+    std::string value;
+    
+    if (match(TokenType::STRING)) {
+        value = currentToken().value;
+        advance();
+    } else if (match(TokenType::IDENTIFIER)) {
+        value = currentToken().value;
+        advance();
+    } else if (match(TokenType::NUMBER)) {
+        value = currentToken().value;
+        advance();
+    } else {
+        // 解析复杂表达式
+        value = parsePropertyExpression();
+    }
+    
+    return value;
+}
+
+std::string CHTLParser::parsePropertyExpression() {
+    std::string expression;
+    
+    while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE) && !match(TokenType::COLON) && !match(TokenType::ASSIGN) && !match(TokenType::SEMICOLON)) {
+        if (match(TokenType::QUESTION)) {
+            // 条件表达式
+            expression += parsePropertyConditional();
+        } else if (match(TokenType::PLUS) || match(TokenType::MINUS) || match(TokenType::MULTIPLY) || match(TokenType::DIVIDE) || match(TokenType::MODULO) || match(TokenType::POWER)) {
+            // 算术运算
+            expression += parsePropertyArithmetic();
+        } else if (match(TokenType::DOT)) {
+            // 属性引用
+            expression += parsePropertyReference();
+        } else {
+            expression += currentToken().value;
+            advance();
+        }
+    }
+    
+    return expression;
+}
+
+std::string CHTLParser::parsePropertyReference() {
+    std::string reference;
+    
+    if (match(TokenType::DOT)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+            reference = "." + currentToken().value;
+            advance();
+        }
+    }
+    
+    return reference;
+}
+
+std::string CHTLParser::parsePropertyConditional() {
+    std::string conditional;
+    
+    if (match(TokenType::QUESTION)) {
+        advance();
+        conditional += "?";
+        
+        // 解析条件
+        while (hasMoreTokens() && !match(TokenType::COLON) && !match(TokenType::RIGHT_BRACE)) {
+            conditional += currentToken().value;
+            advance();
+        }
+        
+        if (match(TokenType::COLON)) {
+            advance();
+            conditional += ":";
+            
+            // 解析结果
+            while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE) && !match(TokenType::SEMICOLON)) {
+                conditional += currentToken().value;
+                advance();
+            }
+        }
+    }
+    
+    return conditional;
+}
+
+std::string CHTLParser::parsePropertyArithmetic() {
+    std::string arithmetic;
+    
+    while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE) && !match(TokenType::COLON) && !match(TokenType::ASSIGN) && !match(TokenType::SEMICOLON)) {
+        if (match(TokenType::PLUS) || match(TokenType::MINUS) || match(TokenType::MULTIPLY) || match(TokenType::DIVIDE) || match(TokenType::MODULO) || match(TokenType::POWER)) {
+            arithmetic += currentToken().value;
+            advance();
+        } else if (match(TokenType::NUMBER) || match(TokenType::IDENTIFIER) || match(TokenType::STRING)) {
+            arithmetic += currentToken().value;
+            advance();
+        } else {
+            break;
+        }
+    }
+    
+    return arithmetic;
+}
+
+// 选择器解析方法
+std::string CHTLParser::parseClassSelector() {
+    std::string selector;
+    
+    if (match(TokenType::DOT)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+            selector = "." + currentToken().value;
+            advance();
+        }
+    }
+    
+    return selector;
+}
+
+std::string CHTLParser::parseIdSelector() {
+    std::string selector;
+    
+    if (match(TokenType::HASH)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+            selector = "#" + currentToken().value;
+            advance();
+        }
+    }
+    
+    return selector;
+}
+
+std::string CHTLParser::parsePseudoSelector() {
+    std::string selector;
+    
+    if (match(TokenType::COLON)) {
+        advance();
+        if (match(TokenType::COLON)) {
+            // 伪元素
+            advance();
+            if (match(TokenType::IDENTIFIER)) {
+                selector = "::" + currentToken().value;
+                advance();
+            }
+        } else if (match(TokenType::IDENTIFIER)) {
+            // 伪类
+            selector = ":" + currentToken().value;
+            advance();
+        }
+    }
+    
+    return selector;
+}
+
+std::string CHTLParser::parseContextSelector() {
+    std::string selector;
+    
+    if (match(TokenType::AMPERSAND)) {
+        advance();
+        selector = "&";
+        
+        // 解析伪选择器
+        if (match(TokenType::COLON)) {
+            selector += parsePseudoSelector();
+        }
+    }
+    
+    return selector;
+}
+
+// 属性运算解析方法
+std::string CHTLParser::parseArithmeticExpression() {
+    return parseArithmeticTerm();
+}
+
+std::string CHTLParser::parseArithmeticTerm() {
+    std::string left = parseArithmeticFactor();
+    
+    while (hasMoreTokens() && (match(TokenType::PLUS) || match(TokenType::MINUS))) {
+        std::string op = currentToken().value;
+        advance();
+        std::string right = parseArithmeticFactor();
+        left = left + " " + op + " " + right;
+    }
+    
+    return left;
+}
+
+std::string CHTLParser::parseArithmeticFactor() {
+    std::string left = parseArithmeticOperator();
+    
+    while (hasMoreTokens() && (match(TokenType::MULTIPLY) || match(TokenType::DIVIDE) || match(TokenType::MODULO) || match(TokenType::POWER))) {
+        std::string op = currentToken().value;
+        advance();
+        std::string right = parseArithmeticOperator();
+        left = left + " " + op + " " + right;
+    }
+    
+    return left;
+}
+
+std::string CHTLParser::parseArithmeticOperator() {
+    if (match(TokenType::NUMBER) || match(TokenType::IDENTIFIER) || match(TokenType::STRING)) {
+        std::string value = currentToken().value;
+        advance();
+        return value;
+    }
+    
+    return "";
+}
+
+// 属性条件表达式解析方法
+std::string CHTLParser::parseConditionalExpression() {
+    return parseConditionalTerm();
+}
+
+std::string CHTLParser::parseConditionalTerm() {
+    std::string left = parseConditionalFactor();
+    
+    while (hasMoreTokens() && (match(TokenType::AND) || match(TokenType::OR))) {
+        std::string op = currentToken().value;
+        advance();
+        std::string right = parseConditionalFactor();
+        left = left + " " + op + " " + right;
+    }
+    
+    return left;
+}
+
+std::string CHTLParser::parseConditionalFactor() {
+    if (match(TokenType::LEFT_PAREN)) {
+        advance();
+        std::string expr = parseConditionalExpression();
+        if (match(TokenType::RIGHT_PAREN)) {
+            advance();
+        }
+        return "(" + expr + ")";
+    }
+    
+    return parseArithmeticExpression();
+}
+
+std::string CHTLParser::parseConditionalOperator() {
+    if (match(TokenType::EQUAL) || match(TokenType::NOT_EQUAL) || match(TokenType::LESS) || 
+        match(TokenType::LESS_EQUAL) || match(TokenType::GREATER) || match(TokenType::GREATER_EQUAL)) {
+        std::string op = currentToken().value;
+        advance();
+        return op;
+    }
+    
+    return "";
+}
+
+// 引用属性解析方法
+std::string CHTLParser::parseReferenceSelector() {
+    std::string selector;
+    
+    if (match(TokenType::IDENTIFIER)) {
+        selector = currentToken().value;
+        advance();
+    } else if (match(TokenType::DOT)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+            selector = "." + currentToken().value;
+            advance();
+        }
+    } else if (match(TokenType::HASH)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+            selector = "#" + currentToken().value;
+            advance();
+        }
+    }
+    
+    return selector;
+}
+
+std::string CHTLParser::parseReferenceProperty() {
+    std::string property;
+    
+    if (match(TokenType::DOT)) {
+        advance();
+        if (match(TokenType::IDENTIFIER)) {
+            property = "." + currentToken().value;
+            advance();
+        }
+    }
+    
+    return property;
 }
 
 } // namespace CHTL

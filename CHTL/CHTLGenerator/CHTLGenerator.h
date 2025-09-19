@@ -89,6 +89,38 @@ private:
     void processLocalStyle(std::shared_ptr<BaseNode> styleNode, std::shared_ptr<BaseNode> parentElement);
     void processGlobalStyle(std::shared_ptr<BaseNode> styleNode);
     
+    // 局部样式块处理
+    void processLocalStyleBlock(std::shared_ptr<BaseNode> styleNode, std::shared_ptr<BaseNode> parentElement);
+    void processStyleSelector(std::shared_ptr<BaseNode> styleNode, std::shared_ptr<BaseNode> parentElement);
+    void processStylePropertyWithOperations(std::shared_ptr<BaseNode> styleNode);
+    std::string processPropertyValue(const std::string& value);
+    std::string processPropertyExpression(const std::string& expression);
+    std::string processPropertyReference(const std::string& reference);
+    std::string processPropertyConditional(const std::string& conditional);
+    std::string processPropertyArithmetic(const std::string& arithmetic);
+    
+    // 选择器处理
+    std::string processClassSelector(const std::string& selector, std::shared_ptr<BaseNode> parentElement);
+    std::string processIdSelector(const std::string& selector, std::shared_ptr<BaseNode> parentElement);
+    std::string processPseudoSelector(const std::string& selector);
+    std::string processContextSelector(const std::string& selector, std::shared_ptr<BaseNode> parentElement);
+    
+    // 属性运算处理
+    std::string processArithmeticExpression(const std::string& expression);
+    std::string processArithmeticTerm(const std::string& term);
+    std::string processArithmeticFactor(const std::string& factor);
+    std::string processArithmeticOperator(const std::string& op);
+    
+    // 属性条件表达式处理
+    std::string processConditionalExpression(const std::string& expression);
+    std::string processConditionalTerm(const std::string& term);
+    std::string processConditionalFactor(const std::string& factor);
+    std::string processConditionalOperator(const std::string& op);
+    
+    // 引用属性处理
+    std::string processReferenceSelector(const std::string& selector);
+    std::string processReferenceProperty(const std::string& property);
+    
     // 脚本处理
     void processScriptBlock(std::shared_ptr<BaseNode> scriptNode);
     void processLocalScript(std::shared_ptr<BaseNode> scriptNode, std::shared_ptr<BaseNode> parentElement);
