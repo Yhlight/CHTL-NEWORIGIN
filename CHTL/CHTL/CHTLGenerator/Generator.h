@@ -4,6 +4,7 @@
 #include "../CHTLNode/Visitor.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
+#include "../CHTLNode/CommentNode.h"
 #include <string>
 #include <sstream>
 
@@ -17,6 +18,7 @@ public:
     // Visitor methods for each node type.
     void visit(ElementNode& node) override;
     void visit(TextNode& node) override;
+    void visit(CommentNode& node) override;
 
 private:
     std::stringstream output;

@@ -8,11 +8,15 @@ enum class TokenType {
     // Single-character tokens
     LBRACE, RBRACE, // { }
     COLON, SEMICOLON, // : ;
+    COMMA, // ,
 
     // Literals
     IDENTIFIER, // div, text, my_variable
     STRING,     // "hello world"
     NUMBER,     // 100, 3.14 (will add later)
+
+    // Comments
+    HASH_COMMENT, // # a comment
 
     // Keywords (will be handled as identifiers for now)
     // TEXT,
@@ -35,8 +39,10 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::RBRACE: return "RBRACE";
         case TokenType::COLON: return "COLON";
         case TokenType::SEMICOLON: return "SEMICOLON";
+        case TokenType::COMMA: return "COMMA";
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::STRING: return "STRING";
+        case TokenType::HASH_COMMENT: return "HASH_COMMENT";
         case TokenType::TOKEN_EOF: return "EOF";
         case TokenType::TOKEN_ERROR: return "ERROR";
         default: return "UNKNOWN";

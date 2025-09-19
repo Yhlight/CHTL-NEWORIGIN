@@ -192,4 +192,7 @@ CMakeFiles/chtl.dir/CHTL/CompilerDispatcher/main.cpp.o: \
  /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/Visitor.h \
  /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \
  /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
+ /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h \
+ /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/BaseNode.h \
+ /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/Visitor.h \
  /app/./CHTL/CHTL/CHTLNode/ElementNode.h

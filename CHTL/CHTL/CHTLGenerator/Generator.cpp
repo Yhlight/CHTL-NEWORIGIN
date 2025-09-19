@@ -42,3 +42,7 @@ void Generator::visit(TextNode& node) {
     // e.g., '<' becomes '&lt;', '&' becomes '&amp;', etc.
     output << node.getContent();
 }
+
+void Generator::visit(CommentNode& node) {
+    output << "<!-- " << node.getContent() << " -->\n";
+}

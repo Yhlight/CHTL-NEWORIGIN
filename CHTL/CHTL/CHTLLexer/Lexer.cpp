@@ -19,8 +19,23 @@ Token Lexer::nextToken() {
     switch (c) {
         case '{': return {TokenType::LBRACE, "{", line};
         case '}': return {TokenType::RBRACE, "}", line};
-        case ':': return {TokenType::COLON, ":", line};
+        case ':':
+        case '=':
+            return {TokenType::COLON, ":", line};
         case ';': return {TokenType::SEMICOLON, ";", line};
+        case ',': return {TokenType::COMMA, ",", line};
+        case '#':
+            if (peek() == ' ') {
+                // Consume the space
+                advance();
+                // The comment goes to the end of the line.
+                start = current;
+                while (peek() != '\n' && !isAtEnd()) {
+                    advance();
+                }
+                return {TokenType::HASH_COMMENT, source.substr(start, current - start), line};
+            }
+            break; // Fall through to error if not '# '
     }
 
     return {TokenType::TOKEN_ERROR, "Unexpected character.", line};
@@ -71,7 +86,7 @@ void Lexer::skipWhitespace() {
 }
 
 Token Lexer::readIdentifier() {
-    while (isAlpha(peek()) || isDigit(peek())) {
+    while (isAlpha(peek()) || isDigit(peek()) || peek() == '-') {
         advance();
     }
     std::string value = source.substr(start, current - start);

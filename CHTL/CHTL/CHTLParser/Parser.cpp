@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include <iostream>
+#include "../CHTLNode/CommentNode.h"
 
 Parser::Parser(Lexer& lexer) : lexer(lexer) {
     // Prime the pump.
@@ -23,12 +24,18 @@ void Parser::parseAttribute(ElementNode* node) {
     consume(TokenType::COLON, "Expect ':' after attribute name.");
 
     std::string value;
-    if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
+    if (match(TokenType::STRING)) {
+        // Quoted strings are consumed as a single token.
         value = previous().value;
     } else {
-        hadError = true;
-        std::cerr << "Parse error at line " << peek().line << ": Expect string or identifier for attribute value." << std::endl;
-        throw std::runtime_error("Parser error");
+        // Unadorned literals: consume tokens until a semicolon.
+        while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
+            if (!value.empty()) {
+                value += " "; // Add space between tokens
+            }
+            advance(); // Consume the token (identifier, comma, etc.)
+            value += previous().value;
+        }
     }
 
     consume(TokenType::SEMICOLON, "Expect ';' after attribute value.");
@@ -44,21 +51,24 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     consume(TokenType::LBRACE, "Expect '{' after element name.");
 
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
-        if (!check(TokenType::IDENTIFIER)) {
-            hadError = true;
-            std::cerr << "Parse error at line " << peek().line << ": Expect property or element." << std::endl;
-            throw std::runtime_error("Parser error");
-        }
-
-        if (peek().value == "text") {
-            node->addChild(parseTextStatement());
-        } else if (peekNext().type == TokenType::COLON) {
-            parseAttribute(node.get());
-        } else if (peekNext().type == TokenType::LBRACE) {
-            node->addChild(parseElement());
+        if (check(TokenType::HASH_COMMENT)) {
+            consume(TokenType::HASH_COMMENT, "Should not fail here.");
+            node->addChild(std::make_unique<CommentNode>(previous().value));
+        } else if (check(TokenType::IDENTIFIER)) {
+            if (peek().value == "text") {
+                node->addChild(parseTextStatement());
+            } else if (peekNext().type == TokenType::COLON) {
+                parseAttribute(node.get());
+            } else if (peekNext().type == TokenType::LBRACE) {
+                node->addChild(parseElement());
+            } else {
+                hadError = true;
+                std::cerr << "Parse error at line " << peek().line << ": Invalid syntax inside element block." << std::endl;
+                throw std::runtime_error("Parser error");
+            }
         } else {
             hadError = true;
-            std::cerr << "Parse error at line " << peek().line << ": Invalid syntax inside element block." << std::endl;
+            std::cerr << "Parse error at line " << peek().line << ": Expect property, comment, or element." << std::endl;
             throw std::runtime_error("Parser error");
         }
     }
@@ -73,10 +83,17 @@ std::unique_ptr<TextNode> Parser::parseTextStatement() {
 
     if (match(TokenType::LBRACE)) { // Block form: text { ... }
         std::string content;
-        if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
+        if (match(TokenType::STRING)) {
             content = previous().value;
         } else {
-            // Allow empty text blocks
+            // Unadorned literals: consume tokens until a right brace.
+            while (!check(TokenType::RBRACE) && !isAtEnd()) {
+                if (!content.empty()) {
+                    content += " ";
+                }
+                advance();
+                content += previous().value;
+            }
         }
         consume(TokenType::RBRACE, "Expect '}' after text block.");
         return std::make_unique<TextNode>(content);

@@ -1,0 +1,12 @@
+// test_hash_comment.chtl
+html {
+    # This is a comment for the body element
+    body {
+        # This is a comment inside the div
+        div {
+            id: main;
+            text: "Hello";
+        }
+        # This is another comment
+    }
+}

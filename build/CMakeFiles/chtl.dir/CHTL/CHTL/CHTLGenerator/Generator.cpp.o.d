@@ -164,6 +164,7 @@ CMakeFiles/chtl.dir/CHTL/CHTL/CHTLGenerator/Generator.cpp.o: \
  /usr/include/c++/13/bits/stl_multimap.h \
  /usr/include/c++/13/bits/erase_if.h \
  /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
+ /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h \
  /usr/include/c++/13/sstream /usr/include/c++/13/istream \
  /usr/include/c++/13/ios /usr/include/c++/13/bits/ios_base.h \
  /usr/include/c++/13/bits/locale_classes.h \

@@ -1,0 +1,13 @@
+// Test for Colon-Equal Equivalence
+html {
+    body {
+        // Use '=' for attributes
+        div {
+            class = container;
+            id = "main-box";
+
+            // Use '=' for text property
+            text = "Hello CHTL!";
+        }
+    }
+}
