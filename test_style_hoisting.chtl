@@ -1,0 +1,20 @@
+html {
+    head {
+        # A head is needed for the generator to find
+    }
+    body {
+        div {
+            # This div should get class="box" and an inline style attribute
+            style {
+                // This is an inline property
+                color: red;
+
+                /* This is a hoisted rule */
+                .box {
+                    border: 1px solid black;
+                }
+            }
+            text: "I am a styled box!";
+        }
+    }
+}

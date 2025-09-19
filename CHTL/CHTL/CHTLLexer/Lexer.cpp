@@ -37,16 +37,21 @@ Token Lexer::nextToken() {
             return {TokenType::COLON, ":", line};
         case ';': return {TokenType::SEMICOLON, ";", line};
         case ',': return {TokenType::COMMA, ",", line};
+        case '.': return {TokenType::DOT, ".", line};
         case '#':
+            // Disambiguate between #id selector and # comment
             if (peek() == ' ') {
+                // It's a generator comment
                 advance();
                 start = current;
                 while (peek() != '\n' && !isAtEnd()) {
                     advance();
                 }
                 return {TokenType::HASH_COMMENT, source.substr(start, current - start), line};
+            } else {
+                // It's an ID selector
+                return {TokenType::HASH, "#", line};
             }
-            break;
     }
 
     return {TokenType::TOKEN_ERROR, "Unexpected character.", line};

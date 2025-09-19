@@ -22,6 +22,7 @@ public:
 
 private:
     std::stringstream output;
+    std::stringstream globalCss;
 };
 
 #endif // CHTL_GENERATOR_H

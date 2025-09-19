@@ -23,7 +23,10 @@ private:
     void parseAttribute(ElementNode* node);
     std::unique_ptr<ElementNode> parseElement();
     std::unique_ptr<TextNode> parseTextStatement();
-    std::unique_ptr<StyleNode> parseStyleBlock();
+    void parseStyleNode(ElementNode* parentNode);
+    void parseCssRule(ElementNode* parentNode, StyleNode* styleNode);
+    void parseCssProperty(StyleNode* styleNode);
+
 
     // Helper methods for token handling
     void advance();

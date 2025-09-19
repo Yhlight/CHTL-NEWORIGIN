@@ -9,6 +9,8 @@ enum class TokenType {
     LBRACE, RBRACE, // { }
     COLON, SEMICOLON, // : ;
     COMMA, // ,
+    DOT, // .
+    HASH, // #
 
     // Literals
     IDENTIFIER, // div, text, my_variable
@@ -40,6 +42,8 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::COLON: return "COLON";
         case TokenType::SEMICOLON: return "SEMICOLON";
         case TokenType::COMMA: return "COMMA";
+        case TokenType::DOT: return "DOT";
+        case TokenType::HASH: return "HASH";
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::STRING: return "STRING";
         case TokenType::NUMBER: return "NUMBER";

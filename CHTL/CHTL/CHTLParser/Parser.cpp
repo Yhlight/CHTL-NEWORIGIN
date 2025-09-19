@@ -25,15 +25,13 @@ void Parser::parseAttribute(ElementNode* node) {
 
     std::string value;
     if (match(TokenType::STRING)) {
-        // Quoted strings are consumed as a single token.
         value = previous().value;
     } else {
-        // Unadorned literals: consume tokens until a semicolon.
         while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
             if (!value.empty()) {
-                value += " "; // Add space between tokens
+                value += " ";
             }
-            advance(); // Consume the token (identifier, comma, etc.)
+            advance();
             value += previous().value;
         }
     }
@@ -57,8 +55,8 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
         } else if (check(TokenType::IDENTIFIER)) {
             if (peek().value == "text") {
                 node->addChild(parseTextStatement());
-        } else if (peek().value == "style") {
-            node->setStyleNode(parseStyleBlock());
+            } else if (peek().value == "style") {
+                parseStyleNode(node.get());
             } else if (peekNext().type == TokenType::COLON) {
                 parseAttribute(node.get());
             } else if (peekNext().type == TokenType::LBRACE) {
@@ -80,57 +78,104 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     return node;
 }
 
-std::unique_ptr<StyleNode> Parser::parseStyleBlock() {
+void Parser::parseStyleNode(ElementNode* parentNode) {
     consume(TokenType::IDENTIFIER, "Expect 'style' keyword.");
     consume(TokenType::LBRACE, "Expect '{' after 'style'.");
 
-    std::string content;
-    int brace_level = 1;
+    auto styleNode = std::make_unique<StyleNode>();
 
-    while (brace_level > 0 && !isAtEnd()) {
-        if (check(TokenType::RBRACE)) {
-            brace_level--;
-            if (brace_level == 0) {
-                // Found the final brace, break without consuming.
-                break;
-            }
+    while (!check(TokenType::RBRACE) && !isAtEnd()) {
+        if (peek().type == TokenType::IDENTIFIER && peekNext().type == TokenType::COLON) {
+            parseCssProperty(styleNode.get());
+        } else {
+            // Assume anything else is a selector rule.
+            parseCssRule(parentNode, styleNode.get());
         }
-        if (check(TokenType::LBRACE)) {
-            brace_level++;
-        }
-
-        if (!content.empty()) {
-            content += " ";
-        }
-        content += peek().value;
-        advance();
     }
 
     consume(TokenType::RBRACE, "Expect '}' to close style block.");
-
-    return std::make_unique<StyleNode>(content);
+    parentNode->setStyleNode(std::move(styleNode));
 }
 
-std::unique_ptr<TextNode> Parser::parseTextStatement() {
-    consume(TokenType::IDENTIFIER, "Expect 'text' keyword."); // Consume 'text'
+void Parser::parseCssProperty(StyleNode* styleNode) {
+    consume(TokenType::IDENTIFIER, "Expect CSS property name.");
+    std::string key = previous().value;
+    consume(TokenType::COLON, "Expect ':' after CSS property name.");
 
-    if (match(TokenType::LBRACE)) { // Block form: text { ... }
+    std::string value;
+    while (!check(TokenType::SEMICOLON) && !check(TokenType::RBRACE) && !isAtEnd()) {
+        if (!value.empty()) {
+            value += " ";
+        }
+        advance();
+        value += previous().value;
+    }
+    consume(TokenType::SEMICOLON, "Expect ';' after CSS property value.");
+    styleNode->addInlineProperty(key, value);
+}
+
+void Parser::parseCssRule(ElementNode* parentNode, StyleNode* styleNode) {
+    std::string selector;
+    std::string selectorName;
+
+    if (match(TokenType::DOT)) {
+        selector = ".";
+        consume(TokenType::IDENTIFIER, "Expect class name after '.'.");
+        selectorName = previous().value;
+        selector += selectorName;
+        // TODO: Handle appending to existing class attribute.
+        parentNode->addAttribute("class", selectorName);
+    } else if (match(TokenType::HASH)) {
+        selector = "#";
+        consume(TokenType::IDENTIFIER, "Expect id name after '#'.");
+        selectorName = previous().value;
+        selector += selectorName;
+        parentNode->addAttribute("id", selectorName);
+    } else {
+        // Handle other selectors later (e.g., tag selectors)
+        hadError = true;
+        std::cerr << "Parse error at line " << peek().line << ": Expect '.' or '#' for selector." << std::endl;
+        throw std::runtime_error("Parser error");
+    }
+
+    consume(TokenType::LBRACE, "Expect '{' after CSS selector.");
+
+    std::string content;
+    int brace_level = 1;
+    while (brace_level > 0 && !isAtEnd()) {
+        if (check(TokenType::RBRACE)) {
+            brace_level--;
+            if (brace_level == 0) break;
+        }
+        if (check(TokenType::LBRACE)) brace_level++;
+
+        if (!content.empty()) content += " ";
+        advance();
+        content += previous().value;
+    }
+    consume(TokenType::RBRACE, "Expect '}' to close CSS rule block.");
+
+    styleNode->addCssRule({selector, content});
+}
+
+
+std::unique_ptr<TextNode> Parser::parseTextStatement() {
+    consume(TokenType::IDENTIFIER, "Expect 'text' keyword.");
+
+    if (match(TokenType::LBRACE)) {
         std::string content;
         if (match(TokenType::STRING)) {
             content = previous().value;
         } else {
-            // Unadorned literals: consume tokens until a right brace.
             while (!check(TokenType::RBRACE) && !isAtEnd()) {
-                if (!content.empty()) {
-                    content += " ";
-                }
+                if (!content.empty()) content += " ";
                 advance();
                 content += previous().value;
             }
         }
         consume(TokenType::RBRACE, "Expect '}' after text block.");
         return std::make_unique<TextNode>(content);
-    } else if (match(TokenType::COLON)) { // Property form: text: ...;
+    } else if (match(TokenType::COLON)) {
         std::string content;
         if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
             content = previous().value;

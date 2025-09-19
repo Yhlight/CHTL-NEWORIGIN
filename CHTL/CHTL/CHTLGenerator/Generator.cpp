@@ -1,45 +1,81 @@
 #include "Generator.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLNode/StyleNode.h"
 
 std::string Generator::generate(BaseNode& root) {
-    output.str(""); // Clear any previous output
-    output.clear(); // Clear any error flags
+    // Clear streams for this generation run
+    output.str("");
+    output.clear();
+    globalCss.str("");
+    globalCss.clear();
+
+    // Pass 1: Traverse AST and generate HTML body + collect global CSS
     root.accept(*this);
-    return output.str();
+    std::string html = output.str();
+
+    // Pass 2: Inject collected global CSS into the <head>
+    if (!globalCss.str().empty()) {
+        std::string styleBlock = "<style>\n" + globalCss.str() + "</style>\n";
+        size_t head_pos = html.find("</head>");
+        if (head_pos != std::string::npos) {
+            html.insert(head_pos, styleBlock);
+        } else {
+            // If no head, prepend to the document. This is a fallback.
+            html.insert(0, "<head>\n" + styleBlock + "</head>\n");
+        }
+    }
+
+    return html;
 }
 
-#include "../CHTLNode/StyleNode.h"
 
 void Generator::visit(ElementNode& node) {
     output << "<" << node.getTagName();
 
-    // Make a mutable copy of attributes to add styles from the style block.
     auto attributes = node.getAttributes();
+    std::string inline_style_content;
+
+    // Process the style node if it exists
     if (node.getStyleNode()) {
-        // TODO: Merge with existing style attribute if it exists.
-        // For now, this will overwrite a manually-set style attribute.
-        attributes["style"] = node.getStyleNode()->getContent();
+        const StyleNode* styleNode = node.getStyleNode();
+
+        // 1. Collect inline properties
+        for (const auto& prop : styleNode->getInlineProperties()) {
+            inline_style_content += prop.first + ": " + prop.second + "; ";
+        }
+        if (!inline_style_content.empty()) {
+            // Trim trailing space
+            inline_style_content.pop_back();
+            attributes["style"] = inline_style_content;
+        }
+
+        // 2. Collect and hoist global rules
+        for (const auto& rule : styleNode->getCssRules()) {
+            globalCss << "  " << rule.selector << " {\n";
+            globalCss << "    " << rule.content << "\n";
+            globalCss << "  }\n";
+        }
     }
 
-    // Add attributes
+    // Add attributes to the tag
     for (const auto& attr : attributes) {
-        // In a real implementation, attribute values should be escaped.
         output << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
     output << ">";
 
-    // For single-child text nodes, don't add newlines.
+    // Pretty-printing logic
     bool simpleTextChild = node.getChildren().size() == 1 && dynamic_cast<TextNode*>(node.getChildren().front().get());
-
     if (!simpleTextChild && !node.getChildren().empty()) {
         output << "\n";
     }
 
+    // Visit children
     for (const auto& child : node.getChildren()) {
         child->accept(*this);
     }
 
+    // Pretty-printing logic
     if (!simpleTextChild && !node.getChildren().empty()) {
         output << "\n";
     }
@@ -48,8 +84,6 @@ void Generator::visit(ElementNode& node) {
 }
 
 void Generator::visit(TextNode& node) {
-    // In a real implementation, we would escape HTML special characters here.
-    // e.g., '<' becomes '&lt;', '&' becomes '&amp;', etc.
     output << node.getContent();
 }
 
