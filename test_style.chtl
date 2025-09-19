@@ -1,0 +1,10 @@
+div {
+    style {
+        width: 100px;
+        height: 200px;
+        background-color: red;
+    }
+    text {
+        "This is a styled div."
+    }
+}

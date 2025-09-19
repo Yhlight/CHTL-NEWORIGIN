@@ -1,0 +1,10 @@
+div {
+    style {
+        .my-class {
+            color: blue;
+        }
+        &:hover {
+            color: red;
+        }
+    }
+}
