@@ -1,0 +1,2 @@
+/usr/bin/ar qc lib/libSCANNER_LIB.a CMakeFiles/SCANNER_LIB.dir/Scanner/UnifiedScanner.cpp.o
+/usr/bin/ranlib lib/libSCANNER_LIB.a
