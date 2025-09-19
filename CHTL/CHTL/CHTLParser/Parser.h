@@ -17,10 +17,13 @@ public:
     // the root element of the CHTL document.
     std::unique_ptr<ElementNode> parse();
 
+#include "../CHTLNode/StyleNode.h"
+
 private:
     void parseAttribute(ElementNode* node);
     std::unique_ptr<ElementNode> parseElement();
     std::unique_ptr<TextNode> parseTextStatement();
+    std::unique_ptr<StyleNode> parseStyleBlock();
 
     // Helper methods for token handling
     void advance();

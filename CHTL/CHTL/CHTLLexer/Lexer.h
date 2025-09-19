@@ -13,6 +13,7 @@ private:
     void skipWhitespace();
     Token readIdentifier();
     Token readString();
+    Token readNumber();
     char peek();
     char peekNext();
     char advance();

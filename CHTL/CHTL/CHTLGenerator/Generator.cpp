@@ -8,11 +8,21 @@ std::string Generator::generate(BaseNode& root) {
     return output.str();
 }
 
+#include "../CHTLNode/StyleNode.h"
+
 void Generator::visit(ElementNode& node) {
     output << "<" << node.getTagName();
 
+    // Make a mutable copy of attributes to add styles from the style block.
+    auto attributes = node.getAttributes();
+    if (node.getStyleNode()) {
+        // TODO: Merge with existing style attribute if it exists.
+        // For now, this will overwrite a manually-set style attribute.
+        attributes["style"] = node.getStyleNode()->getContent();
+    }
+
     // Add attributes
-    for (const auto& attr : node.getAttributes()) {
+    for (const auto& attr : attributes) {
         // In a real implementation, attribute values should be escaped.
         output << " " << attr.first << "=\"" << attr.second << "\"";
     }

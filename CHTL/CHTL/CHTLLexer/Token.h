@@ -13,7 +13,7 @@ enum class TokenType {
     // Literals
     IDENTIFIER, // div, text, my_variable
     STRING,     // "hello world"
-    NUMBER,     // 100, 3.14 (will add later)
+    NUMBER,     // 100, 3.14
 
     // Comments
     HASH_COMMENT, // # a comment
@@ -42,6 +42,7 @@ inline std::string tokenTypeToString(TokenType type) {
         case TokenType::COMMA: return "COMMA";
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::STRING: return "STRING";
+        case TokenType::NUMBER: return "NUMBER";
         case TokenType::HASH_COMMENT: return "HASH_COMMENT";
         case TokenType::TOKEN_EOF: return "EOF";
         case TokenType::TOKEN_ERROR: return "ERROR";

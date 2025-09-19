@@ -167,10 +167,12 @@ CMakeFiles/chtl.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o: \
  /usr/include/c++/13/bits/stl_map.h \
  /usr/include/c++/13/bits/stl_multimap.h \
  /usr/include/c++/13/bits/erase_if.h \
+ /app/CHTL/CHTL/CHTLParser/../CHTLNode/StyleNode.h \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/TextNode.h \
- /usr/include/c++/13/stdexcept /usr/include/c++/13/iostream \
- /usr/include/c++/13/ostream /usr/include/c++/13/ios \
- /usr/include/c++/13/bits/ios_base.h \
+ /usr/include/c++/13/stdexcept \
+ /app/CHTL/CHTL/CHTLParser/../CHTLNode/StyleNode.h \
+ /usr/include/c++/13/iostream /usr/include/c++/13/ostream \
+ /usr/include/c++/13/ios /usr/include/c++/13/bits/ios_base.h \
  /usr/include/c++/13/bits/locale_classes.h \
  /usr/include/c++/13/bits/locale_classes.tcc \
  /usr/include/c++/13/system_error \

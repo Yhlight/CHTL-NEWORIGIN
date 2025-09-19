@@ -3,6 +3,18 @@
 
 Lexer::Lexer(const std::string& source) : source(source) {}
 
+bool Lexer::isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+Token Lexer::readNumber() {
+    while (isDigit(peek())) {
+        advance();
+    }
+    // Does not yet support floating point numbers.
+    return {TokenType::NUMBER, source.substr(start, current - start), line};
+}
+
 Token Lexer::nextToken() {
     skipWhitespace();
     start = current;
@@ -13,7 +25,8 @@ Token Lexer::nextToken() {
 
     char c = advance();
 
-    if (isAlpha(c)) return readIdentifier();
+    if (isAlpha(c) || c == '-') return readIdentifier();
+    if (isDigit(c)) return readNumber();
     if (c == '"') return readString();
 
     switch (c) {
@@ -26,16 +39,14 @@ Token Lexer::nextToken() {
         case ',': return {TokenType::COMMA, ",", line};
         case '#':
             if (peek() == ' ') {
-                // Consume the space
                 advance();
-                // The comment goes to the end of the line.
                 start = current;
                 while (peek() != '\n' && !isAtEnd()) {
                     advance();
                 }
                 return {TokenType::HASH_COMMENT, source.substr(start, current - start), line};
             }
-            break; // Fall through to error if not '# '
+            break;
     }
 
     return {TokenType::TOKEN_ERROR, "Unexpected character.", line};
@@ -56,27 +67,23 @@ void Lexer::skipWhitespace() {
                 break;
             case '/':
                 if (peekNext() == '/') {
-                    // A single-line comment goes until the end of the line.
                     while (peek() != '\n' && !isAtEnd()) {
                         advance();
                     }
                 } else if (peekNext() == '*') {
-                    // A block comment.
-                    advance(); // consume '/'
-                    advance(); // consume '*'
+                    advance();
+                    advance();
                     while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
                         if (peek() == '\n') line++;
                         advance();
                     }
                     if (isAtEnd()) {
-                        // Unclosed comment. The lexer will probably hit EOF
-                        // and the parser will complain. This is okay for now.
                         return;
                     }
-                    advance(); // consume '*'
-                    advance(); // consume '/'
+                    advance();
+                    advance();
                 } else {
-                    return; // It's a division operator, not a comment.
+                    return;
                 }
                 break;
             default:
@@ -103,10 +110,8 @@ Token Lexer::readString() {
         return {TokenType::TOKEN_ERROR, "Unterminated string.", line};
     }
 
-    // The closing "
     advance();
 
-    // Trim the surrounding quotes
     std::string value = source.substr(start + 1, current - start - 2);
     return {TokenType::STRING, value, line};
 }
@@ -134,8 +139,4 @@ bool Lexer::isAlpha(char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
             c == '_';
-}
-
-bool Lexer::isDigit(char c) {
-    return c >= '0' && c <= '9';
 }

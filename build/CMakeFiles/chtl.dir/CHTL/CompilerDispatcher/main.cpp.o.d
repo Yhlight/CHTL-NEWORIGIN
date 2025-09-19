@@ -187,7 +187,9 @@ CMakeFiles/chtl.dir/CHTL/CompilerDispatcher/main.cpp.o: \
  /usr/include/c++/13/bits/stl_map.h \
  /usr/include/c++/13/bits/stl_multimap.h \
  /usr/include/c++/13/bits/erase_if.h \
+ /app/./CHTL/CHTL/CHTLParser/../CHTLNode/StyleNode.h \
  /app/./CHTL/CHTL/CHTLParser/../CHTLNode/TextNode.h \
+ /app/./CHTL/CHTL/CHTLParser/../CHTLNode/StyleNode.h \
  /app/./CHTL/CHTL/CHTLGenerator/Generator.h \
  /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/Visitor.h \
  /app/./CHTL/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \

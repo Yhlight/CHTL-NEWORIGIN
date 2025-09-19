@@ -57,6 +57,8 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
         } else if (check(TokenType::IDENTIFIER)) {
             if (peek().value == "text") {
                 node->addChild(parseTextStatement());
+        } else if (peek().value == "style") {
+            node->setStyleNode(parseStyleBlock());
             } else if (peekNext().type == TokenType::COLON) {
                 parseAttribute(node.get());
             } else if (peekNext().type == TokenType::LBRACE) {
@@ -76,6 +78,37 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     consume(TokenType::RBRACE, "Expect '}' after element block.");
 
     return node;
+}
+
+std::unique_ptr<StyleNode> Parser::parseStyleBlock() {
+    consume(TokenType::IDENTIFIER, "Expect 'style' keyword.");
+    consume(TokenType::LBRACE, "Expect '{' after 'style'.");
+
+    std::string content;
+    int brace_level = 1;
+
+    while (brace_level > 0 && !isAtEnd()) {
+        if (check(TokenType::RBRACE)) {
+            brace_level--;
+            if (brace_level == 0) {
+                // Found the final brace, break without consuming.
+                break;
+            }
+        }
+        if (check(TokenType::LBRACE)) {
+            brace_level++;
+        }
+
+        if (!content.empty()) {
+            content += " ";
+        }
+        content += peek().value;
+        advance();
+    }
+
+    consume(TokenType::RBRACE, "Expect '}' to close style block.");
+
+    return std::make_unique<StyleNode>(content);
 }
 
 std::unique_ptr<TextNode> Parser::parseTextStatement() {

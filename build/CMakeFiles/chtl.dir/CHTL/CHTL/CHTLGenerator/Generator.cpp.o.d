@@ -163,6 +163,7 @@ CMakeFiles/chtl.dir/CHTL/CHTL/CHTLGenerator/Generator.cpp.o: \
  /usr/include/c++/13/bits/stl_map.h \
  /usr/include/c++/13/bits/stl_multimap.h \
  /usr/include/c++/13/bits/erase_if.h \
+ /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/StyleNode.h \
  /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
  /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h \
  /usr/include/c++/13/sstream /usr/include/c++/13/istream \
@@ -184,4 +185,5 @@ CMakeFiles/chtl.dir/CHTL/CHTL/CHTLGenerator/Generator.cpp.o: \
  /usr/include/c++/13/bits/ostream.tcc \
  /usr/include/c++/13/bits/istream.tcc \
  /usr/include/c++/13/bits/sstream.tcc \
- /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/BaseNode.h
+ /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/BaseNode.h \
+ /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/StyleNode.h
