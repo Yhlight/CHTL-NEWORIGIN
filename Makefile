@@ -129,6 +129,30 @@ chtl_compiler/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/build
 .PHONY : chtl_compiler/fast
 
+CHTL/CHTLGenerator/ExpressionEvaluator.o: CHTL/CHTLGenerator/ExpressionEvaluator.cpp.o
+.PHONY : CHTL/CHTLGenerator/ExpressionEvaluator.o
+
+# target to build an object file
+CHTL/CHTLGenerator/ExpressionEvaluator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLGenerator/ExpressionEvaluator.cpp.o
+.PHONY : CHTL/CHTLGenerator/ExpressionEvaluator.cpp.o
+
+CHTL/CHTLGenerator/ExpressionEvaluator.i: CHTL/CHTLGenerator/ExpressionEvaluator.cpp.i
+.PHONY : CHTL/CHTLGenerator/ExpressionEvaluator.i
+
+# target to preprocess a source file
+CHTL/CHTLGenerator/ExpressionEvaluator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLGenerator/ExpressionEvaluator.cpp.i
+.PHONY : CHTL/CHTLGenerator/ExpressionEvaluator.cpp.i
+
+CHTL/CHTLGenerator/ExpressionEvaluator.s: CHTL/CHTLGenerator/ExpressionEvaluator.cpp.s
+.PHONY : CHTL/CHTLGenerator/ExpressionEvaluator.s
+
+# target to generate assembly for a file
+CHTL/CHTLGenerator/ExpressionEvaluator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLGenerator/ExpressionEvaluator.cpp.s
+.PHONY : CHTL/CHTLGenerator/ExpressionEvaluator.cpp.s
+
 CHTL/CHTLGenerator/Generator.o: CHTL/CHTLGenerator/Generator.cpp.o
 .PHONY : CHTL/CHTLGenerator/Generator.o
 
@@ -176,6 +200,30 @@ CHTL/CHTLLexer/Lexer.s: CHTL/CHTLLexer/Lexer.cpp.s
 CHTL/CHTLLexer/Lexer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLLexer/Lexer.cpp.s
 .PHONY : CHTL/CHTLLexer/Lexer.cpp.s
+
+CHTL/CHTLParser/ExpressionParser.o: CHTL/CHTLParser/ExpressionParser.cpp.o
+.PHONY : CHTL/CHTLParser/ExpressionParser.o
+
+# target to build an object file
+CHTL/CHTLParser/ExpressionParser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLParser/ExpressionParser.cpp.o
+.PHONY : CHTL/CHTLParser/ExpressionParser.cpp.o
+
+CHTL/CHTLParser/ExpressionParser.i: CHTL/CHTLParser/ExpressionParser.cpp.i
+.PHONY : CHTL/CHTLParser/ExpressionParser.i
+
+# target to preprocess a source file
+CHTL/CHTLParser/ExpressionParser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLParser/ExpressionParser.cpp.i
+.PHONY : CHTL/CHTLParser/ExpressionParser.cpp.i
+
+CHTL/CHTLParser/ExpressionParser.s: CHTL/CHTLParser/ExpressionParser.cpp.s
+.PHONY : CHTL/CHTLParser/ExpressionParser.s
+
+# target to generate assembly for a file
+CHTL/CHTLParser/ExpressionParser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTLParser/ExpressionParser.cpp.s
+.PHONY : CHTL/CHTLParser/ExpressionParser.cpp.s
 
 CHTL/CHTLParser/Parser.o: CHTL/CHTLParser/Parser.cpp.o
 .PHONY : CHTL/CHTLParser/Parser.o
@@ -234,12 +282,18 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... chtl_compiler"
+	@echo "... CHTL/CHTLGenerator/ExpressionEvaluator.o"
+	@echo "... CHTL/CHTLGenerator/ExpressionEvaluator.i"
+	@echo "... CHTL/CHTLGenerator/ExpressionEvaluator.s"
 	@echo "... CHTL/CHTLGenerator/Generator.o"
 	@echo "... CHTL/CHTLGenerator/Generator.i"
 	@echo "... CHTL/CHTLGenerator/Generator.s"
 	@echo "... CHTL/CHTLLexer/Lexer.o"
 	@echo "... CHTL/CHTLLexer/Lexer.i"
 	@echo "... CHTL/CHTLLexer/Lexer.s"
+	@echo "... CHTL/CHTLParser/ExpressionParser.o"
+	@echo "... CHTL/CHTLParser/ExpressionParser.i"
+	@echo "... CHTL/CHTLParser/ExpressionParser.s"
 	@echo "... CHTL/CHTLParser/Parser.o"
 	@echo "... CHTL/CHTLParser/Parser.i"
 	@echo "... CHTL/CHTLParser/Parser.s"

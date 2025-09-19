@@ -37,6 +37,7 @@ private:
     std::unique_ptr<TextNode> parseTextNode();
     std::unique_ptr<CommentNode> parseCommentNode(TokenType type);
     void parseAttributes(ElementNode& node);
+    void parseStyleBlock(ElementNode& node);
 };
 
 } // namespace CHTL

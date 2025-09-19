@@ -18,11 +18,25 @@ enum class TokenType {
     COLON,         // :
     EQUALS,        // =
     SEMICOLON,     // ;
+    LEFT_PAREN,    // (
+    RIGHT_PAREN,   // )
+    PLUS,          // +
+    MINUS,         // -
+    STAR,          // *
+    SLASH,         // /
+    PERCENT,       // %
+    STAR_STAR,     // **
+    GREATER,       // >
+    LESS,          // <
+    QUESTION,      // ?
+    AMPERSAND_AMPERSAND, // &&
+    PIPE_PIPE,     // ||
 
     // Literals
     IDENTIFIER,         // e.g., div, my_variable
     STRING_LITERAL,     // "hello" or 'hello'
-    UNQUOTED_LITERAL,   // hello
+    NUMBER_LITERAL,     // 100, 3.14
+    UNQUOTED_LITERAL,   // hello, red, 100px (for now)
 
     // Comments
     SINGLE_LINE_COMMENT, // // a comment

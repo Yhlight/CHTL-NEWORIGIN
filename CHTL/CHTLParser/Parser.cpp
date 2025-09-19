@@ -25,9 +25,10 @@ std::unique_ptr<BaseNode> Parser::parseDeclaration() {
         current--;
         return parseElement();
     }
-     if (check(TokenType::SINGLE_LINE_COMMENT) || check(TokenType::MULTI_LINE_COMMENT) || check(TokenType::GENERATOR_COMMENT)) {
+    if (check(TokenType::SINGLE_LINE_COMMENT) || check(TokenType::MULTI_LINE_COMMENT) || check(TokenType::GENERATOR_COMMENT)) {
         return parseCommentNode(peek().type);
     }
+    // Style blocks are not standalone declarations, they are parsed inside elements.
 
 
     // If we are at the end, it's not an error, just return nullptr.
@@ -72,10 +73,16 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     consume(TokenType::LEFT_BRACE, "Expect '{' after element tag name.");
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        // Check for a style block
+        if (match(TokenType::KEYWORD_STYLE)) {
+            parseStyleBlock(*node);
+        }
         // Check for attributes
-        if (peek().type == TokenType::UNQUOTED_LITERAL && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUALS)) {
+        else if (peek().type == TokenType::UNQUOTED_LITERAL && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUALS)) {
             parseAttributes(*node);
-        } else {
+        }
+        // Otherwise, it must be a child element or other declaration
+        else {
             auto child = parseDeclaration();
             if (child) {
                 node->children.push_back(std::move(child));
@@ -103,6 +110,40 @@ void Parser::parseAttributes(ElementNode& node) {
 
     // Consume optional semicolon
     match(TokenType::SEMICOLON);
+}
+
+void Parser::parseStyleBlock(ElementNode& node) {
+    consume(TokenType::LEFT_BRACE, "Expect '{' after 'style' keyword.");
+
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        if (check(TokenType::UNQUOTED_LITERAL)) {
+            std::string propName = advance().value;
+            // Handle multi-part property names like font-size
+            while (match(TokenType::MINUS)) {
+                propName += "-";
+                propName += consume(TokenType::UNQUOTED_LITERAL, "Expect property name part after '-'.").value;
+            }
+
+            consume(TokenType::COLON, "Expect ':' after style property name.");
+
+            std::vector<Token> propValueTokens;
+            while (!check(TokenType::SEMICOLON) && !check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+                propValueTokens.push_back(advance());
+            }
+            node.styleProperties[propName] = propValueTokens;
+
+            // Consume the semicolon
+            if (check(TokenType::SEMICOLON)) {
+                advance();
+            }
+        } else {
+             // If it's not a property, it might be a comment or something else we want to ignore for now.
+             // Or throw an error. For now, we'll just advance to avoid an infinite loop.
+             advance();
+        }
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
 }
 
 

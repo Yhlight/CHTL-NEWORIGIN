@@ -17,11 +17,37 @@ std::vector<Token> Lexer::tokenize() {
         start = current;
         char c = advance();
         switch (c) {
+            case '(': tokens.push_back(makeToken(TokenType::LEFT_PAREN)); break;
+            case ')': tokens.push_back(makeToken(TokenType::RIGHT_PAREN)); break;
             case '{': tokens.push_back(makeToken(TokenType::LEFT_BRACE)); break;
             case '}': tokens.push_back(makeToken(TokenType::RIGHT_BRACE)); break;
             case ':': tokens.push_back(makeToken(TokenType::COLON)); break;
             case '=': tokens.push_back(makeToken(TokenType::EQUALS)); break;
             case ';': tokens.push_back(makeToken(TokenType::SEMICOLON)); break;
+            case '+': tokens.push_back(makeToken(TokenType::PLUS)); break;
+            case '-': tokens.push_back(makeToken(TokenType::MINUS)); break;
+            case '%': tokens.push_back(makeToken(TokenType::PERCENT)); break;
+            case '>': tokens.push_back(makeToken(TokenType::GREATER)); break;
+            case '<': tokens.push_back(makeToken(TokenType::LESS)); break;
+            case '?': tokens.push_back(makeToken(TokenType::QUESTION)); break;
+
+            case '*':
+                tokens.push_back(makeToken(match('*') ? TokenType::STAR_STAR : TokenType::STAR));
+                break;
+            case '&':
+                if (match('&')) {
+                    tokens.push_back(makeToken(TokenType::AMPERSAND_AMPERSAND));
+                } else {
+                    tokens.push_back(makeToken(TokenType::UNKNOWN, "&"));
+                }
+                break;
+            case '|':
+                if (match('|')) {
+                    tokens.push_back(makeToken(TokenType::PIPE_PIPE));
+                } else {
+                    tokens.push_back(makeToken(TokenType::UNKNOWN, "|"));
+                }
+                break;
 
             case '/':
                 if (match('/')) {
@@ -40,6 +66,8 @@ std::vector<Token> Lexer::tokenize() {
                        advance(); // consume /
                     }
                     tokens.push_back(makeToken(TokenType::MULTI_LINE_COMMENT, source.substr(start, current - start)));
+                } else {
+                    tokens.push_back(makeToken(TokenType::SLASH));
                 }
                 break;
 
@@ -65,7 +93,9 @@ std::vector<Token> Lexer::tokenize() {
                 break;
 
             default:
-                if (isalpha(c) || c == '_') {
+                if (isdigit(c)) {
+                    tokens.push_back(number());
+                } else if (isalpha(c) || c == '_') {
                     tokens.push_back(identifier());
                 } else {
                     tokens.push_back(makeToken(TokenType::UNKNOWN, std::string(1, c)));
@@ -146,6 +176,24 @@ Token Lexer::identifier() {
     // We will treat any identifier-like sequence that is not a keyword as an UNQUOTED_LITERAL
     // The parser will later decide if it's a valid element name, attribute, or just a value.
     return makeToken(TokenType::UNQUOTED_LITERAL);
+}
+
+Token Lexer::number() {
+    while (isdigit(peek())) {
+        advance();
+    }
+
+    // Look for a fractional part.
+    if (peek() == '.' && isdigit(peekNext())) {
+        // Consume the "."
+        advance();
+
+        while (isdigit(peek())) {
+            advance();
+        }
+    }
+
+    return makeToken(TokenType::NUMBER_LITERAL);
 }
 
 } // namespace CHTL

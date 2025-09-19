@@ -15,7 +15,9 @@ set(COMPILER_SOURCES
     main.cpp
     CHTL/CHTLLexer/Lexer.cpp
     CHTL/CHTLParser/Parser.cpp
+    CHTL/CHTLParser/ExpressionParser.cpp
     CHTL/CHTLGenerator/Generator.cpp
+    CHTL/CHTLGenerator/ExpressionEvaluator.cpp
 )
 
 # Add the root directory to the include path so we can use #include "CHTL/..."

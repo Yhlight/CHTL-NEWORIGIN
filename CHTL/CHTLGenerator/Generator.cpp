@@ -1,7 +1,30 @@
 #include "Generator.h"
+#include "../CHTLParser/ExpressionParser.h"
+#include "ExpressionEvaluator.h"
 #include <stdexcept>
 
 namespace CHTL {
+
+// Helper to convert an EvaluatedValue to a string for CSS
+std::string valueToString(const EvaluatedValue& val) {
+    switch (val.type) {
+        case EvaluatedValue::Type::NUMBER:
+            // Remove trailing zeros for clean output
+            {
+                std::string s = std::to_string(val.number_val);
+                s.erase(s.find_last_not_of('0') + 1, std::string::npos);
+                s.erase(s.find_last_not_of('.') + 1, std::string::npos);
+                return s;
+            }
+        case EvaluatedValue::Type::STRING:
+            return val.string_val;
+        case EvaluatedValue::Type::BOOL:
+            return val.bool_val ? "true" : "false";
+        default:
+            return "";
+    }
+}
+
 
 Generator::Generator() {}
 
@@ -38,6 +61,38 @@ void Generator::visitElement(const ElementNode& node) {
     for (const auto& attr : node.attributes) {
         output << " " << attr.first << "=\"" << attr.second << "\"";
     }
+
+    // Process and generate style properties
+    if (!node.styleProperties.empty()) {
+        output << " style=\"";
+        std::stringstream style_ss;
+        ExpressionEvaluator evaluator;
+
+        for (const auto& styleProp : node.styleProperties) {
+            ExpressionParser expressionParser(styleProp.second);
+            auto expr = expressionParser.parse();
+            if (expr) {
+                EvaluatedValue result = evaluator.evaluate(*expr);
+                std::string finalValue = valueToString(result);
+                // A better, but still simple, unit handling. If the result is a number
+                // and the next token is a unit, append it.
+                if (result.type == EvaluatedValue::Type::NUMBER) {
+                    // This is not robust, but will work for simple "10 px" cases.
+                    // A proper implementation requires a more advanced parser/evaluator.
+                    for(const auto& token : styleProp.second) {
+                        if (token.type == TokenType::UNQUOTED_LITERAL) {
+                            finalValue += token.value;
+                            break; // only append first unit found
+                        }
+                    }
+                }
+                style_ss << styleProp.first << ": " << finalValue << "; ";
+            }
+        }
+        output << style_ss.str() << "\"";
+    }
+
+
     output << ">" << std::endl;
 
     indentLevel++;

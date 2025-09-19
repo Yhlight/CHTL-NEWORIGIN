@@ -124,6 +124,7 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTLGenerator/Generator.cpp.o: \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator_args.h \
  /app/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \
+ /app/CHTL/CHTLGenerator/../CHTLNode/../CHTLLexer/Token.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/char_traits.h \
  /usr/include/c++/13/bits/localefwd.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h \
@@ -181,4 +182,7 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTLGenerator/Generator.cpp.o: \
  /usr/include/c++/13/bits/basic_ios.tcc /usr/include/c++/13/ostream \
  /usr/include/c++/13/bits/ostream.tcc \
  /usr/include/c++/13/bits/istream.tcc \
- /usr/include/c++/13/bits/sstream.tcc
+ /usr/include/c++/13/bits/sstream.tcc \
+ /app/CHTL/CHTLGenerator/../CHTLParser/ExpressionParser.h \
+ /app/CHTL/CHTLGenerator/../CHTLParser/Expr.h /usr/include/c++/13/any \
+ /app/CHTL/CHTLGenerator/ExpressionEvaluator.h

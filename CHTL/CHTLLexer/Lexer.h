@@ -28,6 +28,7 @@ private:
     Token makeToken(TokenType type);
     Token makeToken(TokenType type, const std::string& value);
     Token stringLiteral();
+    Token number();
     Token identifier();
     Token processSymbol();
     Token processSlash(); // For comments or division

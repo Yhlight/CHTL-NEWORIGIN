@@ -1,3 +1,7 @@
+import os
+
+file_path = "test.chtl"
+content = r"""
 # CHTL document with style expressions
 
 html {
@@ -19,3 +23,9 @@ html {
         }
     }
 }
+"""
+
+with open(file_path, "w") as f:
+    f.write(content.strip())
+
+print(f"File '{file_path}' updated successfully.")
