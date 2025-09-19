@@ -1,0 +1,2 @@
+/usr/bin/ar qc lib/libUTIL_LIB.a CMakeFiles/UTIL_LIB.dir/Util/FileSystem/FileSystem.cpp.o CMakeFiles/UTIL_LIB.dir/Util/StringUtil/StringUtil.cpp.o
+/usr/bin/ranlib lib/libUTIL_LIB.a
