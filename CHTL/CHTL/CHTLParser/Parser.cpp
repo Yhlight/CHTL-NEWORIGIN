@@ -2,32 +2,37 @@
 #include <iostream>
 
 Parser::Parser(Lexer& lexer) : lexer(lexer) {
-    // Prime the pump. Initialize currentToken and previousToken.
+    // Prime the pump.
     advance();
 }
 
-// Main entry point. For now, we assume a single root element.
-std::unique_ptr<BaseNode> Parser::parse() {
+// --- Public Methods ---
+
+std::unique_ptr<ElementNode> Parser::parse() {
     if (isAtEnd()) {
         return nullptr;
     }
-    // A CHTL file is a sequence of statements (elements).
-    // For now, we only parse the first one.
-    return parseStatement();
+    return parseElement();
 }
 
-// A statement is currently just an element or a text definition.
-std::unique_ptr<BaseNode> Parser::parseStatement() {
-    if (peek().type == TokenType::IDENTIFIER) {
-        if (peek().value == "text") {
-            return parseTextStatement();
-        }
-        return parseElement();
+// --- Private Parsing Methods ---
+
+void Parser::parseAttribute(ElementNode* node) {
+    consume(TokenType::IDENTIFIER, "Expect attribute name.");
+    std::string key = previous().value;
+    consume(TokenType::COLON, "Expect ':' after attribute name.");
+
+    std::string value;
+    if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
+        value = previous().value;
+    } else {
+        hadError = true;
+        std::cerr << "Parse error at line " << peek().line << ": Expect string or identifier for attribute value." << std::endl;
+        throw std::runtime_error("Parser error");
     }
 
-    hadError = true;
-    std::cerr << "Parse error at line " << peek().line << ": Expected an element." << std::endl;
-    throw std::runtime_error("Parser error");
+    consume(TokenType::SEMICOLON, "Expect ';' after attribute value.");
+    node->addAttribute(key, value);
 }
 
 std::unique_ptr<ElementNode> Parser::parseElement() {
@@ -39,7 +44,23 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     consume(TokenType::LBRACE, "Expect '{' after element name.");
 
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
-        node->addChild(parseStatement());
+        if (!check(TokenType::IDENTIFIER)) {
+            hadError = true;
+            std::cerr << "Parse error at line " << peek().line << ": Expect property or element." << std::endl;
+            throw std::runtime_error("Parser error");
+        }
+
+        if (peek().value == "text") {
+            node->addChild(parseTextStatement());
+        } else if (peekNext().type == TokenType::COLON) {
+            parseAttribute(node.get());
+        } else if (peekNext().type == TokenType::LBRACE) {
+            node->addChild(parseElement());
+        } else {
+            hadError = true;
+            std::cerr << "Parse error at line " << peek().line << ": Invalid syntax inside element block." << std::endl;
+            throw std::runtime_error("Parser error");
+        }
     }
 
     consume(TokenType::RBRACE, "Expect '}' after element block.");
@@ -50,14 +71,24 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
 std::unique_ptr<TextNode> Parser::parseTextStatement() {
     consume(TokenType::IDENTIFIER, "Expect 'text' keyword."); // Consume 'text'
 
-    if (match(TokenType::LBRACE)) { // Block form: text { "..." }
-        consume(TokenType::STRING, "Expect string literal inside text block.");
-        std::string content = previous().value;
+    if (match(TokenType::LBRACE)) { // Block form: text { ... }
+        std::string content;
+        if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
+            content = previous().value;
+        } else {
+            // Allow empty text blocks
+        }
         consume(TokenType::RBRACE, "Expect '}' after text block.");
         return std::make_unique<TextNode>(content);
-    } else if (match(TokenType::COLON)) { // Property form: text: "...";
-        consume(TokenType::STRING, "Expect string after 'text:'.");
-        std::string content = previous().value;
+    } else if (match(TokenType::COLON)) { // Property form: text: ...;
+        std::string content;
+        if (match(TokenType::STRING) || match(TokenType::IDENTIFIER)) {
+            content = previous().value;
+        } else {
+            hadError = true;
+            std::cerr << "Parse error at line " << peek().line << ": Expect string or identifier for text value." << std::endl;
+            throw std::runtime_error("Parser error");
+        }
         consume(TokenType::SEMICOLON, "Expect ';' after text property.");
         return std::make_unique<TextNode>(content);
     } else {
@@ -72,9 +103,15 @@ std::unique_ptr<TextNode> Parser::parseTextStatement() {
 
 void Parser::advance() {
     previousToken = currentToken;
-    currentToken = lexer.nextToken();
-    // Skip error tokens for now, could implement panic mode recovery later
-    while (currentToken.type == TokenType::TOKEN_ERROR) {
+
+    if (hasLookahead) {
+        currentToken = lookaheadToken;
+        hasLookahead = false;
+    } else {
+        currentToken = lexer.nextToken();
+    }
+
+    while (currentToken.type == TokenType::TOKEN_ERROR && !isAtEnd()) {
         std::cerr << "Lexer Error: " << currentToken.value << " on line " << currentToken.line << std::endl;
         hadError = true;
         currentToken = lexer.nextToken();
@@ -110,6 +147,14 @@ bool Parser::isAtEnd() {
 
 const Token& Parser::peek() {
     return currentToken;
+}
+
+const Token& Parser::peekNext() {
+    if (!hasLookahead) {
+        lookaheadToken = lexer.nextToken();
+        hasLookahead = true;
+    }
+    return lookaheadToken;
 }
 
 const Token& Parser::previous() {

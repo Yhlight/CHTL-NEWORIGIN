@@ -14,6 +14,7 @@ private:
     Token readIdentifier();
     Token readString();
     char peek();
+    char peekNext();
     char advance();
     bool isAtEnd();
     bool isAlpha(char c);

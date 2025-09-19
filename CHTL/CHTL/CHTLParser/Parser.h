@@ -13,13 +13,12 @@ class Parser {
 public:
     Parser(Lexer& lexer);
 
-    // In CHTL, a file can contain multiple root-level elements.
-    // So the parser will return a list of root nodes.
-    // For simplicity in this initial step, we'll parse a single root element.
-    std::unique_ptr<BaseNode> parse();
+    // The parse method starts the parsing process and is expected to return
+    // the root element of the CHTL document.
+    std::unique_ptr<ElementNode> parse();
 
 private:
-    std::unique_ptr<BaseNode> parseStatement();
+    void parseAttribute(ElementNode* node);
     std::unique_ptr<ElementNode> parseElement();
     std::unique_ptr<TextNode> parseTextStatement();
 
@@ -30,11 +29,14 @@ private:
     bool check(TokenType type);
     bool isAtEnd();
     const Token& peek();
+    const Token& peekNext();
     const Token& previous();
 
     Lexer& lexer;
     Token currentToken;
     Token previousToken;
+    Token lookaheadToken;
+    bool hasLookahead = false;
     bool hadError = false;
 };
 

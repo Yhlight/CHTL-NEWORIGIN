@@ -4,7 +4,7 @@
 #include "CHTL/CHTL/CHTLLexer/Lexer.h"
 #include "CHTL/CHTL/CHTLParser/Parser.h"
 #include "CHTL/CHTL/CHTLGenerator/Generator.h"
-#include "CHTL/CHTL/CHTLNode/BaseNode.h"
+#include "CHTL/CHTL/CHTLNode/ElementNode.h"
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 
     // 2. Parsing
     Parser parser(lexer);
-    std::unique_ptr<BaseNode> ast;
+    std::unique_ptr<ElementNode> ast; // Changed from BaseNode to ElementNode
     try {
         ast = parser.parse();
         if (!ast) {
@@ -44,9 +44,7 @@ int main(int argc, char* argv[]) {
     std::string html_output = generator.generate(*ast);
 
     // Print the final result
-    std::cout << "--- CHTL to HTML ---" << std::endl;
-    std::cout << html_output << std::endl;
-    std::cout << "---      END     ---" << std::endl;
+    std::cout << html_output;
 
     return 0;
 }

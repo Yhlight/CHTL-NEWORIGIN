@@ -21,7 +21,6 @@ Token Lexer::nextToken() {
         case '}': return {TokenType::RBRACE, "}", line};
         case ':': return {TokenType::COLON, ":", line};
         case ';': return {TokenType::SEMICOLON, ";", line};
-        // Handle comments later
     }
 
     return {TokenType::TOKEN_ERROR, "Unexpected character.", line};
@@ -40,16 +39,31 @@ void Lexer::skipWhitespace() {
                 line++;
                 advance();
                 break;
-            // For now, we will not handle comments, but they would be skipped here.
-            /*
             case '/':
                 if (peekNext() == '/') {
-                    while (peek() != '\n' && !isAtEnd()) advance();
+                    // A single-line comment goes until the end of the line.
+                    while (peek() != '\n' && !isAtEnd()) {
+                        advance();
+                    }
+                } else if (peekNext() == '*') {
+                    // A block comment.
+                    advance(); // consume '/'
+                    advance(); // consume '*'
+                    while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
+                        if (peek() == '\n') line++;
+                        advance();
+                    }
+                    if (isAtEnd()) {
+                        // Unclosed comment. The lexer will probably hit EOF
+                        // and the parser will complain. This is okay for now.
+                        return;
+                    }
+                    advance(); // consume '*'
+                    advance(); // consume '/'
                 } else {
-                    return;
+                    return; // It's a division operator, not a comment.
                 }
                 break;
-            */
             default:
                 return;
         }
@@ -85,6 +99,11 @@ Token Lexer::readString() {
 char Lexer::peek() {
     if (isAtEnd()) return '\0';
     return source[current];
+}
+
+char Lexer::peekNext() {
+    if (current + 1 >= source.length()) return '\0';
+    return source[current + 1];
 }
 
 char Lexer::advance() {

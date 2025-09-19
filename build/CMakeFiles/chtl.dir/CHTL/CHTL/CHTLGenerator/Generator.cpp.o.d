@@ -157,7 +157,12 @@ CMakeFiles/chtl.dir/CHTL/CHTL/CHTLGenerator/Generator.cpp.o: \
  /usr/include/c++/13/bits/uses_allocator_args.h \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/stl_vector.h \
  /usr/include/c++/13/bits/stl_bvector.h \
- /usr/include/c++/13/bits/vector.tcc \
+ /usr/include/c++/13/bits/vector.tcc /usr/include/c++/13/map \
+ /usr/include/c++/13/bits/stl_tree.h \
+ /usr/include/c++/13/bits/node_handle.h \
+ /usr/include/c++/13/bits/stl_map.h \
+ /usr/include/c++/13/bits/stl_multimap.h \
+ /usr/include/c++/13/bits/erase_if.h \
  /app/CHTL/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
  /usr/include/c++/13/sstream /usr/include/c++/13/istream \
  /usr/include/c++/13/ios /usr/include/c++/13/bits/ios_base.h \
