@@ -28,28 +28,25 @@ UnifiedScanner::UnifiedScanner()
 UnifiedScanner::~UnifiedScanner() = default;
 
 ScanResult UnifiedScanner::scan(const std::string& input) {
+    std::cerr << "DEBUG: scan - input length: " << input.length() << std::endl;
     setInput(input);
     ScanResult result;
     
-    try {
-        scanCode();
-        processFragments();
-        
-        result.fragments = fragments_;
-        result.placeholders = placeholders_;
-        result.success = true;
-        
-        // 生成处理后的代码
-        std::ostringstream oss;
-        for (const auto& fragment : fragments_) {
-            oss << fragment.content;
-        }
-        result.processedCode = oss.str();
-        
-    } catch (const std::exception& e) {
-        result.success = false;
-        result.errorMessage = e.what();
+    std::cerr << "DEBUG: scan - calling scanCode" << std::endl;
+    scanCode();
+    std::cerr << "DEBUG: scan - calling processFragments" << std::endl;
+    processFragments();
+    
+    result.fragments = fragments_;
+    result.placeholders = placeholders_;
+    result.success = true;
+    
+    // 生成处理后的代码
+    std::ostringstream oss;
+    for (const auto& fragment : fragments_) {
+        oss << fragment.content;
     }
+    result.processedCode = oss.str();
     
     return result;
 }
@@ -166,32 +163,49 @@ std::string UnifiedScanner::restorePlaceholders(const std::string& processedCode
 }
 
 void UnifiedScanner::scanCode() {
+    std::cout << "DEBUG: scanCode - input length: " << input_.length() << std::endl;
+    std::cout << "DEBUG: scanCode - enableSyntaxBoundaryDetection_: " << enableSyntaxBoundaryDetection_ << std::endl;
+    
     while (position_ < input_.length()) {
+        std::cout << "DEBUG: scanCode - before skipWhitespace, position: " << position_ << std::endl;
+        
         // 跳过空白字符
         skipWhitespace();
         
+        std::cout << "DEBUG: scanCode - after skipWhitespace, position: " << position_ << std::endl;
+        
         if (position_ >= input_.length()) {
+            std::cout << "DEBUG: scanCode - reached end of input" << std::endl;
             break;
         }
+        
+        std::cout << "DEBUG: scanCode - position: " << position_ << ", char: '" << currentChar() << "'" << std::endl;
         
         // 检测语法边界
         if (enableSyntaxBoundaryDetection_) {
             if (detectCHTLBoundary()) {
+                std::cout << "DEBUG: scanCode - detected CHTL boundary" << std::endl;
                 scanCHTLBlock();
             } else if (detectCHTLJSBoundary()) {
+                std::cout << "DEBUG: scanCode - detected CHTL JS boundary" << std::endl;
                 scanCHTLJSBlock();
             } else if (detectCSSBoundary()) {
+                std::cout << "DEBUG: scanCode - detected CSS boundary" << std::endl;
                 scanCSSBlock();
             } else if (detectJSBoundary()) {
+                std::cout << "DEBUG: scanCode - detected JS boundary" << std::endl;
                 scanJSBlock();
             } else if (detectHTMLBoundary()) {
+                std::cout << "DEBUG: scanCode - detected HTML boundary" << std::endl;
                 scanHTMLBlock();
             } else {
                 // 默认作为CHTL处理
+                std::cout << "DEBUG: scanCode - default to CHTL" << std::endl;
                 scanCHTLBlock();
             }
         } else {
             // 简单扫描，按行处理
+            std::cout << "DEBUG: scanCode - simple scan" << std::endl;
             scanCHTLBlock();
         }
     }
@@ -355,6 +369,7 @@ bool UnifiedScanner::detectCHTLBoundary() {
     
     // 检测CHTL关键字
     std::string keyword = readIdentifier();
+    std::cout << "DEBUG: detectCHTLBoundary - keyword: '" << keyword << "', isCHTLKeyword: " << isCHTLKeyword(keyword) << std::endl;
     if (!keyword.empty() && isCHTLKeyword(keyword)) {
         return true;
     }

@@ -33,7 +33,16 @@ std::shared_ptr<BaseNode> CHTLParser::parse() {
     nodeStack_.push(root);
     
     try {
-        parseBlockContent(root);
+        // 解析第一个元素
+        if (isElementStart()) {
+            auto firstElement = parseElement();
+            if (firstElement) {
+                root->addChild(firstElement);
+            }
+        } else {
+            // 如果没有元素，则解析块内容
+            parseBlockContent(root);
+        }
     } catch (const std::exception& e) {
         addError("Parse error: " + std::string(e.what()));
     }
@@ -109,8 +118,13 @@ std::shared_ptr<BaseNode> CHTLParser::parseElement() {
     // 解析元素内容（包括属性和子元素）
     if (match(TokenType::LEFT_BRACE)) {
         advance();
+        
+        // 先解析属性
         parseAttributes(element);
+        
+        // 然后解析子元素
         parseBlockContent(element);
+        
         if (match(TokenType::RIGHT_BRACE)) {
             advance();
         } else {
@@ -404,6 +418,8 @@ std::shared_ptr<BaseNode> CHTLParser::parseUse() {
 void CHTLParser::parseAttributes(std::shared_ptr<BaseNode> element) {
     // 只解析属性，不解析子元素
     while (hasMoreTokens() && !match(TokenType::RIGHT_BRACE)) {
+        skipWhitespace();
+        
         if (match("style")) {
             // 解析局部样式块
             parseLocalStyleBlock(element);

@@ -6,8 +6,8 @@
 #include <string>
 #include <unordered_map>
 #include <stack>
-#include "CHTLLexer/Token.h"
-#include "CHTLNode/BaseNode.h"
+#include "CHTL/CHTLLexer/Token.h"
+#include "CHTL/CHTLNode/BaseNode.h"
 
 namespace CHTL {
 
