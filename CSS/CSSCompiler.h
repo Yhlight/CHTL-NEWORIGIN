@@ -2,6 +2,8 @@
 #define CSS_COMPILER_H
 
 #include <string>
+#include <vector>
+#include <sstream>
 
 class CSSCompiler {
 public:

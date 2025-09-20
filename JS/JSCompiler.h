@@ -2,6 +2,8 @@
 #define JS_COMPILER_H
 
 #include <string>
+#include <vector>
+#include <sstream>
 
 class JSCompiler {
 public:

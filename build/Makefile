@@ -253,6 +253,32 @@ CodeMerger/fast:
 .PHONY : CodeMerger/fast
 
 #=============================================================================
+# Target rules for targets named CSSCompiler
+
+# Build rule for target.
+CSSCompiler: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CSSCompiler
+.PHONY : CSSCompiler
+
+# fast build rule for target.
+CSSCompiler/fast:
+	$(MAKE) $(MAKESILENT) -f CSS/CMakeFiles/CSSCompiler.dir/build.make CSS/CMakeFiles/CSSCompiler.dir/build
+.PHONY : CSSCompiler/fast
+
+#=============================================================================
+# Target rules for targets named JSCompiler
+
+# Build rule for target.
+JSCompiler: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 JSCompiler
+.PHONY : JSCompiler
+
+# fast build rule for target.
+JSCompiler/fast:
+	$(MAKE) $(MAKESILENT) -f JS/CMakeFiles/JSCompiler.dir/build.make JS/CMakeFiles/JSCompiler.dir/build
+.PHONY : JSCompiler/fast
+
+#=============================================================================
 # Target rules for targets named CompilerDispatcher
 
 # Build rule for target.
@@ -327,8 +353,10 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... CHTJSCore"
 	@echo "... CHTLCore"
+	@echo "... CSSCompiler"
 	@echo "... CodeMerger"
 	@echo "... CompilerDispatcher"
+	@echo "... JSCompiler"
 	@echo "... Scanner"
 	@echo "... Util"
 	@echo "... chtl"

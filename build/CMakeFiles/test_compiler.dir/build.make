@@ -102,6 +102,12 @@ test_compiler: Scanner/libScanner.a
 test_compiler: CodeMerger/libCodeMerger.a
 test_compiler: CompilerDispatcher/libCompilerDispatcher.a
 test_compiler: Util/libUtil.a
+test_compiler: CHTL/libCHTLCore.a
+test_compiler: CHTL\ JS/libCHTJSCore.a
+test_compiler: Scanner/libScanner.a
+test_compiler: CodeMerger/libCodeMerger.a
+test_compiler: CSS/libCSSCompiler.a
+test_compiler: JS/libJSCompiler.a
 test_compiler: CMakeFiles/test_compiler.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/workspace/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable test_compiler"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/test_compiler.dir/link.txt --verbose=$(VERBOSE)

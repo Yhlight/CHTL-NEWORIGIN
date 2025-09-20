@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/workspace -I/workspace/CHTL -I"/workspace/CHTL JS" -I/workspace/Util -I/workspace/ThirdParty -I/workspace/CodeMerger
 
-CXX_FLAGS =  -Wall -Wextra -O2 -O3 -DNDEBUG -std=gnu++17
+CXX_FLAGS =  -Wall -Wextra -O2 -std=gnu++17
 

@@ -25,6 +25,8 @@ add_subdirectory(CHTL)
 add_subdirectory(CHTL\ JS)
 add_subdirectory(Scanner)
 add_subdirectory(CodeMerger)
+add_subdirectory(CSS)
+add_subdirectory(JS)
 add_subdirectory(CompilerDispatcher)
 add_subdirectory(Test)
 

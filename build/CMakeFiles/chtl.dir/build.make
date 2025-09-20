@@ -102,6 +102,12 @@ chtl: Scanner/libScanner.a
 chtl: CodeMerger/libCodeMerger.a
 chtl: CompilerDispatcher/libCompilerDispatcher.a
 chtl: Util/libUtil.a
+chtl: CHTL/libCHTLCore.a
+chtl: CHTL\ JS/libCHTJSCore.a
+chtl: Scanner/libScanner.a
+chtl: CodeMerger/libCodeMerger.a
+chtl: CSS/libCSSCompiler.a
+chtl: JS/libJSCompiler.a
 chtl: CMakeFiles/chtl.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/workspace/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable chtl"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/chtl.dir/link.txt --verbose=$(VERBOSE)

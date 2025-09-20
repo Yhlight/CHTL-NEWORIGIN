@@ -20,3 +20,13 @@ target_include_directories(CompilerDispatcher PUBLIC
 
 # 设置编译选项
 target_compile_features(CompilerDispatcher PUBLIC cxx_std_17)
+
+# 链接必要的库
+target_link_libraries(CompilerDispatcher
+    CHTLCore
+    CHTJSCore
+    Scanner
+    CodeMerger
+    CSSCompiler
+    JSCompiler
+)
