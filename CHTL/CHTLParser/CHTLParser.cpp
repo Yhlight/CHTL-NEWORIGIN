@@ -98,11 +98,11 @@ bool CHTLParser::parseElement(std::unique_ptr<CHTLNode>& element) {
             } else if (match(TokenType::TEXT)) {
                 child = std::make_unique<TextNode>(currentToken().value);
                 advance();
-            } else if (match(TokenType::STYLE)) {
+            } else if (match(TokenType::IDENTIFIER) && currentToken().value == "style") {
                 if (!parseStyle(child)) {
                     return false;
                 }
-            } else if (match(TokenType::SCRIPT)) {
+            } else if (match(TokenType::IDENTIFIER) && currentToken().value == "script") {
                 if (!parseScript(child)) {
                     return false;
                 }
@@ -319,7 +319,7 @@ bool CHTLParser::parseAttributes(std::unique_ptr<CHTLNode>& element) {
             advance();
             
             if (match({TokenType::COLON, TokenType::EQUAL})) {
-                advance(); // 跳过 : 或 =
+                advance(); // 跳过 : 或 = (CE对等式)
                 
                 if (match({TokenType::STRING, TokenType::LITERAL, TokenType::NUMBER})) {
                     Token attrValue = currentToken();

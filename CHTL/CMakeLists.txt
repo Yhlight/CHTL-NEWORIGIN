@@ -2,20 +2,24 @@
 
 # 源文件
 set(CHTL_SOURCES
-    CHTLContext/CHTLContext.cpp
+    CHTLContext.cpp
     CHTLLexer/CHTLLexer.cpp
     CHTLParser/CHTLParser.cpp
     CHTLGenerator/CHTLGenerator.cpp
     CHTLNode/CHTLNode.cpp
+    CHTLManage/TemplateManager.cpp
+    CHTLManage/StyleEnhancer.cpp
 )
 
 # 头文件
 set(CHTL_HEADERS
-    CHTLContext/CHTLContext.h
+    CHTLContext.h
     CHTLLexer/CHTLLexer.h
     CHTLParser/CHTLParser.h
     CHTLGenerator/CHTLGenerator.h
     CHTLNode/CHTLNode.h
+    CHTLManage/TemplateManager.h
+    CHTLManage/StyleEnhancer.h
 )
 
 # 创建库

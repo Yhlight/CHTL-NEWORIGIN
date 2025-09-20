@@ -2,12 +2,16 @@
 
 # 源文件
 set(UTIL_SOURCES
-    # 这里可以添加工具类的源文件
+    StringUtil/StringUtil.cpp
+    FileSystem/FileSystem.cpp
+    ZipUtil/ZipUtil.cpp
 )
 
 # 头文件
 set(UTIL_HEADERS
-    # 这里可以添加工具类的头文件
+    StringUtil/StringUtil.h
+    FileSystem/FileSystem.h
+    ZipUtil/ZipUtil.h
 )
 
 # 创建库

@@ -51,7 +51,13 @@ std::string CodeMerger::generateHTMLStructure(const CompiledCode& compiled,
     // 添加CSS
     if (!compiled.cssCode.empty()) {
         if (inlineCSS || inlineMode) {
-            html = inlineCSS(html);
+            std::string cssTag = this->inlineCSS(compiled.cssCode);
+            size_t headPos = html.find("</head>");
+            if (headPos != std::string::npos) {
+                html.insert(headPos, cssTag);
+            } else {
+                html = cssTag + html;
+            }
         } else {
             // 添加CSS链接
             std::string cssLink = "<link rel=\"stylesheet\" href=\"output.css\">\n";
@@ -67,7 +73,13 @@ std::string CodeMerger::generateHTMLStructure(const CompiledCode& compiled,
     // 添加JavaScript
     if (!compiled.jsCode.empty()) {
         if (inlineJS || inlineMode) {
-            html = inlineJS(html);
+            std::string jsTag = this->inlineJS(compiled.jsCode);
+            size_t bodyEndPos = html.find("</body>");
+            if (bodyEndPos != std::string::npos) {
+                html.insert(bodyEndPos, jsTag);
+            } else {
+                html += jsTag;
+            }
         } else {
             // 添加JS链接
             std::string jsLink = "<script src=\"output.js\"></script>\n";
@@ -105,32 +117,14 @@ std::string CodeMerger::generateDefaultHTMLStructure() {
 </html>)";
 }
 
-std::string CodeMerger::inlineCSS(const std::string& html) {
-    // 在HTML中内联CSS
-    std::string cssTag = "<style>\n" + generateCSS(CompiledCode{}, true) + "\n</style>\n";
-    
-    size_t headPos = html.find("</head>");
-    if (headPos != std::string::npos) {
-        html.insert(headPos, cssTag);
-    } else {
-        html = cssTag + html;
-    }
-    
-    return html;
+std::string CodeMerger::inlineCSS(const std::string& css) {
+    // 返回内联的CSS标签
+    return "<style>\n" + css + "\n</style>\n";
 }
 
-std::string CodeMerger::inlineJS(const std::string& html) {
-    // 在HTML中内联JavaScript
-    std::string jsTag = "<script>\n" + generateJS(CompiledCode{}, true) + "\n</script>\n";
-    
-    size_t bodyEndPos = html.find("</body>");
-    if (bodyEndPos != std::string::npos) {
-        html.insert(bodyEndPos, jsTag);
-    } else {
-        html += jsTag;
-    }
-    
-    return html;
+std::string CodeMerger::inlineJS(const std::string& js) {
+    // 返回内联的JavaScript标签
+    return "<script>\n" + js + "\n</script>\n";
 }
 
 bool CodeMerger::generateCSSFile(const std::string& css, const std::string& baseName) {

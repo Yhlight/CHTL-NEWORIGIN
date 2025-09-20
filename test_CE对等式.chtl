@@ -1,0 +1,6 @@
+div
+{
+    id = box;
+    class = welcome;
+    text: "Hello World";
+}

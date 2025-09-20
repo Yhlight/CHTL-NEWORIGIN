@@ -1,0 +1,40 @@
+{
+  "timestamp": "/workspace",
+  "test_results": [
+    {
+      "name": "构建系统",
+      "success": false,
+      "timestamp": "/workspace"
+    },
+    {
+      "name": "词法分析器",
+      "success": true,
+      "timestamp": "/workspace"
+    },
+    {
+      "name": "语法特性",
+      "success": true,
+      "timestamp": "/workspace"
+    },
+    {
+      "name": "样式增强",
+      "success": true,
+      "timestamp": "/workspace"
+    },
+    {
+      "name": "CHTL JS",
+      "success": true,
+      "timestamp": "/workspace"
+    },
+    {
+      "name": "实现完整性",
+      "success": false,
+      "timestamp": "/workspace"
+    }
+  ],
+  "summary": {
+    "total_tests": 6,
+    "passed": 4,
+    "failed": 2
+  }
+}

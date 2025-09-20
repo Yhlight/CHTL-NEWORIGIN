@@ -24,8 +24,10 @@ enum class TokenType {
     
     // 字面量
     STRING,         // 字符串
+    SINGLE_QUOTE_STRING, // 单引号字符串
     NUMBER,         // 数字
     LITERAL,        // 无修饰字面量
+    TEXT_CONTENT,   // 文本内容
     
     // 运算符
     COLON,          // :
@@ -53,8 +55,9 @@ enum class TokenType {
     UNDERSCORE,     // _
     
     // 注释
-    COMMENT,        // 注释
-    GENERATOR_COMMENT, // # 注释
+    SINGLE_LINE_COMMENT, // // 注释
+    MULTI_LINE_COMMENT,  // /* */ 注释
+    GENERATOR_COMMENT,   // # 注释
     
     // 其他
     TEXT,           // 文本内容
@@ -113,9 +116,11 @@ private:
     // 具体token扫描方法
     Token scanIdentifier();
     Token scanString();
+    Token scanSingleQuoteString();
     Token scanNumber();
     Token scanLiteral();
-    Token scanComment();
+    Token scanSingleLineComment();
+    Token scanMultiLineComment();
     Token scanGeneratorComment();
     Token scanOperator();
     Token scanDelimiter();

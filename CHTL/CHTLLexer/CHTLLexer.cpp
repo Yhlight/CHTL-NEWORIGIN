@@ -105,10 +105,10 @@ Token CHTLLexer::scanNextToken() {
     
     // 检查注释
     if (c == '/' && peekChar() == '/') {
-        return scanComment();
+        return scanSingleLineComment();
     }
     if (c == '/' && peekChar() == '*') {
-        return scanComment();
+        return scanMultiLineComment();
     }
     
     // 检查生成器注释
@@ -117,8 +117,11 @@ Token CHTLLexer::scanNextToken() {
     }
     
     // 检查字符串
-    if (c == '"' || c == '\'') {
+    if (c == '"') {
         return scanString();
+    }
+    if (c == '\'') {
+        return scanSingleQuoteString();
     }
     
     // 检查数字
@@ -207,6 +210,32 @@ Token CHTLLexer::scanString() {
     return Token(TokenType::STRING, value, startLine, startColumn, value.length() + 2);
 }
 
+Token CHTLLexer::scanSingleQuoteString() {
+    char quote = currentChar();
+    size_t start = currentPos_;
+    size_t startLine = currentLine_;
+    size_t startColumn = currentColumn_;
+    
+    advance(); // 跳过开始引号
+    
+    while (!isAtEnd() && currentChar() != quote) {
+        if (currentChar() == '\\' && peekChar() == quote) {
+            advance(2); // 跳过转义字符
+        } else {
+            advance();
+        }
+    }
+    
+    if (isAtEnd()) {
+        return createErrorToken("未闭合的单引号字符串");
+    }
+    
+    advance(); // 跳过结束引号
+    
+    std::string value = input_.substr(start + 1, currentPos_ - start - 2);
+    return Token(TokenType::SINGLE_QUOTE_STRING, value, startLine, startColumn, value.length() + 2);
+}
+
 Token CHTLLexer::scanNumber() {
     size_t start = currentPos_;
     size_t startLine = currentLine_;
@@ -245,31 +274,38 @@ Token CHTLLexer::scanLiteral() {
     return Token(TokenType::LITERAL, value, startLine, startColumn, value.length());
 }
 
-Token CHTLLexer::scanComment() {
+Token CHTLLexer::scanSingleLineComment() {
     size_t start = currentPos_;
     size_t startLine = currentLine_;
     size_t startColumn = currentColumn_;
     
-    if (peekChar() == '/') {
-        // 单行注释
-        advance(2);
-        while (!isAtEnd() && !isNewline(currentChar())) {
-            advance();
-        }
-    } else if (peekChar() == '*') {
-        // 多行注释
-        advance(2);
-        while (!isAtEnd()) {
-            if (currentChar() == '*' && peekChar() == '/') {
-                advance(2);
-                break;
-            }
-            advance();
-        }
+    advance(2); // 跳过 //
+    
+    while (!isAtEnd() && !isNewline(currentChar())) {
+        advance();
     }
     
     std::string value = input_.substr(start, currentPos_ - start);
-    return Token(TokenType::COMMENT, value, startLine, startColumn, value.length());
+    return Token(TokenType::SINGLE_LINE_COMMENT, value, startLine, startColumn, value.length());
+}
+
+Token CHTLLexer::scanMultiLineComment() {
+    size_t start = currentPos_;
+    size_t startLine = currentLine_;
+    size_t startColumn = currentColumn_;
+    
+    advance(2); // 跳过 /*
+    
+    while (!isAtEnd()) {
+        if (currentChar() == '*' && peekChar() == '/') {
+            advance(2); // 跳过 */
+            break;
+        }
+        advance();
+    }
+    
+    std::string value = input_.substr(start, currentPos_ - start);
+    return Token(TokenType::MULTI_LINE_COMMENT, value, startLine, startColumn, value.length());
 }
 
 Token CHTLLexer::scanGeneratorComment() {

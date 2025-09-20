@@ -2,7 +2,7 @@
 
 # 源文件
 set(CHTLJS_SOURCES
-    CHTLJSContext/CHTLJSContext.cpp
+    CHTLJSContext.cpp
     CHTLJSLexer/CHTLJSLexer.cpp
     CHTLJSParser/CHTLJSParser.cpp
     CHTLJSGenerator/CHTLJSGenerator.cpp
@@ -11,7 +11,7 @@ set(CHTLJS_SOURCES
 
 # 头文件
 set(CHTLJS_HEADERS
-    CHTLJSContext/CHTLJSContext.h
+    CHTLJSContext.h
     CHTLJSLexer/CHTLJSLexer.h
     CHTLJSParser/CHTLJSParser.h
     CHTLJSGenerator/CHTLJSGenerator.h

@@ -59,7 +59,7 @@ bool CHTLJSParser::parseRoot(std::unique_ptr<CHTLJSNode>& root) {
 }
 
 bool CHTLJSParser::parseListen(std::unique_ptr<CHTLJSNode>& listen) {
-    Token listenToken = currentToken();
+    CHTLJSToken listenCHTLJSToken = currentToken();
     advance(); // 跳过 Listen
     
     listen = std::make_unique<ListenNode>();
@@ -90,7 +90,7 @@ bool CHTLJSParser::parseListen(std::unique_ptr<CHTLJSNode>& listen) {
 }
 
 bool CHTLJSParser::parseAnimate(std::unique_ptr<CHTLJSNode>& animate) {
-    Token animateToken = currentToken();
+    CHTLJSToken animateCHTLJSToken = currentToken();
     advance(); // 跳过 Animate
     
     animate = std::make_unique<AnimateNode>();
@@ -101,14 +101,14 @@ bool CHTLJSParser::parseAnimate(std::unique_ptr<CHTLJSNode>& animate) {
         while (!isAtEnd() && !match(CHTLJSTokenType::RIGHT_BRACE)) {
             // 解析动画属性
             if (match(CHTLJSTokenType::IDENTIFIER)) {
-                Token attrName = currentToken();
+                CHTLJSToken attrName = currentToken();
                 advance();
                 
                 if (match(CHTLJSTokenType::COLON)) {
                     advance(); // 跳过 :
                     
                     if (match({CHTLJSTokenType::STRING, CHTLJSTokenType::NUMBER, CHTLJSTokenType::BOOLEAN})) {
-                        Token attrValue = currentToken();
+                        CHTLJSToken attrValue = currentToken();
                         animate->setAttribute(attrName.value, attrValue.value);
                         advance();
                     } else {
@@ -135,7 +135,7 @@ bool CHTLJSParser::parseAnimate(std::unique_ptr<CHTLJSNode>& animate) {
 }
 
 bool CHTLJSParser::parseRouter(std::unique_ptr<CHTLJSNode>& router) {
-    Token routerToken = currentToken();
+    CHTLJSToken routerCHTLJSToken = currentToken();
     advance(); // 跳过 Router
     
     router = std::make_unique<RouterNode>();
@@ -166,7 +166,7 @@ bool CHTLJSParser::parseRouter(std::unique_ptr<CHTLJSNode>& router) {
 }
 
 bool CHTLJSParser::parseVir(std::unique_ptr<CHTLJSNode>& vir) {
-    Token virToken = currentToken();
+    CHTLJSToken virCHTLJSToken = currentToken();
     advance(); // 跳过 Vir
     
     if (!match(CHTLJSTokenType::IDENTIFIER)) {
@@ -174,7 +174,7 @@ bool CHTLJSParser::parseVir(std::unique_ptr<CHTLJSNode>& vir) {
         return false;
     }
     
-    Token nameToken = currentToken();
+    CHTLJSToken nameToken = currentToken();
     advance(); // 跳过名称
     
     vir = std::make_unique<VirtualObjectNode>(nameToken.value);
@@ -189,14 +189,14 @@ bool CHTLJSParser::parseVir(std::unique_ptr<CHTLJSNode>& vir) {
             while (!isAtEnd() && !match(CHTLJSTokenType::RIGHT_BRACE)) {
                 // 解析虚对象属性
                 if (match(CHTLJSTokenType::IDENTIFIER)) {
-                    Token attrName = currentToken();
+                    CHTLJSToken attrName = currentToken();
                     advance();
                     
                     if (match(CHTLJSTokenType::COLON)) {
                         advance(); // 跳过 :
                         
                         if (match({CHTLJSTokenType::STRING, CHTLJSTokenType::NUMBER, CHTLJSTokenType::BOOLEAN})) {
-                            Token attrValue = currentToken();
+                            CHTLJSToken attrValue = currentToken();
                             vir->setAttribute(attrName.value, attrValue.value);
                             advance();
                         } else {
@@ -224,7 +224,7 @@ bool CHTLJSParser::parseVir(std::unique_ptr<CHTLJSNode>& vir) {
 }
 
 bool CHTLJSParser::parseSelector(std::unique_ptr<CHTLJSNode>& selector) {
-    Token selectorToken = currentToken();
+    CHTLJSToken selectorToken = currentToken();
     advance(); // 跳过选择器token
     
     selector = std::make_unique<SelectorNode>(selectorToken.value);
@@ -236,7 +236,7 @@ bool CHTLJSParser::parseEventBinding(std::unique_ptr<CHTLJSNode>& eventBinding) 
         return false;
     }
     
-    Token eventType = currentToken();
+    CHTLJSToken eventType = currentToken();
     advance(); // 跳过事件类型
     
     if (!match(CHTLJSTokenType::COLON)) {
@@ -266,7 +266,7 @@ bool CHTLJSParser::parseRoute(std::unique_ptr<CHTLJSNode>& route) {
         return false;
     }
     
-    Token urlToken = currentToken();
+    CHTLJSToken urlCHTLJSToken = currentToken();
     advance(); // 跳过URL
     
     if (!match(CHTLJSTokenType::COLON)) {
@@ -280,9 +280,10 @@ bool CHTLJSParser::parseRoute(std::unique_ptr<CHTLJSNode>& route) {
         return false;
     }
     
-    Token pageToken = currentToken();
-    advance(); // 跳过页面
-    
+    CHTLJSToken urlToken = currentToken();
+    advance();
+    CHTLJSToken pageToken = currentToken();
+    advance();
     route = std::make_unique<RouteNode>(urlToken.value, pageToken.value);
     return true;
 }
@@ -292,7 +293,7 @@ bool CHTLJSParser::parseVirtualObject(std::unique_ptr<CHTLJSNode>& virtualObject
         return false;
     }
     
-    Token nameToken = currentToken();
+    CHTLJSToken nameToken = currentToken();
     advance(); // 跳过名称
     
     virtualObject = std::make_unique<VirtualObjectNode>(nameToken.value);

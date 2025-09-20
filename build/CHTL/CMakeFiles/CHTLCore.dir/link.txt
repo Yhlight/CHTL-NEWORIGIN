@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCHTLCore.a CMakeFiles/CHTLCore.dir/CHTLContext.cpp.o CMakeFiles/CHTLCore.dir/CHTLLexer/CHTLLexer.cpp.o CMakeFiles/CHTLCore.dir/CHTLParser/CHTLParser.cpp.o CMakeFiles/CHTLCore.dir/CHTLGenerator/CHTLGenerator.cpp.o CMakeFiles/CHTLCore.dir/CHTLNode/CHTLNode.cpp.o CMakeFiles/CHTLCore.dir/CHTLManage/TemplateManager.cpp.o CMakeFiles/CHTLCore.dir/CHTLManage/StyleEnhancer.cpp.o
+/usr/bin/ranlib libCHTLCore.a

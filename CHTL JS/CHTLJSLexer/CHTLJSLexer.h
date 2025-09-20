@@ -31,6 +31,7 @@ enum class CHTLJSTokenType {
     DOT,            // .
     COMMA,          // ,
     COLON,          // :
+    EQUAL,          // =
     SEMICOLON,      // ;
     
     // 分隔符

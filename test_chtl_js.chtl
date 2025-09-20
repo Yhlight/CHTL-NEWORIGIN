@@ -1,0 +1,25 @@
+script
+{
+    {{button}}->Listen {
+        click: function() {
+            console.log('Button clicked!');
+        }
+    };
+    
+    const anim = Animate {
+        target: {{box}};
+        duration: 1000;
+        easing: ease-in-out;
+        begin: {
+            opacity: 0;
+        }
+        end: {
+            opacity: 1;
+        }
+    };
+    
+    Router {
+        url: "/home";
+        page: {{homePage}};
+    }
+}
