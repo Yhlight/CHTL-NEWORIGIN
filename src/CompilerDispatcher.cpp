@@ -2,6 +2,8 @@
 #include "CHTLCommon.h"
 #include "UnifiedScanner.h"
 #include "CodeMerger.h"
+#include "CHTL/CHTLParser/CHTLParser.h"
+#include "CHTL/CHTLGenerator/CHTLGenerator.h"
 #include <iostream>
 #include <fstream>
 #include <chrono>
@@ -120,7 +122,7 @@ void CompilerDispatcher::phase1_Scanning(const std::string& source, const std::s
         if (isDebugMode()) {
             std::cout << "[DEBUG] Found " << fragments.size() << " code fragments" << std::endl;
             for (const auto& fragment : fragments) {
-                std::cout << "[DEBUG]   - " << fragment.type << " (" << fragment.content.length() << " chars)" << std::endl;
+                std::cout << "[DEBUG]   - FragmentType:" << static_cast<int>(fragment.type) << " (" << fragment.content.length() << " chars)" << std::endl;
             }
         }
         
@@ -143,12 +145,43 @@ void CompilerDispatcher::phase2_Parsing() {
     }
     
     try {
-        // TODO: Implement parsing phase
-        // This would involve:
-        // 1. CHTL Parser for CHTL fragments
-        // 2. CHTL JS Parser for CHTL JS fragments
-        // 3. CSS Parser for CSS fragments
-        // 4. JS Parser for JS fragments
+        // 获取扫描的片段
+        auto fragments = scanner->scan();
+        
+        // 处理CHTL片段
+        for (const auto& fragment : fragments) {
+            if (fragment.type == FragmentType::CHTL) {
+                if (isDebugMode()) {
+                    std::cout << "[DEBUG] Parsing CHTL fragment: " 
+                              << fragment.content.substr(0, 100) << "..." << std::endl;
+                }
+                
+                // 使用CHTL解析器解析代码
+                CHTLParser parser;
+                parser.setDebugMode(isDebugMode());
+                auto ast = parser.parse(fragment.content);
+                
+                if (parser.hasErrors()) {
+                    std::cerr << "CHTL parsing errors:" << std::endl;
+                    for (const auto& error : parser.getErrors()) {
+                        std::cerr << "  " << error << std::endl;
+                    }
+                    totalErrors += parser.getErrors().size();
+                    continue;
+                }
+                
+                if (!ast) {
+                    std::cerr << "Failed to parse CHTL code" << std::endl;
+                    totalErrors++;
+                    continue;
+                }
+                
+                if (isDebugMode()) {
+                    std::cout << "[DEBUG] CHTL fragment parsed successfully" << std::endl;
+                }
+            }
+            // TODO: 处理CHTL JS、CSS、JS片段
+        }
         
         if (isDebugMode()) {
             std::cout << "[DEBUG] Parsing phase completed" << std::endl;
@@ -166,11 +199,49 @@ void CompilerDispatcher::phase3_CodeGeneration() {
     }
     
     try {
-        // TODO: Implement code generation phase
-        // This would involve:
-        // 1. CHTL Generator for HTML output
-        // 2. CHTL JS Generator for JavaScript output
-        // 3. CSS Generator for CSS output
+        // 获取扫描的片段
+        auto fragments = scanner->scan();
+        
+        // 处理CHTL片段
+        for (const auto& fragment : fragments) {
+            if (fragment.type == FragmentType::CHTL) {
+                if (isDebugMode()) {
+                    std::cout << "[DEBUG] Generating code for CHTL fragment: " 
+                              << fragment.content.substr(0, 100) << "..." << std::endl;
+                }
+                
+                // 解析CHTL代码
+                CHTLParser parser;
+                parser.setDebugMode(isDebugMode());
+                auto ast = parser.parse(fragment.content);
+                
+                if (!ast || parser.hasErrors()) {
+                    continue; // 错误已在解析阶段报告
+                }
+                
+                // 生成代码
+                CHTLGenerator generator;
+                generator.setDebugMode(isDebugMode());
+                auto result = generator.generate(ast);
+                
+                if (!result.success) {
+                    std::cerr << "CHTL generation failed" << std::endl;
+                    for (const auto& error : result.errors) {
+                        std::cerr << "  " << error << std::endl;
+                    }
+                    totalErrors += result.errors.size();
+                    continue;
+                }
+                
+                // 存储生成的结果（临时存储，将在合并阶段处理）
+                if (isDebugMode()) {
+                    std::cout << "[DEBUG] Generated HTML: " << result.html.length() << " chars" << std::endl;
+                    std::cout << "[DEBUG] Generated CSS: " << result.css.length() << " chars" << std::endl;
+                    std::cout << "[DEBUG] Generated JS: " << result.js.length() << " chars" << std::endl;
+                }
+            }
+            // TODO: 处理CHTL JS、CSS、JS片段的代码生成
+        }
         
         if (isDebugMode()) {
             std::cout << "[DEBUG] Code generation phase completed" << std::endl;

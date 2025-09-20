@@ -5,6 +5,8 @@
 
 namespace CHTL {
 
+CHTLLexer::CHTLLexer() : source(""), filename(""), position(0) {}
+
 CHTLLexer::CHTLLexer(const String& src, const String& file)
     : source(src), filename(file), position(0), line(1), column(1),
       inComment(false), inString(false), stringDelimiter('\0'), inGeneratorComment(false) {

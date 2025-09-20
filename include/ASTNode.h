@@ -23,6 +23,7 @@ public:
     // Getters
     NodeType getType() const { return type; }
     const String& getValue() const { return value; }
+    const String& getContent() const { return value; }
     const StringVector& getAttributes() const { return attributes; }
     const ASTNodeVector& getChildren() const { return children; }
     std::shared_ptr<Token> getToken() const { return token; }

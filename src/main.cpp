@@ -31,7 +31,7 @@ void printVersion() {
     std::cout << "MIT License\n";
 }
 
-struct CompilerOptions {
+struct MainCompilerOptions {
     std::string inputFile;
     std::string outputFile;
     bool defaultStruct = false;
@@ -43,8 +43,8 @@ struct CompilerOptions {
     bool showVersion = false;
 };
 
-CompilerOptions parseArguments(int argc, char* argv[]) {
-    CompilerOptions options;
+MainCompilerOptions parseArguments(int argc, char* argv[]) {
+    MainCompilerOptions options;
     
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -89,33 +89,42 @@ CompilerOptions parseArguments(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
     try {
-        CompilerOptions options = parseArguments(argc, argv);
+        MainCompilerOptions mainOptions = parseArguments(argc, argv);
         
-        if (options.showHelp) {
+        // Convert to CHTL CompilerOptions
+        CompilerOptions options;
+        options.outputFile = mainOptions.outputFile;
+        options.defaultStruct = mainOptions.defaultStruct;
+        options.inlineOutput = mainOptions.inlineOutput;
+        options.inlineCSS = mainOptions.inlineCSS;
+        options.inlineJS = mainOptions.inlineJS;
+        options.debugMode = mainOptions.debugMode;
+        
+        if (mainOptions.showHelp) {
             printUsage(argv[0]);
             return 0;
         }
         
-        if (options.showVersion) {
+        if (mainOptions.showVersion) {
             printVersion();
             return 0;
         }
         
-        if (options.inputFile.empty()) {
+        if (mainOptions.inputFile.empty()) {
             std::cerr << "Error: No input file specified\n";
             printUsage(argv[0]);
             return 1;
         }
         
         // Check if input file exists
-        if (!FileSystem::fileExists(options.inputFile)) {
-            std::cerr << "Error: Input file '" << options.inputFile << "' not found\n";
+        if (!FileSystem::fileExists(mainOptions.inputFile)) {
+            std::cerr << "Error: Input file '" << mainOptions.inputFile << "' not found\n";
             return 1;
         }
         
         // Set default output file if not specified
         if (options.outputFile.empty()) {
-            std::string basename = FileSystem::getBasename(options.inputFile);
+            std::string basename = FileSystem::getBasename(mainOptions.inputFile);
             size_t dotPos = basename.find_last_of('.');
             if (dotPos != std::string::npos) {
                 basename = basename.substr(0, dotPos);
@@ -123,14 +132,14 @@ int main(int argc, char* argv[]) {
             options.outputFile = basename + ".html";
         }
         
-        std::cout << "CHTL Compiler - Processing " << options.inputFile << "\n";
+        std::cout << "CHTL Compiler - Processing " << mainOptions.inputFile << "\n";
         
         // Initialize compiler dispatcher
         CompilerDispatcher dispatcher;
         dispatcher.setOptions(options);
         
         // Compile the file
-        dispatcher.compileFile(options.inputFile);
+        dispatcher.compileFile(mainOptions.inputFile);
         
         std::cout << "Compilation completed successfully!\n";
         std::cout << "Output: " << options.outputFile << "\n";

@@ -1,8 +1,9 @@
 #include <iostream>
 #include <cassert>
-#include "../../include/CHTLCommon.h"
-#include "../../include/Token.h"
-#include "../../src/CHTL/CHTLLexer/CHTLLexer.h"
+#include "CHTLCommon.h"
+#include "Token.h"
+#include "ASTNode.h"
+#include "CHTL/CHTLLexer/CHTLLexer.h"
 
 using namespace CHTL;
 

@@ -4,6 +4,7 @@
 #include "UnifiedScanner.h"
 #include "CodeMerger.h"
 #include <memory>
+#include <chrono>
 
 namespace CHTL {
 

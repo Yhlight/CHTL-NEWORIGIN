@@ -80,6 +80,10 @@ public:
     std::string getDefaultCSSTemplate() const;
     std::string getDefaultJSTemplate() const;
     
+    // Inline methods
+    std::string inlineCSSIntoHTML(const std::string& html, const std::string& css);
+    std::string inlineJSIntoHTML(const std::string& html, const std::string& js);
+    
 private:
     // Internal merging helpers
     std::string mergeCHTLFragments(const std::vector<CodeFragment>& fragments);

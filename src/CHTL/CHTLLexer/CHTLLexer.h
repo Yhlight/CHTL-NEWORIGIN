@@ -34,6 +34,7 @@ private:
     StringMap brackets;
     
 public:
+    CHTLLexer();
     CHTLLexer(const String& src, const String& file = "");
     
     // Main lexing methods

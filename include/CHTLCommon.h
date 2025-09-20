@@ -34,6 +34,7 @@ enum class TokenType {
     // Basic tokens
     IDENTIFIER,
     STRING_LITERAL,
+    UNQUOTED_STRING,
     NUMBER_LITERAL,
     COMMENT,
     GENERATOR_COMMENT,
@@ -105,6 +106,8 @@ enum class TokenType {
     
     // End of file
     EOF_TOKEN,
+    ERROR,
+    WHITESPACE,
     
     // Unknown
     UNKNOWN
@@ -113,9 +116,11 @@ enum class TokenType {
 // Node types
 enum class NodeType {
     // Basic nodes
+    DOCUMENT,
     ELEMENT,
     TEXT,
     COMMENT,
+    GENERATOR_COMMENT,
     ATTRIBUTE,
     
     // Template nodes
@@ -149,10 +154,12 @@ enum class NodeType {
     
     // Style nodes
     STYLE_BLOCK,
+    LOCAL_STYLE,
     STYLE_PROPERTY,
     
     // Script nodes
     SCRIPT_BLOCK,
+    SCRIPT,
     
     // Operator nodes
     DELETE_OPERATOR,
