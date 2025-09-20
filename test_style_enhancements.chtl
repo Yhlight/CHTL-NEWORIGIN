@@ -1,0 +1,17 @@
+div
+{
+    style
+    {
+        .box
+        {
+            width: 100px + 50px;
+            height: 200px;
+            background-color: width > 50px ? "red" : "blue";
+        }
+        
+        &:hover
+        {
+            background-color: green;
+        }
+    }
+}

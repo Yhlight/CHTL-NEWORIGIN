@@ -1,0 +1,6 @@
+div
+{
+    text: 这是一段无修饰字面量;
+    class: container;
+    id: main;
+}

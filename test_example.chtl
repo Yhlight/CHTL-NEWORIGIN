@@ -1,0 +1,39 @@
+[Template] @Style
+{
+    .header {
+        background-color: #f0f0f0;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .content {
+        margin: 20px;
+        font-family: Arial, sans-serif;
+    }
+}
+
+[Template] @Element
+{
+    div.header {
+        text "欢迎使用CHTL编译器"
+    }
+    
+    div.content {
+        text "这是一个测试页面，展示了CHTL的基本功能。"
+    }
+}
+
+[Origin] @HTML
+{
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>CHTL测试页面</title>
+    </head>
+    <body>
+        <!-- CHTL生成的内容将在这里 -->
+    </body>
+    </html>
+}

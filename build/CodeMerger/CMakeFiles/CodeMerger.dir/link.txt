@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCodeMerger.a CMakeFiles/CodeMerger.dir/CodeMerger.cpp.o
+/usr/bin/ranlib libCodeMerger.a

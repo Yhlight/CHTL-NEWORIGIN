@@ -1,0 +1,23 @@
+[Template] @Style DefaultText
+{
+    color: "black";
+    line-height: 1.6;
+}
+
+[Template] @Element Box
+{
+    div
+    {
+        style
+        {
+            width: 200px;
+            height: 200px;
+            background-color: red;
+        }
+    }
+}
+
+body
+{
+    @Element Box;
+}

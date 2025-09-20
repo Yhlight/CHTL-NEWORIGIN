@@ -1,0 +1,58 @@
+# 这是一个CHTL测试文件
+
+html
+{
+    head
+    {
+        title: "CHTL测试页面";
+    }
+    
+    body
+    {
+        div
+        {
+            id: main;
+            class: container;
+            
+            h1
+            {
+                text: "欢迎使用CHTL";
+            }
+            
+            p
+            {
+                text: "这是一个基于C++实现的超文本语言";
+            }
+            
+            style
+            {
+                .container
+                {
+                    width: 100%;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+                
+                h1
+                {
+                    color: #333;
+                    text-align: center;
+                }
+                
+                p
+                {
+                    color: #666;
+                    line-height: 1.6;
+                }
+            }
+            
+            script
+            {
+                {{main}}->addEventListener('click', function() {
+                    console.log('Main container clicked!');
+                });
+            }
+        }
+    }
+}

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCHTJSCore.a CMakeFiles/CHTJSCore.dir/CHTLJSContext.cpp.o CMakeFiles/CHTJSCore.dir/CHTLJSLexer/CHTLJSLexer.cpp.o CMakeFiles/CHTJSCore.dir/CHTLJSParser/CHTLJSParser.cpp.o CMakeFiles/CHTJSCore.dir/CHTLJSGenerator/CHTLJSGenerator.cpp.o CMakeFiles/CHTJSCore.dir/CHTLJSNode/CHTLJSNode.cpp.o
+/usr/bin/ranlib libCHTJSCore.a
