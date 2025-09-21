@@ -1,0 +1,43 @@
+
+    use html5;
+    
+    [Template] @Style CardStyle {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    html {
+        head {
+            title {
+                text: "混合内容测试";
+            }
+        }
+        body {
+            div {
+                class: card;
+                style {
+                    @Style CardStyle;
+                }
+                h1 {
+                    text: "欢迎使用CHTL";
+                }
+                p {
+                    text: "这是一个混合内容的测试页面。";
+                }
+                button {
+                    class: btn;
+                    text: "点击我";
+                    sc
+                        {{btn}}->Listen {
+                            click: () => {
+                                alert('按钮被点击了！');
+                            }
+                        }      }
+                }
+            }
+        }
+    }
+    
