@@ -2715,6 +2715,137 @@ _JS_CODE_PLACEHOLDER_ {
 
 由此可见，占位符机制更像是一种状态转换的机制  
 
+#### 统一扫描器实战演示
+根据作用对象  
+
+>统一扫描器的作用对象只有两个，全局style块和所有script块  
+在全局style块中允许使用以下CHTL语法 -> 属性运算，属性条件表达式，模板变量，自定义变量，自定义变量特例化，模板样式组，自定义样式组，无值样式组，自定义样式组特例化，delete属性，delete继承，样式组继承，生成器注释，全缀名，任意类型原始嵌入（原始嵌入可在任意位置使用），以及通过命名空间引入模板变量，自定义变量，模板样式组，自定义样式组，无值样式组，即from语法  
+
+我们可以得出一个CHTL文件只需要2个占位符，CSS_CODE_PLACEHOLDER_和JS_CODE_PLACEHOLDER_  
+只有在交互的情况下，例如CHTL语法中包含CHTL JS的语法，CHTL JS的语法内包含CHTL的语法，这样才需要使用CHTL_CODE_PLACEHOLDER_和CHTL_JS_CODE_PLACEHOLDER_  
+只需要隔离原生的CSS和JS代码，替换为占位符，那么剩下的内容CHTL和CHTL JS一定能够进行处理  
+这里使用一个大型的CHTL文件作为演示  
+
+```chtl
+use html5;
+
+[Custom] @Style BoxStyle
+{
+    color: white;
+    background-color: rgb(255, 192, 203);
+}
+
+[Custom] @Var Theme
+{
+    Sum: white,
+}
+
+[Custom] @Element Box
+{
+    div
+    {
+        text: "Hello World";
+
+        style
+        {
+            background-color: rgb(255, 192, 203);
+            border-radius: 50%;
+        }
+    }
+}
+
+html
+{
+    head
+    {
+        style
+        {
+            body
+            {
+                data-theme: Theme(Sum);  // 此处为CHTL的语法
+            }
+
+            .box
+            {
+                width: 100px;
+                height: 100px / 2;  // 此处为CHTL的语法
+                @Style BoxStyle;
+            }
+        }
+    }
+
+    body
+    {
+        div
+        {
+            id: $test$;  // 此处为CHTL JS的语法
+
+            script
+            {
+                let v = "Test";
+                {{v}} -> Listen {
+                    click: () => { console.log({{v}}) }
+                }
+            }
+        }
+    }
+}
+```
+
+转换为  
+```chtl
+use html5;
+
+[Custom] @Var Theme
+{
+    Sum: white,
+}
+
+[Custom] @Element Box
+{
+    div
+    {
+        text: "Hello World";
+
+        style
+        {
+            background-color: rgb(255, 192, 203);
+            border-radius: 50%;
+        }
+    }
+}
+
+html
+{
+    head
+    {
+        style
+        {
+            CSS_CODE_PLACEHOLDER_ Theme(Sum);
+            CSS_CODE_PLACEHOLDER_ 100px / 2;
+            CSS_CODE_PLACEHOLDER_ @Style BoxStyle;
+        }
+    }
+
+    body
+    {
+        div
+        {
+            id: CHTL_JS_CODE_PLACEHOLDER_;
+
+            script
+            {
+                JS_CODE_PLACEHOLDER_ {{v}} -> Listen {
+                    click: JS_CODE_PLACEHOLDER_
+                }
+            }
+        }
+    }
+}
+```
+
+隔离自身无法处理的代码，这就是占位符机制  
+
 #### 静态环境与运行时代码
 尽管CHTL和CHTL JS都是在静态的环境，通过编译转换为HTML + CSS + JS代码  
 不具有着运行时的环境，但这并不代表CHTL JS无法支持运行时功能  
@@ -2773,3 +2904,118 @@ VSCode IDE需要满足下述基本要求
 
 ## 编译监视器
 编译计时器能够监视编译器的编译时间和使用内存，必要时杀死程序，防止对开发者的造成可能的危害  
+
+## CHTL委员会第三期-元素行为与条件渲染
+### 行为
+```chtl
+div
+{
+    style
+    {
+
+    }
+
+    script
+    {
+
+    }
+
+    text
+    {
+
+    }
+}
+```
+上述是一个常见的CHTL元素  
+它的内部具有style，script，text三个块  
+这些块被称为行为  
+决定了这个元素具有什么样的特征  
+例如style块决定了元素具有什么样式  
+script块决定了元素具有什么行为  
+text块决定了元素具有什么文本内容  
+
+行为是CHTL元素的核心，它控制着CHTL元素的特征，如何显示，如何响应，如何交互  
+在默认情况下，行为使用声明块表示，例如style{}，script{}，text{}  
+
+如果你想要引入更多的行为，请尽可能使用声明式语法取代程序式语法  
+例如if  
+
+```cpp
+if(条件表达式)
+{
+    // 条件成立时执行的代码
+} else if(条件表达式)
+{
+    // 条件成立时执行的代码
+} else
+{
+    // 条件不成立时执行的代码
+}
+```
+
+```chtl
+if
+{
+    condition: 与属性相关的条件表达式,
+    // 条件成立时执行的代码，写属性
+    width: 100px,
+    display: block,
+}
+else if
+{
+    condition: 与属性相关的条件表达式,
+    // CSS代码
+}
+else
+{
+    // CSS代码
+}
+```
+
+当然，这只是一种建议，你也完全可以使用原本的程序式语法  
+或者两者同时提供  
+
+### 条件渲染
+现在，你可以在元素内部定义if块，用于条件渲染  
+条件渲染属于静态特征  
+
+```chtl
+html
+{
+    head
+    {
+
+    }
+
+    body
+    {
+        if
+        {
+            condition: html.width < 500px,
+            display: none,
+        }
+    }
+}
+```
+
+### 动态条件渲染
+静态条件渲染必然是存在限制的，为此，CHTL提供了动态条件渲染  
+
+```chtl
+html
+{
+    head
+    {
+
+    }
+
+    body
+    {
+        if
+        {
+            condition: {{html}}.width < 500px,  // 使用动态属性 / 响应式值时，使用动态条件渲染
+            display: none,
+        }
+    }
+}
+```
