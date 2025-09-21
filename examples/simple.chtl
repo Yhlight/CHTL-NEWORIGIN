@@ -1,0 +1,26 @@
+html
+{
+    head
+    {
+        title
+        {
+            text { Simple CHTL Example }
+        }
+    }
+    
+    body
+    {
+        div
+        {
+            h1
+            {
+                text { Hello, CHTL! }
+            }
+            
+            p
+            {
+                text { This is a simple CHTL document. }
+            }
+        }
+    }
+}
