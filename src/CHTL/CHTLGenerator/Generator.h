@@ -1,9 +1,9 @@
 #ifndef GENERATOR_H
 #define GENERATOR_H
 
-#include "../CHTLNode/Node.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
+#include "CHTL/CHTLNode/Node.h"
+#include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/TextNode.h"
 #include <string>
 #include <sstream>
 

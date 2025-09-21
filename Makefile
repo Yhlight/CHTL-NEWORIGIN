@@ -12,6 +12,9 @@ SRCS = $(wildcard src/CHTL/CHTLParser/*.cpp) \
        $(wildcard src/CHTL/CHTLGenerator/*.cpp) \
        $(wildcard src/Util/FileSystem/*.cpp) \
        $(wildcard src/Util/StringUtil/*.cpp) \
+       $(wildcard src/Scanner/*.cpp) \
+       $(wildcard src/CompilerDispatcher/*.cpp) \
+       $(wildcard src/CodeMerger/*.cpp) \
        src/CHTL/main.cpp
 
 # Object files

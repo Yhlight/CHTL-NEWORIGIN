@@ -1,20 +1,18 @@
-// Main HTML structure
+style {
+    body {
+        font-family: sans-serif;
+        background-color: #f0f0f0;
+    }
+}
+
 html {
     head {
-        title {
-            text { "My First CHTL Page" }
-        }
+        title { text { "CHTL with Styles" } }
     }
-    /*
-      This is the body of the page.
-      It contains the main content.
-    */
     body {
-        # A special CHTL comment
         div {
             id: "main";
-            class: 'container';
-            text { "Hello, Attributes!" }
+            text { "Hello, Styled World!" }
         }
     }
 }

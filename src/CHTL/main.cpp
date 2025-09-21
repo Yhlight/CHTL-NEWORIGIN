@@ -2,18 +2,14 @@
 #include <string>
 #include <vector>
 
-#include "../Util/FileSystem/FileSystem.h"
-#include "CHTLLexer/Lexer.h"
-#include "CHTLParser/Parser.h"
-#include "CHTLGenerator/Generator.h"
+#include <iostream>
+#include <string>
+#include <vector>
 
-void printParseErrors(const std::vector<std::string>& errors) {
-    std::cerr << "Whoops! We ran into some issues." << std::endl;
-    std::cerr << "Parser has " << errors.size() << " error(s):" << std::endl;
-    for (const auto& msg : errors) {
-        std::cerr << "\t" << msg << std::endl;
-    }
-}
+#include "Util/FileSystem/FileSystem.h"
+#include "Scanner/UnifiedScanner.h"
+#include "CompilerDispatcher/CompilerDispatcher.h"
+#include "CodeMerger/CodeMerger.h"
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -31,19 +27,23 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    CHTL::Lexer lexer(source);
-    CHTL::Parser parser(lexer);
-    auto program = parser.ParseProgram();
+    CHTL::UnifiedScanner scanner;
+    CHTL::CompilerDispatcher dispatcher;
+    CHTL::CodeMerger merger;
 
-    if (!parser.Errors().empty()) {
-        printParseErrors(parser.Errors());
+    auto scanResult = scanner.Scan(source);
+    auto compilationResult = dispatcher.Dispatch(scanResult);
+
+    // The dispatcher will print errors. If the main CHTL compilation fails,
+    // the content will be empty. We can check that here.
+    if (compilationResult.chtlOutput.content.empty() && !scanResult.chtlSource.empty()) {
+        std::cerr << "Compilation failed. Aborting." << std::endl;
         return 1;
     }
 
-    CHTL::Generator generator;
-    std::string output = generator.Generate(program.get());
+    std::string finalOutput = merger.Merge(compilationResult);
 
-    std::cout << output << std::endl;
+    std::cout << finalOutput << std::endl;
 
     return 0;
 }

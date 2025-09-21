@@ -1,10 +1,10 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "../CHTLLexer/Lexer.h"
-#include "../CHTLNode/Node.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
+#include "CHTL/CHTLLexer/Lexer.h"
+#include "CHTL/CHTLNode/Node.h"
+#include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/TextNode.h"
 #include <vector>
 #include <string>
 #include <memory>
