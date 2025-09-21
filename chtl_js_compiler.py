@@ -425,6 +425,7 @@ class CHTLJSLexer:
             '.': CHTLJSTokenType.DOT,
             '=': CHTLJSTokenType.EQUALS,
             '->': CHTLJSTokenType.ARROW,
+            '=>': CHTLJSTokenType.ARROW,
             '&->': CHTLJSTokenType.AMPERSAND_ARROW,
             '+': CHTLJSTokenType.PLUS,
             '-': CHTLJSTokenType.MINUS,
@@ -648,6 +649,615 @@ class CHTLJSLexer:
         tokens.append(CHTLJSToken(CHTLJSTokenType.EOF, "", line, column, position))
         
         return tokens
+
+class CHTLJSParser:
+    """CHTL JS语法分析器"""
+    
+    def __init__(self, tokens: List[CHTLJSToken]):
+        self.tokens = tokens
+        self.position = 0
+        self.context = CHTLJSContext()
+    
+    def current_token(self) -> CHTLJSToken:
+        """获取当前标记"""
+        if self.position >= len(self.tokens):
+            return self.tokens[-1]  # 返回EOF标记
+        return self.tokens[self.position]
+    
+    def advance(self) -> CHTLJSToken:
+        """前进到下一个标记"""
+        if self.position < len(self.tokens):
+            token = self.tokens[self.position]
+            self.position += 1
+            return token
+        return self.tokens[-1]  # 返回EOF标记
+    
+    def peek(self, offset: int = 1) -> CHTLJSToken:
+        """查看指定偏移的标记"""
+        peek_pos = self.position + offset
+        if peek_pos >= len(self.tokens):
+            return self.tokens[-1]  # 返回EOF标记
+        return self.tokens[peek_pos]
+    
+    def match(self, *token_types: CHTLJSTokenType) -> bool:
+        """检查当前标记是否匹配指定类型"""
+        return self.current_token().type in token_types
+    
+    def expect(self, token_type: CHTLJSTokenType) -> CHTLJSToken:
+        """期望指定类型的标记"""
+        if self.match(token_type):
+            return self.advance()
+        else:
+            current = self.current_token()
+            raise SyntaxError(f"Expected {token_type.value}, got {current.type.value} at line {current.line}, column {current.column}")
+    
+    def parse(self) -> List[CHTLJSNode]:
+        """解析主方法"""
+        nodes = []
+        
+        while not self.match(CHTLJSTokenType.EOF):
+            node = self.parse_statement()
+            if node:
+                nodes.append(node)
+        
+        return nodes
+    
+    def parse_statement(self) -> Optional[CHTLJSNode]:
+        """解析语句"""
+        token = self.current_token()
+        
+        if token.type == CHTLJSTokenType.SCRIPT_LOADER:
+            return self.parse_script_loader()
+        elif token.type == CHTLJSTokenType.LISTEN:
+            return self.parse_listen()
+        elif token.type == CHTLJSTokenType.ANIMATE:
+            return self.parse_animate()
+        elif token.type == CHTLJSTokenType.DELEGATE:
+            return self.parse_delegate()
+        elif token.type == CHTLJSTokenType.ROUTER:
+            return self.parse_router()
+        elif token.type == CHTLJSTokenType.VIR:
+            return self.parse_virtual_object()
+        elif token.type == CHTLJSTokenType.ENHANCED_SELECTOR:
+            # 检查是否是选择器后跟箭头的情况
+            if self.peek().type == CHTLJSTokenType.ARROW:
+                return self.parse_selector_with_arrow()
+            else:
+                return self.parse_enhanced_selector()
+        elif token.type == CHTLJSTokenType.RESPONSIVE_VALUE:
+            return self.parse_responsive_value()
+        else:
+            # 跳过未知标记
+            self.advance()
+            return None
+    
+    def parse_selector_with_arrow(self) -> Optional[CHTLJSNode]:
+        """解析选择器后跟箭头的情况"""
+        # 解析选择器
+        selector = ""
+        if self.match(CHTLJSTokenType.ENHANCED_SELECTOR):
+            selector = self.advance().value
+        elif self.match(CHTLJSTokenType.IDENTIFIER):
+            selector = self.advance().value
+        else:
+            raise SyntaxError(f"Expected selector, got {self.current_token().type.value}")
+        
+        # 解析箭头
+        self.expect(CHTLJSTokenType.ARROW)
+        
+        # 检查后面的关键字
+        next_token = self.current_token()
+        if next_token.type == CHTLJSTokenType.LISTEN:
+            return self.parse_listen_with_selector(selector)
+        elif next_token.type == CHTLJSTokenType.ANIMATE:
+            return self.parse_animate_with_selector(selector)
+        else:
+            raise SyntaxError(f"Expected LISTEN or ANIMATE after arrow, got {next_token.type.value}")
+    
+    def parse_listen_with_selector(self, selector: str) -> ListenNode:
+        """解析带选择器的监听器"""
+        self.expect(CHTLJSTokenType.LISTEN)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        events = {}
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                event_name = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                # 解析事件处理函数
+                handler = self.parse_function_expression()
+                events[event_name] = handler
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = ListenNode(selector, events)
+        return node
+    
+    def parse_animate_with_selector(self, selector: str) -> AnimateNode:
+        """解析带选择器的动画"""
+        self.expect(CHTLJSTokenType.ANIMATE)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        # 解析动画属性
+        duration = 1000
+        easing = "ease-in-out"
+        begin = {}
+        when = []
+        end = {}
+        loop = 1
+        direction = "normal"
+        delay = 0
+        callback = None
+        
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                prop_name = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                if prop_name == "duration":
+                    duration = int(self.expect(CHTLJSTokenType.NUMBER).value)
+                elif prop_name == "easing":
+                    easing = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                elif prop_name == "begin":
+                    begin = self.parse_object()
+                elif prop_name == "when":
+                    when = self.parse_array()
+                elif prop_name == "end":
+                    end = self.parse_object()
+                elif prop_name == "loop":
+                    loop = int(self.expect(CHTLJSTokenType.NUMBER).value)
+                elif prop_name == "direction":
+                    direction = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                elif prop_name == "delay":
+                    delay = int(self.expect(CHTLJSTokenType.NUMBER).value)
+                elif prop_name == "callback":
+                    callback = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = AnimateNode(selector, duration, easing, begin, when, end, loop, direction, delay, callback)
+        return node
+    
+    def parse_script_loader(self) -> ScriptLoaderNode:
+        """解析脚本加载器"""
+        self.expect(CHTLJSTokenType.SCRIPT_LOADER)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        files = []
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                if self.advance().value == "load":
+                    self.expect(CHTLJSTokenType.COLON)
+                    file_path = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                    files.append(file_path)
+                    self.expect(CHTLJSTokenType.SEMICOLON)
+                else:
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = ScriptLoaderNode(files)
+        self.context.script_loaders.append(node)
+        return node
+    
+    def parse_listen(self) -> ListenNode:
+        """解析监听器"""
+        # 解析选择器
+        selector = ""
+        if self.match(CHTLJSTokenType.ENHANCED_SELECTOR):
+            selector = self.advance().value
+        elif self.match(CHTLJSTokenType.IDENTIFIER):
+            selector = self.advance().value
+        else:
+            raise SyntaxError(f"Expected selector, got {self.current_token().type.value}")
+        
+        # 解析箭头
+        self.expect(CHTLJSTokenType.ARROW)
+        self.expect(CHTLJSTokenType.LISTEN)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        events = {}
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                event_name = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                # 解析事件处理函数
+                handler = self.parse_function_expression()
+                events[event_name] = handler
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = ListenNode(selector, events)
+        return node
+    
+    def parse_animate(self) -> AnimateNode:
+        """解析动画"""
+        # 解析选择器
+        selector = ""
+        if self.match(CHTLJSTokenType.ENHANCED_SELECTOR):
+            selector = self.advance().value
+        elif self.match(CHTLJSTokenType.IDENTIFIER):
+            selector = self.advance().value
+        else:
+            raise SyntaxError(f"Expected selector, got {self.current_token().type.value}")
+        
+        # 解析箭头
+        self.expect(CHTLJSTokenType.ARROW)
+        self.expect(CHTLJSTokenType.ANIMATE)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        # 解析动画属性
+        duration = 1000
+        easing = "ease-in-out"
+        begin = {}
+        when = []
+        end = {}
+        loop = 1
+        direction = "normal"
+        delay = 0
+        callback = None
+        
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                prop_name = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                if prop_name == "duration":
+                    duration = int(self.expect(CHTLJSTokenType.NUMBER).value)
+                elif prop_name == "easing":
+                    easing = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                elif prop_name == "begin":
+                    begin = self.parse_object()
+                elif prop_name == "when":
+                    when = self.parse_array()
+                elif prop_name == "end":
+                    end = self.parse_object()
+                elif prop_name == "loop":
+                    loop = int(self.expect(CHTLJSTokenType.NUMBER).value)
+                elif prop_name == "direction":
+                    direction = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                elif prop_name == "delay":
+                    delay = int(self.expect(CHTLJSTokenType.NUMBER).value)
+                elif prop_name == "callback":
+                    callback = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = AnimateNode(selector, duration, easing, begin, when, end, loop, direction, delay, callback)
+        return node
+    
+    def parse_delegate(self) -> DelegateNode:
+        """解析事件委托"""
+        self.expect(CHTLJSTokenType.DELEGATE)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        parent = ""
+        target = []
+        events = {}
+        
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                prop_name = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                if prop_name == "parent":
+                    parent = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                elif prop_name == "target":
+                    target = self.parse_array()
+                elif prop_name == "events":
+                    events = self.parse_object()
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = DelegateNode(parent, target, events)
+        return node
+    
+    def parse_router(self) -> RouterNode:
+        """解析路由"""
+        self.expect(CHTLJSTokenType.ROUTER)
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        url = []
+        page = []
+        root = None
+        mode = "hash"
+        
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                prop_name = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                if prop_name == "url":
+                    url = self.parse_array()
+                elif prop_name == "page":
+                    page = self.parse_array()
+                elif prop_name == "root":
+                    root = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                elif prop_name == "mode":
+                    mode = self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = RouterNode(url, page, root, mode)
+        self.context.routes.append(node)
+        return node
+    
+    def parse_virtual_object(self) -> VirtualObjectNode:
+        """解析虚对象"""
+        self.expect(CHTLJSTokenType.VIR)
+        
+        name = self.expect(CHTLJSTokenType.IDENTIFIER).value
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        content = {}
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                key = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                if self.match(CHTLJSTokenType.STRING):
+                    value = self.advance().value.strip('"\'')
+                elif self.match(CHTLJSTokenType.NUMBER):
+                    value = float(self.advance().value)
+                elif self.match(CHTLJSTokenType.LBRACE):
+                    value = self.parse_object()
+                elif self.match(CHTLJSTokenType.LBRACKET):
+                    value = self.parse_array()
+                else:
+                    value = self.advance().value
+                
+                content[key] = value
+                
+                if self.match(CHTLJSTokenType.SEMICOLON):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        
+        node = VirtualObjectNode(name, content)
+        self.context.virtual_objects[name] = node
+        return node
+    
+    def parse_enhanced_selector(self) -> EnhancedSelectorNode:
+        """解析增强选择器"""
+        selector = self.expect(CHTLJSTokenType.ENHANCED_SELECTOR).value
+        node = EnhancedSelectorNode(selector)
+        self.context.enhanced_selectors.append(selector)
+        return node
+    
+    def parse_responsive_value(self) -> ResponsiveValueNode:
+        """解析响应式值"""
+        value = self.expect(CHTLJSTokenType.RESPONSIVE_VALUE).value
+        variable = value.strip('$')
+        node = ResponsiveValueNode(variable)
+        self.context.responsive_values[variable] = value
+        return node
+    
+    def parse_function_expression(self) -> str:
+        """解析函数表达式"""
+        if self.match(CHTLJSTokenType.LPAREN):
+            # 箭头函数
+            self.advance()  # 跳过左括号
+            self.expect(CHTLJSTokenType.RPAREN)  # 跳过右括号
+            self.expect(CHTLJSTokenType.ARROW)  # 跳过箭头
+            self.expect(CHTLJSTokenType.LBRACE)  # 跳过左大括号
+            
+            body = ""
+            brace_count = 1
+            while brace_count > 0 and not self.match(CHTLJSTokenType.EOF):
+                token = self.advance()
+                if token.type == CHTLJSTokenType.LBRACE:
+                    brace_count += 1
+                elif token.type == CHTLJSTokenType.RBRACE:
+                    brace_count -= 1
+                body += token.value
+            
+            return f"() => {{{body}}}"
+        else:
+            # 普通函数调用
+            return self.expect(CHTLJSTokenType.STRING).value.strip('"\'')
+    
+    def parse_object(self) -> Dict[str, Any]:
+        """解析对象"""
+        obj = {}
+        self.expect(CHTLJSTokenType.LBRACE)
+        
+        while not self.match(CHTLJSTokenType.RBRACE, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.IDENTIFIER):
+                key = self.advance().value
+                self.expect(CHTLJSTokenType.COLON)
+                
+                if self.match(CHTLJSTokenType.STRING):
+                    value = self.advance().value.strip('"\'')
+                elif self.match(CHTLJSTokenType.NUMBER):
+                    value = float(self.advance().value)
+                elif self.match(CHTLJSTokenType.LBRACE):
+                    value = self.parse_object()
+                elif self.match(CHTLJSTokenType.LBRACKET):
+                    value = self.parse_array()
+                elif self.match(CHTLJSTokenType.LPAREN):
+                    # 处理箭头函数
+                    value = self.parse_function_expression()
+                else:
+                    value = self.advance().value
+                
+                obj[key] = value
+                
+                if self.match(CHTLJSTokenType.COMMA):
+                    self.advance()
+            else:
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACE)
+        return obj
+    
+    def parse_array(self) -> List[Any]:
+        """解析数组"""
+        arr = []
+        self.expect(CHTLJSTokenType.LBRACKET)
+        
+        while not self.match(CHTLJSTokenType.RBRACKET, CHTLJSTokenType.EOF):
+            if self.match(CHTLJSTokenType.STRING):
+                value = self.advance().value.strip('"\'')
+            elif self.match(CHTLJSTokenType.NUMBER):
+                value = float(self.advance().value)
+            elif self.match(CHTLJSTokenType.LBRACE):
+                value = self.parse_object()
+            elif self.match(CHTLJSTokenType.LBRACKET):
+                value = self.parse_array()
+            else:
+                value = self.advance().value
+            
+            arr.append(value)
+            
+            if self.match(CHTLJSTokenType.COMMA):
+                self.advance()
+        
+        self.expect(CHTLJSTokenType.RBRACKET)
+        return arr
+
+class CHTLJSGenerator(CHTLJSVisitor):
+    """CHTL JS代码生成器"""
+    
+    def __init__(self, context: CHTLJSContext):
+        self.context = context
+        self.output = []
+        self.indent_level = 0
+    
+    def generate(self, ast: List[CHTLJSNode]) -> str:
+        """生成JavaScript代码"""
+        self.output = []
+        
+        for node in ast:
+            node.accept(self)
+        
+        return '\n'.join(self.output)
+    
+    def write(self, text: str):
+        """写入代码"""
+        self.output.append('  ' * self.indent_level + text)
+    
+    def visit_script_loader(self, node: ScriptLoaderNode) -> Any:
+        """访问脚本加载器节点"""
+        for file_path in node.files:
+            self.write(f'// Load script: {file_path}')
+            self.write(f'const script = document.createElement("script");')
+            self.write(f'script.src = "{file_path}";')
+            self.write(f'document.head.appendChild(script);')
+            self.write('')
+    
+    def visit_listen(self, node: ListenNode) -> Any:
+        """访问监听器节点"""
+        self.write(f'// Event listener for {node.target}')
+        for event_name, handler in node.events.items():
+            self.write(f'document.querySelector("{node.target}").addEventListener("{event_name}", {handler});')
+        self.write('')
+    
+    def visit_animate(self, node: AnimateNode) -> Any:
+        """访问动画节点"""
+        self.write(f'// Animation for {node.target}')
+        self.write(f'const element = document.querySelector("{node.target}");')
+        self.write(f'const animation = element.animate({{')
+        self.indent_level += 1
+        
+        if node.begin:
+            self.write(f'from: {json.dumps(node.begin)},')
+        if node.end:
+            self.write(f'to: {json.dumps(node.end)},')
+        
+        self.write(f'duration: {node.duration},')
+        self.write(f'easing: "{node.easing}",')
+        self.write(f'iterations: {node.loop},')
+        self.write(f'direction: "{node.direction}",')
+        self.write(f'delay: {node.delay}')
+        
+        self.indent_level -= 1
+        self.write(f'}});')
+        
+        if node.callback:
+            self.write(f'animation.addEventListener("finish", {node.callback});')
+        self.write('')
+    
+    def visit_delegate(self, node: DelegateNode) -> Any:
+        """访问事件委托节点"""
+        self.write(f'// Event delegation for {node.parent}')
+        self.write(f'const parent = document.querySelector("{node.parent}");')
+        
+        for event_name, handler in node.events.items():
+            self.write(f'parent.addEventListener("{event_name}", (e) => {{')
+            self.indent_level += 1
+            self.write(f'if ({json.dumps(node.target)}.includes(e.target.tagName.toLowerCase())) {{')
+            self.indent_level += 1
+            self.write(f'{handler}')
+            self.indent_level -= 1
+            self.write(f'}}')
+            self.indent_level -= 1
+            self.write(f'}});')
+        self.write('')
+    
+    def visit_router(self, node: RouterNode) -> Any:
+        """访问路由节点"""
+        self.write('// Router configuration')
+        self.write('const router = {')
+        self.indent_level += 1
+        self.write(f'urls: {json.dumps(node.url)},')
+        self.write(f'pages: {json.dumps(node.page)},')
+        self.write(f'root: "{node.root or ""}",')
+        self.write(f'mode: "{node.mode}"')
+        self.indent_level -= 1
+        self.write('};')
+        self.write('')
+    
+    def visit_virtual_object(self, node: VirtualObjectNode) -> Any:
+        """访问虚对象节点"""
+        self.write(f'// Virtual object: {node.name}')
+        self.write(f'const {node.name} = {json.dumps(node.content, indent=2)};')
+        self.write('')
+    
+    def visit_enhanced_selector(self, node: EnhancedSelectorNode) -> Any:
+        """访问增强选择器节点"""
+        self.write(f'// Enhanced selector: {node.selector}')
+        self.write('')
+    
+    def visit_responsive_value(self, node: ResponsiveValueNode) -> Any:
+        """访问响应式值节点"""
+        self.write(f'// Responsive value: {node.variable}')
+        self.write('')
 
 def main():
     """测试CHTL JS词法分析器"""

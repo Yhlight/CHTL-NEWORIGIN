@@ -279,8 +279,7 @@ class AdvancedCHTLParser(CHTLParser):
         import_node = ImportNode(namespace_name, 0, 0)
         
         # 将导入的命名空间添加到当前上下文中
-        if namespace_name in self.context.namespaces:
-            self.context.imported_namespaces.add(namespace_name)
+        self.context.imported_namespaces.add(namespace_name)
         
         return import_node
     
@@ -393,9 +392,13 @@ class AdvancedCHTLParser(CHTLParser):
         """解析原始嵌入语句"""
         self.expect(TokenType.LBRACKET)
         self.expect(AdvancedTokenType.ORIGIN)
-        self.expect(TokenType.RBRACKET)
         
-        origin_type = self.expect(TokenType.IDENTIFIER).value
+        if self.match(TokenType.IDENTIFIER):
+            origin_type = self.advance().value
+        elif self.match(TokenType.STYLE):
+            origin_type = self.advance().value
+        else:
+            raise SyntaxError(f"Expected IDENTIFIER or STYLE, got {self.current_token().type.value} at line {self.current_token().line}, column {self.current_token().column}")
         self.expect(TokenType.RBRACKET)
         
         if origin_type.lower() == 'html':
@@ -435,20 +438,36 @@ class AdvancedCHTLParser(CHTLParser):
     
     def parse_origin_content(self) -> str:
         """解析原始内容"""
-        content = ""
+        # 获取当前大括号的位置
+        start_pos = self.position
         brace_count = 1
         
-        while brace_count > 0 and not self.match(TokenType.EOF):
-            token = self.advance()
+        # 找到匹配的结束大括号
+        while brace_count > 0 and self.position < len(self.tokens):
+            token = self.tokens[self.position]
             if token.type == TokenType.LBRACE:
                 brace_count += 1
             elif token.type == TokenType.RBRACE:
                 brace_count -= 1
-            
-            if brace_count > 0:
-                content += token.value + " "
+            self.position += 1
         
-        return content.strip()
+        # 从原始源代码中提取内容
+        # 这里我们需要从原始源代码中提取，而不是从tokens中重构
+        # 暂时使用tokens重构，但保持原始格式
+        content = ""
+        for i in range(start_pos, self.position - 1):  # 排除结束大括号
+            token = self.tokens[i]
+            if token.type == TokenType.LBRACE:
+                content += "{"
+            elif token.type == TokenType.RBRACE:
+                content += "}"
+            else:
+                content += token.value
+        
+        # 回退一个位置，让调用者处理结束大括号
+        self.position -= 1
+        
+        return content
 
 # 高级节点类型
 class NamespaceNode(CHTLNode):

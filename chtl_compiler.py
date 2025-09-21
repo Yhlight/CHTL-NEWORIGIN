@@ -429,9 +429,10 @@ class ConfigNode(CHTLNode):
 class UseNode(CHTLNode):
     """使用节点"""
     
-    def __init__(self, directive: str, line: int = 0, column: int = 0):
+    def __init__(self, directive: str, args: List[str] = None, line: int = 0, column: int = 0):
         super().__init__(line, column)
         self.directive = directive
+        self.args = args or []
     
     def accept(self, visitor: 'CHTLVisitor') -> Any:
         return visitor.visit_use(self)
@@ -836,9 +837,22 @@ class CHTLParser:
         """解析use语句"""
         use_token = self.expect(TokenType.USE)
         directive = self.expect(TokenType.IDENTIFIER).value
+        
+        # 解析可选的参数
+        args = []
+        if self.match(TokenType.LPAREN):
+            while not self.match(TokenType.RPAREN):
+                if self.current_token.type == TokenType.STRING:
+                    args.append(self.current_token.value.strip('"'))
+                elif self.current_token.type == TokenType.IDENTIFIER:
+                    args.append(self.current_token.value)
+                self.advance()
+                if self.current_token.type == TokenType.COMMA:
+                    self.advance()
+        
         self.expect(TokenType.SEMICOLON)
         
-        return UseNode(directive, use_token.line, use_token.column)
+        return UseNode(directive, args, use_token.line, use_token.column)
     
     def parse_bracket_statement(self) -> Optional[CHTLNode]:
         """解析方括号语句"""
@@ -1075,13 +1089,13 @@ class CHTLParser:
                     self.expect(TokenType.SEMICOLON)
                     # 这里应该展开模板，暂时跳过
                     continue
-            elif self.match(TokenType.IDENTIFIER):
+            elif self.current_token().type == TokenType.IDENTIFIER:
                 # 检查是否是约束语法（如 ButtonStyle except）
+                template_name = self.current_token().value
                 next_token = self.peek_token()
-                print(f"DEBUG: Current token: {self.current_token().type.value}, Next token: {next_token.type.value}")
-                if next_token.type == TokenType.EXCEPT:
+                if next_token.type == TokenType.EXCEPT or (hasattr(next_token.type, 'value') and next_token.type.value == 'EXCEPT'):
                     # 解析约束语法
-                    template_name = self.advance().value
+                    self.advance()  # 跳过标识符
                     self.advance()  # 跳过except
                     
                     # 解析约束类型
@@ -1248,6 +1262,10 @@ class CHTLParser:
             elif token.type == TokenType.MINUS:
                 # 处理连字符（如 box-shadow 中的 -）
                 values.append(self.advance().value)
+            elif token.type == TokenType.COMMA:
+                # 处理逗号分隔符
+                self.advance()
+                values.append(",")
             elif token.type == TokenType.COLON:
                 # 跳过冒号（样式值中不应该有冒号）
                 self.advance()
@@ -1400,8 +1418,15 @@ class CHTLGenerator(CHTLVisitor):
     
     def visit_use(self, node: UseNode) -> Any:
         """访问使用节点"""
-        # 使用节点不直接生成HTML
-        pass
+        try:
+            from use_directive_system import UseDirectiveProcessor
+            system = UseDirectiveProcessor()
+            return system.generate_directive_code(node.directive, node.args)
+        except ImportError:
+            # 回退到基本实现
+            if node.directive == "html5":
+                return '<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Document</title>\n</head>\n<body>\n    <!-- Content goes here -->\n</body>\n</html>'
+            return f"<!-- Use directive: {node.directive} -->"
 
 def main():
     """测试词法分析器、语法分析器和代码生成器"""
