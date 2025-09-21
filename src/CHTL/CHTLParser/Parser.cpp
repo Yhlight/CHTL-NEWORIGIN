@@ -63,6 +63,38 @@ std::unique_ptr<Node> Parser::parseStatement() {
 }
 
 
+// An attribute is not a node, so it doesn't return a Node pointer.
+// It's parsed inside a block and added directly to the parent element.
+std::optional<Attribute> Parser::parseAttribute() {
+    Attribute attr;
+    if (!currentTokenIs(IDENTIFIER)) return std::nullopt;
+    attr.name = currentToken.literal;
+
+    // Expect ':' or '='
+    if (!peekTokenIs(COLON) && !peekTokenIs(EQUALS)) {
+        return std::nullopt;
+    }
+    nextToken(); // consume identifier
+
+    // currentToken is now ':' or '='
+    nextToken(); // consume ':' or '='
+
+    if (!currentTokenIs(STRING)) {
+        // For now we only support string literals for values.
+        // Later we will support unquoted literals.
+        errors.push_back("Expected string literal for attribute value.");
+        return std::nullopt;
+    }
+    attr.value = currentToken.literal;
+
+    if (!expectPeek(SEMICOLON)) {
+        return std::nullopt; // expectPeek handles the error message
+    }
+
+    return attr;
+}
+
+
 std::unique_ptr<ElementNode> Parser::parseElement() {
     auto element = std::make_unique<ElementNode>();
     element->tagName = currentToken.literal;
@@ -80,11 +112,18 @@ void Parser::parseBlock(ElementNode* element) {
     nextToken(); // Consume '{'
 
     while (!currentTokenIs(RBRACE) && !currentTokenIs(END_OF_FILE)) {
-        auto stmt = parseStatement();
-        if (stmt) {
-            element->children.push_back(std::move(stmt));
+        // Check if the statement is an attribute
+        if (currentTokenIs(IDENTIFIER) && (peekTokenIs(COLON) || peekTokenIs(EQUALS))) {
+            if (auto attr = parseAttribute()) {
+                element->attributes.push_back(attr.value());
+            }
+        } else { // Otherwise, it's a child node
+            auto stmt = parseStatement();
+            if (stmt) {
+                element->children.push_back(std::move(stmt));
+            }
         }
-        nextToken();
+        nextToken(); // Move to the next statement/attribute
     }
 }
 

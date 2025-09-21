@@ -16,12 +16,14 @@ namespace CHTL {
         STRING,     // "foobar"
 
         // Operators & Delimiters
+    EQUALS,     // =
         COLON,      // :
         SEMICOLON,  // ;
         LBRACE,     // {
         RBRACE,     // }
 
-        // Keywords will be added later
+    // Comments
+    COMMENT,    // # a comment
     };
 
     const std::map<TokenType, std::string> TokenTypeStrings = {
@@ -29,10 +31,12 @@ namespace CHTL {
         {END_OF_FILE, "EOF"},
         {IDENTIFIER, "IDENTIFIER"},
         {STRING, "STRING"},
+        {EQUALS, "EQUALS"},
         {COLON, "COLON"},
         {SEMICOLON, "SEMICOLON"},
         {LBRACE, "LBRACE"},
         {RBRACE, "RBRACE"},
+        {COMMENT, "COMMENT"},
     };
 
     struct Token {

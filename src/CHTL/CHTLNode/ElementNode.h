@@ -5,11 +5,16 @@
 
 namespace CHTL {
 
+struct Attribute {
+    std::string name;
+    std::string value;
+};
+
 class ElementNode : public Node {
 public:
     std::string tagName;
+    std::vector<Attribute> attributes;
     std::vector<std::unique_ptr<Node>> children;
-    // Attributes will be added later
 
     std::string ToString() const override;
     NodeType GetType() const override { return NodeType::ELEMENT_NODE; }

@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <optional>
 
 namespace CHTL {
 
@@ -22,6 +23,7 @@ private:
     std::unique_ptr<Node> parseStatement();
     std::unique_ptr<ElementNode> parseElement();
     std::unique_ptr<TextNode> parseText();
+    std::optional<Attribute> parseAttribute();
     void parseBlock(ElementNode* element);
 
     bool currentTokenIs(TokenType type) const;

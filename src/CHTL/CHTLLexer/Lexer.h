@@ -17,7 +17,10 @@ private:
     void skipWhitespace();
 
     Token readIdentifier();
-    Token readString();
+    Token readString(char delimiter);
+    Token readComment();
+    void skipSingleLineComment();
+    void skipMultiLineComment();
 
     std::string input;
     size_t position;     // current position in input (points to current char)

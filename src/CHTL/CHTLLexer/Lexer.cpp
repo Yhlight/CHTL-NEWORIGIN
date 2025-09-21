@@ -59,11 +59,11 @@ Token Lexer::readIdentifier() {
     return {IDENTIFIER, literal, line, start_col};
 }
 
-Token Lexer::readString() {
-    size_t start_pos = position + 1; // Skip the opening "
+Token Lexer::readString(char delimiter) {
+    size_t start_pos = position + 1; // Skip the opening delimiter
     int start_col = column;
-    readChar(); // Consume opening "
-    while (ch != '"' && ch != 0) {
+    readChar(); // Consume opening delimiter
+    while (ch != delimiter && ch != 0) {
         readChar();
     }
 
@@ -72,10 +72,44 @@ Token Lexer::readString() {
     }
 
     std::string literal = input.substr(start_pos, position - start_pos);
-    readChar(); // Consume closing "
+    readChar(); // Consume closing delimiter
     return {STRING, literal, line, start_col};
 }
 
+
+Token Lexer::readComment() {
+    size_t start_pos = position + 1; // Skip the '#'
+    int start_col = column;
+    readChar(); // Consume '#'
+    while (ch != '\n' && ch != '\r' && ch != 0) {
+        readChar();
+    }
+    std::string literal = input.substr(start_pos, position - start_pos);
+    // Trim leading space from comment content, as per spec
+    size_t first_char = literal.find_first_not_of(" \t");
+    if (std::string::npos != first_char) {
+        literal = literal.substr(first_char);
+    }
+    return {COMMENT, literal, line, start_col};
+}
+
+void Lexer::skipSingleLineComment() {
+    while (ch != '\n' && ch != '\r' && ch != 0) {
+        readChar();
+    }
+}
+
+void Lexer::skipMultiLineComment() {
+    readChar(); // Consume '*'
+    while (ch != 0) {
+        if (ch == '*' && peekChar() == '/') {
+            readChar(); // Consume '*'
+            readChar(); // Consume '/'
+            return;
+        }
+        readChar();
+    }
+}
 
 Token Lexer::nextToken() {
     skipWhitespace();
@@ -85,6 +119,10 @@ Token Lexer::nextToken() {
     tok.column = this->column;
 
     switch (ch) {
+        case '=':
+            tok.type = EQUALS;
+            tok.literal = "=";
+            break;
         case '{':
             tok.type = LBRACE;
             tok.literal = "{";
@@ -102,7 +140,24 @@ Token Lexer::nextToken() {
             tok.literal = ";";
             break;
         case '"':
-            return readString();
+        case '\'':
+            return readString(ch);
+        case '#':
+            return readComment();
+        case '/':
+            if (peekChar() == '/') {
+                readChar(); // consume '/'
+                skipSingleLineComment();
+                return nextToken(); // Get next token after comment
+            } else if (peekChar() == '*') {
+                readChar(); // consume '/'
+                skipMultiLineComment();
+                return nextToken(); // Get next token after comment
+            }
+            // else, it could be division later. For now, it's illegal.
+            tok.type = ILLEGAL;
+            tok.literal = "/";
+            break;
         case 0:
             tok.type = END_OF_FILE;
             tok.literal = "";

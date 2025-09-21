@@ -32,7 +32,13 @@ void Generator::generateNode(const Node* node, std::stringstream& ss) {
 }
 
 void Generator::generateElement(const ElementNode* elementNode, std::stringstream& ss) {
-    ss << "<" << elementNode->tagName << ">";
+    ss << "<" << elementNode->tagName;
+
+    for (const auto& attr : elementNode->attributes) {
+        ss << " " << attr.name << "=\"" << attr.value << "\"";
+    }
+
+    ss << ">";
 
     for (const auto& child : elementNode->children) {
         generateNode(child.get(), ss);
