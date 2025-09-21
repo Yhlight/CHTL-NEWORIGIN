@@ -1,0 +1,43 @@
+html {
+    head {
+        title {
+            text {
+                "My CHTL Page"
+            }
+        }
+    }
+    body {
+        div {
+            id: "main-container";
+            class: "container";
+
+            h1 {
+                style {
+                    color: blue;
+                    font-size: 24px;
+                }
+                text {
+                    "Welcome to CHTL!"
+                }
+            }
+
+            p {
+                text {
+                    "This is a paragraph generated from CHTL."
+                }
+            }
+        }
+        div {
+            class: "card";
+            style {
+                .card {
+                    padding: 16px;
+                    border-radius: 8px;
+                }
+            }
+            p {
+                text { "This is a card." }
+            }
+        }
+    }
+}

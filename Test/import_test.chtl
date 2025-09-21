@@ -1,0 +1,7 @@
+[Import] @Chtl from "TestModule.cmod"
+
+html {
+    body {
+        h1 { text: "Main file content" }
+    }
+}

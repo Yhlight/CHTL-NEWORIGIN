@@ -1,0 +1,9 @@
+// This is the main source file for TestModule.
+
+[Template] @Element MyCard {
+    div {
+        class: "my-card";
+        h3 { text: "Card Title" }
+        p { text: "This is the content of the card." }
+    }
+}

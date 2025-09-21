@@ -1,0 +1,12 @@
+// Module information for TestModule
+
+[Info] {
+    name: "TestModule";
+    version: "1.0.0";
+    author: "Jules";
+    description: "A simple CMOD module for testing.";
+}
+
+[Export] {
+    [Template] @Element MyCard;
+}
