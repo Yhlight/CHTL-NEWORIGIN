@@ -240,6 +240,7 @@ class CompilerDispatcher:
     
     def _convert_chtl_js_functions(self, content: str) -> str:
         """转换CHTL JS函数为JavaScript"""
+        import re
         js_code = content
         
         # 处理ScriptLoader

@@ -111,6 +111,7 @@ class TokenType(Enum):
     IMPORT_STMT = "IMPORT_STMT"      # [Import] @Chtl
     CONFIG_STMT = "CONFIG_STMT"      # [Configuration]
     USE_STMT = "USE_STMT"            # use html5;
+    EXCEPT = "EXCEPT"                # except
     
     # 结束标记
     EOF = "EOF"
@@ -175,11 +176,12 @@ class ElementNode(CHTLNode):
     """元素节点"""
     
     def __init__(self, tag_name: str, attributes: Dict[str, Any] = None, 
-                 children: List[CHTLNode] = None, line: int = 0, column: int = 0):
+                 children: List[CHTLNode] = None, index: int = None, line: int = 0, column: int = 0):
         super().__init__(line, column)
         self.tag_name = tag_name
         self.attributes = attributes or {}
         self.children = children or []
+        self.index = index
     
     def accept(self, visitor: 'CHTLVisitor') -> Any:
         return visitor.visit_element(self)
@@ -515,6 +517,7 @@ class CHTLLexer:
             'inherit': TokenType.INHERIT,
             'from': TokenType.FROM,
             'text': TokenType.TEXT,
+            'except': TokenType.EXCEPT,
             'script': TokenType.SCRIPT,
             'if': TokenType.IF,
             'for': TokenType.FOR,
@@ -626,17 +629,47 @@ class CHTLLexer:
                     ))
                     continue
             
-            # 处理生成器注释
+            # 处理生成器注释或CSS颜色值
             if char == '#':
                 comment_start = position
                 position += 1
-                while position < len(source) and source[position] != '\n':
-                    position += 1
-                tokens.append(Token(
-                    TokenType.GENERATOR_COMMENT,
-                    source[comment_start:position],
-                    line, column, position
-                ))
+                
+                # 检查是否是CSS颜色值（如 #ddd, #ffffff）
+                if (position < len(source) and 
+                    source[position].isalnum() and 
+                    position + 1 < len(source) and 
+                    source[position + 1].isalnum()):
+                    # 这是CSS颜色值，不是注释
+                    while (position < len(source) and 
+                           (source[position].isalnum() or source[position] == ';')):
+                        position += 1
+                    # 如果以分号结尾，需要分离颜色值和分号
+                    if source[position - 1] == ';':
+                        tokens.append(Token(
+                            TokenType.LITERAL,
+                            source[comment_start:position - 1],
+                            line, column, position - 1
+                        ))
+                        tokens.append(Token(
+                            TokenType.SEMICOLON,
+                            ';',
+                            line, column, position
+                        ))
+                    else:
+                        tokens.append(Token(
+                            TokenType.LITERAL,
+                            source[comment_start:position],
+                            line, column, position
+                        ))
+                else:
+                    # 这是注释
+                    while position < len(source) and source[position] != '\n':
+                        position += 1
+                    tokens.append(Token(
+                        TokenType.GENERATOR_COMMENT,
+                        source[comment_start:position],
+                        line, column, position
+                    ))
                 continue
             
             # 处理字符串
@@ -659,7 +692,7 @@ class CHTLLexer:
                 continue
             
             # 处理数字
-            if char.isdigit() or char == '.':
+            if char.isdigit():
                 number_start = position
                 while position < len(source) and (source[position].isdigit() or source[position] == '.'):
                     position += 1
@@ -668,6 +701,17 @@ class CHTLLexer:
                     source[number_start:position],
                     line, column, position
                 ))
+                continue
+            
+            # 处理点号（命名空间访问）
+            if char == '.':
+                tokens.append(Token(
+                    TokenType.DOT,
+                    '.',
+                    line, column, position
+                ))
+                position += 1
+                column += 1
                 continue
             
             # 处理标识符和关键字
@@ -707,17 +751,6 @@ class CHTLLexer:
                 column += 1
                 continue
             
-            # 处理无修饰字面量（以字母开头，不包含特殊字符的连续字符）
-            if char.isalpha():
-                literal_start = position
-                while position < len(source) and (source[position].isalnum() or source[position] in ['-', '_']):
-                    position += 1
-                tokens.append(Token(
-                    TokenType.LITERAL,
-                    source[literal_start:position],
-                    line, column, position
-                ))
-                continue
             
             # 未知字符，跳过
             position += 1
@@ -950,6 +983,15 @@ class CHTLParser:
     def parse_element_statement(self) -> ElementNode:
         """解析元素语句"""
         tag_name = self.expect(TokenType.IDENTIFIER).value
+        
+        # 检查是否有索引访问语法（如 Card[0]）
+        index = None
+        if self.match(TokenType.LBRACKET):
+            self.advance()  # 跳过左括号
+            if self.match(TokenType.NUMBER):
+                index = int(self.advance().value)
+            self.expect(TokenType.RBRACKET)
+        
         self.expect(TokenType.LBRACE)
         
         attributes = {}
@@ -982,7 +1024,7 @@ class CHTLParser:
                 self.advance()
         
         self.expect(TokenType.RBRACE)
-        return ElementNode(tag_name, attributes, children)
+        return ElementNode(tag_name, attributes, children, index, 0, 0)
     
     def parse_text_statement(self) -> TextNode:
         """解析文本语句"""
@@ -1024,20 +1066,68 @@ class CHTLParser:
                 if self.match(TokenType.STYLE):
                     self.advance()  # 跳过Style
                     template_name = self.expect(TokenType.IDENTIFIER).value
+                    
+                    # 检查是否有命名空间访问语法（如 UI.ButtonStyle）
+                    if self.match(TokenType.DOT):
+                        self.advance()  # 跳过点号
+                        template_name += "." + self.expect(TokenType.IDENTIFIER).value
+                    
                     self.expect(TokenType.SEMICOLON)
                     # 这里应该展开模板，暂时跳过
                     continue
             elif self.match(TokenType.IDENTIFIER):
-                # 解析属性名（可能包含连字符）
-                prop_name = self.advance().value
-                while self.match(TokenType.MINUS) and self.peek_token().type == TokenType.IDENTIFIER:
-                    self.advance()  # 跳过连字符
-                    prop_name += "-" + self.advance().value
-                
-                self.expect(TokenType.COLON)
-                prop_value = self.parse_attribute_value()
-                properties[prop_name] = prop_value
-                self.expect(TokenType.SEMICOLON)
+                # 检查是否是约束语法（如 ButtonStyle except）
+                next_token = self.peek_token()
+                print(f"DEBUG: Current token: {self.current_token().type.value}, Next token: {next_token.type.value}")
+                if next_token.type == TokenType.EXCEPT:
+                    # 解析约束语法
+                    template_name = self.advance().value
+                    self.advance()  # 跳过except
+                    
+                    # 解析约束类型
+                    constraint_type = "exact"  # 默认精确约束
+                    if self.match(TokenType.IDENTIFIER):
+                        constraint_type = self.advance().value
+                    
+                    # 解析约束内容
+                    self.expect(TokenType.LBRACE)
+                    constraint_properties = {}
+                    while not self.match(TokenType.RBRACE, TokenType.EOF):
+                        if self.match(TokenType.IDENTIFIER):
+                            # 解析约束属性
+                            constraint_prop_name = self.advance().value
+                            while self.match(TokenType.MINUS) and (self.peek_token().type == TokenType.IDENTIFIER or self.peek_token().type == TokenType.STYLE):
+                                self.advance()  # 跳过连字符
+                                constraint_prop_name += "-" + self.advance().value
+                            
+                            self.expect(TokenType.COLON)
+                            constraint_prop_value = self.parse_style_value()
+                            constraint_properties[constraint_prop_name] = constraint_prop_value
+                            self.expect(TokenType.SEMICOLON)
+                        else:
+                            self.advance()
+                    self.expect(TokenType.RBRACE)
+                    
+                    # 创建约束信息
+                    constraint_info = {
+                        'type': 'constraint',
+                        'template_name': template_name,
+                        'constraint_type': constraint_type,
+                        'properties': constraint_properties
+                    }
+                    properties['_constraint'] = constraint_info
+                    continue
+                else:
+                    # 解析普通属性名（可能包含连字符）
+                    prop_name = self.advance().value
+                    while self.match(TokenType.MINUS) and (self.peek_token().type == TokenType.IDENTIFIER or self.peek_token().type == TokenType.STYLE):
+                        self.advance()  # 跳过连字符
+                        prop_name += "-" + self.advance().value
+                    
+                    self.expect(TokenType.COLON)
+                    prop_value = self.parse_style_value()
+                    properties[prop_name] = prop_value
+                    self.expect(TokenType.SEMICOLON)
             else:
                 # 跳过未知标记
                 self.advance()
@@ -1082,7 +1172,13 @@ class CHTLParser:
         if token.type == TokenType.STRING:
             return self.advance().value.strip('"\'')
         elif token.type == TokenType.NUMBER:
-            return float(self.advance().value)
+            # 处理带单位的数值（如 10px, 20px）
+            number = self.advance().value
+            if self.match(TokenType.IDENTIFIER):
+                unit = self.advance().value
+                return f"{number}{unit}"
+            else:
+                return float(number)
         elif token.type == TokenType.LITERAL:
             return self.advance().value
         elif token.type == TokenType.IDENTIFIER:
@@ -1108,6 +1204,58 @@ class CHTLParser:
             # 跳过未知标记
             self.advance()
             return None
+    
+    def parse_style_value(self) -> str:
+        """解析样式值，支持多个值（如 padding: 10px 20px）"""
+        values = []
+        
+        while True:
+            token = self.current_token()
+            
+            if token.type == TokenType.NUMBER:
+                # 处理带单位的数值
+                number = self.advance().value
+                if self.match(TokenType.IDENTIFIER):
+                    unit = self.advance().value
+                    values.append(f"{number}{unit}")
+                else:
+                    values.append(number)
+            elif token.type == TokenType.IDENTIFIER:
+                # 处理标识符或函数调用
+                func_name = self.advance().value
+                if self.match(TokenType.LPAREN):
+                    # 解析函数调用
+                    self.advance()  # 跳过左括号
+                    args = []
+                    while not self.match(TokenType.RPAREN, TokenType.EOF):
+                        if self.match(TokenType.NUMBER):
+                            args.append(self.advance().value)
+                        elif self.match(TokenType.COMMA):
+                            self.advance()  # 跳过逗号
+                        else:
+                            self.advance()  # 跳过其他标记
+                    if self.match(TokenType.RPAREN):
+                        self.advance()  # 跳过右括号
+                    values.append(f"{func_name}({', '.join(args)})")
+                else:
+                    values.append(func_name)
+            elif token.type == TokenType.STRING:
+                # 处理字符串
+                values.append(self.advance().value.strip('"\''))
+            elif token.type == TokenType.LITERAL:
+                # 处理字面量
+                values.append(self.advance().value)
+            elif token.type == TokenType.MINUS:
+                # 处理连字符（如 box-shadow 中的 -）
+                values.append(self.advance().value)
+            elif token.type == TokenType.COLON:
+                # 跳过冒号（样式值中不应该有冒号）
+                self.advance()
+            else:
+                # 遇到分号或其他结束标记，停止解析
+                break
+        
+        return " ".join(values)
     
     def parse_script_content(self) -> str:
         """解析脚本内容"""
