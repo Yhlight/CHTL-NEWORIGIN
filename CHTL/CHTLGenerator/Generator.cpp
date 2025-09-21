@@ -32,26 +32,28 @@ void Generator::collectCssRules(const NodePtr& node) {
     }
 }
 
+void Generator::generateCssRules(const std::vector<std::shared_ptr<CssRuleNode>>& rules) {
+    for (const auto& rule : rules) {
+        indent();
+        output << rule->selector << " {\n";
+        indentLevel++;
+        for (const auto& prop : rule->properties) {
+            indent();
+            output << prop.name << ": " << evaluateExpression(prop.value) << ";\n";
+        }
+        indentLevel--;
+        indent();
+        output << "}\n";
+    }
+}
+
 void Generator::generateCss() {
     if (globalCssRules.empty()) return;
 
     indent();
     output << "<style>\n";
     indentLevel++;
-
-    for (const auto& rule : globalCssRules) {
-        indent();
-        output << rule->selector << " {\n";
-        indentLevel++;
-        for (const auto& prop : rule->properties) {
-            indent();
-            output << prop.name << ": " << prop.value << ";\n";
-        }
-        indentLevel--;
-        indent();
-        output << "}\n";
-    }
-
+    generateCssRules(globalCssRules);
     indentLevel--;
     indent();
     output << "</style>\n";
@@ -92,6 +94,59 @@ void Generator::visitTemplateUsageNode(const std::shared_ptr<TemplateUsageNode>&
     }
 }
 
+// Simple struct to hold the result of an evaluation
+struct EvaluatedValue {
+    double numeric_val = 0.0;
+    std::string string_val = "";
+    std::string unit = "";
+    bool is_numeric = false;
+};
+
+// Helper to evaluate a node and return the struct
+EvaluatedValue evaluate(std::shared_ptr<ExprNode> expr) {
+    if (auto num = std::dynamic_pointer_cast<NumericLiteralNode>(expr)) {
+        return {num->value, "", num->unit, true};
+    }
+    if (auto str = std::dynamic_pointer_cast<StringLiteralNode>(expr)) {
+        return {0.0, str->value, "", false};
+    }
+    if (auto binOp = std::dynamic_pointer_cast<BinaryOpNode>(expr)) {
+        EvaluatedValue left = evaluate(binOp->left);
+        EvaluatedValue right = evaluate(binOp->right);
+
+        if (left.is_numeric && right.is_numeric) {
+            // Unit check
+            if (!left.unit.empty() && !right.unit.empty() && left.unit != right.unit) {
+                // For now, return error string. Proper error handling needed.
+                return {0.0, "ERROR: Incompatible units", "", false};
+            }
+            std::string result_unit = !left.unit.empty() ? left.unit : right.unit;
+            double result_val = 0.0;
+            switch(binOp->op) {
+                case TokenType::PLUS: result_val = left.numeric_val + right.numeric_val; break;
+                case TokenType::MINUS: result_val = left.numeric_val - right.numeric_val; break;
+                case TokenType::STAR: result_val = left.numeric_val * right.numeric_val; break;
+                case TokenType::SLASH: result_val = left.numeric_val / right.numeric_val; break;
+                default: return {0.0, "ERROR: Unsupported operator", "", false};
+            }
+            return {result_val, "", result_unit, true};
+        }
+        // Handle string concatenation if needed
+    }
+    return {0.0, "ERROR: Unknown expression type", "", false};
+}
+
+
+std::string Generator::evaluateExpression(std::shared_ptr<ExprNode> expr) {
+    EvaluatedValue result = evaluate(expr);
+    if (result.is_numeric) {
+        std::stringstream ss;
+        ss << result.numeric_val << result.unit;
+        return ss.str();
+    }
+    return result.string_val;
+}
+
 
 void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
     indent();
@@ -101,7 +156,7 @@ void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
         output << " " << attr.name << "=\"" << attr.value << "\"";
     }
 
-    if (node->styleBlock) {
+    if (node->tagName != "style" && node->styleBlock) {
         std::stringstream style_ss;
         // First, resolve and add properties from template usages
         for (const auto& usage : node->styleBlock->templateUsages) {
@@ -110,7 +165,7 @@ void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
                 if (templateNode->templateType == TemplateType::STYLE) {
                     const auto& props = std::get<std::vector<StyleProperty>>(templateNode->body);
                     for (const auto& prop : props) {
-                        style_ss << prop.name << ": " << prop.value << ";";
+                        style_ss << prop.name << ": " << evaluateExpression(prop.value) << ";";
                     }
                 }
             }
@@ -118,7 +173,7 @@ void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
 
         // Then, add the inline properties (they can override template properties)
         for (const auto& prop : node->styleBlock->inlineProperties) {
-            style_ss << prop.name << ": " << prop.value << ";";
+            style_ss << prop.name << ": " << evaluateExpression(prop.value) << ";";
         }
 
         if (style_ss.str().length() > 0) {
@@ -133,6 +188,10 @@ void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
     } else {
         output << ">\n";
         indentLevel++;
+
+        if (node->tagName == "style" && node->styleBlock) {
+            generateCssRules(node->styleBlock->rules);
+        }
 
         for (const auto& child : node->children) {
             visit(child);

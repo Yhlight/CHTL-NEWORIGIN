@@ -5,12 +5,16 @@
 #include <memory>
 #include <map>
 #include <variant>
+#include "../CHTLLexer/Token.h"
 
 namespace CHTL {
 
 // Forward declarations
+class ExprNode;
 struct ElementNode;
 struct TextNode;
+class StyleBlockNode;
+class TemplateUsageNode;
 
 // Using std::variant for a visitor-pattern-friendly AST
 // but for now, let's stick to a more traditional inheritance model
@@ -46,7 +50,7 @@ public:
 
 struct StyleProperty {
     std::string name;
-    std::string value;
+    std::shared_ptr<ExprNode> value;
 };
 
 class CssRuleNode : public Node {
@@ -93,6 +97,31 @@ class TemplateUsageNode : public Node {
 public:
     TemplateType templateType;
     std::string name;
+};
+
+// --- Expression Nodes ---
+
+class ExprNode : public Node {
+public:
+    virtual ~ExprNode() = default;
+};
+
+class NumericLiteralNode : public ExprNode {
+public:
+    double value;
+    std::string unit; // e.g., "px", "%", "em"
+};
+
+class StringLiteralNode : public ExprNode {
+public:
+    std::string value;
+};
+
+class BinaryOpNode : public ExprNode {
+public:
+    std::shared_ptr<ExprNode> left;
+    std::shared_ptr<ExprNode> right;
+    TokenType op;
 };
 
 

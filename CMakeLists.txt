@@ -13,6 +13,7 @@ add_executable(chtl_compiler
     CHTL/CMODSystem/CMODSystem.cpp
     CHTL/Loader.cpp
     CHTL/Compiler.cpp
+    CHTL/CHTLExpressionParser.cpp
     ThirdParty/miniz.c
 )
 

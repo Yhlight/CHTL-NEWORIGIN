@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include "../CHTLExpressionParser.h"
 #include <iostream>
 
 namespace CHTL {
@@ -247,15 +248,13 @@ std::shared_ptr<StyleBlockNode> Parser::parseStyleBlock() {
                 std::string propName;
                 while(peek().type != TokenType::COLON && !isAtEnd()) { propName += advance().lexeme; }
                 consume(TokenType::COLON, "Expect ':' after property name.");
-                std::string propValue;
+                std::vector<Token> valueTokens;
                 while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) {
-                    propValue += advance().lexeme;
-                    if(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE) {
-                        propValue += " ";
-                    }
+                    valueTokens.push_back(advance());
                 }
-                if (!propValue.empty() && propValue.back() == ' ') propValue.pop_back();
-                rule->properties.push_back({propName, propValue});
+                ExpressionParser exprParser(valueTokens);
+                std::shared_ptr<ExprNode> valueExpr = exprParser.parse();
+                rule->properties.push_back({propName, valueExpr});
                 if (peek().type == TokenType::SEMICOLON) advance();
             }
             consume(TokenType::RIGHT_BRACE, "Expect '}' after selector block.");
@@ -267,15 +266,16 @@ std::shared_ptr<StyleBlockNode> Parser::parseStyleBlock() {
                 propName += advance().lexeme;
             }
             consume(TokenType::COLON, "Expect ':' after property name.");
-            std::string propValue;
+            // Collect tokens for the expression
+            std::vector<Token> valueTokens;
             while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) {
-                propValue += advance().lexeme;
-                if(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE) {
-                    propValue += " ";
-                }
+                valueTokens.push_back(advance());
             }
-            if (!propValue.empty() && propValue.back() == ' ') propValue.pop_back();
-            styleBlock->inlineProperties.push_back({propName, propValue});
+            // Parse the expression
+            ExpressionParser exprParser(valueTokens);
+            std::shared_ptr<ExprNode> valueExpr = exprParser.parse();
+            styleBlock->inlineProperties.push_back({propName, valueExpr});
+
             if (peek().type == TokenType::SEMICOLON) {
                 advance();
             }
@@ -322,16 +322,14 @@ NodePtr Parser::parseTemplate() {
                 std::string propName;
                 while(peek().type != TokenType::COLON && !isAtEnd()) { propName += advance().lexeme; }
                 consume(TokenType::COLON, "Expect ':' after property name.");
-                std::string propValue;
+                std::vector<Token> valueTokens;
                 while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) {
-                    propValue += advance().lexeme;
-                    if(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE) {
-                        propValue += " ";
-                    }
+                    valueTokens.push_back(advance());
                 }
-                if (!propValue.empty() && propValue.back() == ' ') propValue.pop_back();
+                ExpressionParser exprParser(valueTokens);
+                std::shared_ptr<ExprNode> valueExpr = exprParser.parse();
                 if (peek().type == TokenType::SEMICOLON) advance();
-                styleBody.push_back({propName, propValue});
+                styleBody.push_back({propName, valueExpr});
             }
             templateNode->body = styleBody;
             break;

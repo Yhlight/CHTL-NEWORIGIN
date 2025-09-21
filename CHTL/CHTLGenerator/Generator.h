@@ -18,8 +18,11 @@ private:
     void visitTextNode(const std::shared_ptr<TextNode>& node);
     void visitTemplateUsageNode(const std::shared_ptr<TemplateUsageNode>& node);
 
+    std::string evaluateExpression(std::shared_ptr<ExprNode> expr);
+
     void collectCssRules(const NodePtr& node);
     void generateCss();
+    void generateCssRules(const std::vector<std::shared_ptr<CssRuleNode>>& rules);
 
     const std::vector<NodePtr>& rootNodes;
     const std::map<std::string, std::shared_ptr<TemplateNode>>& templateTable;
