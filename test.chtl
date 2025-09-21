@@ -1,0 +1,19 @@
+html {
+    head {
+        title {
+            text { "My CHTL Page" }
+        }
+    }
+    body {
+        div {
+            id: "main-container";
+            class: "container";
+            h1 {
+                text { "Welcome to CHTL!" }
+            }
+            p {
+                text { "This is a paragraph generated from CHTL source." }
+            }
+        }
+    }
+}

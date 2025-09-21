@@ -1,0 +1,29 @@
+html {
+    head {
+        title {
+            text { "Page with Styles" }
+        }
+        style {
+            body {
+                font-family: "Arial", sans-serif;
+                background-color: #f0f0f0;
+            }
+
+            .container {
+                color: blue;
+            }
+        }
+    }
+    body {
+        div {
+            class: "container";
+            text { "This text should be blue." }
+
+            // This is a local style block, which should be handled differently.
+            // For now, the parser should just produce an empty <style> tag for it.
+            style {
+                // width: 100px;
+            }
+        }
+    }
+}

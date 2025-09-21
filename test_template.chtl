@@ -1,0 +1,16 @@
+[Template] @Style DefaultText
+{
+	color: "black";
+	line-height: "1.6";
+}
+
+html {
+    body {
+        div {
+            style {
+                @Style DefaultText;
+            }
+            text { "This text should have styles from the template." }
+        }
+    }
+}
