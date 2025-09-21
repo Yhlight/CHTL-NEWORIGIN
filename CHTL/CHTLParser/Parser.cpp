@@ -17,7 +17,10 @@ NodePtr Parser::parseDeclaration() {
     if (match({TokenType::KEYWORD_IMPORT})) {
         return parseImport();
     }
-    // other declarations like [Template] go here
+    if (match({TokenType::KEYWORD_TEMPLATE})) {
+        return parseTemplate();
+    }
+    // other declarations like [Custom] go here
 
     return parseStatement();
 }
@@ -26,6 +29,15 @@ NodePtr Parser::parseStatement() {
     if(check(TokenType::IDENTIFIER)) {
         return parseElement();
     }
+
+    if (match({TokenType::AT_ELEMENT})) {
+        auto usageNode = std::make_shared<TemplateUsageNode>();
+        usageNode->templateType = TemplateType::ELEMENT;
+        usageNode->name = consume(TokenType::IDENTIFIER, "Expect template name after @Element.").lexeme;
+        if(peek().type == TokenType::SEMICOLON) advance(); // Optional semicolon
+        return usageNode;
+    }
+
     // for now, skip unknown tokens at top level
     advance();
     return nullptr;
@@ -76,7 +88,14 @@ NodePtr Parser::parseElement() {
                     element->children.push_back(parseText());
                 } else if (peek().type == TokenType::IDENTIFIER) {
                      element->children.push_back(parseElement());
-                } else {
+                } else if (match({TokenType::AT_ELEMENT})) {
+                    auto usageNode = std::make_shared<TemplateUsageNode>();
+                    usageNode->templateType = TemplateType::ELEMENT;
+                    usageNode->name = consume(TokenType::IDENTIFIER, "Expect template name after @Element.").lexeme;
+                    if(peek().type == TokenType::SEMICOLON) advance();
+                    element->children.push_back(usageNode);
+                }
+                else {
                     // Unknown token inside element block, skip for now
                     advance();
                 }
@@ -196,9 +215,15 @@ std::shared_ptr<StyleBlockNode> Parser::parseStyleBlock() {
     auto styleBlock = std::make_shared<StyleBlockNode>();
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        // Look ahead to see if we're parsing a property or a selector rule.
-        // This is a simple heuristic: if we see a '{' before a ';', it's a rule.
-        // This is not foolproof, but good enough for now.
+        if (match({TokenType::AT_STYLE})) {
+            auto usageNode = std::make_shared<TemplateUsageNode>();
+            usageNode->templateType = TemplateType::STYLE;
+            usageNode->name = consume(TokenType::IDENTIFIER, "Expect template name after @Style.").lexeme;
+            if(peek().type == TokenType::SEMICOLON) advance();
+            styleBlock->templateUsages.push_back(usageNode);
+            continue;
+        }
+
         int lookahead = current;
         bool isRule = false;
         while(lookahead < tokens.size() && tokens[lookahead].type != TokenType::SEMICOLON && tokens[lookahead].type != TokenType::RIGHT_BRACE) {
@@ -223,7 +248,13 @@ std::shared_ptr<StyleBlockNode> Parser::parseStyleBlock() {
                 while(peek().type != TokenType::COLON && !isAtEnd()) { propName += advance().lexeme; }
                 consume(TokenType::COLON, "Expect ':' after property name.");
                 std::string propValue;
-                while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) { propValue += advance().lexeme; }
+                while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) {
+                    propValue += advance().lexeme;
+                    if(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE) {
+                        propValue += " ";
+                    }
+                }
+                if (!propValue.empty() && propValue.back() == ' ') propValue.pop_back();
                 rule->properties.push_back({propName, propValue});
                 if (peek().type == TokenType::SEMICOLON) advance();
             }
@@ -239,7 +270,11 @@ std::shared_ptr<StyleBlockNode> Parser::parseStyleBlock() {
             std::string propValue;
             while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) {
                 propValue += advance().lexeme;
+                if(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE) {
+                    propValue += " ";
+                }
             }
+            if (!propValue.empty() && propValue.back() == ' ') propValue.pop_back();
             styleBlock->inlineProperties.push_back({propName, propValue});
             if (peek().type == TokenType::SEMICOLON) {
                 advance();
@@ -250,5 +285,75 @@ std::shared_ptr<StyleBlockNode> Parser::parseStyleBlock() {
     consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
     return styleBlock;
 }
+
+NodePtr Parser::parseTemplate() {
+    auto templateNode = std::make_shared<TemplateNode>();
+
+    // Parse type and name
+    if (match({TokenType::AT_ELEMENT})) {
+        templateNode->templateType = TemplateType::ELEMENT;
+    } else if (match({TokenType::AT_STYLE})) {
+        templateNode->templateType = TemplateType::STYLE;
+    } else if (match({TokenType::AT_VAR})) {
+        templateNode->templateType = TemplateType::VAR;
+    } else {
+        // Handle error: unknown template type
+        consume(TokenType::AT_ELEMENT, "Expect template type like @Element, @Style, or @Var.");
+        return nullptr;
+    }
+
+    templateNode->name = consume(TokenType::IDENTIFIER, "Expect template name.").lexeme;
+    consume(TokenType::LEFT_BRACE, "Expect '{' after template name.");
+
+    // Parse body based on type
+    switch (templateNode->templateType) {
+        case TemplateType::ELEMENT: {
+            std::vector<NodePtr> elementBody;
+            while(!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+                elementBody.push_back(parseStatement());
+            }
+            templateNode->body = elementBody;
+            break;
+        }
+        case TemplateType::STYLE: {
+            std::vector<StyleProperty> styleBody;
+            while(!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+                // This is simplified logic, re-using the inline property parsing logic.
+                std::string propName;
+                while(peek().type != TokenType::COLON && !isAtEnd()) { propName += advance().lexeme; }
+                consume(TokenType::COLON, "Expect ':' after property name.");
+                std::string propValue;
+                while(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE && !isAtEnd()) {
+                    propValue += advance().lexeme;
+                    if(peek().type != TokenType::SEMICOLON && peek().type != TokenType::RIGHT_BRACE) {
+                        propValue += " ";
+                    }
+                }
+                if (!propValue.empty() && propValue.back() == ' ') propValue.pop_back();
+                if (peek().type == TokenType::SEMICOLON) advance();
+                styleBody.push_back({propName, propValue});
+            }
+            templateNode->body = styleBody;
+            break;
+        }
+        case TemplateType::VAR: {
+            std::vector<Attribute> varBody;
+             while(!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+                // This is simplified logic, re-using the attribute parsing logic.
+                Token name = consume(TokenType::IDENTIFIER, "Expect variable name.");
+                consume(TokenType::COLON, "Expect ':' after variable name.");
+                Token value = consume(TokenType::STRING, "Expect string literal for variable value.");
+                if (peek().type == TokenType::SEMICOLON) advance();
+                varBody.push_back({name.lexeme, value.lexeme});
+            }
+            templateNode->body = varBody;
+            break;
+        }
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after template body.");
+    return templateNode;
+}
+
 
 } // namespace CHTL

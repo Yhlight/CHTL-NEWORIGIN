@@ -3,7 +3,8 @@
 
 namespace CHTL {
 
-Generator::Generator(const std::vector<NodePtr>& nodes) : rootNodes(nodes) {}
+Generator::Generator(const std::vector<NodePtr>& nodes, const std::map<std::string, std::shared_ptr<TemplateNode>>& templates)
+    : rootNodes(nodes), templateTable(templates) {}
 
 std::string Generator::generate() {
     for (const auto& node : rootNodes) {
@@ -64,13 +65,33 @@ void Generator::indent() {
 }
 
 void Generator::visit(const NodePtr& node) {
+    if (!node) return;
     if (auto element = std::dynamic_pointer_cast<ElementNode>(node)) {
         visitElementNode(element);
     } else if (auto text = std::dynamic_pointer_cast<TextNode>(node)) {
         visitTextNode(text);
+    } else if (auto usage = std::dynamic_pointer_cast<TemplateUsageNode>(node)) {
+        visitTemplateUsageNode(usage);
     }
     // Add cases for other node types here later
 }
+
+void Generator::visitTemplateUsageNode(const std::shared_ptr<TemplateUsageNode>& node) {
+    if (templateTable.count(node->name)) {
+        auto templateNode = templateTable.at(node->name);
+        if (templateNode->templateType == TemplateType::ELEMENT) {
+            const auto& body = std::get<std::vector<NodePtr>>(templateNode->body);
+            for (const auto& bodyNode : body) {
+                visit(bodyNode);
+            }
+        }
+        // Handle other template types if necessary, though @Style is handled by parser
+    } else {
+        // Handle error: template not found
+        output << "<!-- Error: Template '" << node->name << "' not found. -->\n";
+    }
+}
+
 
 void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
     indent();
@@ -80,12 +101,29 @@ void Generator::visitElementNode(const std::shared_ptr<ElementNode>& node) {
         output << " " << attr.name << "=\"" << attr.value << "\"";
     }
 
-    if (node->styleBlock && !node->styleBlock->inlineProperties.empty()) {
-        output << " style=\"";
-        for (const auto& prop : node->styleBlock->inlineProperties) {
-            output << prop.name << ": " << prop.value << ";";
+    if (node->styleBlock) {
+        std::stringstream style_ss;
+        // First, resolve and add properties from template usages
+        for (const auto& usage : node->styleBlock->templateUsages) {
+            if (templateTable.count(usage->name)) {
+                auto templateNode = templateTable.at(usage->name);
+                if (templateNode->templateType == TemplateType::STYLE) {
+                    const auto& props = std::get<std::vector<StyleProperty>>(templateNode->body);
+                    for (const auto& prop : props) {
+                        style_ss << prop.name << ": " << prop.value << ";";
+                    }
+                }
+            }
         }
-        output << "\"";
+
+        // Then, add the inline properties (they can override template properties)
+        for (const auto& prop : node->styleBlock->inlineProperties) {
+            style_ss << prop.name << ": " << prop.value << ";";
+        }
+
+        if (style_ss.str().length() > 0) {
+            output << " style=\"" << style_ss.str() << "\"";
+        }
     }
 
     if (node->children.empty()) {

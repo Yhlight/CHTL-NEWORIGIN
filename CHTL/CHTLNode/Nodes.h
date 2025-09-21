@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <variant>
 
 namespace CHTL {
 
@@ -27,7 +28,8 @@ struct Attribute {
     std::string value;
 };
 
-class StyleBlockNode; // Forward declaration
+class StyleBlockNode;
+class TemplateUsageNode;
 
 class ElementNode : public Node {
 public:
@@ -55,6 +57,7 @@ public:
 
 class StyleBlockNode : public Node {
 public:
+    std::vector<std::shared_ptr<TemplateUsageNode>> templateUsages;
     std::vector<StyleProperty> inlineProperties;
     std::vector<std::shared_ptr<CssRuleNode>> rules;
 };
@@ -71,5 +74,26 @@ public:
     // for 'as' clause
     std::string alias;
 };
+
+enum class TemplateType { ELEMENT, STYLE, VAR };
+
+class TemplateNode : public Node {
+public:
+    TemplateType templateType;
+    std::string name;
+
+    std::variant<
+        std::vector<NodePtr>,       // For @Element
+        std::vector<StyleProperty>, // For @Style
+        std::vector<Attribute>      // For @Var
+    > body;
+};
+
+class TemplateUsageNode : public Node {
+public:
+    TemplateType templateType;
+    std::string name;
+};
+
 
 } // namespace CHTL

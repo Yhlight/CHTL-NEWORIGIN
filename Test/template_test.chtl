@@ -1,0 +1,26 @@
+[Template] @Style BaseCardStyle {
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+[Template] @Element Card {
+    div {
+        class: "card";
+        style {
+            @Style BaseCardStyle;
+            border: 1px solid #eee;
+        }
+        h3 { text: "Card Title" }
+        p { text: "This is a card created from a template." }
+    }
+}
+
+html {
+    body {
+        h1 { text: "Template Test" }
+
+        // Use the element template
+        @Element Card;
+    }
+}

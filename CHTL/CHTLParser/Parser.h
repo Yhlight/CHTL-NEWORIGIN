@@ -18,6 +18,7 @@ private:
     NodePtr parseElement();
     NodePtr parseText();
     NodePtr parseImport();
+    NodePtr parseTemplate();
     void parseAttributes(ElementNode& element);
     std::shared_ptr<StyleBlockNode> parseStyleBlock();
 

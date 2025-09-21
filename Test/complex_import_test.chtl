@@ -1,0 +1,12 @@
+[Import] @Chtl from "TestModule2.cmod"
+
+html {
+    head {
+        title { text: "Complex Import Test" }
+    }
+    body {
+        h1 { text: "Testing imported templates" }
+
+        @Element MyButton;
+    }
+}

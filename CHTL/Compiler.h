@@ -19,6 +19,7 @@ private:
     Loader loader;
     std::vector<NodePtr> ast;
     std::vector<std::string> processedFiles;
+    std::map<std::string, std::shared_ptr<TemplateNode>> templateTable;
 };
 
 } // namespace CHTL

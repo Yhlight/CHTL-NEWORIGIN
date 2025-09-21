@@ -60,7 +60,11 @@ void Compiler::compile(const std::string& entryFilePath) {
                      worklist.push_back(fs::absolute(importPath).string());
                 }
 
-            } else if(node) { // Parser can return nullptrs for skipped tokens
+            } else if (auto templateNode = std::dynamic_pointer_cast<TemplateNode>(node)) {
+                templateTable[templateNode->name] = templateNode;
+                // We don't add the template definition itself to the main AST for generation
+            }
+            else if(node) { // Parser can return nullptrs for skipped tokens
                 ast.push_back(node);
             }
         }
@@ -69,7 +73,7 @@ void Compiler::compile(const std::string& entryFilePath) {
     // All files are parsed and the AST is built.
     // Now, generate the output.
 
-    Generator generator(ast);
+    Generator generator(ast, templateTable);
     std::string html = generator.generate();
     std::cout << html << std::endl;
 }
