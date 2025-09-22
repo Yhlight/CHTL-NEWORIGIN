@@ -12,6 +12,11 @@ enum class TokenType {
     Equals,
     LeftBrace,
     RightBrace,
+    LeftBracket,
+    RightBracket,
+    LeftParen,
+    RightParen,
+    At,
     Comment,
     EndOfFile,
     Unknown

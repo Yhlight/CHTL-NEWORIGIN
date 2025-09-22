@@ -1,5 +1,6 @@
 #include "Generator.h"
 #include <iostream>
+#include <vector>
 
 std::string Generator::get_html() {
     return html_stream.str();
@@ -9,52 +10,97 @@ std::string Generator::get_css() {
     return css_stream.str();
 }
 
-void Generator::generate(BaseNode& root) {
+void Generator::generate(ProgramNode& root) {
+    // First pass: register all template definitions
+    root.accept(*this);
+    // Second pass: generate the output
+    html_stream.str(""); // Clear the stream
     root.accept(*this);
 }
 
+void Generator::visit(ProgramNode& node) {
+    for (const auto& child : node.children) {
+        if (child) {
+            child->accept(*this);
+        }
+    }
+}
+
+void Generator::visit(NamespaceNode& node) {
+    // For now, we just generate the content of the namespace directly.
+    // Scoping will be handled later.
+    for (const auto& child : node.children) {
+        child->accept(*this);
+    }
+}
+
+void Generator::visit(ConfigurationNode& node) {
+    // Configuration nodes do not generate output.
+    // They are used to configure the compiler itself.
+}
+
 void Generator::visit(ElementNode& node) {
-    // Store the current element to give context to child nodes (like StyleNode)
     ElementNode* previous_element = current_element;
     current_element = &node;
 
     html_stream << "<" << node.tag_name;
 
-    // This is a simplification. A better approach would be to collect all styles
-    // from StyleNodes first, then render attributes.
-    std::string inline_style;
+    // --- Style pre-pass ---
+    std::vector<AttributeNode*> style_attributes;
 
-    // Visit style nodes first to extract inline styles
+    // Collect styles from @Style templates
     for (const auto& child : node.children) {
-        if (auto* style_node = dynamic_cast<StyleNode*>(child.get())) {
-            // Simple parsing for "key: value;"
-            // This is a placeholder for a real CSS parser.
-            inline_style += style_node->raw_css;
+        if (auto* style_usage = dynamic_cast<StyleUsageNode*>(child.get())) {
+            if (style_templates.count(style_usage->name)) {
+                auto* template_node = style_templates[style_usage->name];
+                for (const auto& style_attr : template_node->styles) {
+                    style_attributes.push_back(style_attr.get());
+                }
+            }
         }
     }
 
-    // Render attributes
+    // Collect styles from inline style blocks
+    for (const auto& child : node.children) {
+        if (auto* style_node = dynamic_cast<StyleNode*>(child.get())) {
+            // This is a simplification. A real implementation would parse the raw_css.
+            // For now, we assume raw_css is empty and we're not supporting inline style blocks
+            // when also using style templates, to keep this step manageable.
+        }
+    }
+
+    // Render element's own attributes
     for (const auto& attr : node.attributes) {
         attr->accept(*this);
     }
 
-    // Add collected inline styles
-    if (!inline_style.empty()) {
-        html_stream << " style=\"" << inline_style << "\"";
+    // Render collected styles into a style="..." attribute
+    if (!style_attributes.empty()) {
+        html_stream << " style=\"";
+        for (const auto* attr : style_attributes) {
+            if (auto val_ptr = std::get_if<std::optional<std::string>>(&attr->value)) {
+                if (val_ptr->has_value()) {
+                    html_stream << attr->key << ": " << **val_ptr << "; ";
+                }
+            }
+            // Later, handle ExprNode here by evaluating it
+        }
+        html_stream << "\"";
     }
 
     html_stream << ">";
 
-    // Visit non-style children to render content
+    // --- Content pass ---
     for (const auto& child : node.children) {
-        if (dynamic_cast<StyleNode*>(child.get()) == nullptr) {
-             child->accept(*this);
+        // Skip nodes that are not for content generation
+        if (dynamic_cast<StyleNode*>(child.get()) || dynamic_cast<StyleUsageNode*>(child.get())) {
+            continue;
         }
+        child->accept(*this);
     }
 
     html_stream << "</" << node.tag_name << ">";
 
-    // Restore previous element context
     current_element = previous_element;
 }
 
@@ -63,25 +109,45 @@ void Generator::visit(TextNode& node) {
 }
 
 void Generator::visit(AttributeNode& node) {
-    html_stream << " " << node.key << "=\"" << node.value << "\"";
+    if (auto val_ptr = std::get_if<std::optional<std::string>>(&node.value)) {
+        if (val_ptr->has_value()) {
+            html_stream << " " << node.key << "=\"" << **val_ptr << "\"";
+        }
+    }
+    // Later, handle ExprNode here
 }
 
 void Generator::visit(StyleNode& node) {
-    // The logic is handled in visit(ElementNode&) for now.
-    // A more advanced generator would parse the CSS here and add rules
-    // to the main css_stream if they are not inline styles.
-    // For example, handling .class selectors.
+    // Logic is handled in ElementNode visit's pre-pass
 }
 
-void Generator_visit_CommentNode(CommentNode& node) {
-    // The spec says # comments are for the generator.
-    // We will translate them to HTML comments.
-    // html_stream << "<!--" << node.content << " -->";
-}
 void Generator::visit(CommentNode& node) {
-    // The spec says # comments are for the generator.
-    // We will translate them to HTML comments.
     html_stream << "<!--" << node.content << " -->";
+}
+
+void Generator::visit(TemplateStyleNode& node) {
+    style_templates[node.name] = &node;
+}
+
+void Generator::visit(TemplateElementNode& node) {
+    element_templates[node.name] = &node;
+}
+
+void Generator::visit(TemplateVarNode& node) {
+    // Not implemented yet
+}
+
+void Generator::visit(StyleUsageNode& node) {
+    // Logic is handled within ElementNode visit's pre-pass
+}
+
+void Generator::visit(ElementUsageNode& node) {
+    if (element_templates.count(node.name)) {
+        auto* template_node = element_templates[node.name];
+        for (const auto& child : template_node->children) {
+            child->accept(*this);
+        }
+    }
 }
 
 

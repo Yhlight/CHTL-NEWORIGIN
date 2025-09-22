@@ -1,31 +1,48 @@
-// CHTL Test File
+[Configuration]
+{
+    DEBUG_MODE = false;
+}
 
-# This is a generator comment that should appear in the HTML output.
+[Namespace] TestSpace {
+    // CHTL Template Test File
 
-html {
-    head {
-        title { text: "CHTL Test Page"; }
+    [Custom] @Style TextSet
+    {
+        color;
+        font-size;
     }
 
-    body {
-        // Main container
-        div {
-            id: "container";
-            class = "main-content";
+    [Template] @Style DefaultText
+    {
+        color: black;
+        line-height: 1.6;
+    }
 
-            // A text node using the block syntax
-            text {
-                "Welcome to CHTL"
-            }
+    [Template] @Element Box
+    {
+        span
+        {
+            text: "This is from an element template.";
+        }
+    }
+
+
+    html {
+        head {
+            title { text: "CHTL Template Test"; }
         }
 
-        // A span with an inline style
-        span {
-            style {
-                color: red;
-                font-size: 14px;
+        body {
+            div {
+                class: "styled-div";
+                @Style DefaultText;
+                text: "This div uses a style template. ";
             }
-            text: "This text should be red.";
+
+            div {
+                class: "element-container";
+                @Element Box;
+            }
         }
     }
 }

@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
 
     // 2. Parsing
     Parser parser(tokens);
-    std::unique_ptr<ElementNode> ast_root = parser.parse();
+    std::unique_ptr<ProgramNode> ast_root = parser.parse();
 
     // 3. Generation
     if (ast_root) {
