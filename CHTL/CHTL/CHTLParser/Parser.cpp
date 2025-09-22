@@ -114,7 +114,63 @@ std::unique_ptr<StyleBlockNode> Parser::parseStyleBlock() {
     auto styleNode = std::make_unique<StyleBlockNode>();
 
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
-        // Consume property name (can be multi-token, e.g., font-size)
+        // Check if it's a property (IDENTIFIER... :) or a nested rule (IDENTIFIER... {)
+        bool is_property = false;
+        if (current + 1 < tokens.size()) {
+            if (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUALS) {
+                is_property = true;
+            }
+        }
+
+        // This lookahead is still too simple. A key can be multiple tokens.
+        // A better lookahead is to scan until a `{` or a `:`.
+        int temp_pos = current;
+        while(temp_pos < tokens.size() && tokens[temp_pos].type != TokenType::LEFT_BRACE && tokens[temp_pos].type != TokenType::COLON && tokens[temp_pos].type != TokenType::EQUALS) {
+            temp_pos++;
+        }
+
+        if (temp_pos < tokens.size() && (tokens[temp_pos].type == TokenType::COLON || tokens[temp_pos].type == TokenType::EQUALS)) {
+             // It's an inline property
+            std::stringstream key_stream;
+            while (!check(TokenType::COLON) && !check(TokenType::EQUALS) && !isAtEnd()) {
+                key_stream << advance().lexeme;
+            }
+            std::string key = key_stream.str();
+
+            if (!match({TokenType::COLON, TokenType::EQUALS})) {
+                throw std::runtime_error("Expect ':' or '=' after css property name.");
+            }
+
+            std::vector<Token> value_tokens;
+            while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
+                value_tokens.push_back(advance());
+            }
+            ExpressionParser expr_parser(value_tokens);
+            std::unique_ptr<ExpressionNode> value_expr = expr_parser.parse();
+
+            consume(TokenType::SEMICOLON, "Expect ';' after css property value.");
+            styleNode->properties.push_back(std::make_unique<CssPropertyNode>(key, std::move(value_expr)));
+        } else {
+            // It's a nested rule
+            styleNode->rules.push_back(parseCssRule());
+        }
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
+    return styleNode;
+}
+
+std::unique_ptr<CssRuleNode> Parser::parseCssRule() {
+    // For now, selector is a simple concatenation of tokens until '{'
+    std::stringstream selector_stream;
+    while(!check(TokenType::LEFT_BRACE) && !isAtEnd()){
+        selector_stream << advance().lexeme;
+    }
+    auto ruleNode = std::make_unique<CssRuleNode>(selector_stream.str());
+
+    consume(TokenType::LEFT_BRACE, "Expect '{' after selector.");
+
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
         std::stringstream key_stream;
         while (!check(TokenType::COLON) && !check(TokenType::EQUALS) && !isAtEnd()) {
             key_stream << advance().lexeme;
@@ -125,22 +181,19 @@ std::unique_ptr<StyleBlockNode> Parser::parseStyleBlock() {
             throw std::runtime_error("Expect ':' or '=' after css property name.");
         }
 
-        // Collect tokens for the expression
         std::vector<Token> value_tokens;
         while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
             value_tokens.push_back(advance());
         }
-
-        // Parse the expression
         ExpressionParser expr_parser(value_tokens);
         std::unique_ptr<ExpressionNode> value_expr = expr_parser.parse();
 
         consume(TokenType::SEMICOLON, "Expect ';' after css property value.");
-        styleNode->properties.push_back(std::make_unique<CssPropertyNode>(key, std::move(value_expr)));
+        ruleNode->properties.push_back(std::make_unique<CssPropertyNode>(key, std::move(value_expr)));
     }
 
-    consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
-    return styleNode;
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after CSS rule block.");
+    return ruleNode;
 }
 
 void Parser::parseAttribute(ElementNode* element) {

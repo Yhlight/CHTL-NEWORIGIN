@@ -18,9 +18,26 @@ html {
             }
 
             p {
+                style {
+                    .highlight {
+                        font-weight: bold;
+                    }
+                }
+                class: "highlight";
                 text {
                     "This is a paragraph generated from CHTL source."
                 }
+            }
+
+            button {
+                style {
+                    .btn {
+                        padding: 10px;
+                        border-radius: 5px;
+                    }
+                    background-color: blue;
+                }
+                text: "Click Me";
             }
         }
     }

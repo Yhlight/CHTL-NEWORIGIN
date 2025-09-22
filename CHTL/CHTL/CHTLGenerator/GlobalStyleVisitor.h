@@ -1,18 +1,17 @@
 #pragma once
 
 #include "AstVisitor.h"
-#include "GlobalStyleVisitor.h"
-#include "../CHTLNode/BaseNode.h"
-#include "../CHTLExpression/ExpressionEvaluator.h"
-#include <string>
-#include <sstream>
+#include "../CHTLNode/CssRuleNode.h"
+#include <vector>
 
 namespace CHTL {
 
-class HtmlGenerator : public AstVisitor {
+class GlobalStyleVisitor : public AstVisitor {
 public:
-    std::string generate(BaseNode* root);
+    void collect(BaseNode* root);
+    const std::vector<CssRuleNode*>& getCollectedRules() const;
 
+    // Visitor overrides
     void visit(ElementNode& node) override;
     void visit(TextNode& node) override;
     void visit(AttributeNode& node) override;
@@ -21,7 +20,6 @@ public:
     void visit(CssRuleNode& node) override;
 
 private:
-    std::stringstream output;
     std::vector<CssRuleNode*> collectedRules;
 };
 
