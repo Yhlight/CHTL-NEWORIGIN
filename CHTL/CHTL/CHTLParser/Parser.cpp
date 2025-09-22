@@ -3,6 +3,7 @@
 #include "../CHTLNode/TextNode.h"
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 
 namespace CHTL {
 
@@ -93,6 +94,8 @@ void Parser::parseBlock(ElementNode* element) {
             }
         } else if (peek().type == TokenType::IDENTIFIER && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUALS)) {
             parseAttribute(element);
+        } else if (peek().type == TokenType::KEYWORD_STYLE) {
+            element->children.push_back(parseStyleBlock());
         } else if (peek().type == TokenType::IDENTIFIER) {
             element->children.push_back(parseElement());
         } else {
@@ -103,22 +106,62 @@ void Parser::parseBlock(ElementNode* element) {
     consume(TokenType::RIGHT_BRACE, "Expect '}' after element block.");
 }
 
+std::unique_ptr<StyleBlockNode> Parser::parseStyleBlock() {
+    consume(TokenType::KEYWORD_STYLE, "Expect 'style' keyword.");
+    consume(TokenType::LEFT_BRACE, "Expect '{' after 'style'.");
+
+    auto styleNode = std::make_unique<StyleBlockNode>();
+
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) {
+        // Consume property name (can be multi-token, e.g., font-size)
+        std::stringstream key_stream;
+        while (!check(TokenType::COLON) && !check(TokenType::EQUALS) && !isAtEnd()) {
+            key_stream << advance().lexeme;
+        }
+        std::string key = key_stream.str();
+
+        if (!match({TokenType::COLON, TokenType::EQUALS})) {
+            throw std::runtime_error("Expect ':' or '=' after css property name.");
+        }
+
+        std::string final_value;
+        if (peek().type == TokenType::STRING_LITERAL) {
+            final_value = consume(TokenType::STRING_LITERAL, "Expect string literal.").lexeme;
+        } else {
+            std::stringstream value_stream;
+            while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
+                value_stream << advance().lexeme;
+            }
+            final_value = value_stream.str();
+        }
+
+        consume(TokenType::SEMICOLON, "Expect ';' after css property value.");
+        styleNode->properties.push_back(std::make_unique<CssPropertyNode>(key, final_value));
+    }
+
+    consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");
+    return styleNode;
+}
+
 void Parser::parseAttribute(ElementNode* element) {
     Token key = consume(TokenType::IDENTIFIER, "Expect attribute name.");
     if (!match({TokenType::COLON, TokenType::EQUALS})) {
         throw std::runtime_error("Expect ':' or '=' after attribute name.");
     }
 
-    Token value;
-    if (match({TokenType::STRING_LITERAL, TokenType::UNQUOTED_LITERAL, TokenType::IDENTIFIER})) {
-        value = tokens[current - 1];
+    std::string final_value;
+    if (peek().type == TokenType::STRING_LITERAL) {
+        final_value = consume(TokenType::STRING_LITERAL, "Expect string literal.").lexeme;
     } else {
-        throw std::runtime_error("Expect attribute value.");
+        std::stringstream value_stream;
+        while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
+            value_stream << advance().lexeme;
+        }
+        final_value = value_stream.str();
     }
 
     consume(TokenType::SEMICOLON, "Expect ';' after attribute value.");
-
-    element->attributes.push_back(std::make_unique<AttributeNode>(key.lexeme, value.lexeme));
+    element->attributes.push_back(std::make_unique<AttributeNode>(key.lexeme, final_value));
 }
 
 } // namespace CHTL

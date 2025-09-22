@@ -111,10 +111,24 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/AttributeNode.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/AttributeNode.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTL/CHTLNode/AttributeNode.cpp -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/AttributeNode.cpp.s
 
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o: CMakeFiles/chtl_compiler.dir/flags.make
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o: /app/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o -MF CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o -c /app/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp
+
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp > CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i
+
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s
+
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o: CMakeFiles/chtl_compiler.dir/flags.make
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o: /app/CHTL/CHTL/CHTLNode/ElementNode.cpp
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o -MF CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o -c /app/CHTL/CHTL/CHTLNode/ElementNode.cpp
 
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.i: cmake_force
@@ -125,10 +139,24 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTL/CHTLNode/ElementNode.cpp -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.s
 
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o: CMakeFiles/chtl_compiler.dir/flags.make
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o: /app/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o -MF CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o -c /app/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp
+
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp > CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i
+
+CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s
+
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o: CMakeFiles/chtl_compiler.dir/flags.make
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o: /app/CHTL/CHTL/CHTLNode/TextNode.cpp
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o -MF CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o -c /app/CHTL/CHTL/CHTLNode/TextNode.cpp
 
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.i: cmake_force
@@ -142,7 +170,7 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.s: cmake_force
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o: CMakeFiles/chtl_compiler.dir/flags.make
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o: /app/CHTL/CHTL/CHTLParser/Parser.cpp
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o -MF CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o -c /app/CHTL/CHTL/CHTLParser/Parser.cpp
 
 CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.i: cmake_force
@@ -156,7 +184,7 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.s: cmake_force
 CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o: CMakeFiles/chtl_compiler.dir/flags.make
 CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o: /app/CHTL/main.cpp
 CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o -MF CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o -c /app/CHTL/main.cpp
 
 CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.i: cmake_force
@@ -170,7 +198,7 @@ CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.s: cmake_force
 CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o: CMakeFiles/chtl_compiler.dir/flags.make
 CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o: /app/CHTL/ThirdParty/miniz/miniz.c
 CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o: CMakeFiles/chtl_compiler.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building C object CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o -MF CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o.d -o CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o -c /app/CHTL/ThirdParty/miniz/miniz.c
 
 CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.i: cmake_force
@@ -186,7 +214,9 @@ chtl_compiler_OBJECTS = \
 "CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLGenerator/Generator.cpp.o" \
 "CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLLexer/Lexer.cpp.o" \
 "CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/AttributeNode.cpp.o" \
+"CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o" \
 "CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o" \
+"CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o" \
 "CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o" \
 "CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o" \
 "CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o" \
@@ -198,14 +228,16 @@ chtl_compiler_EXTERNAL_OBJECTS =
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLGenerator/Generator.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLLexer/Lexer.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/AttributeNode.cpp.o
+chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.o
+chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/TextNode.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/CHTL/ThirdParty/miniz/miniz.c.o
 chtl_compiler: CMakeFiles/chtl_compiler.dir/build.make
 chtl_compiler: CMakeFiles/chtl_compiler.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable chtl_compiler"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX executable chtl_compiler"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/chtl_compiler.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

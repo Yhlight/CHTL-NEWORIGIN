@@ -201,6 +201,30 @@ CHTL/CHTL/CHTLNode/AttributeNode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/AttributeNode.cpp.s
 .PHONY : CHTL/CHTL/CHTLNode/AttributeNode.cpp.s
 
+CHTL/CHTL/CHTLNode/CssPropertyNode.o: CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o
+.PHONY : CHTL/CHTL/CHTLNode/CssPropertyNode.o
+
+# target to build an object file
+CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o
+.PHONY : CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.o
+
+CHTL/CHTL/CHTLNode/CssPropertyNode.i: CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i
+.PHONY : CHTL/CHTL/CHTLNode/CssPropertyNode.i
+
+# target to preprocess a source file
+CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i
+.PHONY : CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.i
+
+CHTL/CHTL/CHTLNode/CssPropertyNode.s: CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s
+.PHONY : CHTL/CHTL/CHTLNode/CssPropertyNode.s
+
+# target to generate assembly for a file
+CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s
+.PHONY : CHTL/CHTL/CHTLNode/CssPropertyNode.cpp.s
+
 CHTL/CHTL/CHTLNode/ElementNode.o: CHTL/CHTL/CHTLNode/ElementNode.cpp.o
 .PHONY : CHTL/CHTL/CHTLNode/ElementNode.o
 
@@ -224,6 +248,30 @@ CHTL/CHTL/CHTLNode/ElementNode.s: CHTL/CHTL/CHTLNode/ElementNode.cpp.s
 CHTL/CHTL/CHTLNode/ElementNode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/ElementNode.cpp.s
 .PHONY : CHTL/CHTL/CHTLNode/ElementNode.cpp.s
+
+CHTL/CHTL/CHTLNode/StyleBlockNode.o: CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o
+.PHONY : CHTL/CHTL/CHTLNode/StyleBlockNode.o
+
+# target to build an object file
+CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o
+.PHONY : CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.o
+
+CHTL/CHTL/CHTLNode/StyleBlockNode.i: CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i
+.PHONY : CHTL/CHTL/CHTLNode/StyleBlockNode.i
+
+# target to preprocess a source file
+CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i
+.PHONY : CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.i
+
+CHTL/CHTL/CHTLNode/StyleBlockNode.s: CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s
+.PHONY : CHTL/CHTL/CHTLNode/StyleBlockNode.s
+
+# target to generate assembly for a file
+CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_compiler.dir/build.make CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s
+.PHONY : CHTL/CHTL/CHTLNode/StyleBlockNode.cpp.s
 
 CHTL/CHTL/CHTLNode/TextNode.o: CHTL/CHTL/CHTLNode/TextNode.cpp.o
 .PHONY : CHTL/CHTL/CHTLNode/TextNode.o
@@ -339,9 +387,15 @@ help:
 	@echo "... CHTL/CHTL/CHTLNode/AttributeNode.o"
 	@echo "... CHTL/CHTL/CHTLNode/AttributeNode.i"
 	@echo "... CHTL/CHTL/CHTLNode/AttributeNode.s"
+	@echo "... CHTL/CHTL/CHTLNode/CssPropertyNode.o"
+	@echo "... CHTL/CHTL/CHTLNode/CssPropertyNode.i"
+	@echo "... CHTL/CHTL/CHTLNode/CssPropertyNode.s"
 	@echo "... CHTL/CHTL/CHTLNode/ElementNode.o"
 	@echo "... CHTL/CHTL/CHTLNode/ElementNode.i"
 	@echo "... CHTL/CHTL/CHTLNode/ElementNode.s"
+	@echo "... CHTL/CHTL/CHTLNode/StyleBlockNode.o"
+	@echo "... CHTL/CHTL/CHTLNode/StyleBlockNode.i"
+	@echo "... CHTL/CHTL/CHTLNode/StyleBlockNode.s"
 	@echo "... CHTL/CHTL/CHTLNode/TextNode.o"
 	@echo "... CHTL/CHTL/CHTLNode/TextNode.i"
 	@echo "... CHTL/CHTL/CHTLNode/TextNode.s"

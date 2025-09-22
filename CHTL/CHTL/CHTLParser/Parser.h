@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 
+#include "../CHTLNode/StyleBlockNode.h"
+
 namespace CHTL {
 
 class Parser {
@@ -18,6 +20,7 @@ private:
     void parseBlock(ElementNode* element);
     void parseAttribute(ElementNode* element);
     std::unique_ptr<TextNode> parseTextNode();
+    std::unique_ptr<StyleBlockNode> parseStyleBlock();
 
 
     bool isAtEnd();

@@ -6,6 +6,8 @@ namespace CHTL {
 class ElementNode;
 class TextNode;
 class AttributeNode;
+class StyleBlockNode;
+class CssPropertyNode;
 
 class AstVisitor {
 public:
@@ -13,6 +15,8 @@ public:
     virtual void visit(ElementNode& node) = 0;
     virtual void visit(TextNode& node) = 0;
     virtual void visit(AttributeNode& node) = 0;
+    virtual void visit(StyleBlockNode& node) = 0;
+    virtual void visit(CssPropertyNode& node) = 0;
 };
 
 } // namespace CHTL

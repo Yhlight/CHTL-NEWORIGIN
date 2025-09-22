@@ -161,6 +161,8 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o: \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/ElementNode.h \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/AttributeNode.h \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/TextNode.h \
+ /app/CHTL/CHTL/CHTLParser/../CHTLNode/StyleBlockNode.h \
+ /app/CHTL/CHTL/CHTLParser/../CHTLNode/CssPropertyNode.h \
  /usr/include/c++/13/iostream /usr/include/c++/13/ostream \
  /usr/include/c++/13/ios /usr/include/c++/13/bits/ios_base.h \
  /usr/include/c++/13/bits/locale_classes.h \
@@ -178,4 +180,5 @@ CMakeFiles/chtl_compiler.dir/CHTL/CHTL/CHTLParser/Parser.cpp.o: \
  /usr/include/c++/13/bits/locale_facets.tcc \
  /usr/include/c++/13/bits/basic_ios.tcc \
  /usr/include/c++/13/bits/ostream.tcc /usr/include/c++/13/istream \
- /usr/include/c++/13/bits/istream.tcc
+ /usr/include/c++/13/bits/istream.tcc /usr/include/c++/13/sstream \
+ /usr/include/c++/13/bits/sstream.tcc

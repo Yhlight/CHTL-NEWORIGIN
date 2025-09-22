@@ -187,5 +187,7 @@ CMakeFiles/chtl_compiler.dir/CHTL/main.cpp.o: /app/CHTL/main.cpp \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/ElementNode.h \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/AttributeNode.h \
  /app/CHTL/CHTL/CHTLParser/../CHTLNode/TextNode.h \
+ /app/CHTL/CHTL/CHTLParser/../CHTLNode/StyleBlockNode.h \
+ /app/CHTL/CHTL/CHTLParser/../CHTLNode/CssPropertyNode.h \
  /app/CHTL/CHTL/CHTLGenerator/Generator.h \
  /app/CHTL/CHTL/CHTLGenerator/AstVisitor.h

@@ -1,0 +1,9 @@
+# Build artifacts
+build/
+
+# IDE files
+.vscode/
+
+# Other
+*.DS_Store
+*.swp

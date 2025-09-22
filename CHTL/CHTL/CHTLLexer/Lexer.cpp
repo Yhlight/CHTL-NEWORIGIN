@@ -179,7 +179,7 @@ void Lexer::stringLiteral(char quoteType) {
 }
 
 void Lexer::identifier() {
-    while (isalnum(peek()) || peek() == '_' || peek() == '-') {
+    while (isalnum(peek()) || peek() == '_') {
         advance();
     }
 

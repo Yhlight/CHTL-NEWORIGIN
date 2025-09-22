@@ -14,6 +14,8 @@ public:
     void visit(ElementNode& node) override;
     void visit(TextNode& node) override;
     void visit(AttributeNode& node) override;
+    void visit(StyleBlockNode& node) override;
+    void visit(CssPropertyNode& node) override;
 
 private:
     std::stringstream output;
