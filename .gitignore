@@ -1,0 +1,12 @@
+# Build artifacts
+build/
+
+# Other common generated files
+*.o
+*.out
+*.exe
+*.dll
+*.so
+
+# CHTL executable
+chtl

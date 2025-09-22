@@ -1,0 +1,16 @@
+[Import] @Chtl from "theme.chtl";
+
+# This is the main test file.
+html {
+    body {
+        div {
+            class: "container";
+            style {
+                @Style ThemeColors;
+                font-weight: "bold";
+                border: "1px solid black";
+            }
+            h1 { text { "Imports and Command-Line Apps are cool!" } }
+        }
+    }
+}
