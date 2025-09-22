@@ -2,10 +2,31 @@
 #include "CHTL/Node/ElementNode.h"
 #include "CHTL/Node/TextNode.h"
 #include "CHTL/Node/CommentNode.h"
+#include <regex>
 
-std::string Generator::generate(const NodeList& ast) {
+std::string Generator::generate(const ParseResult& result) {
     output.str(""); // Clear the stream
-    for (const auto& node : ast) {
+
+    // 1. Render global styles
+    if (!result.global_styles.empty()) {
+        output << "<style>\n";
+        for (const auto& rule : result.global_styles) {
+            std::string selector = rule.selector;
+            // Handle '&' substitution
+            if (selector.find('&') != std::string::npos) {
+                selector = std::regex_replace(selector, std::regex("&"), rule.context_selector);
+            }
+            output << "  " << selector << " {\n";
+            for (const auto& prop : rule.properties) {
+                output << "    " << prop.key << ": " << prop.value << ";\n";
+            }
+            output << "  }\n";
+        }
+        output << "</style>\n\n";
+    }
+
+    // 2. Render AST
+    for (const auto& node : result.ast) {
         if (node) {
             node->accept(*this);
             output << "\n";

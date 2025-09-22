@@ -33,11 +33,11 @@ int main(int argc, char* argv[]) {
 
     // 2. Parser
     Parser parser(tokens);
-    NodeList ast = parser.parse();
+    ParseResult result = parser.parse();
 
     // 3. Generator
     Generator generator;
-    std::string html = generator.generate(ast);
+    std::string html = generator.generate(result);
 
     // 4. Print final HTML
     std::cout << "--- Generated HTML ---" << std::endl;

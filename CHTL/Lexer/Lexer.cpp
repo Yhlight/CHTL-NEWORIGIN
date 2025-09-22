@@ -31,13 +31,20 @@ Token Lexer::scan_token() {
         case '=': return make_token(TokenType::EQUAL);
         case ';': return make_token(TokenType::SEMICOLON);
 
+        case '.': return make_token(TokenType::DOT);
+        case '&': return make_token(TokenType::AMPERSAND);
         case '#': {
-            // Generator comment: consume the rest of the line.
-            while (peek() != '\n' && !is_at_end()) {
-                advance();
+            // If '#' is followed by a space, it's a comment.
+            // Otherwise, it's an ID selector.
+            if (peek() == ' ') {
+                // Generator comment: consume the rest of the line.
+                while (peek() != '\n' && !is_at_end()) {
+                    advance();
+                }
+                return make_token(TokenType::HASH_COMMENT);
+            } else {
+                return make_token(TokenType::HASH);
             }
-            // We create a token for the whole line, including the #
-            return make_token(TokenType::HASH_COMMENT);
         }
 
         case '"': return string_literal('"');

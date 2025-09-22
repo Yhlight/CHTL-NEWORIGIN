@@ -1,0 +1,57 @@
+// Test for advanced styling features
+
+# A root-level comment
+
+div {
+    // This style block should auto-add class="box" to the div
+    // and create a global CSS rule for .box
+    style {
+        .box {
+            width: 100px;
+            height: 100px;
+        }
+
+        // This should use the .box context to create .box:hover
+        &:hover {
+            background-color: red;
+        }
+    }
+
+    text {
+        This is the first box.
+    }
+}
+
+span {
+    // This should auto-add id="important-text" to the span
+    // and create a global CSS rule for #important-text
+    style {
+        #important-text {
+            font-weight: bold;
+        }
+    }
+    text: "This text should be bold.";
+}
+
+button {
+    class: "btn"; // Manually add a class
+
+    // This should append "btn-primary" to the existing class attribute
+    // and also create a global rule for .btn-primary
+    style {
+        .btn-primary {
+            color: white;
+            background-color: blue;
+        }
+
+        // This should use the .btn-primary context
+        &:hover {
+            background-color: darkblue;
+        }
+
+        // Also add an inline style
+        border: 1px solid black;
+    }
+
+    text: "Click Me";
+}

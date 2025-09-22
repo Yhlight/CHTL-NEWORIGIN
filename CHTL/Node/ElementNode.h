@@ -37,8 +37,8 @@ public:
         return ss.str();
     }
 
-    const std::string tag_name;
-    const AttributeList attributes;
-    const StylePropertyList styles;
-    const NodeList children;
+    std::string tag_name;
+    AttributeList attributes;
+    StylePropertyList styles;
+    NodeList children;
 };

@@ -1,13 +1,14 @@
 #pragma once
 
 #include "CHTL/AstVisitor.h"
+#include "CHTL/Parser/ParseResult.h"
 #include "CHTL/Node/Node.h"
 #include <string>
 #include <sstream>
 
 class Generator : public AstVisitor {
 public:
-    std::string generate(const NodeList& ast);
+    std::string generate(const ParseResult& result);
 
     void visit(const ElementNode& node) override;
     void visit(const TextNode& node) override;

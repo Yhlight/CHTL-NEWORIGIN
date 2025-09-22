@@ -10,6 +10,9 @@ enum class TokenType {
     COLON,          // :
     EQUAL,          // =
     SEMICOLON,      // ;
+    DOT,            // .
+    HASH,           // #
+    AMPERSAND,      // &
 
     // Literals
     IDENTIFIER,     // element names, attribute names, etc.
