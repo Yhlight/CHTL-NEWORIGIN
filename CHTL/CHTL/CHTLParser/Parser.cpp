@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "../CHTLNode/AttributeNode.h"
 #include "../CHTLNode/TextNode.h"
+#include "../CHTLExpression/ExpressionParser.h"
 #include <iostream>
 #include <stdexcept>
 #include <sstream>
@@ -124,19 +125,18 @@ std::unique_ptr<StyleBlockNode> Parser::parseStyleBlock() {
             throw std::runtime_error("Expect ':' or '=' after css property name.");
         }
 
-        std::string final_value;
-        if (peek().type == TokenType::STRING_LITERAL) {
-            final_value = consume(TokenType::STRING_LITERAL, "Expect string literal.").lexeme;
-        } else {
-            std::stringstream value_stream;
-            while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
-                value_stream << advance().lexeme;
-            }
-            final_value = value_stream.str();
+        // Collect tokens for the expression
+        std::vector<Token> value_tokens;
+        while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
+            value_tokens.push_back(advance());
         }
 
+        // Parse the expression
+        ExpressionParser expr_parser(value_tokens);
+        std::unique_ptr<ExpressionNode> value_expr = expr_parser.parse();
+
         consume(TokenType::SEMICOLON, "Expect ';' after css property value.");
-        styleNode->properties.push_back(std::make_unique<CssPropertyNode>(key, final_value));
+        styleNode->properties.push_back(std::make_unique<CssPropertyNode>(key, std::move(value_expr)));
     }
 
     consume(TokenType::RIGHT_BRACE, "Expect '}' after style block.");

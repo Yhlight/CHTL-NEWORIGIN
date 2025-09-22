@@ -32,10 +32,18 @@ void HtmlGenerator::visit(ElementNode& node) {
 
     // Aggregate styles from any StyleBlockNode children
     std::stringstream style_stream;
+    ExpressionEvaluator evaluator;
     for (const auto& child : node.children) {
         if (auto* style_block = dynamic_cast<StyleBlockNode*>(child.get())) {
             for (const auto& prop : style_block->properties) {
-                style_stream << prop->property << ":" << prop->value << ";";
+                Value result = evaluator.evaluate(prop->value.get());
+                style_stream << prop->property << ":";
+                if (result.type == ValueType::NUMBER) {
+                    style_stream << result.number_val << result.unit;
+                } else {
+                    style_stream << result.string_val;
+                }
+                style_stream << ";";
             }
         }
     }

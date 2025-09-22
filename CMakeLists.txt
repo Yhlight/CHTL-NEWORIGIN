@@ -26,4 +26,5 @@ target_include_directories(chtl_compiler PUBLIC
     ${PROJECT_SOURCE_DIR}/CHTL/CHTL/CHTLNode
     ${PROJECT_SOURCE_DIR}/CHTL/CHTL/CHTLParser
     ${PROJECT_SOURCE_DIR}/CHTL/CHTL/CHTLGenerator
+    ${PROJECT_SOURCE_DIR}/CHTL/CHTL/CHTLExpression
 )

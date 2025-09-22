@@ -2,6 +2,7 @@
 
 #include "AstVisitor.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLExpression/ExpressionEvaluator.h"
 #include <string>
 #include <sstream>
 
