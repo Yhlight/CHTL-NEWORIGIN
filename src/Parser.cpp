@@ -1,4 +1,6 @@
 #include "Parser.h"
+#include "ValueLexer.h"
+#include "ExpressionParser.h"
 #include <iostream>
 
 Parser::Parser(std::vector<Token> tokens) : tokens(std::move(tokens)) {}
@@ -20,17 +22,21 @@ std::unique_ptr<BaseNode> Parser::parse_top_level_statement() {
     }
 
     if (peek().type == TokenType::LeftBracket) {
-        // Could be [Template] or [Namespace]
         if (tokens[current + 1].value == "Template" || tokens[current + 1].value == "Custom") {
             return parse_template_definition();
         } else if (tokens[current + 1].value == "Namespace") {
             return parse_namespace_definition();
         } else if (tokens[current + 1].value == "Configuration") {
             return parse_configuration_definition();
+        } else if (tokens[current + 1].value == "Import") {
+            return parse_import_statement();
         }
     }
 
     if (peek().type == TokenType::Identifier) {
+        if (peek().value == "use") {
+            return parse_use_statement();
+        }
         return parse_element();
     }
 
@@ -54,7 +60,7 @@ std::unique_ptr<BaseNode> Parser::parse_template_definition() {
     if (type.value == "Style") {
         auto node = std::make_unique<TemplateStyleNode>(name.value, is_custom);
         while(!check(TokenType::RightBrace) && !is_at_end()) {
-            node->styles.push_back(parse_attribute(is_custom));
+            node->styles.push_back(parse_attribute(true)); // Style context is true
             consume(TokenType::Semicolon, "Expect ';' after attribute in template.");
         }
         consume(TokenType::RightBrace, "Expect '}' to close template body.");
@@ -71,7 +77,7 @@ std::unique_ptr<BaseNode> Parser::parse_template_definition() {
     if (type.value == "Var") {
         auto node = std::make_unique<TemplateVarNode>(name.value, is_custom);
         while(!check(TokenType::RightBrace) && !is_at_end()) {
-            node->variables.push_back(parse_attribute(is_custom));
+            node->variables.push_back(parse_attribute(true)); // Style context is true for vars too
             consume(TokenType::Semicolon, "Expect ';' after variable in template.");
         }
         consume(TokenType::RightBrace, "Expect '}' to close template body.");
@@ -111,7 +117,6 @@ std::unique_ptr<BaseNode> Parser::parse_configuration_definition() {
     consume(TokenType::LeftBrace, "Expect '{' to open configuration body.");
 
     while(!check(TokenType::RightBrace) && !is_at_end()) {
-        // Not supporting [Name] block yet
         node->settings.push_back(parse_attribute(false));
         consume(TokenType::Semicolon, "Expect ';' after setting.");
     }
@@ -120,22 +125,85 @@ std::unique_ptr<BaseNode> Parser::parse_configuration_definition() {
     return node;
 }
 
-std::unique_ptr<AttributeNode> Parser::parse_attribute(bool is_custom_context) {
+std::unique_ptr<BaseNode> Parser::parse_use_statement() {
+    consume(TokenType::Identifier, "Expect 'use' keyword."); // consume 'use'
+    Token value = consume(TokenType::Identifier, "Expect value after 'use'.");
+    consume(TokenType::Semicolon, "Expect ';' after use statement.");
+    return std::make_unique<UseNode>(value.value);
+}
+
+std::unique_ptr<BaseNode> Parser::parse_import_statement() {
+    consume(TokenType::LeftBracket, "Expect '[' for import statement.");
+    consume(TokenType::Identifier, "Expect 'Import' keyword.");
+    consume(TokenType::RightBracket, "Expect ']' for import statement.");
+
+    consume(TokenType::At, "Expect '@' for import type.");
+    std::string import_type = consume(TokenType::Identifier, "Expect import type.").value;
+
+    consume(TokenType::Identifier, "Expect 'from' keyword."); // Should check value
+
+    // Path can be quoted or unquoted
+    Token path_token = advance();
+    std::string path = path_token.value;
+
+    consume(TokenType::Semicolon, "Expect ';' after import statement.");
+
+    return std::make_unique<ImportNode>(import_type, path);
+}
+
+std::unique_ptr<AttributeNode> Parser::parse_attribute(bool is_style_context) {
     std::string key = consume(TokenType::Identifier, "Expect attribute key.").value;
 
-    // Handle valueless attributes in custom context, e.g. "color;"
-    if (is_custom_context && check(TokenType::Semicolon)) {
+    if (is_style_context && check(TokenType::Semicolon)) {
         return std::make_unique<AttributeNode>(key, std::optional<std::string>(std::nullopt));
     }
 
     if (!match(TokenType::Colon)) {
         consume(TokenType::Equals, "Expect ':' or '=' after attribute key.");
     }
-    Token value_token = advance(); // StringLiteral or Identifier
 
-    // For now, all values are treated as simple strings.
-    // In the future, we would parse expressions here for style properties.
-    return std::make_unique<AttributeNode>(key, std::optional<std::string>(value_token.value));
+    if (is_style_context) {
+        std::string value_string;
+        while(peek().type != TokenType::Semicolon && !is_at_end()) {
+            value_string += advance().value;
+            if (peek().type != TokenType::Semicolon) value_string += " ";
+        }
+
+        ValueLexer v_lexer(value_string);
+        auto v_tokens = v_lexer.tokenize();
+
+        bool is_expression = false;
+        for(const auto& t : v_tokens) {
+            if (t.type == ValueTokenType::Operator) {
+                is_expression = true;
+                break;
+            }
+        }
+
+        if (is_expression) {
+            ExpressionParser e_parser(v_tokens);
+            return std::make_unique<AttributeNode>(key, e_parser.parse());
+        } else {
+            if (!value_string.empty() && value_string.back() == ' ') value_string.pop_back();
+            return std::make_unique<AttributeNode>(key, std::optional<std::string>(value_string));
+        }
+
+    } else { // Not a style context
+        if (peek().type == TokenType::Identifier && tokens[current + 1].type == TokenType::LeftParen) {
+            return std::make_unique<AttributeNode>(key, parse_variable_usage());
+        }
+
+        Token value_token = advance();
+        return std::make_unique<AttributeNode>(key, std::optional<std::string>(value_token.value));
+    }
+}
+
+std::unique_ptr<VarUsageNode> Parser::parse_variable_usage() {
+    Token group_name = consume(TokenType::Identifier, "Expect variable group name.");
+    consume(TokenType::LeftParen, "Expect '(' after variable group name.");
+    Token var_name = consume(TokenType::Identifier, "Expect variable name inside parentheses.");
+    consume(TokenType::RightParen, "Expect ')' to close variable usage.");
+    return std::make_unique<VarUsageNode>(group_name.value, var_name.value);
 }
 
 std::unique_ptr<BaseNode> Parser::parse_node() {
@@ -144,30 +212,38 @@ std::unique_ptr<BaseNode> Parser::parse_node() {
     }
 
     if (peek().type == TokenType::At) {
-        advance(); // consume '@'
+        advance();
         Token type = consume(TokenType::Identifier, "Expect template type after '@'.");
         Token name = consume(TokenType::Identifier, "Expect template name after type.");
-        consume(TokenType::Semicolon, "Expect ';' after template usage.");
 
         if (type.value == "Style") {
-            return std::make_unique<StyleUsageNode>(name.value);
+            auto node = std::make_unique<StyleUsageNode>(name.value);
+            if (match(TokenType::LeftBrace)) {
+                while(!check(TokenType::RightBrace) && !is_at_end()) {
+                    node->specializations.push_back(parse_attribute(true));
+                    consume(TokenType::Semicolon, "Expect ';' after specialization.");
+                }
+                consume(TokenType::RightBrace, "Expect '}' to close specialization block.");
+            } else {
+                consume(TokenType::Semicolon, "Expect ';' after template usage.");
+            }
+            return node;
         } else if (type.value == "Element") {
+            consume(TokenType::Semicolon, "Expect ';' after template usage.");
             return std::make_unique<ElementUsageNode>(name.value);
         }
-        return nullptr; // Unknown template usage
+        return nullptr;
     }
 
     if (peek().type == TokenType::Identifier) {
-        // text: "..." is an attribute-like statement, not a nested element
         if (peek().value == "text" && (tokens[current + 1].type == TokenType::Colon || tokens[current + 1].type == TokenType::Equals)) {
-            advance(); // consume 'text'
-            advance(); // consume ':' or '='
+            advance();
+            advance();
             Token value_token = consume(TokenType::StringLiteral, "Expect string literal for text attribute.");
             consume(TokenType::Semicolon, "Expect ';' after text attribute.");
             return std::make_unique<TextNode>(value_token.value);
         }
 
-        // It's a nested element, a text block, or a style block
         if (peek().value == "text") {
             advance();
             consume(TokenType::LeftBrace, "Expect '{' after 'text' keyword.");
@@ -192,12 +268,11 @@ std::unique_ptr<ElementNode> Parser::parse_element() {
     consume(TokenType::LeftBrace, "Expect '{' after element tag name.");
 
     while (!check(TokenType::RightBrace) && !is_at_end()) {
-        // Check for attributes first
         if (peek().type == TokenType::Identifier && (tokens[current + 1].type == TokenType::Colon || tokens[current + 1].type == TokenType::Equals)) {
             if (peek().value == "text") {
                  element->add_child(parse_node());
             } else {
-                element->add_attribute(parse_attribute(false)); // Not custom context
+                element->add_attribute(parse_attribute(false));
                 consume(TokenType::Semicolon, "Expect ';' after attribute value.");
             }
         } else {

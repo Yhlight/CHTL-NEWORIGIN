@@ -10,6 +10,7 @@
 
 // Forward declarations
 class ProgramNode;
+class VarUsageNode;
 class ElementNode;
 class TextNode;
 class AttributeNode;
@@ -22,6 +23,8 @@ class StyleUsageNode;
 class ElementUsageNode;
 class NamespaceNode;
 class ConfigurationNode;
+class ImportNode;
+class UseNode;
 
 
 // Base visitor class for the visitor pattern
@@ -41,6 +44,9 @@ public:
     virtual void visit(ElementUsageNode& node) = 0;
     virtual void visit(NamespaceNode& node) = 0;
     virtual void visit(ConfigurationNode& node) = 0;
+    virtual void visit(VarUsageNode& node) = 0;
+    virtual void visit(ImportNode& node) = 0;
+    virtual void visit(UseNode& node) = 0;
 };
 
 // Base class for all AST nodes
@@ -58,6 +64,32 @@ public:
     void add_child(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
     }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+// Represents a use statement
+class UseNode : public BaseNode {
+public:
+    std::string value;
+
+    explicit UseNode(std::string value) : value(std::move(value)) {}
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+// Represents a [Import] statement
+class ImportNode : public BaseNode {
+public:
+    std::string import_type; // e.g., "@Chtl", "@Style"
+    std::string path;
+
+    ImportNode(std::string import_type, std::string path)
+        : import_type(std::move(import_type)), path(std::move(path)) {}
 
     void accept(NodeVisitor& visitor) override {
         visitor.visit(*this);
@@ -95,6 +127,9 @@ public:
 class StyleUsageNode : public BaseNode {
 public:
     std::string name;
+    // For specialization: @Style MyStyles { color: red; }
+    std::vector<std::unique_ptr<AttributeNode>> specializations;
+
     explicit StyleUsageNode(std::string name) : name(std::move(name)) {}
 
     void accept(NodeVisitor& visitor) override {
@@ -161,7 +196,7 @@ public:
 // Represents an attribute (e.g., id="box")
 class AttributeNode : public BaseNode {
 public:
-    using ValueType = std::variant<std::optional<std::string>, std::unique_ptr<ExprNode>>;
+    using ValueType = std::variant<std::optional<std::string>, std::unique_ptr<ExprNode>, std::unique_ptr<VarUsageNode>>;
 
     std::string key;
     ValueType value;

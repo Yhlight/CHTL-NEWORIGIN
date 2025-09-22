@@ -1,0 +1,68 @@
+#include "ExpressionParser.h"
+#include <stdexcept>
+
+ExpressionParser::ExpressionParser(std::vector<ValueToken> tokens) : tokens(std::move(tokens)) {}
+
+std::unique_ptr<ExprNode> ExpressionParser::parse() {
+    return parse_expression();
+}
+
+// expression -> term ( ( "+" | "-" ) term )*
+std::unique_ptr<ExprNode> ExpressionParser::parse_expression() {
+    auto node = parse_term();
+
+    while (peek().type == ValueTokenType::Operator && (peek().value == "+" || peek().value == "-")) {
+        char op = advance().value[0];
+        auto right = parse_term();
+        node = std::make_unique<BinaryOpNode>(op, std::move(node), std::move(right));
+    }
+
+    return node;
+}
+
+// term -> factor ( ( "*" | "/" ) factor )*
+std::unique_ptr<ExprNode> ExpressionParser::parse_term() {
+    auto node = parse_factor();
+
+    while (peek().type == ValueTokenType::Operator && (peek().value == "*" || peek().value == "/")) {
+        char op = advance().value[0];
+        auto right = parse_factor();
+        node = std::make_unique<BinaryOpNode>(op, std::move(node), std::move(right));
+    }
+
+    return node;
+}
+
+// factor -> primary ( "px" | "em" | etc. )?
+std::unique_ptr<ExprNode> ExpressionParser::parse_factor() {
+    return parse_primary();
+}
+
+// primary -> NUMBER
+std::unique_ptr<ExprNode> ExpressionParser::parse_primary() {
+    if (peek().type == ValueTokenType::Number) {
+        double value = std::stod(advance().value);
+        std::string unit;
+        if (peek().type == ValueTokenType::Unit) {
+            unit = advance().value;
+        }
+        return std::make_unique<NumberNode>(value, unit);
+    }
+
+    throw std::runtime_error("Expression parser: Unexpected token.");
+}
+
+ValueToken& ExpressionParser::peek() {
+    return tokens[current];
+}
+
+ValueToken& ExpressionParser::advance() {
+    if (!is_at_end()) {
+        current++;
+    }
+    return tokens[current - 1];
+}
+
+bool ExpressionParser::is_at_end() {
+    return current >= tokens.size() || tokens[current].type == ValueTokenType::EndOfValue;
+}

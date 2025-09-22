@@ -26,17 +26,23 @@ public:
     void visit(ElementUsageNode& node) override;
     void visit(NamespaceNode& node) override;
     void visit(ConfigurationNode& node) override;
+    void visit(VarUsageNode& node) override;
+    void visit(ImportNode& node) override;
+    void visit(UseNode& node) override;
 
 private:
+    bool use_html5 = false;
     std::stringstream html_stream;
     std::stringstream css_stream;
     ElementNode* current_element = nullptr;
 
     std::map<std::string, TemplateStyleNode*> style_templates;
     std::map<std::string, TemplateElementNode*> element_templates;
-    // std::map<std::string, TemplateVarNode*> var_templates; // For later
+    std::map<std::string, TemplateVarNode*> var_templates;
 
     void indent(int level);
+    std::string evaluate_var_usage(VarUsageNode& node);
+    std::string evaluate_expression(ExprNode& node);
 };
 
 #endif //CHTL_GENERATOR_H

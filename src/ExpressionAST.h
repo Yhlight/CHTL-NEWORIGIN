@@ -4,6 +4,8 @@
 #include <string>
 #include <memory>
 
+class VarUsageNode;
+
 // Base class for all expression nodes
 class ExprNode {
 public:
@@ -31,6 +33,16 @@ public:
 
     BinaryOpNode(char op, std::unique_ptr<ExprNode> left, std::unique_ptr<ExprNode> right)
         : op(op), left(std::move(left)), right(std::move(right)) {}
+};
+
+// Represents a variable usage like ThemeColor(tableColor)
+class VarUsageNode : public ExprNode {
+public:
+    std::string group_name;
+    std::string var_name;
+
+    VarUsageNode(std::string group_name, std::string var_name)
+        : group_name(std::move(group_name)), var_name(std::move(var_name)) {}
 };
 
 

@@ -1,0 +1,7 @@
+[Template] @Element Header
+{
+    div {
+        class: "header";
+        text: "This header was imported!";
+    }
+}

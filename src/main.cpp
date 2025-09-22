@@ -3,21 +3,10 @@
 #include <memory>
 #include <fstream>
 #include <sstream>
+#include "Loader.h"
 #include "Lexer.h"
 #include "Parser.h"
 #include "Generator.h"
-
-// Function to read file content into a string
-std::string readFile(const std::string& filepath) {
-    std::ifstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file " << filepath << std::endl;
-        exit(1);
-    }
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
-}
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -26,7 +15,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::string filepath = argv[1];
-    std::string chtl_source = readFile(filepath);
+
+    // 0. Loading
+    Loader loader;
+    std::string chtl_source = loader.load(filepath);
 
     // 1. Lexing
     Lexer lexer(chtl_source);

@@ -1,6 +1,21 @@
+use html5;
+
+[Import] @Chtl from "imports/header.chtl";
+
 [Configuration]
 {
     DEBUG_MODE = false;
+}
+
+[Configuration]
+{
+    DEBUG_MODE = false;
+}
+
+[Template] @Var ThemeColor
+{
+    main_color: "rgb(255, 192, 203)";
+    secondary_color: "black";
 }
 
 [Namespace] TestSpace {
@@ -14,8 +29,9 @@
 
     [Template] @Style DefaultText
     {
-        color: black;
+	color: ThemeColor(secondary_color);
         line-height: 1.6;
+    width: 100px + 50px * 2;
     }
 
     [Template] @Element Box
@@ -34,15 +50,26 @@
 
         body {
             div {
-                class: "styled-div";
-                @Style DefaultText;
-                text: "This div uses a style template. ";
+                class: "custom-styled-div";
+                @Style TextSet {
+                    color: blue;
+                    font-size: 20px;
+                }
+                text: "This div uses a custom style template. ";
             }
 
             div {
                 class: "element-container";
                 @Element Box;
             }
+
+            div {
+                class: "expr-div";
+                @Style DefaultText;
+                text: "This div tests expressions.";
+            }
+
+            @Element Header;
         }
     }
 }
