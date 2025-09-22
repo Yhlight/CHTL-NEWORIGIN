@@ -14,6 +14,8 @@ std::string token_type_to_string(TokenType type) {
         case TokenType::MINUS: return "MINUS";
         case TokenType::STAR: return "STAR";
         case TokenType::SLASH: return "SLASH";
+        case TokenType::DOT: return "DOT";
+        case TokenType::AMPERSAND: return "AMPERSAND";
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::STRING: return "STRING";
         case TokenType::NUMBER: return "NUMBER";

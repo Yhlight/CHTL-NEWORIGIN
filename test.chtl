@@ -1,18 +1,17 @@
-[Import] @Chtl from "theme.chtl";
-
-# This is the main test file.
+// Test file for nested style rules.
 html {
+    head {
+        title { text { "Global Styles Test" } }
+    }
     body {
         div {
-            class: container; # An unquoted attribute
             style {
-                @Style ThemeColors;
-                font-weight: bold;
-                border: 1px solid black;
-                width: 100px + 50px;
-                height: 200px - 25px;
+                .container {
+                    border: 1px solid red;
+                    width: 100px - 40px;
+                }
             }
-            h1 { text { "Property arithmetic is cool!" } }
+            h1 { text { "This div should have a class." } }
         }
     }
 }

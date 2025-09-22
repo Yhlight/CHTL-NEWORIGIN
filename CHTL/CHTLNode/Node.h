@@ -30,6 +30,12 @@ struct CssProperty {
     std::optional<std::string> value;
 };
 
+// Define a struct for a single CSS rule (e.g., .my-class { ... })
+struct StyleRule {
+    std::string selector;
+    std::vector<CssProperty> properties;
+};
+
 // Base class for all AST nodes
 class BaseNode {
 public:
@@ -66,7 +72,8 @@ public:
 // Represents a style { ... } block
 class StyleNode : public BaseNode {
 public:
-    std::vector<CssProperty> properties;
+    std::vector<CssProperty> inline_properties;
+    std::vector<StyleRule> style_rules;
 
     NodeType getType() const override { return NodeType::STYLE; }
 };

@@ -134,34 +134,26 @@ void Parser::parse_attributes(ElementNode& element) {
     } while (peek().type == TokenType::IDENTIFIER && peek_next().type == TokenType::COLON);
 }
 
-// New robust implementation
 std::string Parser::parse_value_sequence() {
-    // Handle quoted strings separately as they don't mix with unquoted literals
     if (peek().type == TokenType::STRING) {
         std::string value = advance().value;
         consume(TokenType::SEMICOLON, "Expect ';' after string value.");
         return value;
     }
-
-    // Gather all tokens until the semicolon
     std::vector<Token> value_tokens;
     while (peek().type != TokenType::SEMICOLON && !is_at_end()) {
         value_tokens.push_back(advance());
     }
-
     std::string result_string;
-
-    // Process the collected tokens
     if (is_simple_arithmetic(value_tokens)) {
-        // Evaluation logic
         Term lhs = {std::stod(value_tokens[0].value), ""};
+        size_t current_token_idx = 1;
         if (value_tokens.size() > 1 && value_tokens[1].type == TokenType::IDENTIFIER) {
             lhs.unit = value_tokens[1].value;
+            current_token_idx = 2;
         }
-
-        for (size_t i = lhs.unit.empty() ? 1 : 2; i < value_tokens.size();) {
+        for (size_t i = current_token_idx; i < value_tokens.size();) {
             Token op = value_tokens[i++];
-
             if (i >= value_tokens.size() || value_tokens[i].type != TokenType::NUMBER) {
                 throw std::runtime_error("Expected number after operator in expression.");
             }
@@ -169,20 +161,16 @@ std::string Parser::parse_value_sequence() {
             if (i < value_tokens.size() && value_tokens[i].type == TokenType::IDENTIFIER) {
                 rhs.unit = value_tokens[i++].value;
             }
-
             if (lhs.unit != rhs.unit) {
                 throw std::runtime_error("Mismatched units in arithmetic expression ('" + lhs.unit + "' and '" + rhs.unit + "').");
             }
-
             if (op.type == TokenType::PLUS) lhs.value += rhs.value;
             else if (op.type == TokenType::MINUS) lhs.value -= rhs.value;
         }
         std::stringstream ss;
         ss << lhs.value << lhs.unit;
         result_string = ss.str();
-
     } else {
-        // Join with spaces for generic literals
         for (size_t i = 0; i < value_tokens.size(); ++i) {
             result_string += value_tokens[i].value;
             if (i < value_tokens.size() - 1) {
@@ -190,24 +178,17 @@ std::string Parser::parse_value_sequence() {
             }
         }
     }
-
     consume(TokenType::SEMICOLON, "Expect ';' after value.");
     return result_string;
 }
 
 bool is_simple_arithmetic(const std::vector<Token>& tokens) {
-    if (tokens.empty() || tokens[0].type != TokenType::NUMBER) {
-        return false;
-    }
-    // A simple check: if any token is a PLUS or MINUS, we'll try to evaluate it.
+    if (tokens.empty() || tokens[0].type != TokenType::NUMBER) return false;
     for (const auto& token : tokens) {
-        if (token.type == TokenType::PLUS || token.type == TokenType::MINUS) {
-            return true;
-        }
+        if (token.type == TokenType::PLUS || token.type == TokenType::MINUS) return true;
     }
     return false;
 }
-
 
 Term Parser::parse_term() {
     Token number = consume(TokenType::NUMBER, "Expect a number for a term in an expression.");
@@ -233,25 +214,45 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
     consume(TokenType::LBRACE, "Expect '{' after 'style' keyword.");
     auto styleNode = std::make_unique<StyleNode>();
     while (!check(TokenType::RBRACE) && !is_at_end()) {
-        if (match({TokenType::AT})) {
+        if (match({TokenType::AT})) { // Template Usage
             Token template_type = consume(TokenType::IDENTIFIER, "Expect template type (e.g. 'Style').");
-            if (template_type.value != "Style") {
-                throw std::runtime_error("Only '@Style' templates are currently supported.");
-            }
+            if (template_type.value != "Style") throw std::runtime_error("Only '@Style' templates are currently supported.");
             Token template_name = consume(TokenType::IDENTIFIER, "Expect template name.");
             consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
             auto it = context.style_templates.find(template_name.value);
             if (it != context.style_templates.end()) {
-                const auto& props = it->second->style_properties;
-                styleNode->properties.insert(styleNode->properties.end(), props.begin(), props.end());
+                styleNode->inline_properties.insert(styleNode->inline_properties.end(), it->second->style_properties.begin(), it->second->style_properties.end());
             } else {
                 throw std::runtime_error("Undefined style template: '" + template_name.value + "'");
             }
-        } else {
-            Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
+        } else if (peek().type == TokenType::DOT || peek().type == TokenType::HASH) { // Style Rule or Shorthand
+            Token selector_type = advance();
+            Token selector_name = consume(TokenType::IDENTIFIER, "Expect selector name.");
+            std::string selector = selector_type.value + selector_name.value;
+
+            if (match({TokenType::LBRACE})) { // Full rule block
+                StyleRule rule;
+                rule.selector = selector;
+                while(!check(TokenType::RBRACE) && !is_at_end()){
+                    Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
+                    consume(TokenType::COLON, "Expect ':' after style property name.");
+                    std::string value_str = parse_value_sequence();
+                    rule.properties.push_back({key.value, value_str});
+                }
+                consume(TokenType::RBRACE, "Expect '}' after style rule body.");
+                styleNode->style_rules.push_back(rule);
+            } else { // Shorthand
+                consume(TokenType::SEMICOLON, "Expect ';' after shorthand selector.");
+                StyleRule shorthand_rule;
+                shorthand_rule.selector = selector;
+                styleNode->style_rules.push_back(shorthand_rule);
+            }
+        }
+        else { // Inline Property
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property name or selector.");
             consume(TokenType::COLON, "Expect ':' after style property name.");
             std::string value_str = parse_value_sequence();
-            styleNode->properties.push_back({key.value, value_str});
+            styleNode->inline_properties.push_back({key.value, value_str});
         }
     }
     consume(TokenType::RBRACE, "Expect '}' after style block.");
@@ -259,54 +260,12 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
 }
 
 // --- Helper Methods ---
-Token Parser::advance() {
-    if (!is_at_end()) current++;
-    return previous();
-}
-Token Parser::peek() {
-    return tokens[current];
-}
-Token Parser::peek_next() {
-    if (is_at_end() || current + 1 >= tokens.size()) {
-        return tokens.back();
-    }
-    return tokens[current + 1];
-}
-Token Parser::previous() {
-    return tokens[current - 1];
-}
-bool Parser::is_at_end() {
-    return peek().type == TokenType::END_OF_FILE;
-}
-bool Parser::check(TokenType type) {
-    if (is_at_end()) return false;
-    return peek().type == type;
-}
-bool Parser::match(const std::vector<TokenType>& types) {
-    for (TokenType type : types) {
-        if (check(type)) {
-            advance();
-            return true;
-        }
-    }
-    return false;
-}
-Token Parser::consume(TokenType type, const std::string& message) {
-    if (check(type)) return advance();
-    throw std::runtime_error("Line " + std::to_string(peek().line) + ": " + message);
-}
-void Parser::synchronize() {
-    advance();
-    while (!is_at_end()) {
-        if (previous().type == TokenType::SEMICOLON) return;
-        switch (peek().type) {
-            case TokenType::TEXT:
-            case TokenType::STYLE:
-            case TokenType::IDENTIFIER:
-                return;
-            default:
-                break;
-        }
-        advance();
-    }
-}
+Token Parser::advance() { if (!is_at_end()) current++; return previous(); }
+Token Parser::peek() { return tokens[current]; }
+Token Parser::peek_next() { if (is_at_end() || current + 1 >= tokens.size()) { return tokens.back(); } return tokens[current + 1]; }
+Token Parser::previous() { return tokens[current - 1]; }
+bool Parser::is_at_end() { return peek().type == TokenType::END_OF_FILE; }
+bool Parser::check(TokenType type) { if (is_at_end()) return false; return peek().type == type; }
+bool Parser::match(const std::vector<TokenType>& types) { for (TokenType type : types) { if (check(type)) { advance(); return true; } } return false; }
+Token Parser::consume(TokenType type, const std::string& message) { if (check(type)) return advance(); throw std::runtime_error("Line " + std::to_string(peek().line) + ": " + message); }
+void Parser::synchronize() { advance(); while (!is_at_end()) { if (previous().type == TokenType::SEMICOLON) return; switch (peek().type) { case TokenType::TEXT: case TokenType::STYLE: case TokenType::IDENTIFIER: return; default: break; } advance(); } }

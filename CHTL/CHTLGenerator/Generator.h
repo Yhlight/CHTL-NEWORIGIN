@@ -6,13 +6,19 @@
 #include <memory>
 #include <sstream>
 
+struct GeneratedOutput {
+    std::string html;
+    std::string css;
+};
+
 class Generator {
 public:
     Generator();
-    std::string generate(const std::vector<std::unique_ptr<BaseNode>>& ast);
+    GeneratedOutput generate(const std::vector<std::unique_ptr<BaseNode>>& ast);
 
 private:
-    std::stringstream output;
+    std::stringstream html_output;
+    std::stringstream css_output;
     int indent_level = 0;
 
     void generate_node(const BaseNode* node);

@@ -36,10 +36,13 @@ int main(int argc, char* argv[]) {
 
     // 3. Generation
     Generator generator;
-    std::string html_output = generator.generate(ast);
+    GeneratedOutput output = generator.generate(ast);
 
-    // 4. Print Final HTML to standard output
-    std::cout << html_output << std::endl;
+    // 4. Print Final Output
+    // For a real application, you might put the CSS in a <style> tag in the <head>
+    // or write it to a separate file. For this test, we'll print them separately.
+    std::cout << "--- Generated CSS ---\n" << output.css << std::endl;
+    std::cout << "--- Generated HTML ---\n" << output.html << std::endl;
 
     return 0;
 }

@@ -39,18 +39,9 @@ Token Lexer::scan_token() {
         case '-': return make_token(TokenType::MINUS);
         case '*': return make_token(TokenType::STAR);
         case '/': return make_token(TokenType::SLASH);
-        case '#': {
-            int start = current;
-            while (peek() != '\n' && !is_at_end()) {
-                advance();
-            }
-            // Trim leading space from comment content
-            if (source[start] == ' ') {
-                start++;
-            }
-            std::string comment_content = source.substr(start, current - start);
-            return make_token(TokenType::HASH, comment_content);
-        }
+        case '.': return make_token(TokenType::DOT);
+        case '&': return make_token(TokenType::AMPERSAND);
+        case '#': return make_token(TokenType::HASH);
     }
 
     return make_token(TokenType::UNKNOWN, std::string(1, c));
