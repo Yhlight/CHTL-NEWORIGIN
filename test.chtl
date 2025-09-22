@@ -1,0 +1,42 @@
+// CHTL Test File
+// This file covers features from lines 1-101 of CHTL.md
+
+# This is a root-level generator comment.
+
+/**
+ * Multi-line comment.
+ * Should be ignored by the compiler.
+ */
+html {
+    lang: "en"; // attribute with double quotes
+
+    head {
+        # A comment inside the head
+        title {
+            text { CHTL Compiler Test }
+        }
+    }
+
+    body {
+        // A div with various attributes
+        div {
+            id = 'main-content'; // attribute with single quotes and '='
+            class: container;    // attribute with unquoted literal and ':'
+
+            h1 {
+                style {
+                    color: blue;
+                    font-size: 24px;
+                }
+                text: "Welcome to CHTL"; // text as an attribute
+            }
+
+            p {
+                text {
+                    This is a paragraph with an unquoted literal spanning
+                    multiple words. The parser should handle this correctly.
+                }
+            }
+        }
+    }
+}

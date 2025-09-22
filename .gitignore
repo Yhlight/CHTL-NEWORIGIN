@@ -1,0 +1,10 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+chtl_compiler
+
+# Other common files
+.DS_Store
+*.swp

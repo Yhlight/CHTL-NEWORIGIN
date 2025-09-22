@@ -1,0 +1,15 @@
+// This is a comment
+# This is a generator comment
+
+div {
+    id: "main-box";
+    class = 'container';
+
+    text {
+        Hello CHTL World
+    }
+
+    style {
+        color: red; // inline style
+    }
+}
