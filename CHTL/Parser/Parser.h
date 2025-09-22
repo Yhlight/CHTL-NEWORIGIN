@@ -25,6 +25,19 @@ private:
     StyleProperty parse_style_property();
     std::string parse_selector();
 
+    // Expression parsing methods
+    ExprPtr parse_expression();
+    ExprPtr parse_conditional();
+    ExprPtr parse_logical_or();
+    ExprPtr parse_logical_and();
+    ExprPtr parse_equality();
+    ExprPtr parse_comparison();
+    ExprPtr parse_term();
+    ExprPtr parse_factor();
+    ExprPtr parse_unary();
+    ExprPtr parse_primary();
+    ExprPtr parse_reference();
+
     // Token stream management
     bool is_at_end() const;
     Token advance();

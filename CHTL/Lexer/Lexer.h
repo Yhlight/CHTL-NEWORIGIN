@@ -15,6 +15,7 @@ private:
     bool is_at_end() const;
     char peek() const;
     char peek_next() const;
+    bool match(char expected);
     void skip_whitespace_and_comments();
 
     Token make_token(TokenType type) const;
@@ -22,7 +23,7 @@ private:
 
     Token string_literal(char quote_type);
     Token identifier();
-    Token unquoted_literal();
+    Token number();
 
     const std::string source;
     size_t start = 0;

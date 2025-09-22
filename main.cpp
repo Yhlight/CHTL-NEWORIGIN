@@ -31,6 +31,13 @@ int main(int argc, char* argv[]) {
     Lexer lexer(source);
     std::vector<Token> tokens = lexer.scan_tokens();
 
+    // Optional: Print tokens for debugging
+    std::cout << "--- Tokens ---" << std::endl;
+    for (const auto& token : tokens) {
+        std::cout << token.to_string() << std::endl;
+    }
+    std::cout << "--------------" << std::endl;
+
     // 2. Parser
     Parser parser(tokens);
     ParseResult result = parser.parse();

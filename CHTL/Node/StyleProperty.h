@@ -1,11 +1,12 @@
 #pragma once
 
+#include "CHTL/Expression/Expression.h"
 #include <string>
 #include <vector>
 
 struct StyleProperty {
     std::string key;
-    std::string value;
+    ExprPtr value;
 };
 
 using StylePropertyList = std::vector<StyleProperty>;

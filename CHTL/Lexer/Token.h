@@ -13,11 +13,34 @@ enum class TokenType {
     DOT,            // .
     HASH,           // #
     AMPERSAND,      // &
+    QUESTION,       // ?
+    LEFT_PAREN,     // (
+    RIGHT_PAREN,    // )
+
+    // Operators
+    PLUS,           // +
+    MINUS,          // -
+    STAR,           // *
+    SLASH,          // /
+    PERCENT,        // %
+    STAR_STAR,      // **
+
+    // Relational Operators
+    GREATER,        // >
+    LESS,           // <
+    GREATER_EQUAL,  // >=
+    LESS_EQUAL,     // <=
+    EQUAL_EQUAL,    // ==
+    BANG_EQUAL,     // !=
+
+    // Logical Operators
+    LOGICAL_AND,    // &&
+    LOGICAL_OR,     // ||
 
     // Literals
     IDENTIFIER,     // element names, attribute names, etc.
     STRING,         // "text" or 'text'
-    UNQUOTED_LITERAL, // unquoted text
+    NUMBER,         // 100, 50.5
 
     // Comments (might be skipped or handled specially)
     LINE_COMMENT,   // //

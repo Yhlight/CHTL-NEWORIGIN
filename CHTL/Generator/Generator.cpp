@@ -2,6 +2,7 @@
 #include "CHTL/Node/ElementNode.h"
 #include "CHTL/Node/TextNode.h"
 #include "CHTL/Node/CommentNode.h"
+#include "CHTL/Evaluator/Evaluator.h"
 #include <regex>
 
 std::string Generator::generate(const ParseResult& result) {
@@ -10,15 +11,18 @@ std::string Generator::generate(const ParseResult& result) {
     // 1. Render global styles
     if (!result.global_styles.empty()) {
         output << "<style>\n";
+        Evaluator dummy_evaluator(result.ast, ElementNode("", {}, {}, {})); // Dummy context for now
         for (const auto& rule : result.global_styles) {
             std::string selector = rule.selector;
-            // Handle '&' substitution
             if (selector.find('&') != std::string::npos) {
                 selector = std::regex_replace(selector, std::regex("&"), rule.context_selector);
             }
             output << "  " << selector << " {\n";
             for (const auto& prop : rule.properties) {
-                output << "    " << prop.key << ": " << prop.value << ";\n";
+                // Evaluating global properties is complex because we don't have a clear 'current_element'.
+                // For now, we will just evaluate them with a dummy context. This will only work for non-referential expressions.
+                Value val = dummy_evaluator.evaluate(*prop.value);
+                output << "    " << prop.key << ": " << val.to_css_string() << ";\n";
             }
             output << "  }\n";
         }
@@ -45,23 +49,23 @@ void Generator::visit(const ElementNode& node) {
     indent();
     output << "<" << node.tag_name;
 
-    // Add attributes
     for (const auto& attr : node.attributes) {
         output << " " << attr.key << "=\"" << attr.value << "\"";
     }
 
-    // Combine style properties into a single style attribute
     if (!node.styles.empty()) {
         output << " style=\"";
-        for (size_t i = 0; i < node.styles.size(); ++i) {
-            output << node.styles[i].key << ":" << node.styles[i].value << ";";
+        // Here we need to create the evaluator with the correct context
+        Evaluator evaluator(NodeList{}, node); // The root AST is not needed for local refs
+        for (const auto& prop : node.styles) {
+            Value val = evaluator.evaluate(*prop.value);
+            output << prop.key << ":" << val.to_css_string() << ";";
         }
         output << "\"";
     }
 
     output << ">";
 
-    // Handle children
     if (!node.children.empty()) {
         output << "\n";
         indent_level++;

@@ -29,7 +29,9 @@ public:
             ss << indentation << "  " << attr.key << "=\"" << attr.value << "\"" << std::endl;
         }
         for (const auto& style : styles) {
-            ss << indentation << "  " << "style: " << style.key << ": " << style.value << std::endl;
+            // Cannot easily print expression AST here, so we skip it for debugging.
+            // ss << indentation << "  " << "style: " << style.key << ": " << style.value << std::endl;
+            ss << indentation << "  " << "style: " << style.key << ": [Expression]" << std::endl;
         }
         for (const auto& child : children) {
             ss << child->to_string(indent + 1);

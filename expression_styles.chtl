@@ -1,0 +1,25 @@
+// Test for expression evaluation in styles
+
+div {
+    id: box;
+    style {
+        width: 100px;
+        padding: 10px * 2; // Simple arithmetic: 20px
+        margin: 5px;
+        height: width + padding; // Reference self-property: 100px + 20px = 120px
+
+        // Conditional expression
+        border: width > 50px ? "1px solid red" : "none";
+
+        // Logical and conditional
+        background-color: width == 100px && padding == 20px ? "lightblue" : "grey";
+    }
+}
+
+span {
+    style {
+        // More complex expression
+        font-size: (10px + 2px) * 2; // Should be 24px
+    }
+    text: "Some text with complex font size.";
+}
