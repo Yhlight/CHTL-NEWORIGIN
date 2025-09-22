@@ -7,6 +7,7 @@
 #include "CHTL/CHTLParser/CHTLParser.h"
 #include "CHTL/CHTLGenerator/CHTLGenerator.h"
 #include "CHTL/CHTLContext/CHTLContext.h"
+#include "CHTL/CHTLResolver/CHTLResolver.h"
 
 int main() {
     std::string filename = "Test/test.chtl";
@@ -33,10 +34,14 @@ int main() {
 
         // 2. Parser
         CHTLParser parser(lexer, context);
-        std::shared_ptr<ElementNode> ast = parser.parse();
+        std::shared_ptr<ElementNode> initial_ast = parser.parse();
 
-        // 3. Generator
-        CHTLGenerator generator(ast);
+        // 3. Resolver
+        CHTLResolver resolver(context);
+        std::shared_ptr<ElementNode> resolved_ast = resolver.resolve(initial_ast);
+
+        // 4. Generator
+        CHTLGenerator generator(resolved_ast);
         std::string html_output = generator.generate();
 
         // 4. Output

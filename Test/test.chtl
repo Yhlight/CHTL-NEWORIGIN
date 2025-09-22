@@ -4,6 +4,13 @@
 	line-height: 1.6;
 }
 
+[Template] @Element Box
+{
+    div {
+        text { "This is a box from a template." }
+    }
+}
+
 # This is a generator-aware comment that should appear in the output.
 
 // This is a regular comment that should be ignored.
@@ -34,6 +41,8 @@ html {
                 }
                 text { "This is a paragraph generated from CHTL source." }
             }
+
+            @Element Box;
         }
     }
 }

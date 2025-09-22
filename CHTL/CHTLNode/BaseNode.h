@@ -15,7 +15,9 @@ enum class NodeType {
     Element,
     Text,
     Comment,
-    Attribute
+    Attribute,
+    TemplateDefinition,
+    TemplateUsage
 };
 
 struct BaseNode {

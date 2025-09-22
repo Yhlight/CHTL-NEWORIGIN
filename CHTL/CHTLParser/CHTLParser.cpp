@@ -1,4 +1,5 @@
 #include "CHTLParser.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 #include <iostream>
 
 const std::string VIRTUAL_ROOT_TAG = "__ROOT__";
@@ -49,9 +50,17 @@ std::shared_ptr<BaseNode> CHTLParser::parseStatement() {
         return parseElement();
     } else if (currentToken.type == TokenType::HASH_COMMENT) {
         return parseCommentNode();
+    } else if (currentToken.type == TokenType::AT) {
+        // This is where @Element usage goes
+        expect(TokenType::AT, "Expected '@'");
+        expect(TokenType::KEYWORD_ELEMENT, "Expected 'Element' keyword for template usage.");
+        std::string templateName = currentToken.value;
+        expect(TokenType::IDENTIFIER, "Expected template name.");
+        expect(TokenType::SEMICOLON, "Expected ';' after element template usage.");
+        return std::make_shared<TemplateUsageNode>(templateName, TemplateType::Element);
     }
     else {
-        error("Unexpected token. Expected an element or a #-comment.");
+        error("Unexpected token. Expected an element, a #-comment, or an @Element usage.");
         return nullptr;
     }
 }
@@ -86,6 +95,10 @@ void CHTLParser::parseBlock(const std::shared_ptr<ElementNode>& element) {
             }
         } else if (currentToken.type == TokenType::HASH_COMMENT) {
             element->addChild(parseCommentNode());
+        }
+        else if (currentToken.type == TokenType::AT) {
+            // Handle @Element usage inside a block
+             element->addChild(parseStatement());
         }
         else {
             if (currentToken.type == TokenType::RIGHT_BRACE) {
@@ -158,7 +171,8 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
             expect(TokenType::IDENTIFIER, "Expected template name.");
 
             if (context.styleTemplates.count(templateName)) {
-                for (const auto& pair : context.styleTemplates[templateName]) {
+                auto templateNode = context.styleTemplates[templateName];
+                for (const auto& pair : templateNode->styleProperties) {
                     element->inlineStyles[pair.first] = pair.second;
                 }
             } else {
@@ -167,10 +181,24 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
             expect(TokenType::SEMICOLON, "Expected ';' after style template usage.");
 
         } else if (currentToken.type == TokenType::IDENTIFIER) {
-            // It's the start of a property block, parse all of them
-            auto properties = parseStyleProperties();
-            for(const auto& pair : properties) {
-                element->inlineStyles[pair.first] = pair.second;
+            std::string key = currentToken.value;
+            advanceToken();
+
+            expect(TokenType::COLON, "Expected ':' after style property name.");
+
+            std::string value;
+            while(currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
+                value += currentToken.value;
+                if (lexer.peekToken().type != TokenType::SEMICOLON && lexer.peekToken().type != TokenType::RIGHT_BRACE) {
+                    value += " ";
+                }
+                advanceToken();
+            }
+
+            element->inlineStyles[key] = value;
+
+            if (currentToken.type == TokenType::SEMICOLON) {
+                advanceToken();
             }
         } else {
             error("Expected a style property or a template usage (@Style).");
@@ -205,44 +233,57 @@ void CHTLParser::parseTemplateDefinition() {
         std::string templateName = currentToken.value;
         advanceToken();
 
-        std::map<std::string, std::string> styles;
-
         expect(TokenType::LEFT_BRACE, "Expected '{' for template block.");
 
-        // Refactored this part
-        styles = parseStyleProperties();
+        auto templateNode = std::make_shared<TemplateDefinitionNode>(templateName, TemplateType::Style);
+
+        // Manually parse properties here, avoiding the problematic helper
+        while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+            if(currentToken.type != TokenType::IDENTIFIER) error("Expected a style property name.");
+            std::string key = currentToken.value;
+            advanceToken();
+
+            expect(TokenType::COLON, "Expected ':' after style property name.");
+
+            std::string value;
+            while(currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
+                value += currentToken.value;
+                if (lexer.peekToken().type != TokenType::SEMICOLON && lexer.peekToken().type != TokenType::RIGHT_BRACE) {
+                    value += " ";
+                }
+                advanceToken();
+            }
+            templateNode->styleProperties[key] = value;
+
+            if (currentToken.type == TokenType::SEMICOLON) {
+                advanceToken();
+            }
+        }
+
+        context.styleTemplates[templateName] = templateNode;
 
         expect(TokenType::RIGHT_BRACE, "Expected '}' to end template block.");
 
-        context.styleTemplates[templateName] = styles;
+    } else if (currentToken.type == TokenType::KEYWORD_ELEMENT) {
+        advanceToken(); // Consume 'Element'
+
+        if (currentToken.type != TokenType::IDENTIFIER) {
+            error("Expected a name for the element template.");
+        }
+        std::string templateName = currentToken.value;
+        advanceToken();
+
+        auto templateNode = std::make_shared<TemplateDefinitionNode>(templateName, TemplateType::Element);
+
+        expect(TokenType::LEFT_BRACE, "Expected '{' for template block.");
+        while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+            templateNode->children.push_back(parseStatement());
+        }
+        expect(TokenType::RIGHT_BRACE, "Expected '}' to end template block.");
+
+        context.elementTemplates[templateName] = templateNode;
 
     } else {
         error("Unsupported template type found: @" + currentToken.value);
     }
-}
-
-std::map<std::string, std::string> CHTLParser::parseStyleProperties() {
-    std::map<std::string, std::string> styles;
-    while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
-        if(currentToken.type != TokenType::IDENTIFIER) error("Expected a style property name.");
-        std::string key = currentToken.value;
-        advanceToken();
-
-        expect(TokenType::COLON, "Expected ':' after style property name.");
-
-        std::string value;
-        while(currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
-            value += currentToken.value;
-            if (lexer.peekToken().type != TokenType::SEMICOLON && lexer.peekToken().type != TokenType::RIGHT_BRACE) {
-                value += " ";
-            }
-            advanceToken();
-        }
-        styles[key] = value;
-
-        if (currentToken.type == TokenType::SEMICOLON) {
-            advanceToken();
-        }
-    }
-    return styles;
 }

@@ -34,6 +34,7 @@ private:
     std::shared_ptr<ElementNode> parseElement();
     void parseBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<AttributeNode> parseAttribute();
+    std::shared_ptr<BaseNode> parseTemplateUsage(const std::shared_ptr<ElementNode>& element);
     void parseStyleBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<TextNode> parseTextNode();
     std::shared_ptr<CommentNode> parseCommentNode();
