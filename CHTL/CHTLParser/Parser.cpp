@@ -18,7 +18,7 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
         if (node) {
             if (node->getType() == NodeType::TEMPLATE_DEFINITION) {
                 auto template_def = std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(node.release()));
-                context.style_templates[template_def->name] = std::move(template_def);
+                context.template_definitions[template_def->name] = std::move(template_def);
             } else {
                 statements.push_back(std::move(node));
             }
@@ -27,34 +27,56 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
     return statements;
 }
 
+void Parser::import_declaration() {
+    consume(TokenType::LBRACKET, "Expect '[' to start an import statement.");
+    consume(TokenType::IMPORT, "Expect 'Import' keyword.");
+    consume(TokenType::RBRACKET, "Expect ']' after 'Import' keyword.");
+    consume(TokenType::AT, "Expect '@' for import type.");
+    consume(TokenType::CHTL, "Only '@Chtl' imports are currently supported.");
+    consume(TokenType::FROM, "Expect 'from' keyword.");
+    Token path = consume(TokenType::STRING, "Expect a string literal for the file path.");
+    consume(TokenType::SEMICOLON, "Expect ';' after import statement.");
+    std::string file_content = CHTL::load_file(path.value);
+    Lexer imported_lexer(file_content);
+    std::vector<Token> imported_tokens = imported_lexer.tokenize();
+    Parser imported_parser(imported_tokens, context);
+    imported_parser.parse();
+}
+
+
 std::unique_ptr<BaseNode> Parser::declaration() {
     try {
+        if (peek().type == TokenType::LBRACKET && peek_next().type == TokenType::IMPORT) {
+            import_declaration();
+            return nullptr; // Imports don't produce a node in the AST
+        }
         if (peek().type == TokenType::LBRACKET && (peek_next().type == TokenType::TEMPLATE || peek_next().type == TokenType::CUSTOM)) {
             return template_declaration();
         }
-        if (match({TokenType::HASH})) { // Top-level HASH is a comment
+        if (match({TokenType::HASH})) {
             auto node = std::make_unique<CommentNode>();
             std::string content;
             int comment_line = previous().line;
-
             while (!is_at_end() && peek().line == comment_line) {
                 content += advance().value;
-                if (!is_at_end() && peek().line == comment_line) {
-                    content += " "; // Add space between tokens
-                }
+                 if (!is_at_end() && peek().line == comment_line) content += " ";
             }
-
-            // Trim leading/trailing space
             size_t first = content.find_first_not_of(" \t");
-            if(std::string::npos != first) {
-                size_t last = content.find_last_not_of(" \t");
-                content = content.substr(first, (last - first + 1));
-            } else {
-                content.clear();
-            }
-
+            if(std::string::npos != first) content = content.substr(first);
             node->content = content;
             return node;
+        }
+        if (match({TokenType::AT})) { // Template Usage
+            auto usage_node = std::make_unique<TemplateUsageNode>();
+            Token type = consume(TokenType::IDENTIFIER, "Expect template type.");
+            if(type.value == "Style") usage_node->template_type = TemplateType::STYLE;
+            else if(type.value == "Element") usage_node->template_type = TemplateType::ELEMENT;
+            else if(type.value == "Var") usage_node->template_type = TemplateType::VAR;
+            else throw std::runtime_error("Unknown template type @" + type.value);
+
+            usage_node->name = consume(TokenType::IDENTIFIER, "Expect template name.").value;
+            consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
+            return usage_node;
         }
         if (match({TokenType::IDENTIFIER})) {
             return element_declaration();
@@ -72,54 +94,47 @@ std::unique_ptr<BaseNode> Parser::declaration() {
     return nullptr;
 }
 
-// NOTE: This logic for imports is flawed as it was part of the previous buggy implementation.
-// A proper implementation would likely happen in a pre-processing step, not during main parsing.
-// For now, it is being bypassed by the top-level declaration logic.
-void Parser::import_declaration() {
-    consume(TokenType::LBRACKET, "Expect '[' to start an import statement.");
-    consume(TokenType::IMPORT, "Expect 'Import' keyword.");
-    consume(TokenType::RBRACKET, "Expect ']' after 'Import' keyword.");
-    consume(TokenType::AT, "Expect '@' for import type.");
-    consume(TokenType::CHTL, "Only '@Chtl' imports are currently supported.");
-    consume(TokenType::FROM, "Expect 'from' keyword.");
-    Token path = consume(TokenType::STRING, "Expect a string literal for the file path.");
-    consume(TokenType::SEMICOLON, "Expect ';' after import statement.");
-    std::string file_content = CHTL::load_file(path.value);
-    Lexer imported_lexer(file_content);
-    std::vector<Token> imported_tokens = imported_lexer.tokenize();
-    Parser imported_parser(imported_tokens, context);
-    imported_parser.parse();
-}
-
 std::unique_ptr<BaseNode> Parser::template_declaration() {
     auto template_node = std::make_unique<TemplateDefinitionNode>();
     consume(TokenType::LBRACKET, "Expect '[' to start a definition.");
-    if (match({TokenType::TEMPLATE})) {
-        template_node->modifier = TemplateModifier::IS_TEMPLATE;
-    } else if (match({TokenType::CUSTOM})) {
-        template_node->modifier = TemplateModifier::IS_CUSTOM;
-    } else {
-        throw std::runtime_error("Expect 'Template' or 'Custom' keyword.");
-    }
+    if (match({TokenType::TEMPLATE})) template_node->modifier = TemplateModifier::IS_TEMPLATE;
+    else if (match({TokenType::CUSTOM})) template_node->modifier = TemplateModifier::IS_CUSTOM;
+    else throw std::runtime_error("Expect 'Template' or 'Custom' keyword.");
     consume(TokenType::RBRACKET, "Expect ']' after keyword.");
+
     consume(TokenType::AT, "Expect '@' for template type.");
-    Token template_type = consume(TokenType::IDENTIFIER, "Expect template type (e.g. 'Style').");
-    if (template_type.value != "Style") {
-        throw std::runtime_error("Only '@Style' templates are currently supported.");
-    }
-    Token name = consume(TokenType::IDENTIFIER, "Expect a name for the style template.");
+    Token template_type_token = consume(TokenType::IDENTIFIER, "Expect template type (e.g. 'Style' or 'Element').");
+
+    Token name = consume(TokenType::IDENTIFIER, "Expect a name for the template.");
     template_node->name = name.value;
+
     consume(TokenType::LBRACE, "Expect '{' to start template body.");
-    while (!check(TokenType::RBRACE) && !is_at_end()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
-        if (match({TokenType::COLON})) {
-            std::string value_str = parse_value_sequence();
-            template_node->style_properties.push_back({key.value, value_str});
-        } else {
-            consume(TokenType::SEMICOLON, "Expect ';' after valueless property.");
-            template_node->style_properties.push_back({key.value, std::nullopt});
+
+    if (template_type_token.value == "Style") {
+        template_node->template_type = TemplateType::STYLE;
+        TemplateDefinitionNode::StyleBody style_body;
+        while (!check(TokenType::RBRACE) && !is_at_end()) {
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property name.");
+            if (match({TokenType::COLON})) {
+                std::string value_str = parse_value_sequence();
+                style_body.push_back({key.value, value_str});
+            } else {
+                consume(TokenType::SEMICOLON, "Expect ';' after valueless property.");
+                style_body.push_back({key.value, std::nullopt});
+            }
         }
+        template_node->body = std::move(style_body);
+    } else if (template_type_token.value == "Element") {
+        template_node->template_type = TemplateType::ELEMENT;
+        TemplateDefinitionNode::ElementBody element_body;
+        while (!check(TokenType::RBRACE) && !is_at_end()) {
+            element_body.push_back(declaration());
+        }
+        template_node->body = std::move(element_body);
+    } else {
+        throw std::runtime_error("Unsupported template type: @" + template_type_token.value);
     }
+
     consume(TokenType::RBRACE, "Expect '}' to end template body.");
     return template_node;
 }
@@ -173,16 +188,10 @@ std::string Parser::parse_value_sequence() {
         }
         for (size_t i = current_token_idx; i < value_tokens.size();) {
             Token op = value_tokens[i++];
-            if (i >= value_tokens.size() || value_tokens[i].type != TokenType::NUMBER) {
-                throw std::runtime_error("Expected number after operator in expression.");
-            }
+            if (i >= value_tokens.size() || value_tokens[i].type != TokenType::NUMBER) throw std::runtime_error("Expected number after operator in expression.");
             Term rhs = {std::stod(value_tokens[i++].value), ""};
-            if (i < value_tokens.size() && value_tokens[i].type == TokenType::IDENTIFIER) {
-                rhs.unit = value_tokens[i++].value;
-            }
-            if (lhs.unit != rhs.unit) {
-                throw std::runtime_error("Mismatched units in arithmetic expression ('" + lhs.unit + "' and '" + rhs.unit + "').");
-            }
+            if (i < value_tokens.size() && value_tokens[i].type == TokenType::IDENTIFIER) rhs.unit = value_tokens[i++].value;
+            if (lhs.unit != rhs.unit) throw std::runtime_error("Mismatched units in arithmetic expression ('" + lhs.unit + "' and '" + rhs.unit + "').");
             if (op.type == TokenType::PLUS) lhs.value += rhs.value;
             else if (op.type == TokenType::MINUS) lhs.value -= rhs.value;
         }
@@ -192,9 +201,7 @@ std::string Parser::parse_value_sequence() {
     } else {
         for (size_t i = 0; i < value_tokens.size(); ++i) {
             result_string += value_tokens[i].value;
-            if (i < value_tokens.size() - 1) {
-                result_string += " ";
-            }
+            if (i < value_tokens.size() - 1) result_string += " ";
         }
     }
     consume(TokenType::SEMICOLON, "Expect ';' after value.");
@@ -212,9 +219,7 @@ bool is_simple_arithmetic(const std::vector<Token>& tokens) {
 Term Parser::parse_term() {
     Token number = consume(TokenType::NUMBER, "Expect a number for a term in an expression.");
     std::string unit;
-    if (peek().type == TokenType::IDENTIFIER) {
-        unit = advance().value;
-    }
+    if (peek().type == TokenType::IDENTIFIER) unit = advance().value;
     return {std::stod(number.value), unit};
 }
 
@@ -238,9 +243,10 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
             if (template_type.value != "Style") throw std::runtime_error("Only '@Style' templates are currently supported.");
             Token template_name = consume(TokenType::IDENTIFIER, "Expect template name.");
             consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
-            auto it = context.style_templates.find(template_name.value);
-            if (it != context.style_templates.end()) {
-                styleNode->inline_properties.insert(styleNode->inline_properties.end(), it->second->style_properties.begin(), it->second->style_properties.end());
+            auto it = context.template_definitions.find(template_name.value);
+            if (it != context.template_definitions.end()) {
+                const auto& style_body = std::get<TemplateDefinitionNode::StyleBody>(it->second->body);
+                styleNode->inline_properties.insert(styleNode->inline_properties.end(), style_body.begin(), style_body.end());
             } else {
                 throw std::runtime_error("Undefined style template: '" + template_name.value + "'");
             }
@@ -278,62 +284,12 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
 }
 
 // --- Helper Methods ---
-Token Parser::advance() {
-    if (!is_at_end()) current++;
-    return previous();
-}
-Token Parser::peek() {
-    if (current >= tokens.size()) {
-        // Should not happen if is_at_end() is used correctly
-        return tokens.back(); // Return EOF token
-    }
-    return tokens[current];
-}
-Token Parser::peek_next() {
-    if (current + 1 >= tokens.size()) {
-        return tokens.back();
-    }
-    return tokens[current + 1];
-}
-Token Parser::previous() {
-    return tokens[current - 1];
-}
-bool Parser::is_at_end() {
-    // The last token is always EOF, so we're at the end if we're pointing to it.
-    return current >= tokens.size() - 1;
-}
-bool Parser::check(TokenType type) {
-    if (is_at_end() && type != TokenType::END_OF_FILE) return false;
-    return peek().type == type;
-}
-bool Parser::match(const std::vector<TokenType>& types) {
-    for (TokenType type : types) {
-        if (check(type)) {
-            advance();
-            return true;
-        }
-    }
-    return false;
-}
-Token Parser::consume(TokenType type, const std::string& message) {
-    if (check(type)) return advance();
-    throw std::runtime_error("Line " + std::to_string(peek().line) + ": " + message);
-}
-void Parser::synchronize() {
-    if(is_at_end()) return;
-    advance();
-    while (!is_at_end()) {
-        if (previous().type == TokenType::SEMICOLON) return;
-        switch (peek().type) {
-            case TokenType::TEXT:
-            case TokenType::STYLE:
-            case TokenType::IDENTIFIER:
-            case TokenType::LBRACKET: // Start of [Template] etc.
-            case TokenType::HASH: // Start of comment
-                return;
-            default:
-                break;
-        }
-        advance();
-    }
-}
+Token Parser::advance() { if (!is_at_end()) current++; return previous(); }
+Token Parser::peek() { if (current >= tokens.size()) return tokens.back(); return tokens[current]; }
+Token Parser::peek_next() { if (current + 1 >= tokens.size()) return tokens.back(); return tokens[current + 1]; }
+Token Parser::previous() { return tokens[current - 1]; }
+bool Parser::is_at_end() { return current >= tokens.size() - 1; }
+bool Parser::check(TokenType type) { if (is_at_end() && type != TokenType::END_OF_FILE) return false; return peek().type == type; }
+bool Parser::match(const std::vector<TokenType>& types) { for (TokenType type : types) { if (check(type)) { advance(); return true; } } return false; }
+Token Parser::consume(TokenType type, const std::string& message) { if (check(type)) return advance(); throw std::runtime_error("Line " + std::to_string(peek().line) + ": " + message); }
+void Parser::synchronize() { if(is_at_end()) return; advance(); while (!is_at_end()) { if (previous().type == TokenType::SEMICOLON) return; switch (peek().type) { case TokenType::TEXT: case TokenType::STYLE: case TokenType::IDENTIFIER: case TokenType::LBRACKET: case TokenType::HASH: return; default: break; } advance(); } }

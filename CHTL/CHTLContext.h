@@ -9,5 +9,5 @@
 class ParsingContext {
 public:
     // The context takes ownership of the template definitions.
-    std::unordered_map<std::string, std::unique_ptr<TemplateDefinitionNode>> style_templates;
+    std::unordered_map<std::string, std::unique_ptr<TemplateDefinitionNode>> template_definitions;
 };

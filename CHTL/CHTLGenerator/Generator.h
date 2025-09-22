@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <sstream>
+#include "CHTL/CHTLContext.h"
 
 struct GeneratedOutput {
     std::string html;
@@ -13,10 +14,11 @@ struct GeneratedOutput {
 
 class Generator {
 public:
-    Generator();
+    Generator(const ParsingContext& context);
     GeneratedOutput generate(const std::vector<std::unique_ptr<BaseNode>>& ast);
 
 private:
+    const ParsingContext& context;
     std::stringstream html_output;
     std::stringstream css_output;
     int indent_level = 0;

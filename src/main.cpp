@@ -35,14 +35,16 @@ int main(int argc, char* argv[]) {
     std::vector<std::unique_ptr<BaseNode>> ast = parser.parse();
 
     // 3. Generation
-    Generator generator;
+    Generator generator(context);
     GeneratedOutput output = generator.generate(ast);
 
     // 4. Print Final Output
-    // For a real application, you might put the CSS in a <style> tag in the <head>
-    // or write it to a separate file. For this test, we'll print them separately.
-    std::cout << "--- Generated CSS ---\n" << output.css << std::endl;
-    std::cout << "--- Generated HTML ---\n" << output.html << std::endl;
+    if (!output.css.empty()) {
+        std::cout << "/* --- Generated CSS --- */\n";
+        std::cout << "<style>\n" << output.css << "</style>\n";
+    }
+    std::cout << "<!-- --- Generated HTML --- -->\n";
+    std::cout << output.html << std::endl;
 
     return 0;
 }

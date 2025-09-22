@@ -1,17 +1,21 @@
-# This is a test comment.
+[Import] @Chtl from "theme.chtl";
+
+[Template] @Element MyBox {
+    div {
+        class: "box-from-template";
+        h2 { text { "This is a box." } }
+        p { text { "It comes from an Element Template." } }
+    }
+}
+
 html {
     body {
-        div {
-            style {
-                // Shorthand to add id="main-content"
-                #main-content;
-
-                // Full rule to add class="container" and global CSS
-                .container {
-                    width: 100px - 40px;
-                }
-            }
-            h1 { text { "It works!" } }
+        style {
+            @Style ThemeColors; // From theme.chtl
         }
+
+        h1 { text { "Combined Test" } }
+
+        @Element MyBox;
     }
 }

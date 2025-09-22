@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <optional>
+#include <variant>
 
 // Forward declaration
 class BaseNode;
@@ -21,7 +22,8 @@ enum class NodeType {
     TEXT,
     COMMENT,
     STYLE,
-    TEMPLATE_DEFINITION
+    TEMPLATE_DEFINITION,
+    TEMPLATE_USAGE
 };
 
 // Define a struct for CSS properties
@@ -78,6 +80,12 @@ public:
     NodeType getType() const override { return NodeType::STYLE; }
 };
 
+enum class TemplateType {
+    STYLE,
+    ELEMENT,
+    VAR
+};
+
 enum TemplateModifier {
     IS_TEMPLATE,
     IS_CUSTOM
@@ -87,10 +95,21 @@ enum TemplateModifier {
 class TemplateDefinitionNode : public BaseNode {
 public:
     TemplateModifier modifier;
+    TemplateType template_type;
     std::string name;
-    // For now, we only support Style templates, so we store CssProperty.
-    // This would need to be more generic for @Element or @Var templates.
-    std::vector<CssProperty> style_properties;
+
+    using StyleBody = std::vector<CssProperty>;
+    using ElementBody = std::vector<std::unique_ptr<BaseNode>>;
+    std::variant<StyleBody, ElementBody> body;
 
     NodeType getType() const override { return NodeType::TEMPLATE_DEFINITION; }
+};
+
+// Represents a usage of a template, e.g. @Element MyBox;
+class TemplateUsageNode : public BaseNode {
+public:
+    TemplateType template_type;
+    std::string name;
+
+    NodeType getType() const override { return NodeType::TEMPLATE_USAGE; }
 };
