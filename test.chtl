@@ -1,0 +1,31 @@
+// CHTL Test File
+
+# This is a generator comment that should appear in the HTML output.
+
+html {
+    head {
+        title { text: "CHTL Test Page"; }
+    }
+
+    body {
+        // Main container
+        div {
+            id: "container";
+            class = "main-content";
+
+            // A text node using the block syntax
+            text {
+                "Welcome to CHTL"
+            }
+        }
+
+        // A span with an inline style
+        span {
+            style {
+                color: red;
+                font-size: 14px;
+            }
+            text: "This text should be red.";
+        }
+    }
+}
