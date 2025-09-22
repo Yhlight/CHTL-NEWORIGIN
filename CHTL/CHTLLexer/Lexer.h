@@ -19,6 +19,7 @@ private:
 
     void stringLiteral(char quote_type);
     void identifier();
+    void number();
     void singleLineComment();
     void multiLineComment();
     void generatorComment();

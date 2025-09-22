@@ -13,4 +13,8 @@ public:
     void accept(NodeVisitor& visitor) override {
         visitor.visit(*this);
     }
+
+    std::shared_ptr<BaseNode> clone() const override {
+        return std::make_shared<CommentNode>(this->content);
+    }
 };

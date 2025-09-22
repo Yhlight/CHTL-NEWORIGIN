@@ -48,21 +48,33 @@ void CHTLLexer::scanToken() {
         case '}': tokens.emplace_back(TokenType::RIGHT_BRACE, "}", line, column); break;
         case '[': tokens.emplace_back(TokenType::LEFT_BRACKET, "[", line, column); break;
         case ']': tokens.emplace_back(TokenType::RIGHT_BRACKET, "]", line, column); break;
+        case '(': tokens.emplace_back(TokenType::LEFT_PAREN, "(", line, column); break;
+        case ')': tokens.emplace_back(TokenType::RIGHT_PAREN, ")", line, column); break;
         case '@': tokens.emplace_back(TokenType::AT, "@", line, column); break;
         case ';': tokens.emplace_back(TokenType::SEMICOLON, ";", line, column); break;
         case ':': tokens.emplace_back(TokenType::COLON, ":", line, column); break;
         case '=': tokens.emplace_back(TokenType::EQUALS, "=", line, column); break;
         case '.': tokens.emplace_back(TokenType::DOT, ".", line, column); break;
         case '&': tokens.emplace_back(TokenType::AMPERSAND, "&", line, column); break;
+
+        case '+': tokens.emplace_back(TokenType::PLUS, "+", line, column); break;
+        case '-': tokens.emplace_back(TokenType::MINUS, "-", line, column); break;
+        case '%': tokens.emplace_back(TokenType::PERCENT, "%", line, column); break;
+        case '*':
+            if (match('*')) {
+                tokens.emplace_back(TokenType::STAR_STAR, "**", line, column);
+            } else {
+                tokens.emplace_back(TokenType::STAR, "*", line, column);
+            }
+            break;
+
         case '/':
             if (match('/')) {
                 singleLineComment();
             } else if (match('*')) {
                 multiLineComment();
             } else {
-                 // For now, we assume it's part of an unquoted literal or an error.
-                 // In the future, this will handle division in property values.
-                unquotedLiteral();
+                tokens.emplace_back(TokenType::SLASH, "/", line, column);
             }
             break;
         case '#':
@@ -88,15 +100,14 @@ void CHTLLexer::scanToken() {
         case '\'': stringLiteral('\''); break;
 
         default:
-            if (std::isalpha(c) || c == '_') {
+            if (std::isdigit(c)) {
+                number();
+            }
+            else if (std::isalpha(c) || c == '_') {
                 identifier();
-            } else if (std::isdigit(c) || c == '.' || c == '-') {
-                // For now, treat numbers and other symbols as part of unquoted literals
-                unquotedLiteral();
             }
             else {
                 // For now, treat unknown characters as part of an unquoted literal
-                // A more robust error handling can be added later.
                 if (!isspace(c)) {
                     unquotedLiteral();
                 }
@@ -166,7 +177,22 @@ void CHTLLexer::stringLiteral(char quote_type) {
 void CHTLLexer::identifier() {
     while (std::isalnum(peek()) || peek() == '_' || peek() == '-') advance();
     std::string text = source.substr(start, current - start);
-    tokens.emplace_back(TokenType::IDENTIFIER, text, line, column);
+    TokenType type = TokenType::IDENTIFIER;
+    if (text == "inherit") type = TokenType::KEYWORD_INHERIT;
+    tokens.emplace_back(type, text, line, column);
+}
+
+void CHTLLexer::number() {
+    while (std::isdigit(peek())) advance();
+
+    // Look for a fractional part.
+    if (peek() == '.' && std::isdigit(peekNext())) {
+        // Consume the "."
+        advance();
+        while (std::isdigit(peek())) advance();
+    }
+
+    tokens.emplace_back(TokenType::NUMBER, source.substr(start, current - start), line, column);
 }
 
 // This is a simplification for now. CHTL's unquoted literals are more complex,

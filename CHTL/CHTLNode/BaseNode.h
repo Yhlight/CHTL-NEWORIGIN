@@ -15,6 +15,7 @@ class BaseNode {
 public:
     virtual ~BaseNode() = default;
     virtual void accept(NodeVisitor& visitor) = 0;
+    virtual std::shared_ptr<BaseNode> clone() const = 0;
 };
 
 // Visitor interface - enables clean processing of the AST
