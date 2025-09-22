@@ -23,6 +23,7 @@ Token Lexer::scan_token() {
 
     char c = advance();
 
+    if (std::isdigit(c)) return number();
     if (std::isalpha(c) || c == '_') return identifier();
     if (c == '"') return string_literal();
 
@@ -158,4 +159,19 @@ Token Lexer::string_literal() {
 
     std::string value = source.substr(start_current, current - start_current - 1);
     return Token(TokenType::STRING, value, start_line, start_col);
+}
+
+Token Lexer::number() {
+    int start = current - 1;
+    while (std::isdigit(peek())) advance();
+
+    // Look for a fractional part.
+    if (peek() == '.' && std::isdigit(peek_next())) {
+        // Consume the "."
+        advance();
+        while (std::isdigit(peek())) advance();
+    }
+
+    std::string value = source.substr(start, current - start);
+    return make_token(TokenType::NUMBER, value);
 }

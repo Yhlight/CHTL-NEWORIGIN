@@ -4,13 +4,13 @@
 html {
     body {
         div {
-            class: "container";
+            class: container; # An unquoted attribute
             style {
                 @Style ThemeColors;
-                font-weight: "bold";
-                border: "1px solid black";
+                font-weight: bold;
+                border: 1px solid black;
             }
-            h1 { text { "Imports and Command-Line Apps are cool!" } }
+            h1 { text { "Unquoted literals are cool!" } }
         }
     }
 }

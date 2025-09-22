@@ -26,6 +26,7 @@ private:
     Token scan_token();
     Token identifier();
     Token string_literal();
+    Token number();
 
     void skip_whitespace_and_comments();
 };

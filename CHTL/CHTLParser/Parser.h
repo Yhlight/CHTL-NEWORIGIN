@@ -35,6 +35,7 @@ private:
     std::unique_ptr<BaseNode> template_declaration();
     std::unique_ptr<ElementNode> element_declaration();
     void parse_attributes(ElementNode& element);
+    std::string parse_value_sequence();
     std::unique_ptr<TextNode> text_block_inside_element();
     std::unique_ptr<StyleNode> parse_style_block();
 };

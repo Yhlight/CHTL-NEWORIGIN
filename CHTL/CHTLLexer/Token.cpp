@@ -12,6 +12,7 @@ std::string token_type_to_string(TokenType type) {
         case TokenType::AT: return "AT";
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::STRING: return "STRING";
+        case TokenType::NUMBER: return "NUMBER";
         case TokenType::TEXT: return "TEXT";
         case TokenType::STYLE: return "STYLE";
         case TokenType::TEMPLATE: return "TEMPLATE";

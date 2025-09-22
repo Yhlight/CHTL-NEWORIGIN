@@ -11,6 +11,7 @@ enum class TokenType {
     // Literals
     IDENTIFIER,
     STRING,
+    NUMBER,
 
     // Keywords
     TEXT,
