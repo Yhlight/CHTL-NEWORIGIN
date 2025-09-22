@@ -3,7 +3,7 @@
 
 namespace CHTL {
 
-Parser::Parser(Lexer& lexer) : lexer(lexer) {
+Parser::Parser(Lexer& lexer, CHTLContext& context) : lexer(lexer), context(context) {
     // Prime the tokens by calling nextToken twice to initialize currentToken and peekToken
     nextToken();
     nextToken();
@@ -35,7 +35,13 @@ std::unique_ptr<ProgramNode> Parser::parseProgram() {
 }
 
 std::unique_ptr<BaseNode> Parser::parseStatement() {
-    if (currentToken.type == TokenType::IDENTIFIER) {
+    if (currentTokenIs(TokenType::LBRACKET)) {
+        // This could be a [Template] or other future bracketed expressions
+        if (peekTokenIs(TokenType::IDENTIFIER) && peekToken.literal == "Template") {
+            return parseTemplateStyleNode();
+        }
+    }
+    else if (currentTokenIs(TokenType::IDENTIFIER)) {
         if (currentToken.literal == "text") {
             return parseTextNode();
         } else if (currentToken.literal == "style") {
@@ -170,41 +176,98 @@ std::unique_ptr<StyleNode> Parser::parseStyleNode() {
 
     // Loop until we find the closing brace
     while (!currentTokenIs(TokenType::RBRACE) && !currentTokenIs(TokenType::END_OF_FILE)) {
-        // We expect a CSS property, which is an identifier
-        if (currentTokenIs(TokenType::IDENTIFIER)) {
+        if (currentTokenIs(TokenType::AT)) {
+            // Handle template usage: @Style TemplateName;
+            if (!expectPeek(TokenType::IDENTIFIER) || currentToken.literal != "Style") return nullptr;
+            if (!expectPeek(TokenType::IDENTIFIER)) return nullptr; // Template name
+
+            std::string templateName = currentToken.literal;
+            auto tmpl = context.getStyleTemplate(templateName);
+            if (tmpl) {
+                // Early expansion: copy properties from the template
+                styleNode->properties.insert(styleNode->properties.end(), tmpl->properties.begin(), tmpl->properties.end());
+            }
+            // TODO: Add error handling for unfound templates
+
+            if (!expectPeek(TokenType::SEMICOLON)) return nullptr;
+
+        } else if (currentTokenIs(TokenType::IDENTIFIER)) {
+            // Handle regular property definition
             StyleProperty prop;
             prop.token = currentToken;
             prop.key = currentToken.literal;
 
-            if (!expectPeek(TokenType::COLON)) {
-                return nullptr;
-            }
+            if (!expectPeek(TokenType::COLON)) return nullptr;
             nextToken(); // consume ':'
 
-            // Read all tokens until the semicolon as the value.
-            // This is a simple way to handle multi-token values like `100px`.
             std::string value_str;
-            // Loop while the *next* token is not the semicolon that terminates the property.
             while (!peekTokenIs(TokenType::SEMICOLON) && !peekTokenIs(TokenType::RBRACE) && !peekTokenIs(TokenType::END_OF_FILE)) {
                 value_str += currentToken.literal;
                 nextToken();
             }
-            // Add the final token of the value (the one before the semicolon)
             value_str += currentToken.literal;
             prop.value = value_str;
 
             styleNode->properties.push_back(prop);
 
-            // Properties must end with a semicolon
-            if (!expectPeek(TokenType::SEMICOLON)) {
-                return nullptr;
-            }
+            if (!expectPeek(TokenType::SEMICOLON)) return nullptr;
         }
 
-        nextToken(); // Advance to the next property or the closing brace
+        nextToken(); // Advance to the next property/usage or the closing brace
     }
 
     return styleNode;
+}
+
+std::unique_ptr<TemplateStyleNode> Parser::parseTemplateStyleNode() {
+    // Expect [ Template ] @ Style <Name> { ... }
+    if (!expectPeek(TokenType::IDENTIFIER) || currentToken.literal != "Template") return nullptr;
+    if (!expectPeek(TokenType::RBRACKET)) return nullptr;
+    if (!expectPeek(TokenType::AT)) return nullptr;
+    if (!expectPeek(TokenType::IDENTIFIER) || currentToken.literal != "Style") return nullptr;
+
+    if (!expectPeek(TokenType::IDENTIFIER)) return nullptr; // Template name
+
+    auto templateNode = std::make_shared<TemplateStyleNode>();
+    templateNode->token = currentToken;
+    templateNode->name = currentToken.literal;
+
+    if (!expectPeek(TokenType::LBRACE)) return nullptr;
+    nextToken(); // Consume '{'
+
+    // This is the same logic as parseStyleNode, could be refactored later
+    while (!currentTokenIs(TokenType::RBRACE) && !currentTokenIs(TokenType::END_OF_FILE)) {
+        if (currentTokenIs(TokenType::IDENTIFIER)) {
+            StyleProperty prop;
+            prop.token = currentToken;
+            prop.key = currentToken.literal;
+
+            if (!expectPeek(TokenType::COLON)) return nullptr;
+            nextToken(); // consume ':'
+
+            std::string value_str;
+            while (!peekTokenIs(TokenType::SEMICOLON) && !peekTokenIs(TokenType::RBRACE) && !peekTokenIs(TokenType::END_OF_FILE)) {
+                value_str += currentToken.literal;
+                nextToken();
+            }
+            value_str += currentToken.literal;
+            prop.value = value_str;
+
+            templateNode->properties.push_back(prop);
+
+            if (!expectPeek(TokenType::SEMICOLON)) return nullptr;
+        }
+        nextToken();
+    }
+
+    context.registerStyleTemplate(templateNode->name, templateNode);
+
+    // We use a make_unique here just to satisfy the return type, but the real
+    // ownership is shared via the context. This is a bit awkward.
+    // A better design might be for the parser to return nothing for definitions.
+    // For now, this works. We will clone the node for the return.
+    auto returnNode = std::make_unique<TemplateStyleNode>(*templateNode);
+    return returnNode;
 }
 
 } // namespace CHTL

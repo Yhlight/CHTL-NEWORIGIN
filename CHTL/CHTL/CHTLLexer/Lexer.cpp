@@ -41,7 +41,8 @@ bool Lexer::isWhitespace(char c) const {
 }
 
 bool Lexer::isLetter(char c) const {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
+    // Allow '-' in identifiers for css properties like 'line-height'
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_' || c == '-';
 }
 
 bool Lexer::isDigit(char c) const {
@@ -120,6 +121,7 @@ Token Lexer::nextToken() {
         case ';': token = {TokenType::SEMICOLON, ";", line, column}; break;
         case '=': token = {TokenType::EQUALS, "=", line, column}; break;
         case ',': token = {TokenType::COMMA, ",", line, column}; break;
+        case '@': token = {TokenType::AT, "@", line, column}; break;
         case '"': return readStringLiteral('"');
         case '\'': return readStringLiteral('\'');
         case '/':

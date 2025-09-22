@@ -12,6 +12,7 @@ class ProgramNode;
 class ElementNode;
 class TextNode;
 class StyleNode;
+class TemplateStyleNode;
 
 class Generator {
 public:
@@ -21,6 +22,7 @@ public:
     void visit(const ElementNode& node);
     void visit(const TextNode& node);
     void visit(const StyleNode& node);
+    void visit(const TemplateStyleNode& node);
 
 private:
     std::stringstream ss;

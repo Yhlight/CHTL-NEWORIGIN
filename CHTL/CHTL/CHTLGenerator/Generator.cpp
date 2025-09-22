@@ -72,4 +72,10 @@ void Generator::visit(const StyleNode& node) {
     // to generate an inline style attribute. It does not produce direct output itself.
 }
 
+void Generator::visit(const TemplateStyleNode& node) {
+    // A template definition produces no direct output in the final document.
+    // It is only used for lookups by the parser/context.
+    // This method is intentionally empty.
+}
+
 } // namespace CHTL

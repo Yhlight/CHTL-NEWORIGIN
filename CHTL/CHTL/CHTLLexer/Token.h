@@ -29,6 +29,7 @@ enum class TokenType {
     SEMICOLON,  // ;
     EQUALS,     // =
     COMMA,      // ,
+    AT,         // @
 
     // Comments
     LINE_COMMENT, // // a comment

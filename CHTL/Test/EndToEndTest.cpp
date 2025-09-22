@@ -1,6 +1,7 @@
 #include "../CHTL/CHTLLexer/Lexer.h"
 #include "../CHTL/CHTLParser/Parser.h"
 #include "../CHTL/CHTLGenerator/Generator.h"
+#include "../CHTL/CHTLContext/CHTLContext.h"
 #include <iostream>
 #include <string>
 #include <algorithm>
@@ -13,23 +14,29 @@ std::string remove_whitespace(std::string str) {
 
 int main() {
     std::string input = R"(
+        [Template] @Style DefaultText
+        {
+            color: black;
+            line-height: 1.6;
+        }
+
         div {
             id: "main";
 
             style {
-                width: 100px;
-                height: 200px;
-                color: red;
+                @Style DefaultText;
+                font-size: 16px;
             }
 
             p {
-                text { "Styled div" }
+                text { "Styled div with template" }
             }
         }
     )";
 
     CHTL::Lexer lexer(input);
-    CHTL::Parser parser(lexer);
+    CHTL::CHTLContext context;
+    CHTL::Parser parser(lexer, context);
 
     auto program = parser.parseProgram();
 
@@ -51,9 +58,9 @@ int main() {
     CHTL::Generator generator;
     std::string html_output = generator.generate(*program);
 
-    std::string expected_html = "<div id=\"main\" style=\"width:100px;height:200px;color:red;\"><p>Styled div</p></div>";
+    std::string expected_html = "<div id=\"main\" style=\"color:black;line-height:1.6;font-size:16px;\"><p>Styled div with template</p></div>";
 
-    std::cout << "--- End-to-End Test with Style Blocks ---" << std::endl;
+    std::cout << "--- End-to-End Test with Style Templates ---" << std::endl;
     std::cout << "Generated HTML: " << html_output << std::endl;
     std::cout << "Expected HTML:  " << expected_html << std::endl;
 

@@ -6,7 +6,9 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/StyleNode.h"
+#include "../CHTLNode/TemplateStyleNode.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLContext/CHTLContext.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -15,7 +17,7 @@ namespace CHTL {
 
 class Parser {
 public:
-    Parser(Lexer& lexer);
+    Parser(Lexer& lexer, CHTLContext& context);
 
     std::unique_ptr<ProgramNode> parseProgram();
     const std::vector<std::string>& getErrors() const { return errors; }
@@ -31,8 +33,10 @@ private:
     std::unique_ptr<ElementNode> parseElementNode();
     std::unique_ptr<TextNode> parseTextNode();
     std::unique_ptr<StyleNode> parseStyleNode();
+    std::unique_ptr<TemplateStyleNode> parseTemplateStyleNode();
 
     Lexer& lexer;
+    CHTLContext& context;
     Token currentToken;
     Token peekToken;
 
