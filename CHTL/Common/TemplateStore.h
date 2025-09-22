@@ -9,22 +9,30 @@
 
 namespace CHTL {
 
+struct BaseTemplateInfo {
+    std::string name;
+    std::vector<std::string> deleted_properties;
+};
+
 struct StyleTemplate {
     std::string name;
+    bool is_custom = false;
     std::vector<std::pair<std::string, std::string>> properties;
-    std::vector<std::string> base_templates;
+    std::vector<BaseTemplateInfo> base_templates;
 };
 
 struct ElementTemplate {
     std::string name;
+    bool is_custom = false;
     std::vector<std::unique_ptr<BaseNode>> nodes;
-    std::vector<std::string> base_templates;
+    std::vector<BaseTemplateInfo> base_templates;
 };
 
 struct VarTemplate {
     std::string name;
+    bool is_custom = false;
     std::map<std::string, std::string> variables;
-    std::vector<std::string> base_templates;
+    std::vector<BaseTemplateInfo> base_templates;
 };
 
 

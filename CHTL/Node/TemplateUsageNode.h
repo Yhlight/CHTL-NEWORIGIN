@@ -17,7 +17,9 @@ class TemplateUsageNode : public BaseNode {
 public:
     TemplateType template_type;
     std::string name;
-    std::vector<std::string> deleted_properties; // This was for Phase 6, but I'll add it back as it's simple
+
+    // For @Style specialization
+    std::vector<std::string> deleted_properties;
 
     TemplateUsageNode(TemplateType type, const std::string& n) : template_type(type), name(n) {}
 
@@ -34,7 +36,15 @@ public:
             case TemplateType::Element: type_str = "Element"; break;
             case TemplateType::Var: type_str = "Var"; break;
         }
-        ss << ind << "TemplateUsageNode(@" << type_str << " " << name << ")\n";
+        ss << ind << "TemplateUsageNode(@" << type_str << " " << name << ")";
+        if (!deleted_properties.empty()) {
+            ss << " { delete: ";
+            for (const auto& prop : deleted_properties) {
+                ss << prop << " ";
+            }
+            ss << "}";
+        }
+        ss << "\n";
         return ss.str();
     }
 };

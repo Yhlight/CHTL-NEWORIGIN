@@ -11,6 +11,8 @@ enum class NodeType {
     Text,
     Style,
     TemplateUsage,
+    Origin,
+    If,
     // ... other node types to be added later
 };
 
