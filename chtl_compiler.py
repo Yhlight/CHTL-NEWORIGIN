@@ -836,18 +836,34 @@ class CHTLParser:
     def parse_use_statement(self) -> UseNode:
         """解析use语句"""
         use_token = self.expect(TokenType.USE)
-        directive = self.expect(TokenType.IDENTIFIER).value
+        # 指令名可为普通标识符，或某些被词法器识别为关键字的标记（如 custom 等）
+        tok = self.current_token()
+        if tok.type in (TokenType.IDENTIFIER, TokenType.CUSTOM):
+            directive = tok.value
+            self.advance()
+        else:
+            raise SyntaxError(f"Expected IDENTIFIER or CUSTOM, got {tok.type.name} at line {tok.line}, column {tok.column}")
         
         # 解析可选的参数
         args = []
         if self.match(TokenType.LPAREN):
-            while not self.match(TokenType.RPAREN):
-                if self.current_token.type == TokenType.STRING:
-                    args.append(self.current_token.value.strip('"'))
-                elif self.current_token.type == TokenType.IDENTIFIER:
-                    args.append(self.current_token.value)
-                self.advance()
-                if self.current_token.type == TokenType.COMMA:
+            # 循环直到遇到右括号
+            while True:
+                current = self.current_token()
+                if current.type == TokenType.RPAREN:
+                    self.advance()
+                    break
+                if current.type == TokenType.STRING:
+                    args.append(current.value.strip('"'))
+                    self.advance()
+                elif current.type == TokenType.IDENTIFIER:
+                    args.append(current.value)
+                    self.advance()
+                else:
+                    # 跳过无法识别的参数标记，防止死循环
+                    self.advance()
+                # 可选逗号分隔
+                if self.current_token().type == TokenType.COMMA:
                     self.advance()
         
         self.expect(TokenType.SEMICOLON)
