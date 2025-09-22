@@ -47,17 +47,42 @@ html {
 }
 )";
 
-    std::string expectedSimpleHtml = R"(<!-- This is a comment. -->
-<html>
+    std::string expectedSimpleHtml = R"(<html>
   <body>
     <div>Hello CHTL!</div>
     <br>
-    <!-- A void element -->
   </body>
 </html>
 )";
 
     runTest("Simple CHTL Document", simpleChtl, expectedSimpleHtml);
+
+    std::string generatorCommentChtl = R"(
+# This is a generator comment.
+p { text { "Hi" } }
+)";
+    std::string expectedGeneratorCommentHtml = R"(<!-- This is a generator comment. -->
+<p>Hi</p>
+)";
+    runTest("Generator Comment Test", generatorCommentChtl, expectedGeneratorCommentHtml);
+
+    std::string attributeChtl = R"(
+div {
+    id: "main-div";
+    class = "container";
+
+    p {
+        text { "A paragraph." }
+    }
+}
+)";
+
+    std::string expectedAttributeHtml = R"(<div class="container" id="main-div">
+  <p>A paragraph.</p>
+</div>
+)";
+
+    runTest("Attribute Test", attributeChtl, expectedAttributeHtml);
 
     std::cout << "\nAll tests passed!" << std::endl;
 

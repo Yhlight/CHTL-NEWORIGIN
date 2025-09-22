@@ -20,10 +20,12 @@ private:
     std::unique_ptr<BaseNode> parseDeclaration();
     std::unique_ptr<ElementNode> parseElement();
     std::unique_ptr<TextNode> parseTextNode();
+    void parseAttribute(ElementNode* parent);
     void parseBlock(ElementNode* parent);
 
     bool isAtEnd();
     Token peek();
+    Token peekNext();
     Token previous();
     Token advance();
     bool check(TokenType type);

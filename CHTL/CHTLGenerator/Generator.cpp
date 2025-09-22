@@ -36,7 +36,12 @@ void Generator::visit(ElementNode& node) {
 
     indent();
     output << "<" << node.tagName;
-    // Attribute handling will go here in a future step
+
+    // Print attributes
+    for (const auto& attr : node.attributes) {
+        output << " " << attr.first << "=\"" << attr.second << "\"";
+    }
+
     output << ">";
 
     if (isVoidElement(node.tagName)) {
@@ -74,17 +79,9 @@ void Generator::visit(TextNode& node) {
 }
 
 void Generator::visit(CommentNode& node) {
-    // For now, treat generator comments like regular HTML comments
     indent();
-    // The lexer captures the comment markers, so we need to strip them.
-    std::string content = node.content;
-    if (content.rfind("//", 0) == 0) {
-        content = content.substr(2);
-    } else if (content.rfind("#", 0) == 0) {
-        content = content.substr(1);
-    } else if (content.rfind("/*", 0) == 0) {
-        content = content.substr(2, content.length() - 4);
-    }
+    // The lexer captures the #, so we strip it.
+    std::string content = node.content.substr(1);
     output << "<!--" << content << " -->\n";
 }
 

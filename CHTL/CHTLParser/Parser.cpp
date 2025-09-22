@@ -28,11 +28,9 @@ std::unique_ptr<BaseNode> Parser::parseDeclaration() {
         return parseElement();
     }
 
-    // Skip comments for now in the AST, but a real implementation would add them.
-    if (match({TokenType::TOKEN_COMMENT, TokenType::TOKEN_GENERATOR_COMMENT})) {
-        // Return a dummy node or handle appropriately
-        // For now, let's just create a comment node that the generator can ignore or print
-        return std::make_unique<CommentNode>(previous().lexeme, previous().type == TokenType::TOKEN_GENERATOR_COMMENT);
+    // Only generator comments (#) are part of the AST.
+    if (match({TokenType::TOKEN_GENERATOR_COMMENT})) {
+        return std::make_unique<CommentNode>(previous().lexeme, true);
     }
 
     throw std::runtime_error("Expect a declaration (element, text, etc.). Found token: " + peek().lexeme);
@@ -64,14 +62,57 @@ std::unique_ptr<TextNode> Parser::parseTextNode() {
     return std::make_unique<TextNode>(textValue);
 }
 
+void Parser::parseAttribute(ElementNode* parent) {
+    Token key = advance(); // Consume the identifier
+
+    if (!match({TokenType::TOKEN_COLON, TokenType::TOKEN_EQUALS})) {
+        throw std::runtime_error("Expect ':' or '=' after attribute name.");
+    }
+
+    Token valueToken = advance();
+    if (valueToken.type != TokenType::TOKEN_STRING &&
+        valueToken.type != TokenType::TOKEN_IDENTIFIER &&
+        valueToken.type != TokenType::TOKEN_NUMBER) {
+        throw std::runtime_error("Expect attribute value (string, identifier, or number).");
+    }
+
+    std::string value = valueToken.lexeme;
+    if (valueToken.type == TokenType::TOKEN_STRING) {
+        // Strip quotes from the value
+        value = value.substr(1, value.length() - 2);
+    }
+
+    consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after attribute value.");
+
+    parent->setAttribute(key.lexeme, value);
+}
+
 void Parser::parseBlock(ElementNode* parent) {
     while (!check(TokenType::TOKEN_RBRACE) && !isAtEnd()) {
-        parent->addChild(parseDeclaration());
+        if (check(TokenType::TOKEN_IDENTIFIER)) {
+            // Lookahead to decide if this is an attribute or a nested element.
+            if (peekNext().type == TokenType::TOKEN_COLON || peekNext().type == TokenType::TOKEN_EQUALS) {
+                parseAttribute(parent);
+            } else {
+                parent->addChild(parseDeclaration());
+            }
+        } else {
+            // This handles comments and throws errors for other unexpected tokens.
+            parent->addChild(parseDeclaration());
+        }
     }
     consume(TokenType::TOKEN_RBRACE, "Expect '}' after block.");
 }
 
 // --- Helper Methods ---
+
+Token Parser::peekNext() {
+    if (current + 1 >= tokens.size()) {
+        // Return the EOF token if we're at the end
+        return tokens.back();
+    }
+    return tokens[current + 1];
+}
 
 bool Parser::isAtEnd() {
     return peek().type == TokenType::TOKEN_EOF;

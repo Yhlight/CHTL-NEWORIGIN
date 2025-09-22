@@ -46,13 +46,11 @@ void Lexer::scanToken() {
 
         case '/':
             if (match('/')) {
-                // A single-line comment goes until the end of the line.
+                // A single-line comment goes until the end of the line. It's ignored.
                 while (peek() != '\n' && !isAtEnd()) advance();
-                addToken(TokenType::TOKEN_COMMENT, source.substr(start, current - start));
             } else if (match('*')) {
+                // A block comment goes until the closing */. It's ignored.
                 blockComment();
-                // The block comment itself doesn't add the token, the scanner does.
-                addToken(TokenType::TOKEN_COMMENT, source.substr(start, current - start));
             }
             else {
                 addToken(TokenType::TOKEN_SLASH);
