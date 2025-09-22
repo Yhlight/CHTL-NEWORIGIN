@@ -9,6 +9,7 @@ enum class TokenType {
     LBRACKET, RBRACKET, AT,
     PLUS, MINUS, STAR, SLASH,
     DOT, AMPERSAND,
+    LPAREN, RPAREN,
 
     // Literals
     IDENTIFIER,

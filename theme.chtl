@@ -1,4 +1,8 @@
-[Template] @Style ThemeColors {
-    background-color: cornflowerblue;
-    color: white;
+[Template] @Style BaseStyles {
+    font-weight: bold;
+}
+
+[Template] @Var ThemeColors {
+    primary: cornflowerblue;
+    primary-text: white;
 }

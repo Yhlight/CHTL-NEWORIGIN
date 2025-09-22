@@ -100,7 +100,8 @@ public:
 
     using StyleBody = std::vector<CssProperty>;
     using ElementBody = std::vector<std::unique_ptr<BaseNode>>;
-    std::variant<StyleBody, ElementBody> body;
+    using VarBody = std::vector<std::pair<std::string, std::string>>;
+    std::variant<StyleBody, ElementBody, VarBody> body;
 
     NodeType getType() const override { return NodeType::TEMPLATE_DEFINITION; }
 };

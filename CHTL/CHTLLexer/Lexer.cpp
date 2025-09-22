@@ -41,6 +41,8 @@ Token Lexer::scan_token() {
         case '/': return make_token(TokenType::SLASH);
         case '.': return make_token(TokenType::DOT);
         case '&': return make_token(TokenType::AMPERSAND);
+        case '(': return make_token(TokenType::LPAREN);
+        case ')': return make_token(TokenType::RPAREN);
         case '#': return make_token(TokenType::HASH);
     }
 

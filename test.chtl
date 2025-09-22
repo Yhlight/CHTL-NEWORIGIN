@@ -11,10 +11,12 @@
 html {
     body {
         style {
-            @Style ThemeColors; // From theme.chtl
+            @Style BaseStyles;
+            background-color: ThemeColors(primary);
+            color: ThemeColors(primary-text);
         }
 
-        h1 { text { "Combined Test" } }
+        h1 { text { "Variable Templates are cool!" } }
 
         @Element MyBox;
     }
