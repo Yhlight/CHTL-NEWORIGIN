@@ -42,6 +42,15 @@ void Generator::visit(ElementNode& node) {
         output << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
+    // Print inline styles
+    if (!node.inlineStyles.empty()) {
+        output << " style=\"";
+        for (const auto& style : node.inlineStyles) {
+            output << style.first << ": " << style.second << ";";
+        }
+        output << "\"";
+    }
+
     output << ">";
 
     if (isVoidElement(node.tagName)) {

@@ -87,11 +87,41 @@ void Parser::parseAttribute(ElementNode* parent) {
     parent->setAttribute(key.lexeme, value);
 }
 
+void Parser::parseStyleBlock(ElementNode* parent) {
+    consume(TokenType::TOKEN_LBRACE, "Expect '{' after 'style' keyword.");
+    while (!check(TokenType::TOKEN_RBRACE) && !isAtEnd()) {
+        Token key = consume(TokenType::TOKEN_IDENTIFIER, "Expect style property name.");
+
+        if (!match({TokenType::TOKEN_COLON, TokenType::TOKEN_EQUALS})) {
+            throw std::runtime_error("Expect ':' or '=' after style property name.");
+        }
+
+        Token valueToken = advance();
+        if (valueToken.type != TokenType::TOKEN_STRING &&
+            valueToken.type != TokenType::TOKEN_IDENTIFIER &&
+            valueToken.type != TokenType::TOKEN_NUMBER) {
+            throw std::runtime_error("Expect style value (string, identifier, or number).");
+        }
+
+        std::string value = valueToken.lexeme;
+        if (valueToken.type == TokenType::TOKEN_STRING) {
+            value = value.substr(1, value.length() - 2);
+        }
+
+        consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after style property value.");
+
+        parent->addStyle(key.lexeme, value);
+    }
+    consume(TokenType::TOKEN_RBRACE, "Expect '}' after style block.");
+}
+
 void Parser::parseBlock(ElementNode* parent) {
     while (!check(TokenType::TOKEN_RBRACE) && !isAtEnd()) {
         if (check(TokenType::TOKEN_IDENTIFIER)) {
-            // Lookahead to decide if this is an attribute or a nested element.
-            if (peekNext().type == TokenType::TOKEN_COLON || peekNext().type == TokenType::TOKEN_EQUALS) {
+            if (peek().lexeme == "style") {
+                advance(); // consume 'style'
+                parseStyleBlock(parent);
+            } else if (peekNext().type == TokenType::TOKEN_COLON || peekNext().type == TokenType::TOKEN_EQUALS) {
                 parseAttribute(parent);
             } else {
                 parent->addChild(parseDeclaration());

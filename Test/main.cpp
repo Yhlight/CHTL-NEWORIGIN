@@ -84,6 +84,21 @@ div {
 
     runTest("Attribute Test", attributeChtl, expectedAttributeHtml);
 
+    std::string styleBlockChtl = R"(
+div {
+    id: "styled-div";
+    style {
+        color: "red";
+        font-size = 16px;
+    }
+
+    text { "This text should be red." }
+}
+)";
+    std::string expectedStyleBlockHtml = R"(<div id="styled-div" style="color: red;font-size: 16px;">This text should be red.</div>
+)";
+    runTest("Style Block Test", styleBlockChtl, expectedStyleBlockHtml);
+
     std::cout << "\nAll tests passed!" << std::endl;
 
     return 0;
