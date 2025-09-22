@@ -1,0 +1,27 @@
+
+    use html5;
+    
+    [Template] @Style ButtonStyle {
+        background-color: blue;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+    }
+    
+    [Template] @Element Button {
+        button {
+            class: btn;
+            style {
+                @Style ButtonStyle;
+            }
+            text: "Click Me";
+        }
+    }
+    
+    html {
+        body {
+            @Element Button;
+        }
+    }
+    

@@ -1,0 +1,32 @@
+
+    use html5;
+    
+    [Template] @Style BoxStyle {
+        color: white;
+        background-color: rgb(255, 192, 203);
+        padding: 20px;
+        border-radius: 8px;
+    }
+    
+    html {
+        head {
+            title {
+                text: "CHTL编译器测试";
+            }
+        }
+        body {
+            div {
+                class: box;
+                style {
+                    @Style BoxStyle;
+                }
+                s
+                    {{box}}->Listen {
+                        click: () => {
+                            console.log('Box clicked!');
+                        }
+                    }       }
+            }
+        }
+    }
+    
