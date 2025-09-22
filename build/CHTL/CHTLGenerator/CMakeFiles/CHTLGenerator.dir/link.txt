@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCHTLGenerator.a CMakeFiles/CHTLGenerator.dir/Generator.cpp.o
+/usr/bin/ranlib libCHTLGenerator.a

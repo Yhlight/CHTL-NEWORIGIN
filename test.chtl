@@ -1,0 +1,39 @@
+// CHTL comprehensive test file
+
+[Configuration] {
+    DEBUG_MODE = true;
+}
+
+[Template] @Style BrandColors {
+    color: white;
+    background-color: #007bff;
+    border-radius: 5px;
+}
+
+[Template] @Element Card {
+    h2 { text { "Card Title" } }
+    p { text { "This is the content of the card element, generated from a template." } }
+}
+
+html {
+    head {
+        title { text { "CHTL Test Page" } }
+    }
+    body {
+        div {
+            id: "main-container";
+            class: container;
+
+            style {
+                @Style BrandColors;
+                padding: 20px;
+                margin-top: 15px;
+            }
+
+            h1 { text { "Welcome to CHTL" } }
+
+            // Use the element template
+            @Element Card;
+        }
+    }
+}

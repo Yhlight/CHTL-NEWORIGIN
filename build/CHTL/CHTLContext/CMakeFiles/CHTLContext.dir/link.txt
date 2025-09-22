@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCHTLContext.a CMakeFiles/CHTLContext.dir/Context.cpp.o
+/usr/bin/ranlib libCHTLContext.a
