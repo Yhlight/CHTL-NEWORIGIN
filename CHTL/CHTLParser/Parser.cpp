@@ -15,8 +15,15 @@ std::unique_ptr<RootNode> Parser::parse() {
 }
 
 NodePtr Parser::parseStatement() {
-    if (currentToken().type == TokenType::Template) {
+    if (currentToken().type == TokenType::Template || currentToken().type == TokenType::Custom) {
         return parseTemplateDefinition();
+    }
+    if (currentToken().type == TokenType::AtElement) {
+        advance();
+        Token name = currentToken();
+        expect(TokenType::Identifier, "Expected template name after @Element.");
+        expect(TokenType::Semicolon, "Expected ';' after element template usage.");
+        return std::make_unique<ElementTemplateUsageNode>(name.value);
     }
     if (currentToken().type == TokenType::Identifier && peekToken().type == TokenType::OpenBrace) {
         return parseElement();
@@ -36,7 +43,15 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     expect(TokenType::OpenBrace, "Expected '{' after element name.");
 
     while (currentToken().type != TokenType::CloseBrace && currentToken().type != TokenType::EndOfFile) {
-        if (currentToken().type == TokenType::Identifier && (peekToken().type == TokenType::Colon || peekToken().type == TokenType::Equals)) {
+        if (currentToken().type == TokenType::Text && peekToken().type == TokenType::Colon) {
+             advance();
+             advance();
+             Token value = currentToken();
+             expect(TokenType::String, "Expected string after 'text:'.");
+             element->addChild(std::make_unique<TextNode>(value.value));
+             if(currentToken().type == TokenType::Semicolon) advance();
+        }
+        else if (currentToken().type == TokenType::Identifier && (peekToken().type == TokenType::Colon || peekToken().type == TokenType::Equals)) {
             Token key = currentToken();
             advance();
             advance();
@@ -68,45 +83,92 @@ std::unique_ptr<ElementNode> Parser::parseElement() {
     return element;
 }
 
+std::unique_ptr<StylePropertyNode> Parser::parseStyleProperty() {
+    std::string property_str;
+    while (currentToken().type != TokenType::Colon && currentToken().type != TokenType::Semicolon && currentToken().type != TokenType::Comma && currentToken().type != TokenType::CloseBrace) {
+        property_str += currentToken().value;
+        advance();
+    }
+
+    if (currentToken().type == TokenType::Semicolon || currentToken().type == TokenType::Comma) {
+        advance();
+        return std::make_unique<StylePropertyNode>(property_str);
+    }
+
+    expect(TokenType::Colon, "Expected ':' after style property name.");
+
+    std::string value_str;
+    while (currentToken().type != TokenType::Semicolon && currentToken().type != TokenType::CloseBrace) {
+        value_str += currentToken().value;
+        advance();
+    }
+
+    if (currentToken().type == TokenType::Semicolon) advance();
+
+    return std::make_unique<StylePropertyNode>(property_str, value_str);
+}
+
+std::unique_ptr<DeletePropertyNode> Parser::parseDeleteStatement() {
+    expect(TokenType::Delete, "Expected 'delete' keyword.");
+    std::vector<std::string> props;
+    while(currentToken().type != TokenType::Semicolon && currentToken().type != TokenType::EndOfFile) {
+        std::string propName;
+        while(currentToken().type != TokenType::Comma && currentToken().type != TokenType::Semicolon && currentToken().type != TokenType::EndOfFile) {
+            propName += currentToken().value;
+            advance();
+        }
+        props.push_back(propName);
+
+        if (currentToken().type == TokenType::Comma) {
+            advance();
+        }
+    }
+    expect(TokenType::Semicolon, "Expected ';' after delete statement.");
+    return std::make_unique<DeletePropertyNode>(std::move(props));
+}
+
 void Parser::parseStyleBlock(ElementNode* element) {
     expect(TokenType::Style, "Expected 'style' keyword.");
     expect(TokenType::OpenBrace, "Expected '{' after 'style'.");
 
     while (currentToken().type != TokenType::CloseBrace && currentToken().type != TokenType::EndOfFile) {
         if (currentToken().type == TokenType::AtStyle) {
-            advance(); // Consume @Style
+            advance();
             Token name = currentToken();
             expect(TokenType::Identifier, "Expected template name after @Style.");
-            element->addStyleStatement(std::make_unique<TemplateUsageNode>(TemplateType::Style, name.value));
-            expect(TokenType::Semicolon, "Expected ';' after style template usage.");
+
+            StyleStatementList body;
+            if (currentToken().type == TokenType::OpenBrace) {
+                advance();
+                while(currentToken().type != TokenType::CloseBrace && currentToken().type != TokenType::EndOfFile) {
+                    if (currentToken().type == TokenType::Delete) {
+                        body.push_back(parseDeleteStatement());
+                    } else {
+                        body.push_back(parseStyleProperty());
+                    }
+                }
+                expect(TokenType::CloseBrace, "Expected '}' to close specialization block.");
+            } else {
+                expect(TokenType::Semicolon, "Expected ';' after style template usage.");
+            }
+            element->addStyleStatement(std::make_unique<StyleTemplateUsageNode>(TemplateType::Style, name.value, std::move(body)));
         } else {
-            std::string property_str;
-            while (currentToken().type != TokenType::Colon && currentToken().type != TokenType::EndOfFile) {
-                property_str += currentToken().value;
-                advance();
-            }
-            expect(TokenType::Colon, "Expected ':' after style property name.");
-            std::string value_str;
-            while (currentToken().type != TokenType::Semicolon && currentToken().type != TokenType::CloseBrace) {
-                value_str += currentToken().value;
-                advance();
-            }
-            element->addStyleStatement(std::make_unique<StylePropertyNode>(property_str, value_str));
-            if (currentToken().type == TokenType::Semicolon) advance();
+            element->addStyleStatement(parseStyleProperty());
         }
     }
     expect(TokenType::CloseBrace, "Expected '}' to close style block.");
 }
 
 NodePtr Parser::parseTemplateDefinition() {
-    expect(TokenType::Template, "Expected [Template].");
+    bool isCustom = currentToken().type == TokenType::Custom;
+    advance();
 
     TemplateType type;
     if (match(TokenType::AtStyle)) type = TemplateType::Style;
     else if (match(TokenType::AtElement)) type = TemplateType::Element;
     else if (match(TokenType::AtVar)) type = TemplateType::Var;
     else {
-        std::cerr << "Parser Error: Expected @Style, @Element, or @Var after [Template]." << std::endl;
+        std::cerr << "Parser Error: Expected @Style, @Element, or @Var." << std::endl;
         return nullptr;
     }
 
@@ -129,9 +191,8 @@ NodePtr Parser::parseTemplateDefinition() {
     expect(TokenType::CloseBrace, "Expected '}' to close template body.");
 
     auto body = std::make_unique<RawBodyNode>(std::move(bodyTokens));
-    return std::make_unique<TemplateDefinitionNode>(type, name.value, std::move(body));
+    return std::make_unique<TemplateDefinitionNode>(type, name.value, std::move(body), isCustom);
 }
-
 
 NodePtr Parser::parseText() {
     expect(TokenType::Text, "Expected 'text' keyword.");
@@ -173,4 +234,13 @@ void Parser::expect(TokenType type, const std::string& errorMessage) {
                   << " instead. (Line: " << currentToken().line << ", Col: " << currentToken().column << ")" << std::endl;
         exit(1);
     }
+}
+
+StyleStatementList Parser::parseStyleSnippet(const std::vector<Token>& tokens) {
+    Parser snippetParser(tokens);
+    StyleStatementList properties;
+    while(snippetParser.currentToken().type != TokenType::EndOfFile) {
+        properties.push_back(snippetParser.parseStyleProperty());
+    }
+    return properties;
 }

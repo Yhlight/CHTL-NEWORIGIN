@@ -17,7 +17,11 @@ private:
     // We will use raw pointers here because the transformer does not own the nodes.
     // The AST itself (via unique_ptr in the RootNode) owns them.
     std::map<std::string, TemplateDefinitionNode*> styleTemplates;
+    std::map<std::string, TemplateDefinitionNode*> elementTemplates;
+    std::map<std::string, std::map<std::string, std::string>> varTemplates;
 
     void collectTemplates(Node* node);
     void expandTemplates(Node* node);
+    void expandTemplatesForChildren(Node* containerNode);
+    void expandStyleTemplates(ElementNode* elementNode);
 };

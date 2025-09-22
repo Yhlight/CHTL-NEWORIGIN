@@ -17,6 +17,8 @@ public:
     const AttributeList& getAttributes() const { return attributes; }
     const StyleStatementList& getStyleStatements() const { return styleStatements; }
     const NodeList& getChildren() const { return children; }
+    NodeList takeChildren() { return std::move(children); }
+    void setChildren(NodeList newChildren) { children = std::move(newChildren); }
 
     void addAttribute(std::unique_ptr<AttributeNode> attr) {
         attributes.push_back(std::move(attr));

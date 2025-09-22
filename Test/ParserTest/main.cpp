@@ -9,18 +9,18 @@
 
 int main() {
     std::string source = R"(
-[Template] @Style DefaultBox
+[Template] @Var Theme
 {
-    width: 100px;
-    height: 100px;
+    primaryColor: "blue";
+    primaryFont: "Arial";
 }
 
-div {
-    id: "my-box";
+p {
     style {
-        @Style DefaultBox;
-        background-color: blue;
+        color: Theme(primaryColor);
+        font-family: Theme(primaryFont);
     }
+    text: "Variable test";
 }
 )";
 
@@ -49,8 +49,9 @@ div {
     std::cout << "----------------------" << std::endl;
 
     // 5. Final Verification
-    std::string expectedHtml = R"(<div id="my-box" style="width:100px;height:100px;background-color:blue;">
-</div>
+    std::string expectedHtml = R"(<p style="color:blue;font-family:Arial;">
+  Variable test
+</p>
 )";
 
     auto normalize = [](const std::string& s) {
@@ -61,7 +62,7 @@ div {
 
     assert(normalize(html) == normalize(expectedHtml));
 
-    std::cout << "Template expansion test passed!" << std::endl;
+    std::cout << "Variable template test passed!" << std::endl;
 
     return 0;
 }

@@ -3,10 +3,10 @@
 #include "StyleStatementNode.h"
 #include "TemplateDefinitionNode.h" // For TemplateType enum
 
-class TemplateUsageNode : public StyleStatementNode {
+class StyleTemplateUsageNode : public StyleStatementNode {
 public:
-    TemplateUsageNode(TemplateType type, const std::string& name)
-        : templateType(type), name(name) {}
+    StyleTemplateUsageNode(TemplateType type, const std::string& name, StyleStatementList body = {})
+        : templateType(type), name(name), body(std::move(body)) {}
 
     void accept(Visitor& visitor) override {
         // The generator will not visit this directly.
@@ -15,8 +15,10 @@ public:
 
     TemplateType getTemplateType() const { return templateType; }
     std::string getName() const { return name; }
+    const StyleStatementList& getBody() const { return body; }
 
 private:
     TemplateType templateType;
     std::string name;
+    StyleStatementList body;
 };

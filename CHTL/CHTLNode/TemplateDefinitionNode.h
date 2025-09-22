@@ -11,8 +11,8 @@ enum class TemplateType {
 
 class TemplateDefinitionNode : public Node {
 public:
-    TemplateDefinitionNode(TemplateType type, const std::string& name, std::unique_ptr<RawBodyNode> body)
-        : templateType(type), name(name), body(std::move(body)) {}
+    TemplateDefinitionNode(TemplateType type, const std::string& name, std::unique_ptr<RawBodyNode> body, bool isCustom = false)
+        : templateType(type), name(name), body(std::move(body)), isCustom(isCustom) {}
 
     void accept(Visitor& visitor) override {
         // The generator will not visit this directly.
@@ -22,9 +22,11 @@ public:
     TemplateType getTemplateType() const { return templateType; }
     std::string getName() const { return name; }
     const RawBodyNode* getBody() const { return body.get(); }
+    bool getIsCustom() const { return isCustom; }
 
 private:
     TemplateType templateType;
     std::string name;
     std::unique_ptr<RawBodyNode> body;
+    bool isCustom;
 };

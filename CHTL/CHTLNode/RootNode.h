@@ -13,6 +13,8 @@ public:
     }
 
     const NodeList& getChildren() const { return children; }
+    NodeList takeChildren() { return std::move(children); }
+    void setChildren(NodeList newChildren) { children = std::move(newChildren); }
 
 private:
     NodeList children;
