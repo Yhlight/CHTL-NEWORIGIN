@@ -22,7 +22,8 @@ struct TemplateDefinitionNode : public BaseNode {
     // Content for Element templates
     std::vector<std::shared_ptr<BaseNode>> children;
 
-    // We can add content for Var templates later
+    // Content for Var templates
+    std::map<std::string, std::string> variables;
 
     TemplateDefinitionNode(const std::string& name, TemplateType type)
         : name(name), templateType(type) {}

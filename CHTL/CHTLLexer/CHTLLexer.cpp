@@ -80,6 +80,7 @@ Token CHTLLexer::identifier() {
         {"script", TokenType::KEYWORD_SCRIPT},
         {"Template", TokenType::KEYWORD_TEMPLATE},
         {"Element", TokenType::KEYWORD_ELEMENT},
+        {"Var", TokenType::KEYWORD_VAR},
         {"Import", TokenType::KEYWORD_IMPORT},
         {"Custom", TokenType::KEYWORD_CUSTOM},
         {"Origin", TokenType::KEYWORD_ORIGIN},
