@@ -10,6 +10,10 @@ std::string token_type_to_string(TokenType type) {
         case TokenType::LBRACKET: return "LBRACKET";
         case TokenType::RBRACKET: return "RBRACKET";
         case TokenType::AT: return "AT";
+        case TokenType::PLUS: return "PLUS";
+        case TokenType::MINUS: return "MINUS";
+        case TokenType::STAR: return "STAR";
+        case TokenType::SLASH: return "SLASH";
         case TokenType::IDENTIFIER: return "IDENTIFIER";
         case TokenType::STRING: return "STRING";
         case TokenType::NUMBER: return "NUMBER";

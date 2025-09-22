@@ -4,8 +4,12 @@
 #include <stdexcept>
 #include <iostream>
 #include <vector>
+#include <sstream>
 
 Parser::Parser(const std::vector<Token>& tokens, ParsingContext& context) : tokens(tokens), context(context) {}
+
+// Forward declaration of a helper for the helper
+bool is_simple_arithmetic(const std::vector<Token>& tokens);
 
 std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
     std::vector<std::unique_ptr<BaseNode>> statements;
@@ -28,7 +32,6 @@ std::unique_ptr<BaseNode> Parser::declaration() {
         while(peek().type == TokenType::LBRACKET && peek_next().type == TokenType::IMPORT) {
             import_declaration();
         }
-
         if (peek().type == TokenType::LBRACKET && (peek_next().type == TokenType::TEMPLATE || peek_next().type == TokenType::CUSTOM)) {
             return template_declaration();
         }
@@ -131,30 +134,93 @@ void Parser::parse_attributes(ElementNode& element) {
     } while (peek().type == TokenType::IDENTIFIER && peek_next().type == TokenType::COLON);
 }
 
+// New robust implementation
 std::string Parser::parse_value_sequence() {
-    std::string value_str;
+    // Handle quoted strings separately as they don't mix with unquoted literals
     if (peek().type == TokenType::STRING) {
-        value_str = advance().value;
+        std::string value = advance().value;
+        consume(TokenType::SEMICOLON, "Expect ';' after string value.");
+        return value;
+    }
+
+    // Gather all tokens until the semicolon
+    std::vector<Token> value_tokens;
+    while (peek().type != TokenType::SEMICOLON && !is_at_end()) {
+        value_tokens.push_back(advance());
+    }
+
+    std::string result_string;
+
+    // Process the collected tokens
+    if (is_simple_arithmetic(value_tokens)) {
+        // Evaluation logic
+        Term lhs = {std::stod(value_tokens[0].value), ""};
+        if (value_tokens.size() > 1 && value_tokens[1].type == TokenType::IDENTIFIER) {
+            lhs.unit = value_tokens[1].value;
+        }
+
+        for (size_t i = lhs.unit.empty() ? 1 : 2; i < value_tokens.size();) {
+            Token op = value_tokens[i++];
+
+            if (i >= value_tokens.size() || value_tokens[i].type != TokenType::NUMBER) {
+                throw std::runtime_error("Expected number after operator in expression.");
+            }
+            Term rhs = {std::stod(value_tokens[i++].value), ""};
+            if (i < value_tokens.size() && value_tokens[i].type == TokenType::IDENTIFIER) {
+                rhs.unit = value_tokens[i++].value;
+            }
+
+            if (lhs.unit != rhs.unit) {
+                throw std::runtime_error("Mismatched units in arithmetic expression ('" + lhs.unit + "' and '" + rhs.unit + "').");
+            }
+
+            if (op.type == TokenType::PLUS) lhs.value += rhs.value;
+            else if (op.type == TokenType::MINUS) lhs.value -= rhs.value;
+        }
+        std::stringstream ss;
+        ss << lhs.value << lhs.unit;
+        result_string = ss.str();
+
     } else {
-        while (!check(TokenType::SEMICOLON) && !check(TokenType::RBRACE) && !is_at_end()) {
-            value_str += advance().value;
-            if (!check(TokenType::SEMICOLON)) {
-                 value_str += " "; // Add space between tokens
+        // Join with spaces for generic literals
+        for (size_t i = 0; i < value_tokens.size(); ++i) {
+            result_string += value_tokens[i].value;
+            if (i < value_tokens.size() - 1) {
+                result_string += " ";
             }
         }
-        // Trim trailing space
-        if (!value_str.empty() && value_str.back() == ' ') {
-            value_str.pop_back();
+    }
+
+    consume(TokenType::SEMICOLON, "Expect ';' after value.");
+    return result_string;
+}
+
+bool is_simple_arithmetic(const std::vector<Token>& tokens) {
+    if (tokens.empty() || tokens[0].type != TokenType::NUMBER) {
+        return false;
+    }
+    // A simple check: if any token is a PLUS or MINUS, we'll try to evaluate it.
+    for (const auto& token : tokens) {
+        if (token.type == TokenType::PLUS || token.type == TokenType::MINUS) {
+            return true;
         }
     }
-    consume(TokenType::SEMICOLON, "Expect ';' after value.");
-    return value_str;
+    return false;
+}
+
+
+Term Parser::parse_term() {
+    Token number = consume(TokenType::NUMBER, "Expect a number for a term in an expression.");
+    std::string unit;
+    if (peek().type == TokenType::IDENTIFIER) {
+        unit = advance().value;
+    }
+    return {std::stod(number.value), unit};
 }
 
 std::unique_ptr<TextNode> Parser::text_block_inside_element() {
     consume(TokenType::TEXT, "Expect 'text' keyword.");
     consume(TokenType::LBRACE, "Expect '{' after 'text' keyword.");
-    // For now, text blocks still require a single string
     Token content = consume(TokenType::STRING, "Expect string literal inside text block.");
     consume(TokenType::RBRACE, "Expect '}' after text content.");
     auto textNode = std::make_unique<TextNode>();

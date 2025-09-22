@@ -9,8 +9,10 @@ html {
                 @Style ThemeColors;
                 font-weight: bold;
                 border: 1px solid black;
+                width: 100px + 50px;
+                height: 200px - 25px;
             }
-            h1 { text { "Unquoted literals are cool!" } }
+            h1 { text { "Property arithmetic is cool!" } }
         }
     }
 }

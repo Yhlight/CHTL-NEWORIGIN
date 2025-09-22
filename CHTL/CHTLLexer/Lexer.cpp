@@ -35,6 +35,10 @@ Token Lexer::scan_token() {
         case '[': return make_token(TokenType::LBRACKET);
         case ']': return make_token(TokenType::RBRACKET);
         case '@': return make_token(TokenType::AT);
+        case '+': return make_token(TokenType::PLUS);
+        case '-': return make_token(TokenType::MINUS);
+        case '*': return make_token(TokenType::STAR);
+        case '/': return make_token(TokenType::SLASH);
         case '#': {
             int start = current;
             while (peek() != '\n' && !is_at_end()) {

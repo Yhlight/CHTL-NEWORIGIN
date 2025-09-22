@@ -7,6 +7,7 @@ enum class TokenType {
     // Single-character tokens
     LBRACE, RBRACE, COLON, SEMICOLON, HASH,
     LBRACKET, RBRACKET, AT,
+    PLUS, MINUS, STAR, SLASH,
 
     // Literals
     IDENTIFIER,

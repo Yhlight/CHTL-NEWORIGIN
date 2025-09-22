@@ -6,6 +6,11 @@
 #include <vector>
 #include <memory>
 
+struct Term {
+    double value;
+    std::string unit;
+};
+
 class Parser {
 public:
     Parser(const std::vector<Token>& tokens, ParsingContext& context);
@@ -36,6 +41,7 @@ private:
     std::unique_ptr<ElementNode> element_declaration();
     void parse_attributes(ElementNode& element);
     std::string parse_value_sequence();
+    Term parse_term();
     std::unique_ptr<TextNode> text_block_inside_element();
     std::unique_ptr<StyleNode> parse_style_block();
 };
