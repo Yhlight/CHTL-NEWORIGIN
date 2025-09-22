@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include "Util/ExpressionEvaluator.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -96,17 +97,18 @@ void Parser::parseStyleBlock(ElementNode* parent) {
             throw std::runtime_error("Expect ':' or '=' after style property name.");
         }
 
-        Token valueToken = advance();
-        if (valueToken.type != TokenType::TOKEN_STRING &&
-            valueToken.type != TokenType::TOKEN_IDENTIFIER &&
-            valueToken.type != TokenType::TOKEN_NUMBER) {
-            throw std::runtime_error("Expect style value (string, identifier, or number).");
+        // Collect tokens for the expression until we hit a semicolon.
+        std::vector<Token> valueTokens;
+        while (!check(TokenType::TOKEN_SEMICOLON) && !isAtEnd()) {
+            valueTokens.push_back(advance());
         }
 
-        std::string value = valueToken.lexeme;
-        if (valueToken.type == TokenType::TOKEN_STRING) {
-            value = value.substr(1, value.length() - 2);
+        if (valueTokens.empty()) {
+            throw std::runtime_error("Expect a value for style property '" + key.lexeme + "'.");
         }
+
+        // Evaluate the expression.
+        std::string value = ExpressionEvaluator::evaluate(valueTokens);
 
         consume(TokenType::TOKEN_SEMICOLON, "Expect ';' after style property value.");
 

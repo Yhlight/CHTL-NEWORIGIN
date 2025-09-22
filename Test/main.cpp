@@ -3,9 +3,9 @@
 #include <vector>
 #include <cassert>
 
-#include "../CHTL/CHTLLexer/Lexer.h"
-#include "../CHTL/CHTLParser/Parser.h"
-#include "../CHTL/CHTLGenerator/Generator.h"
+#include "CHTL/CHTLLexer/Lexer.h"
+#include "CHTL/CHTLParser/Parser.h"
+#include "CHTL/CHTLGenerator/Generator.h"
 
 void runTest(const std::string& testName, const std::string& chtlSource, const std::string& expectedHtml) {
     std::cout << "Running test: " << testName << "..." << std::endl;
@@ -98,6 +98,19 @@ div {
     std::string expectedStyleBlockHtml = R"(<div id="styled-div" style="color: red;font-size: 16px;">This text should be red.</div>
 )";
     runTest("Style Block Test", styleBlockChtl, expectedStyleBlockHtml);
+
+    std::string arithmeticChtl = R"(
+div {
+    style {
+        width: 100px + 50px - 25px;
+        height: 20.5rem - 0.5rem;
+    }
+}
+)";
+    std::string expectedArithmeticHtml = R"(<div style="height: 20rem;width: 125px;">
+</div>
+)";
+    runTest("Property Arithmetic Test", arithmeticChtl, expectedArithmeticHtml);
 
     std::cout << "\nAll tests passed!" << std::endl;
 

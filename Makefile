@@ -6,6 +6,7 @@ CXXFLAGS = -std=c++17 -Wall -g -I.
 SRCS = CHTL/CHTLLexer/Lexer.cpp \
        CHTL/CHTLParser/Parser.cpp \
        CHTL/CHTLGenerator/Generator.cpp \
+       Util/ExpressionEvaluator.cpp \
        Test/main.cpp
 
 # Object files

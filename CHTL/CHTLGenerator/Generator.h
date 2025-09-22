@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../CHTLNode/BaseNode.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
-#include "../CHTLNode/CommentNode.h"
+#include "CHTL/CHTLNode/BaseNode.h"
+#include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/TextNode.h"
+#include "CHTL/CHTLNode/CommentNode.h"
 #include <string>
 #include <sstream>
 

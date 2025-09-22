@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../CHTLLexer/Token.h"
-#include "../CHTLNode/BaseNode.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
-#include "../CHTLNode/CommentNode.h"
+#include "CHTL/CHTLLexer/Token.h"
+#include "CHTL/CHTLNode/BaseNode.h"
+#include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/TextNode.h"
+#include "CHTL/CHTLNode/CommentNode.h"
 #include <vector>
 #include <memory>
 
