@@ -3,9 +3,9 @@
 #include "../CHTL/CHTLGenerator/Generator.h"
 #include <iostream>
 #include <string>
-
-// Helper function to remove whitespace for comparison
 #include <algorithm>
+
+// Helper function to remove whitespace for robust comparison
 std::string remove_whitespace(std::string str) {
     str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
     return str;
@@ -13,15 +13,17 @@ std::string remove_whitespace(std::string str) {
 
 int main() {
     std::string input = R"(
-        html {
-            head {
-                // A title would go here
+        div {
+            id: "main";
+
+            style {
+                width: 100px;
+                height: 200px;
+                color: red;
             }
-            body {
-                div {
-                    text { "Hello CHTL" }
-                }
-                span {}
+
+            p {
+                text { "Styled div" }
             }
         }
     )";
@@ -49,18 +51,20 @@ int main() {
     CHTL::Generator generator;
     std::string html_output = generator.generate(*program);
 
-    std::string expected_html = "<html><head></head><body><div>Hello CHTL</div><span></span></body></html>";
+    std::string expected_html = "<div id=\"main\" style=\"width:100px;height:200px;color:red;\"><p>Styled div</p></div>";
 
-    std::cout << "--- Generator Test ---" << std::endl;
+    std::cout << "--- End-to-End Test with Style Blocks ---" << std::endl;
     std::cout << "Generated HTML: " << html_output << std::endl;
     std::cout << "Expected HTML:  " << expected_html << std::endl;
 
+    // Use a more forgiving comparison that ignores whitespace differences
     if (remove_whitespace(html_output) != remove_whitespace(expected_html)) {
-        std::cerr << "\n--- Generator Test Failed! ---" << std::endl;
+        std::cerr << "\n--- Test Failed! ---" << std::endl;
+        std::cerr << "Mismatch after removing whitespace." << std::endl;
         return 1;
     }
 
-    std::cout << "\n--- Generator Test Passed! ---" << std::endl;
+    std::cout << "\n--- Test Passed! ---" << std::endl;
 
     return 0;
 }

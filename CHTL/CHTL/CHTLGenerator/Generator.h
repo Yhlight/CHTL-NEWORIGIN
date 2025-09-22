@@ -11,6 +11,7 @@ class BaseNode;
 class ProgramNode;
 class ElementNode;
 class TextNode;
+class StyleNode;
 
 class Generator {
 public:
@@ -19,6 +20,7 @@ public:
     void visit(const ProgramNode& node);
     void visit(const ElementNode& node);
     void visit(const TextNode& node);
+    void visit(const StyleNode& node);
 
 private:
     std::stringstream ss;
