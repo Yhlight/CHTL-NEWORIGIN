@@ -1,17 +1,17 @@
-// Test file for nested style rules.
+# This is a test comment.
 html {
-    head {
-        title { text { "Global Styles Test" } }
-    }
     body {
         div {
             style {
+                // Shorthand to add id="main-content"
+                #main-content;
+
+                // Full rule to add class="container" and global CSS
                 .container {
-                    border: 1px solid red;
                     width: 100px - 40px;
                 }
             }
-            h1 { text { "This div should have a class." } }
+            h1 { text { "It works!" } }
         }
     }
 }

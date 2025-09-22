@@ -84,8 +84,8 @@ void Lexer::skip_whitespace_and_comments() {
                 if (peek_next() == '/') { // Single line comment
                     while (peek() != '\n' && !is_at_end()) advance();
                 } else if (peek_next() == '*') { // Block comment
-                    advance(); // consume /
-                    advance(); // consume *
+                    advance();
+                    advance();
                     while (!is_at_end() && (peek() != '*' || peek_next() != '/')) {
                         if (peek() == '\n') {
                             line++;
@@ -94,8 +94,8 @@ void Lexer::skip_whitespace_and_comments() {
                         advance();
                     }
                     if (!is_at_end()) {
-                        advance(); // consume *
-                        advance(); // consume /
+                        advance();
+                        advance();
                     }
                 }
                 else {
@@ -119,9 +119,7 @@ Token Lexer::make_token(TokenType type) {
 Token Lexer::identifier() {
     int start = current - 1;
     while (std::isalnum(peek()) || peek() == '_' || peek() == '-') advance();
-
     std::string text = source.substr(start, current - start);
-
     if (text == "text") return make_token(TokenType::TEXT, text);
     if (text == "style") return make_token(TokenType::STYLE, text);
     if (text == "Template") return make_token(TokenType::TEMPLATE, text);
@@ -129,7 +127,6 @@ Token Lexer::identifier() {
     if (text == "Import") return make_token(TokenType::IMPORT, text);
     if (text == "from") return make_token(TokenType::FROM, text);
     if (text == "Chtl") return make_token(TokenType::CHTL, text);
-
     return make_token(TokenType::IDENTIFIER, text);
 }
 
@@ -137,7 +134,6 @@ Token Lexer::string_literal() {
     int start_col = column;
     int start_line = line;
     int start_current = current;
-
     while (peek() != '"' && !is_at_end()) {
         if (peek() == '\n') {
             line++;
@@ -145,13 +141,10 @@ Token Lexer::string_literal() {
         }
         advance();
     }
-
     if (is_at_end()) {
         return Token(TokenType::UNKNOWN, "Unterminated string", start_line, start_col);
     }
-
-    advance(); // The closing ".
-
+    advance();
     std::string value = source.substr(start_current, current - start_current - 1);
     return Token(TokenType::STRING, value, start_line, start_col);
 }
@@ -159,14 +152,10 @@ Token Lexer::string_literal() {
 Token Lexer::number() {
     int start = current - 1;
     while (std::isdigit(peek())) advance();
-
-    // Look for a fractional part.
     if (peek() == '.' && std::isdigit(peek_next())) {
-        // Consume the "."
         advance();
         while (std::isdigit(peek())) advance();
     }
-
     std::string value = source.substr(start, current - start);
     return make_token(TokenType::NUMBER, value);
 }

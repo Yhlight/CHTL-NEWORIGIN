@@ -33,6 +33,7 @@ private:
     // Error handling and synchronization
     Token consume(TokenType type, const std::string& message);
     void synchronize();
+    void skip_newlines();
 
     // Parsing methods for grammar rules
     std::unique_ptr<BaseNode> declaration();

@@ -35,12 +35,8 @@ struct Token {
     int line;
     int column;
 
-    // Default constructor
     Token() : type(TokenType::UNKNOWN), line(0), column(0) {}
-
-    // Parameterized constructor
     Token(TokenType t, std::string v, int l, int c) : type(t), value(std::move(v)), line(l), column(c) {}
 };
 
-// Helper function for debugging
 std::string token_type_to_string(TokenType type);

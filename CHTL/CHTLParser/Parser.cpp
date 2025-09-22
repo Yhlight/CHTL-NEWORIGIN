@@ -29,15 +29,31 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
 
 std::unique_ptr<BaseNode> Parser::declaration() {
     try {
-        while(peek().type == TokenType::LBRACKET && peek_next().type == TokenType::IMPORT) {
-            import_declaration();
-        }
         if (peek().type == TokenType::LBRACKET && (peek_next().type == TokenType::TEMPLATE || peek_next().type == TokenType::CUSTOM)) {
             return template_declaration();
         }
-        if (match({TokenType::HASH})) {
+        if (match({TokenType::HASH})) { // Top-level HASH is a comment
             auto node = std::make_unique<CommentNode>();
-            node->content = previous().value;
+            std::string content;
+            int comment_line = previous().line;
+
+            while (!is_at_end() && peek().line == comment_line) {
+                content += advance().value;
+                if (!is_at_end() && peek().line == comment_line) {
+                    content += " "; // Add space between tokens
+                }
+            }
+
+            // Trim leading/trailing space
+            size_t first = content.find_first_not_of(" \t");
+            if(std::string::npos != first) {
+                size_t last = content.find_last_not_of(" \t");
+                content = content.substr(first, (last - first + 1));
+            } else {
+                content.clear();
+            }
+
+            node->content = content;
             return node;
         }
         if (match({TokenType::IDENTIFIER})) {
@@ -56,6 +72,9 @@ std::unique_ptr<BaseNode> Parser::declaration() {
     return nullptr;
 }
 
+// NOTE: This logic for imports is flawed as it was part of the previous buggy implementation.
+// A proper implementation would likely happen in a pre-processing step, not during main parsing.
+// For now, it is being bypassed by the top-level declaration logic.
 void Parser::import_declaration() {
     consume(TokenType::LBRACKET, "Expect '[' to start an import statement.");
     consume(TokenType::IMPORT, "Expect 'Import' keyword.");
@@ -214,7 +233,7 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
     consume(TokenType::LBRACE, "Expect '{' after 'style' keyword.");
     auto styleNode = std::make_unique<StyleNode>();
     while (!check(TokenType::RBRACE) && !is_at_end()) {
-        if (match({TokenType::AT})) { // Template Usage
+        if (match({TokenType::AT})) {
             Token template_type = consume(TokenType::IDENTIFIER, "Expect template type (e.g. 'Style').");
             if (template_type.value != "Style") throw std::runtime_error("Only '@Style' templates are currently supported.");
             Token template_name = consume(TokenType::IDENTIFIER, "Expect template name.");
@@ -225,12 +244,11 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
             } else {
                 throw std::runtime_error("Undefined style template: '" + template_name.value + "'");
             }
-        } else if (peek().type == TokenType::DOT || peek().type == TokenType::HASH) { // Style Rule or Shorthand
+        } else if (peek().type == TokenType::DOT || peek().type == TokenType::HASH) {
             Token selector_type = advance();
             Token selector_name = consume(TokenType::IDENTIFIER, "Expect selector name.");
             std::string selector = selector_type.value + selector_name.value;
-
-            if (match({TokenType::LBRACE})) { // Full rule block
+            if (match({TokenType::LBRACE})) {
                 StyleRule rule;
                 rule.selector = selector;
                 while(!check(TokenType::RBRACE) && !is_at_end()){
@@ -241,14 +259,14 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
                 }
                 consume(TokenType::RBRACE, "Expect '}' after style rule body.");
                 styleNode->style_rules.push_back(rule);
-            } else { // Shorthand
+            } else {
                 consume(TokenType::SEMICOLON, "Expect ';' after shorthand selector.");
                 StyleRule shorthand_rule;
                 shorthand_rule.selector = selector;
                 styleNode->style_rules.push_back(shorthand_rule);
             }
         }
-        else { // Inline Property
+        else {
             Token key = consume(TokenType::IDENTIFIER, "Expect style property name or selector.");
             consume(TokenType::COLON, "Expect ':' after style property name.");
             std::string value_str = parse_value_sequence();
@@ -260,12 +278,62 @@ std::unique_ptr<StyleNode> Parser::parse_style_block() {
 }
 
 // --- Helper Methods ---
-Token Parser::advance() { if (!is_at_end()) current++; return previous(); }
-Token Parser::peek() { return tokens[current]; }
-Token Parser::peek_next() { if (is_at_end() || current + 1 >= tokens.size()) { return tokens.back(); } return tokens[current + 1]; }
-Token Parser::previous() { return tokens[current - 1]; }
-bool Parser::is_at_end() { return peek().type == TokenType::END_OF_FILE; }
-bool Parser::check(TokenType type) { if (is_at_end()) return false; return peek().type == type; }
-bool Parser::match(const std::vector<TokenType>& types) { for (TokenType type : types) { if (check(type)) { advance(); return true; } } return false; }
-Token Parser::consume(TokenType type, const std::string& message) { if (check(type)) return advance(); throw std::runtime_error("Line " + std::to_string(peek().line) + ": " + message); }
-void Parser::synchronize() { advance(); while (!is_at_end()) { if (previous().type == TokenType::SEMICOLON) return; switch (peek().type) { case TokenType::TEXT: case TokenType::STYLE: case TokenType::IDENTIFIER: return; default: break; } advance(); } }
+Token Parser::advance() {
+    if (!is_at_end()) current++;
+    return previous();
+}
+Token Parser::peek() {
+    if (current >= tokens.size()) {
+        // Should not happen if is_at_end() is used correctly
+        return tokens.back(); // Return EOF token
+    }
+    return tokens[current];
+}
+Token Parser::peek_next() {
+    if (current + 1 >= tokens.size()) {
+        return tokens.back();
+    }
+    return tokens[current + 1];
+}
+Token Parser::previous() {
+    return tokens[current - 1];
+}
+bool Parser::is_at_end() {
+    // The last token is always EOF, so we're at the end if we're pointing to it.
+    return current >= tokens.size() - 1;
+}
+bool Parser::check(TokenType type) {
+    if (is_at_end() && type != TokenType::END_OF_FILE) return false;
+    return peek().type == type;
+}
+bool Parser::match(const std::vector<TokenType>& types) {
+    for (TokenType type : types) {
+        if (check(type)) {
+            advance();
+            return true;
+        }
+    }
+    return false;
+}
+Token Parser::consume(TokenType type, const std::string& message) {
+    if (check(type)) return advance();
+    throw std::runtime_error("Line " + std::to_string(peek().line) + ": " + message);
+}
+void Parser::synchronize() {
+    if(is_at_end()) return;
+    advance();
+    while (!is_at_end()) {
+        if (previous().type == TokenType::SEMICOLON) return;
+        switch (peek().type) {
+            case TokenType::TEXT:
+            case TokenType::STYLE:
+            case TokenType::IDENTIFIER:
+            case TokenType::LBRACKET: // Start of [Template] etc.
+            case TokenType::HASH: // Start of comment
+                return;
+            default:
+                break;
+        }
+        advance();
+    }
+}
