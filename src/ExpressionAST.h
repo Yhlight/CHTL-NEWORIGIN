@@ -5,6 +5,7 @@
 #include <memory>
 
 class VarUsageNode;
+class PropertyReferenceNode;
 
 // Base class for all expression nodes
 class ExprNode {
@@ -43,6 +44,16 @@ public:
 
     VarUsageNode(std::string group_name, std::string var_name)
         : group_name(std::move(group_name)), var_name(std::move(var_name)) {}
+};
+
+// Represents a property reference like #box.width
+class PropertyReferenceNode : public ExprNode {
+public:
+    std::string selector;
+    std::string property_name;
+
+    PropertyReferenceNode(std::string selector, std::string property_name)
+        : selector(std::move(selector)), property_name(std::move(property_name)) {}
 };
 
 

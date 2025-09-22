@@ -60,8 +60,13 @@ std::unique_ptr<BaseNode> Parser::parse_template_definition() {
     if (type.value == "Style") {
         auto node = std::make_unique<TemplateStyleNode>(name.value, is_custom);
         while(!check(TokenType::RightBrace) && !is_at_end()) {
-            node->styles.push_back(parse_attribute(true)); // Style context is true
-            consume(TokenType::Semicolon, "Expect ';' after attribute in template.");
+            if (peek().type == TokenType::At || peek().type == TokenType::Inherit) {
+                node->children.push_back(parse_node());
+            } else {
+                auto attr_node = parse_attribute(true);
+                consume(TokenType::Semicolon, "Expect ';' after attribute in template.");
+                node->children.push_back(std::move(attr_node));
+            }
         }
         consume(TokenType::RightBrace, "Expect '}' to close template body.");
         return node;
@@ -211,17 +216,32 @@ std::unique_ptr<BaseNode> Parser::parse_node() {
         return std::make_unique<CommentNode>(advance().value);
     }
 
-    if (peek().type == TokenType::At) {
-        advance();
+    if (peek().type == TokenType::At || peek().type == TokenType::Inherit) {
+        bool is_inherit = match(TokenType::Inherit);
+        consume(TokenType::At, "Expect '@' after 'inherit' keyword or for template usage.");
         Token type = consume(TokenType::Identifier, "Expect template type after '@'.");
         Token name = consume(TokenType::Identifier, "Expect template name after type.");
+        std::optional<std::string> from_ns;
+        if (match(TokenType::From)) {
+            from_ns = consume(TokenType::Identifier, "Expect namespace name after 'from'.").value;
+        }
 
         if (type.value == "Style") {
             auto node = std::make_unique<StyleUsageNode>(name.value);
+            node->from_namespace = from_ns;
             if (match(TokenType::LeftBrace)) {
                 while(!check(TokenType::RightBrace) && !is_at_end()) {
-                    node->specializations.push_back(parse_attribute(true));
-                    consume(TokenType::Semicolon, "Expect ';' after specialization.");
+                    if (match(TokenType::Delete)) {
+                        auto delete_node = std::make_unique<DeleteNode>();
+                        do {
+                            delete_node->keys_to_delete.push_back(consume(TokenType::Identifier, "Expect property name after 'delete'.").value);
+                        } while (match(TokenType::Comma));
+                        consume(TokenType::Semicolon, "Expect ';' after delete statement.");
+                        node->specializations.push_back(std::move(delete_node));
+                    } else {
+                        node->specializations.push_back(parse_attribute(true));
+                        consume(TokenType::Semicolon, "Expect ';' after specialization.");
+                    }
                 }
                 consume(TokenType::RightBrace, "Expect '}' to close specialization block.");
             } else {
@@ -230,7 +250,9 @@ std::unique_ptr<BaseNode> Parser::parse_node() {
             return node;
         } else if (type.value == "Element") {
             consume(TokenType::Semicolon, "Expect ';' after template usage.");
-            return std::make_unique<ElementUsageNode>(name.value);
+            auto node = std::make_unique<ElementUsageNode>(name.value);
+            node->from_namespace = from_ns;
+            return node;
         }
         return nullptr;
     }

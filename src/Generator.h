@@ -29,20 +29,25 @@ public:
     void visit(VarUsageNode& node) override;
     void visit(ImportNode& node) override;
     void visit(UseNode& node) override;
+    void visit(DeleteNode& node) override;
 
 private:
+    ProgramNode* ast_root = nullptr;
     bool use_html5 = false;
     std::stringstream html_stream;
     std::stringstream css_stream;
     ElementNode* current_element = nullptr;
+    std::string current_namespace = "_GLOBAL_";
 
-    std::map<std::string, TemplateStyleNode*> style_templates;
-    std::map<std::string, TemplateElementNode*> element_templates;
-    std::map<std::string, TemplateVarNode*> var_templates;
+    std::map<std::string, std::map<std::string, TemplateStyleNode*>> style_templates;
+    std::map<std::string, std::map<std::string, TemplateElementNode*>> element_templates;
+    std::map<std::string, std::map<std::string, TemplateVarNode*>> var_templates;
 
     void indent(int level);
     std::string evaluate_var_usage(VarUsageNode& node);
     std::string evaluate_expression(ExprNode& node);
+    void collect_styles_recursive(TemplateStyleNode* node, std::vector<AttributeNode*>& collected_styles);
+    ElementNode* find_node_by_selector(BaseNode* start_node, const std::string& selector);
 };
 
 #endif //CHTL_GENERATOR_H

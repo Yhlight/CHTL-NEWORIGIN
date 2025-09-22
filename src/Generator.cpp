@@ -15,6 +15,7 @@ std::string Generator::get_css() {
 }
 
 void Generator::generate(ProgramNode& root) {
+    this->ast_root = &root;
     // First pass: register all template definitions
     root.accept(*this);
     // Second pass: generate the output
@@ -31,27 +32,22 @@ void Generator::visit(ProgramNode& node) {
 }
 
 void Generator::visit(NamespaceNode& node) {
-    // For now, we just generate the content of the namespace directly.
-    // Scoping will be handled later.
+    std::string previous_namespace = current_namespace;
+    current_namespace = node.name;
     for (const auto& child : node.children) {
         child->accept(*this);
     }
+    current_namespace = previous_namespace;
 }
 
-void Generator::visit(ConfigurationNode& node) {
-    // Configuration nodes do not generate output.
-    // They are used to configure the compiler itself.
-}
-
+void Generator::visit(ConfigurationNode& node) {}
+void Generator::visit(DeleteNode& node) {}
 void Generator::visit(UseNode& node) {
     if (node.value == "html5") {
         use_html5 = true;
     }
 }
-
-void Generator::visit(ImportNode& node) {
-    // Imports are handled by the Loader, so the generator does nothing.
-}
+void Generator::visit(ImportNode& node) {}
 
 void Generator::visit(ElementNode& node) {
     ElementNode* previous_element = current_element;
@@ -62,73 +58,73 @@ void Generator::visit(ElementNode& node) {
     // --- Style pre-pass ---
     std::vector<AttributeNode*> style_attributes;
 
-    // Collect styles from @Style templates
     for (const auto& child : node.children) {
         if (auto* style_usage = dynamic_cast<StyleUsageNode*>(child.get())) {
-            if (style_templates.count(style_usage->name)) {
-                auto* template_node = style_templates[style_usage->name];
+            std::string ns = style_usage->from_namespace.value_or(current_namespace);
+            if (style_templates[ns].count(style_usage->name)) {
+                auto* template_node = style_templates[ns][style_usage->name];
+                collect_styles_recursive(template_node, style_attributes);
 
-                // If it's a custom style with specializations, we need to merge
                 if (template_node->is_custom && !style_usage->specializations.empty()) {
-                    for(const auto& base_style : template_node->styles) {
-                        bool has_value = true;
-                        if (auto val_ptr = std::get_if<std::optional<std::string>>(&base_style->value)) {
-                            if (!(*val_ptr).has_value()) {
-                                has_value = false;
-                            }
+                    for (const auto& spec_node : style_usage->specializations) {
+                        if (auto* spec_attr = dynamic_cast<AttributeNode*>(spec_node.get())) {
+                            style_attributes.push_back(spec_attr);
                         }
-
-                        if (!has_value) { // Valueless property like 'color;'
-                            // Find the specialization for this key
-                            for (const auto& spec_style : style_usage->specializations) {
-                                if (spec_style->key == base_style->key) {
-                                    style_attributes.push_back(spec_style.get());
-                                    break;
-                                }
-                            }
-                        } else { // Property with a default value
-                            style_attributes.push_back(base_style.get());
-                        }
-                    }
-                } else { // Regular template usage
-                    for (const auto& style_attr : template_node->styles) {
-                        style_attributes.push_back(style_attr.get());
                     }
                 }
             }
         }
     }
 
-    // Collect styles from inline style blocks
+    std::string inline_styles_str;
     for (const auto& child : node.children) {
         if (auto* style_node = dynamic_cast<StyleNode*>(child.get())) {
-            // This is a simplification. A real implementation would parse the raw_css.
-            // For now, we assume raw_css is empty and we're not supporting inline style blocks
-            // when also using style templates, to keep this step manageable.
+            inline_styles_str += style_node->raw_css;
         }
     }
 
-    // Render element's own attributes
     for (const auto& attr : node.attributes) {
         attr->accept(*this);
     }
 
-    // Render collected styles into a style="..." attribute
-    if (!style_attributes.empty()) {
+    if (!style_attributes.empty() || !inline_styles_str.empty()) {
         html_stream << " style=\"";
+
+        std::map<std::string, std::string> final_styles;
         for (const auto* attr : style_attributes) {
-            html_stream << attr->key << ": ";
+            std::string value_str;
             if (auto val_ptr = std::get_if<std::optional<std::string>>(&attr->value)) {
-                if (val_ptr->has_value()) {
-                    html_stream << **val_ptr;
-                }
+                if (val_ptr->has_value()) value_str = **val_ptr;
             } else if (auto var_ptr = std::get_if<std::unique_ptr<VarUsageNode>>(&attr->value)) {
-                html_stream << evaluate_var_usage(*var_ptr->get());
+                value_str = evaluate_var_usage(*var_ptr->get());
             } else if (auto expr_ptr = std::get_if<std::unique_ptr<ExprNode>>(&attr->value)) {
-                html_stream << evaluate_expression(*expr_ptr->get());
+                value_str = evaluate_expression(*expr_ptr->get());
             }
-            html_stream << "; ";
+            if (!value_str.empty()) final_styles[attr->key] = value_str;
         }
+
+        for (const auto& child : node.children) {
+            if (auto* style_usage = dynamic_cast<StyleUsageNode*>(child.get())) {
+                 std::string ns = style_usage->from_namespace.value_or(current_namespace);
+                if (style_templates[ns].count(style_usage->name)) {
+                    auto* template_node = style_templates[ns][style_usage->name];
+                    if (template_node->is_custom) {
+                        for (const auto& spec_node : style_usage->specializations) {
+                            if (auto* delete_node = dynamic_cast<DeleteNode*>(spec_node.get())) {
+                                for (const auto& key : delete_node->keys_to_delete) {
+                                    final_styles.erase(key);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for(const auto& pair : final_styles) {
+            html_stream << pair.first << ": " << pair.second << "; ";
+        }
+        html_stream << inline_styles_str;
         html_stream << "\"";
     }
 
@@ -136,7 +132,6 @@ void Generator::visit(ElementNode& node) {
 
     // --- Content pass ---
     for (const auto& child : node.children) {
-        // Skip nodes that are not for content generation
         if (dynamic_cast<StyleNode*>(child.get()) || dynamic_cast<StyleUsageNode*>(child.get())) {
             continue;
         }
@@ -156,9 +151,7 @@ void Generator::visit(AttributeNode& node) {
     html_stream << " " << node.key << "=\"";
 
     if (auto val_ptr = std::get_if<std::optional<std::string>>(&node.value)) {
-        if (val_ptr->has_value()) {
-            html_stream << **val_ptr;
-        }
+        if (val_ptr->has_value()) html_stream << **val_ptr;
     } else if (auto var_ptr = std::get_if<std::unique_ptr<VarUsageNode>>(&node.value)) {
         html_stream << evaluate_var_usage(*var_ptr->get());
     } else if (auto expr_ptr = std::get_if<std::unique_ptr<ExprNode>>(&node.value)) {
@@ -168,60 +161,71 @@ void Generator::visit(AttributeNode& node) {
     html_stream << "\"";
 }
 
-void Generator::visit(StyleNode& node) {
-    // Logic is handled in ElementNode visit's pre-pass
-}
-
+void Generator::visit(StyleNode& node) {}
 void Generator::visit(CommentNode& node) {
     html_stream << "<!--" << node.content << " -->";
 }
 
 void Generator::visit(TemplateStyleNode& node) {
-    style_templates[node.name] = &node;
+    style_templates[current_namespace][node.name] = &node;
 }
 
 void Generator::visit(TemplateElementNode& node) {
-    element_templates[node.name] = &node;
+    element_templates[current_namespace][node.name] = &node;
 }
 
 void Generator::visit(TemplateVarNode& node) {
-    var_templates[node.name] = &node;
+    var_templates[current_namespace][node.name] = &node;
 }
 
 void Generator::visit(VarUsageNode& node) {
-    // This node doesn't generate output directly.
-    // It is evaluated when found inside an AttributeNode.
     html_stream << evaluate_var_usage(node);
 }
 
-void Generator::visit(StyleUsageNode& node) {
-    // Logic is handled within ElementNode visit's pre-pass
-}
+void Generator::visit(StyleUsageNode& node) {}
 
 void Generator::visit(ElementUsageNode& node) {
-    if (element_templates.count(node.name)) {
-        auto* template_node = element_templates[node.name];
+    std::string ns = node.from_namespace.value_or(current_namespace);
+    if (element_templates[ns].count(node.name)) {
+        auto* template_node = element_templates[ns][node.name];
         for (const auto& child : template_node->children) {
             child->accept(*this);
         }
     }
 }
 
+void Generator::collect_styles_recursive(TemplateStyleNode* node, std::vector<AttributeNode*>& collected_styles) {
+    if (!node) return;
+
+    for (const auto& child : node->children) {
+        if (auto* usage = dynamic_cast<StyleUsageNode*>(child.get())) {
+            std::string ns = usage->from_namespace.value_or(current_namespace);
+            if (style_templates[ns].count(usage->name)) {
+                collect_styles_recursive(style_templates[ns][usage->name], collected_styles);
+            }
+        }
+    }
+
+    for (const auto& child : node->children) {
+        if (auto* attr = dynamic_cast<AttributeNode*>(child.get())) {
+            collected_styles.push_back(attr);
+        }
+    }
+}
+
 std::string Generator::evaluate_var_usage(VarUsageNode& node) {
-    if (var_templates.count(node.group_name)) {
-        auto* template_node = var_templates[node.group_name];
+    std::string ns = current_namespace; // Simplified: doesn't handle 'from' on var usage yet
+    if (var_templates[ns].count(node.group_name)) {
+        auto* template_node = var_templates[ns][node.group_name];
         for (const auto& var_attr : template_node->variables) {
             if (var_attr->key == node.var_name) {
-                // Assuming the value is a simple string for now
                 if (auto val_ptr = std::get_if<std::optional<std::string>>(&var_attr->value)) {
-                    if (val_ptr->has_value()) {
-                        return **val_ptr;
-                    }
+                    if (val_ptr->has_value()) return **val_ptr;
                 }
             }
         }
     }
-    return "[VAR NOT FOUND]"; // Error case
+    return "[VAR NOT FOUND]";
 }
 
 std::string Generator::evaluate_expression(ExprNode& node) {
@@ -231,7 +235,6 @@ std::string Generator::evaluate_expression(ExprNode& node) {
         return oss.str() + n->unit;
     }
     if (auto* b = dynamic_cast<BinaryOpNode*>(&node)) {
-        // This is a very simplified evaluation. It doesn't check for compatible units.
         double left_val = std::stod(evaluate_expression(*b->left));
         double right_val = std::stod(evaluate_expression(*b->right));
         double result = 0;
@@ -250,7 +253,54 @@ std::string Generator::evaluate_expression(ExprNode& node) {
         oss << result;
         return oss.str() + unit;
     }
+    if (auto* p = dynamic_cast<PropertyReferenceNode*>(&node)) {
+        if (!ast_root) return "[REF ERROR: NO ROOT]";
+        auto* target_node = find_node_by_selector(ast_root, p->selector);
+        if (!target_node) return "[REF ERROR: NOT FOUND]";
+
+        for (const auto& attr : target_node->attributes) {
+            if (attr->key == p->property_name) {
+                if (auto val_ptr = std::get_if<std::optional<std::string>>(&attr->value)) {
+                    if (val_ptr->has_value()) return **val_ptr;
+                }
+            }
+        }
+
+        return "[REF ERROR: PROP NOT FOUND]";
+    }
     return "[EXPR ERROR]";
+}
+
+ElementNode* Generator::find_node_by_selector(BaseNode* start_node, const std::string& selector) {
+    if (!start_node) return nullptr;
+
+    if (auto* element = dynamic_cast<ElementNode*>(start_node)) {
+        for (const auto& attr : element->attributes) {
+            if (attr->key == "id") {
+                if (auto val_ptr = std::get_if<std::optional<std::string>>(&attr->value)) {
+                     if ((*val_ptr).has_value() && ("#" + **val_ptr) == selector) {
+                        return element;
+                    }
+                }
+            }
+        }
+    }
+
+    if (auto* p_node = dynamic_cast<ProgramNode*>(start_node)) {
+        for (const auto& child : p_node->children) {
+            if (auto* found = find_node_by_selector(child.get(), selector)) return found;
+        }
+    } else if (auto* e_node = dynamic_cast<ElementNode*>(start_node)) {
+        for (const auto& child : e_node->children) {
+            if (auto* found = find_node_by_selector(child.get(), selector)) return found;
+        }
+    } else if (auto* ns_node = dynamic_cast<NamespaceNode*>(start_node)) {
+         for (const auto& child : ns_node->children) {
+            if (auto* found = find_node_by_selector(child.get(), selector)) return found;
+        }
+    }
+
+    return nullptr;
 }
 
 

@@ -38,15 +38,30 @@ std::unique_ptr<ExprNode> ExpressionParser::parse_factor() {
     return parse_primary();
 }
 
-// primary -> NUMBER
+// primary -> NUMBER [IDENTIFIER] | SELECTOR "." IDENTIFIER
 std::unique_ptr<ExprNode> ExpressionParser::parse_primary() {
     if (peek().type == ValueTokenType::Number) {
         double value = std::stod(advance().value);
         std::string unit;
-        if (peek().type == ValueTokenType::Unit) {
+        if (peek().type == ValueTokenType::Identifier) {
             unit = advance().value;
         }
         return std::make_unique<NumberNode>(value, unit);
+    }
+
+    if (peek().type == ValueTokenType::Selector) {
+        std::string selector = advance().value;
+        if (tokens[current].type != ValueTokenType::Dot) {
+             throw std::runtime_error("Expression parser: Expected '.' after selector.");
+        }
+        advance(); // consume dot
+
+        if (tokens[current].type != ValueTokenType::Identifier) {
+            throw std::runtime_error("Expression parser: Expected property name after selector.");
+        }
+        std::string prop_name = advance().value;
+
+        return std::make_unique<PropertyReferenceNode>(selector, prop_name);
     }
 
     throw std::runtime_error("Expression parser: Unexpected token.");

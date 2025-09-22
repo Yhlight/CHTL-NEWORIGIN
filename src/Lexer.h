@@ -17,6 +17,10 @@ enum class TokenType {
     LeftParen,
     RightParen,
     At,
+    Inherit,
+    Delete,
+    Comma,
+    From,
     Comment,
     EndOfFile,
     Unknown

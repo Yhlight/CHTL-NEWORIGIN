@@ -8,6 +8,9 @@ enum class ValueTokenType {
     Number,
     Unit,
     Operator,
+    Selector,
+    Identifier,
+    Dot,
     EndOfValue,
     Unknown
 };

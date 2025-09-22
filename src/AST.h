@@ -25,6 +25,7 @@ class NamespaceNode;
 class ConfigurationNode;
 class ImportNode;
 class UseNode;
+class DeleteNode;
 
 
 // Base visitor class for the visitor pattern
@@ -47,6 +48,7 @@ public:
     virtual void visit(VarUsageNode& node) = 0;
     virtual void visit(ImportNode& node) = 0;
     virtual void visit(UseNode& node) = 0;
+    virtual void visit(DeleteNode& node) = 0;
 };
 
 // Base class for all AST nodes
@@ -64,6 +66,16 @@ public:
     void add_child(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
     }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+};
+
+// Represents a delete statement
+class DeleteNode : public BaseNode {
+public:
+    std::vector<std::string> keys_to_delete;
 
     void accept(NodeVisitor& visitor) override {
         visitor.visit(*this);
@@ -127,8 +139,9 @@ public:
 class StyleUsageNode : public BaseNode {
 public:
     std::string name;
-    // For specialization: @Style MyStyles { color: red; }
-    std::vector<std::unique_ptr<AttributeNode>> specializations;
+    std::optional<std::string> from_namespace;
+    // For specialization: @Style MyStyles { color: red; delete font-size; }
+    std::vector<std::unique_ptr<BaseNode>> specializations;
 
     explicit StyleUsageNode(std::string name) : name(std::move(name)) {}
 
@@ -141,6 +154,7 @@ public:
 class ElementUsageNode : public BaseNode {
 public:
     std::string name;
+    std::optional<std::string> from_namespace;
     explicit ElementUsageNode(std::string name) : name(std::move(name)) {}
 
     void accept(NodeVisitor& visitor) override {
@@ -153,7 +167,7 @@ class TemplateStyleNode : public BaseNode {
 public:
     std::string name;
     bool is_custom;
-    std::vector<std::unique_ptr<AttributeNode>> styles;
+    std::vector<std::unique_ptr<BaseNode>> children; // Can contain AttributeNode or StyleUsageNode
 
     explicit TemplateStyleNode(std::string name, bool is_custom = false)
         : name(std::move(name)), is_custom(is_custom) {}

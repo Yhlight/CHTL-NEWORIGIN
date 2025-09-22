@@ -80,6 +80,15 @@ Token Lexer::nextToken() {
         while (!isAtEnd() && (isalnum(peek()) || peek() == '_' || peek() == '-')) {
             value += advance();
         }
+        if (value == "inherit") {
+            return {TokenType::Inherit, value, line};
+        }
+        if (value == "delete") {
+            return {TokenType::Delete, value, line};
+        }
+        if (value == "from") {
+            return {TokenType::From, value, line};
+        }
         return {TokenType::Identifier, value, line};
     }
 
@@ -99,6 +108,7 @@ Token Lexer::nextToken() {
         case '(': advance(); return {TokenType::LeftParen, "(", line};
         case ')': advance(); return {TokenType::RightParen, ")", line};
         case '@': advance(); return {TokenType::At, "@", line};
+        case ',': advance(); return {TokenType::Comma, ",", line};
     }
 
     // Fallback for unquoted literals that don't start with a letter (e.g. numbers)

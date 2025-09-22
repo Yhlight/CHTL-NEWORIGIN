@@ -30,14 +30,32 @@ ValueToken ValueLexer::nextToken() {
 
     if (isalpha(c)) {
         std::string value;
-        while (!isAtEnd() && isalpha(peek())) {
+        while (!isAtEnd() && (isalnum(peek()) || peek() == '_')) {
             value += advance();
         }
-        return {ValueTokenType::Unit, value};
+        // A unit is just a specific type of identifier, the expression parser can distinguish
+        return {ValueTokenType::Identifier, value};
     }
 
     if (c == '+' || c == '-' || c == '*' || c == '/') {
         return {ValueTokenType::Operator, std::string(1, advance())};
+    }
+
+    if (c == '+' || c == '-' || c == '*' || c == '/') {
+        return {ValueTokenType::Operator, std::string(1, advance())};
+    }
+
+    if (c == '.') {
+        return {ValueTokenType::Dot, std::string(1, advance())};
+    }
+
+    if (c == '#') { // Selectors start with #, class selectors with . are not handled yet
+        std::string value;
+        value += advance(); // consume #
+        while (!isAtEnd() && isalnum(peek())) {
+            value += advance();
+        }
+        return {ValueTokenType::Selector, value};
     }
 
     advance();

@@ -18,6 +18,12 @@ use html5;
     secondary_color: "black";
 }
 
+[Namespace] Shared {
+    [Template] @Element Footer {
+        div { text: "Shared Footer"; }
+    }
+}
+
 [Namespace] TestSpace {
     // CHTL Template Test File
 
@@ -27,8 +33,16 @@ use html5;
         font-size;
     }
 
+[Custom] @Style BaseTheme
+{
+    font-family: Arial;
+    font-size: 16px;
+    color: red;
+}
+
     [Template] @Style DefaultText
     {
+    @Style BaseTheme;
 	color: ThemeColor(secondary_color);
         line-height: 1.6;
     width: 100px + 50px * 2;
@@ -70,6 +84,28 @@ use html5;
             }
 
             @Element Header;
+
+            div {
+                class: "delete-div";
+                @Style BaseTheme {
+                    delete color;
+                }
+                text: "This div tests deletion.";
+            }
+
+            div {
+                id: "ref-target";
+                style { width: 300px; }
+            }
+
+            div {
+                class: "ref-user";
+                style {
+                    width: #ref-target.width / 2;
+                }
+            }
+
+            @Element Footer from Shared;
         }
     }
 }
