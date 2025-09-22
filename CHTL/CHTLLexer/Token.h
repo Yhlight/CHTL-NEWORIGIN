@@ -4,44 +4,87 @@
 #include <vector>
 
 enum class TokenType {
-    // Single-character tokens.
-    LEFT_BRACE, RIGHT_BRACE,
-    LEFT_BRACKET, RIGHT_BRACKET,
-    LEFT_PAREN, RIGHT_PAREN,
-    SEMICOLON, COLON, EQUALS,
-    DOT, HASH, AMPERSAND, AT,
+    // Special
+    ILLEGAL,
+    END_OF_FILE,
+    WHITESPACE,
+
+    // Identifiers & Literals
+    IDENTIFIER,         // e.g., div, myVar
+    UNQUOTED_LITERAL,   // e.g., red, 100px
+    STRING_LITERAL,     // e.g., "hello world"
+    NUMBER_LITERAL,     // e.g., 100, 3.14
+
+    // Punctuation
+    LEFT_BRACE,         // {
+    RIGHT_BRACE,        // }
+    LEFT_PAREN,         // (
+    RIGHT_PAREN,        // )
+    LEFT_BRACKET,       // [
+    RIGHT_BRACKET,      // ]
+    COLON,              // :
+    SEMICOLON,          // ;
+    EQUALS,             // =
+    COMMA,              // ,
+    DOT,                // .
+    QUESTION_MARK,      // ?
+    AMPERSAND,          // &
 
     // Operators
-    PLUS, MINUS, STAR, SLASH, PERCENT, STAR_STAR,
+    PLUS,               // +
+    MINUS,              // -
+    ASTERISK,           // *
+    SLASH,              // /
+    PERCENT,            // %
+    DOUBLE_ASTERISK,    // **
 
-    // Literals.
-    IDENTIFIER,
-    NUMBER,
-    STRING_LITERAL, // "..."
-    SINGLE_QUOTED_LITERAL, // '...'
-    UNQUOTED_LITERAL, // a_bare_word
+    // Single-character keywords
+    HASH,               // # (Generator comment)
+    AT,                 // @
 
-    // Comments
-    SINGLE_LINE_COMMENT, // // ...
-    MULTI_LINE_COMMENT,  // /* ... */
-    GENERATOR_COMMENT,   // # ...
-
-    // Keywords
-    KEYWORD_INHERIT,
-
-    // End of file.
-    END_OF_FILE,
-
-    // Unknown token
-    UNKNOWN
+    // Word Keywords
+    TEXT,
+    STYLE,
+    SCRIPT,
+    USE,
+    INHERIT,
+    DELETE,
+    INSERT,
+    AFTER,
+    BEFORE,
+    REPLACE,
+    AT_TOP,
+    AT_BOTTOM,
+    FROM,
+    AS,
+    EXCEPT,
+    CUSTOM,
+    TEMPLATE,
+    ORIGIN,
+    IMPORT,
+    NAMESPACE,
+    CONFIGURATION,
+    INFO,
+    EXPORT,
+    NAME,
+    ORIGINTYPE,
+    HTML,
+    JAVASCRIPT,
+    CHTL,
+    CJMOD,
+    CONFIG,
 };
 
 struct Token {
     TokenType type;
-    std::string lexeme;
+    std::string literal;
     int line;
     int column;
 
-    Token(TokenType type, std::string lexeme, int line, int column)
-        : type(type), lexeme(std::move(lexeme)), line(line), column(column) {}
+    // Helper for debugging
+    std::string ToString() const {
+        return "Line " + std::to_string(line) + ":" + std::to_string(column) +
+               " Type: " + std::to_string(static_cast<int>(type)) +
+               " Literal: " + literal;
+    }
 };

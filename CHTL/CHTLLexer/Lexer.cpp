@@ -1,217 +1,221 @@
 #include "Lexer.h"
-#include <iostream>
 #include <cctype>
+#include <unordered_map>
 
-CHTLLexer::CHTLLexer(std::string source) : source(std::move(source)) {}
+// Helper to check if a character can be part of an identifier
+bool isIdentifierChar(char ch) {
+    return std::isalnum(ch) || ch == '_' || ch == '-';
+}
 
-std::vector<Token> CHTLLexer::scanTokens() {
-    while (!isAtEnd()) {
-        start = current;
-        scanToken();
+// Keyword lookup table
+std::unordered_map<std::string, TokenType> keywords = {
+    {"text", TokenType::TEXT},
+    {"style", TokenType::STYLE},
+    {"script", TokenType::SCRIPT},
+    {"use", TokenType::USE},
+    {"inherit", TokenType::INHERIT},
+    {"delete", TokenType::DELETE},
+    {"insert", TokenType::INSERT},
+    {"after", TokenType::AFTER},
+    {"before", TokenType::BEFORE},
+    {"replace", TokenType::REPLACE},
+    {"from", TokenType::FROM},
+    {"as", TokenType::AS},
+    {"except", TokenType::EXCEPT},
+    {"Custom", TokenType::CUSTOM},
+    {"Template", TokenType::TEMPLATE},
+    {"Origin", TokenType::ORIGIN},
+    {"Import", TokenType::IMPORT},
+    {"Namespace", TokenType::NAMESPACE},
+    {"Configuration", TokenType::CONFIGURATION},
+    {"Info", TokenType::INFO},
+    {"Export", TokenType::EXPORT},
+    {"Name", TokenType::NAME},
+    {"OriginType", TokenType::ORIGINTYPE},
+    {"Html", TokenType::HTML},
+    {"JavaScript", TokenType::JAVASCRIPT},
+    {"Chtl", TokenType::CHTL},
+    {"CJmod", TokenType::CJMOD},
+    {"Config", TokenType::CONFIG},
+};
+
+Lexer::Lexer(const std::string& input)
+    : input(input), position(0), readPosition(0), ch(0), line(1), column(0), _skipWhitespace(true) {
+    readChar();
+}
+
+void Lexer::readChar() {
+    if (readPosition >= input.length()) {
+        ch = 0; // EOF
+    } else {
+        ch = input[readPosition];
+    }
+    position = readPosition;
+    readPosition++;
+
+    if (ch == '\n') {
+        line++;
+        column = 0;
+    } else {
+        column++;
+    }
+}
+
+char Lexer::peekChar() const {
+    if (readPosition >= input.length()) {
+        return 0;
+    }
+    return input[readPosition];
+}
+
+void Lexer::skipWhitespace() {
+    while (std::isspace(ch)) {
+        readChar();
+    }
+}
+
+Token Lexer::NextToken() {
+    Token tok;
+
+    if (std::isspace(ch)) {
+        if (_skipWhitespace) {
+            skipWhitespace();
+        } else {
+            tok.line = line;
+            tok.column = column;
+            size_t start_pos = position;
+            while (std::isspace(ch)) {
+                readChar();
+            }
+            tok.literal = input.substr(start_pos, position - start_pos);
+            tok.type = TokenType::WHITESPACE;
+            return tok;
+        }
     }
 
-    tokens.emplace_back(TokenType::END_OF_FILE, "", line, column);
-    return tokens;
-}
+    tok.line = line;
+    tok.column = column;
 
-bool CHTLLexer::isAtEnd() {
-    return current >= source.length();
-}
+    switch (ch) {
+        case '{': tok = {TokenType::LEFT_BRACE, "{", line, column}; break;
+        case '}': tok = {TokenType::RIGHT_BRACE, "}", line, column}; break;
+        case '(': tok = {TokenType::LEFT_PAREN, "(", line, column}; break;
+        case ')': tok = {TokenType::RIGHT_PAREN, ")", line, column}; break;
+        case '[': tok = {TokenType::LEFT_BRACKET, "[", line, column}; break;
+        case ']': tok = {TokenType::RIGHT_BRACKET, "]", line, column}; break;
+        case ':': tok = {TokenType::COLON, ":", line, column}; break;
+        case ';': tok = {TokenType::SEMICOLON, ";", line, column}; break;
+        case ',': tok = {TokenType::COMMA, ",", line, column}; break;
+        case '.': tok = {TokenType::DOT, ".", line, column}; break;
+        case '?': tok = {TokenType::QUESTION_MARK, "?", line, column}; break;
+        case '@': tok = {TokenType::AT, "@", line, column}; break;
+        case '#': tok = {TokenType::HASH, "#", line, column}; break;
+        case '&': tok = {TokenType::AMPERSAND, "&", line, column}; break;
+        case '+': tok = {TokenType::PLUS, "+", line, column}; break;
+        case '-': tok = {TokenType::MINUS, "-", line, column}; break;
+        case '%': tok = {TokenType::PERCENT, "%", line, column}; break;
+        case '=': tok = {TokenType::EQUALS, "=", line, column}; break;
 
-char CHTLLexer::advance() {
-    column++;
-    return source[current++];
-}
-
-char CHTLLexer::peek() {
-    if (isAtEnd()) return '\0';
-    return source[current];
-}
-
-char CHTLLexer::peekNext() {
-    if (current + 1 >= source.length()) return '\0';
-    return source[current + 1];
-}
-
-bool CHTLLexer::match(char expected) {
-    if (isAtEnd()) return false;
-    if (source[current] != expected) return false;
-    current++;
-    column++;
-    return true;
-}
-
-void CHTLLexer::scanToken() {
-    char c = advance();
-    switch (c) {
-        case '{': tokens.emplace_back(TokenType::LEFT_BRACE, "{", line, column); break;
-        case '}': tokens.emplace_back(TokenType::RIGHT_BRACE, "}", line, column); break;
-        case '[': tokens.emplace_back(TokenType::LEFT_BRACKET, "[", line, column); break;
-        case ']': tokens.emplace_back(TokenType::RIGHT_BRACKET, "]", line, column); break;
-        case '(': tokens.emplace_back(TokenType::LEFT_PAREN, "(", line, column); break;
-        case ')': tokens.emplace_back(TokenType::RIGHT_PAREN, ")", line, column); break;
-        case '@': tokens.emplace_back(TokenType::AT, "@", line, column); break;
-        case ';': tokens.emplace_back(TokenType::SEMICOLON, ";", line, column); break;
-        case ':': tokens.emplace_back(TokenType::COLON, ":", line, column); break;
-        case '=': tokens.emplace_back(TokenType::EQUALS, "=", line, column); break;
-        case '.': tokens.emplace_back(TokenType::DOT, ".", line, column); break;
-        case '&': tokens.emplace_back(TokenType::AMPERSAND, "&", line, column); break;
-
-        case '+': tokens.emplace_back(TokenType::PLUS, "+", line, column); break;
-        case '-': tokens.emplace_back(TokenType::MINUS, "-", line, column); break;
-        case '%': tokens.emplace_back(TokenType::PERCENT, "%", line, column); break;
         case '*':
-            if (match('*')) {
-                tokens.emplace_back(TokenType::STAR_STAR, "**", line, column);
+            if (peekChar() == '*') {
+                readChar();
+                tok = {TokenType::DOUBLE_ASTERISK, "**", line, column};
             } else {
-                tokens.emplace_back(TokenType::STAR, "*", line, column);
+                tok = {TokenType::ASTERISK, "*", line, column};
             }
             break;
 
         case '/':
-            if (match('/')) {
-                singleLineComment();
-            } else if (match('*')) {
-                multiLineComment();
+            if (peekChar() == '/') {
+                readChar();
+                while (ch != '\n' && ch != 0) readChar();
+                return NextToken();
+            } else if (peekChar() == '*') {
+                readChar(); readChar();
+                while (ch != 0 && !(ch == '*' && peekChar() == '/')) readChar();
+                if (ch != 0) { readChar(); readChar(); }
+                return NextToken();
             } else {
-                tokens.emplace_back(TokenType::SLASH, "/", line, column);
+                tok = {TokenType::SLASH, "/", line, column};
             }
             break;
-        case '#':
-            if (peek() == ' ') {
-                generatorComment();
-            } else {
-                tokens.emplace_back(TokenType::HASH, "#", line, column);
-            }
-            break;
 
-        // Ignore whitespace
-        case ' ':
-        case '\r':
-        case '\t':
-            break;
+        case '"':
+        case '\'':
+            return readStringLiteral();
 
-        case '\n':
-            line++;
-            column = 1;
+        case 0:
+            tok = {TokenType::END_OF_FILE, "", line, column};
             break;
-
-        case '"': stringLiteral('"'); break;
-        case '\'': stringLiteral('\''); break;
 
         default:
-            if (std::isdigit(c)) {
-                number();
-            }
-            else if (std::isalpha(c) || c == '_') {
-                identifier();
-            }
-            else {
-                // For now, treat unknown characters as part of an unquoted literal
-                if (!isspace(c)) {
-                    unquotedLiteral();
-                }
+            if (std::isalpha(ch) || ch == '_') {
+                return readIdentifier();
+            } else if (std::isdigit(ch)) {
+                return readNumberLiteral();
+            } else {
+                tok = {TokenType::ILLEGAL, std::string(1, ch), line, column};
             }
             break;
     }
+
+    readChar();
+    return tok;
 }
 
-void CHTLLexer::singleLineComment() {
-    while (peek() != '\n' && !isAtEnd()) {
-        advance();
+Token Lexer::readIdentifier() {
+    Token tok;
+    tok.line = line;
+    tok.column = column;
+    size_t start_pos = position;
+    while (isIdentifierChar(ch)) {
+        readChar();
     }
-    tokens.emplace_back(TokenType::SINGLE_LINE_COMMENT, source.substr(start, current - start), line, column);
+    tok.literal = input.substr(start_pos, position - start_pos);
+    tok.type = lookupIdent(tok.literal);
+    return tok;
 }
 
-void CHTLLexer::multiLineComment() {
-    while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
-        if (peek() == '\n') {
-            line++;
-            column = 1;
-        }
-        advance();
+Token Lexer::readStringLiteral() {
+    Token tok;
+    tok.line = line;
+    tok.column = column;
+    char quote_type = ch;
+    readChar();
+    size_t start_pos = position;
+    while (ch != quote_type && ch != 0) {
+        readChar();
     }
-
-    if (isAtEnd()) {
-        // Unterminated comment, handle error later
-        return;
-    }
-
-    // Consume the closing */
-    advance();
-    advance();
-    tokens.emplace_back(TokenType::MULTI_LINE_COMMENT, source.substr(start, current - start), line, column);
+    tok.literal = input.substr(start_pos, position - start_pos);
+    tok.type = TokenType::STRING_LITERAL;
+    if (ch == quote_type) readChar();
+    return tok;
 }
 
-void CHTLLexer::generatorComment() {
-    // consume the space
-    advance();
-    start = current;
-    while (peek() != '\n' && !isAtEnd()) {
-        advance();
+Token Lexer::readNumberLiteral() {
+    Token tok;
+    tok.line = line;
+    tok.column = column;
+    size_t start_pos = position;
+    bool has_dot = false;
+    while (std::isdigit(ch) || (ch == '.' && !has_dot)) {
+        if (ch == '.') has_dot = true;
+        readChar();
     }
-    tokens.emplace_back(TokenType::GENERATOR_COMMENT, source.substr(start, current - start), line, column);
+    tok.literal = input.substr(start_pos, position - start_pos);
+    tok.type = TokenType::NUMBER_LITERAL;
+    return tok;
 }
 
-
-void CHTLLexer::stringLiteral(char quote_type) {
-    while (peek() != quote_type && !isAtEnd()) {
-        if (peek() == '\n') line++;
-        advance();
+TokenType Lexer::lookupIdent(const std::string& ident) {
+    if (keywords.count(ident)) {
+        return keywords.at(ident);
     }
-
-    if (isAtEnd()) {
-        // Unterminated string, handle error later
-        return;
-    }
-
-    // The closing quote.
-    advance();
-
-    // Trim the surrounding quotes.
-    std::string value = source.substr(start + 1, current - start - 2);
-    TokenType type = (quote_type == '"') ? TokenType::STRING_LITERAL : TokenType::SINGLE_QUOTED_LITERAL;
-    tokens.emplace_back(type, value, line, column);
+    return TokenType::IDENTIFIER;
 }
 
-void CHTLLexer::identifier() {
-    while (std::isalnum(peek()) || peek() == '_' || peek() == '-') advance();
-    std::string text = source.substr(start, current - start);
-    TokenType type = TokenType::IDENTIFIER;
-    if (text == "inherit") type = TokenType::KEYWORD_INHERIT;
-    tokens.emplace_back(type, text, line, column);
-}
-
-void CHTLLexer::number() {
-    while (std::isdigit(peek())) advance();
-
-    // Look for a fractional part.
-    if (peek() == '.' && std::isdigit(peekNext())) {
-        // Consume the "."
-        advance();
-        while (std::isdigit(peek())) advance();
-    }
-
-    tokens.emplace_back(TokenType::NUMBER, source.substr(start, current - start), line, column);
-}
-
-// This is a simplification for now. CHTL's unquoted literals are more complex,
-// especially inside style blocks. This will be refined later.
-void CHTLLexer::unquotedLiteral() {
-     // An unquoted literal ends with a semicolon, a brace, or a newline.
-    while (peek() != ';' && peek() != '{' && peek() != '}' && peek() != '\n' && !isAtEnd()) {
-        advance();
-    }
-    // We backup one character because the advance() in scanToken() already consumed the first char.
-    // So we need to backup one char to get the correct start position.
-    std::string text = source.substr(start, current - start);
-
-    // remove leading and trailing whitespace
-    size_t first = text.find_first_not_of(" \t\r\n");
-    if (std::string::npos == first)
-    {
-        return; // all whitespace
-    }
-    size_t last = text.find_last_not_of(" \t\r\n");
-    tokens.emplace_back(TokenType::UNQUOTED_LITERAL, text.substr(first, (last - first + 1)), line, column);
+// Unquoted literals are just identifiers that the parser treats differently.
+// This function is not currently called from the main switch.
+Token Lexer::readUnquotedLiteral() {
+    return readIdentifier();
 }

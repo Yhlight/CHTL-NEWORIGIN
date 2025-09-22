@@ -1,35 +1,30 @@
 #pragma once
 
 #include "BaseNode.h"
-#include "CssRule.h"
-#include <map>
+#include "AttributeNode.h"
+#include <string>
+#include <vector>
+#include <memory>
 
-// Represents an element like `div { ... }`
-class ElementNode : public BaseNode {
-public:
+// Represents an element, e.g., div { ... }
+// An element is a statement.
+struct ElementNode : public Statement {
+    Token token; // The token for the tag name (e.g., 'div')
     std::string tagName;
-    std::vector<std::shared_ptr<BaseNode>> children;
-    // Attributes will be stored here, e.g., { "id" -> "main" }
-    std::map<std::string, std::string> attributes;
-    // Inline styles from a `style {}` block will be stored here
-    std::map<std::string, std::string> inlineStyles;
-    // CSS rules to be hoisted to a global style block
-    std::vector<CssRule> globalCssRules;
+    std::unique_ptr<Program> body; // The block of statements inside the braces
 
-    explicit ElementNode(std::string tagName) : tagName(std::move(tagName)) {}
+    ElementNode(Token token, std::string name)
+        : token(std::move(token)), tagName(std::move(name)), body(std::make_unique<Program>()) {}
 
-    void accept(NodeVisitor& visitor) override {
-        visitor.visit(*this);
-    }
+    std::string tokenLiteral() const override { return token.literal; }
+    NodeType getType() const override { return NodeType::ELEMENT_DECLARATION; }
 
-    std::shared_ptr<BaseNode> clone() const override {
-        auto new_node = std::make_shared<ElementNode>(tagName);
-        new_node->attributes = this->attributes;
-        new_node->inlineStyles = this->inlineStyles;
-        new_node->globalCssRules = this->globalCssRules;
-        for (const auto& child : this->children) {
-            new_node->children.push_back(child->clone());
+    std::string toString() const override {
+        std::string out = tagName + " {\n";
+        if (body) {
+            out += body->toString();
         }
-        return new_node;
+        out += "\n}";
+        return out;
     }
 };

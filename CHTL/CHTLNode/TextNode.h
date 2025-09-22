@@ -1,19 +1,21 @@
 #pragma once
 
 #include "BaseNode.h"
+#include <string>
+#include <memory>
 
-// Represents a text block, e.g., `text { "content" }`
-class TextNode : public BaseNode {
-public:
-    std::string content;
+// Represents a text block, e.g., text { "Hello, World!" }
+struct TextNode : public Statement {
+    Token token; // The 'text' token
+    std::string value; // The string content of the text node
 
-    explicit TextNode(std::string content) : content(std::move(content)) {}
+    TextNode(Token token, std::string val)
+        : token(std::move(token)), value(std::move(val)) {}
 
-    void accept(NodeVisitor& visitor) override {
-        visitor.visit(*this);
-    }
+    std::string tokenLiteral() const override { return token.literal; }
+    NodeType getType() const override { return NodeType::TEXT_DECLARATION; }
 
-    std::shared_ptr<BaseNode> clone() const override {
-        return std::make_shared<TextNode>(this->content);
+    std::string toString() const override {
+        return token.literal + " { \"" + value + "\" }";
     }
 };

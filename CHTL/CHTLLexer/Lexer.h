@@ -2,34 +2,34 @@
 
 #include "Token.h"
 #include <string>
-#include <vector>
 
-class CHTLLexer {
+class Lexer {
 public:
-    explicit CHTLLexer(std::string source);
-    std::vector<Token> scanTokens();
+    Lexer(const std::string& input);
+
+    Token NextToken();
+
+public:
+    const std::string& getInput() const { return input; }
+    size_t getReadPosition() const { return readPosition; }
+    size_t getPosition() const { return position; }
+    void setSkipWhitespace(bool skip) { _skipWhitespace = skip; }
 
 private:
-    void scanToken();
-    char advance();
-    bool isAtEnd();
-    char peek();
-    char peekNext();
-    bool match(char expected);
+    void readChar();
+    char peekChar() const;
+    void skipWhitespace();
+    Token readIdentifier();
+    Token readStringLiteral();
+    Token readUnquotedLiteral();
+    Token readNumberLiteral();
+    TokenType lookupIdent(const std::string& ident);
 
-    void stringLiteral(char quote_type);
-    void identifier();
-    void number();
-    void singleLineComment();
-    void multiLineComment();
-    void generatorComment();
-    void unquotedLiteral();
-
-
-    std::string source;
-    std::vector<Token> tokens;
-    int start = 0;
-    int current = 0;
-    int line = 1;
-    int column = 1;
+    std::string input;
+    bool _skipWhitespace;
+    size_t position;      // current position in input (points to current char)
+    size_t readPosition;  // current reading position in input (after current char)
+    char ch;              // current char under examination
+    int line;             // current line number
+    int column;           // current column number
 };

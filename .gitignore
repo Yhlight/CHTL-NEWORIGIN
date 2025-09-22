@@ -1,0 +1,11 @@
+# Build artifacts
+/build/
+*.o
+*.out
+chtl_compiler
+
+# IDE files
+.vscode/
+
+# Other
+*.swp

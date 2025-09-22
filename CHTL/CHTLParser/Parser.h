@@ -1,56 +1,38 @@
 #pragma once
 
-#include "../CHTLLexer/Token.h"
+#include "../CHTLLexer/Lexer.h"
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
-#include "../CHTLNode/CommentNode.h"
-#include "ParseContext.h"
-#include "ExpressionParser.h"
-#include "ExpressionEvaluator.h"
-
+#include "../CHTLNode/AttributeNode.h"
+#include "../CHTLNode/LiteralNode.h"
+#include "../CHTLNode/StyleNode.h"
 #include <vector>
+#include <string>
 #include <memory>
-#include <stdexcept>
 
-class CHTLParser {
+class Parser {
 public:
-    explicit CHTLParser(std::vector<Token> tokens);
-    std::vector<std::shared_ptr<BaseNode>> parse();
+    Parser(Lexer& l);
+
+    std::unique_ptr<Program> ParseProgram();
+    const std::vector<std::string>& Errors() const { return errors; }
 
 private:
-    std::vector<std::shared_ptr<BaseNode>> parseStatement();
-    std::shared_ptr<BaseNode> parseElement();
-    std::shared_ptr<BaseNode> parseTextElement();
-    void parseAttribute(std::shared_ptr<ElementNode> element);
-    void parseStyleBlock(std::shared_ptr<ElementNode> element);
-    void parseTemplateDefinition();
-    std::string parseValueUntilSemicolon();
+    void nextToken();
+    bool expectPeek(TokenType t);
 
-    // Helper methods
-    bool isAtEnd();
-    Token& peek();
-    Token& previous();
-    Token& advance();
-    bool check(TokenType type);
-    bool match(const std::vector<TokenType>& types);
-    Token& consume(TokenType type, const std::string& message);
-    void synchronize();
+    std::unique_ptr<Statement> parseStatement();
+    std::unique_ptr<ElementNode> parseElementNode();
+    std::unique_ptr<TextNode> parseTextNode();
+    std::unique_ptr<Statement> parseAttributeNode();
+    std::unique_ptr<Statement> parseStyleNode();
+    std::unique_ptr<Expression> parseExpression();
 
-    std::vector<Token> tokens;
-    int current = 0;
-    ParseContext parseContext;
+    void peekError(TokenType t);
 
-    enum class ParserState {
-        GLOBAL,
-        ELEMENT_BODY,
-        STYLE_BLOCK
-    };
-    std::vector<ParserState> states;
-    ParserState currentState();
-};
-
-class ParseError : public std::runtime_error {
-public:
-    using std::runtime_error::runtime_error;
+    Lexer& lexer;
+    Token curToken;
+    Token peekToken;
+    std::vector<std::string> errors;
 };
