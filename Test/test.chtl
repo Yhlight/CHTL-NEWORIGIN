@@ -1,0 +1,39 @@
+[Template] @Style DefaultText
+{
+	color: blue;
+	line-height: 1.6;
+}
+
+# This is a generator-aware comment that should appear in the output.
+
+// This is a regular comment that should be ignored.
+
+html {
+    head {
+        title {
+            text { "My CHTL Page" }
+        }
+    }
+    body {
+        div {
+            id: "main-container";
+            class = "container"; // Testing the '=' alternative for ':'
+
+            h1 {
+                style {
+                    color: red;
+                    font-size: 24px;
+                }
+                text { "Welcome to CHTL!" }
+            }
+
+            p {
+                style {
+                    @Style DefaultText;
+                    font-weight: bold;
+                }
+                text { "This is a paragraph generated from CHTL source." }
+            }
+        }
+    }
+}
