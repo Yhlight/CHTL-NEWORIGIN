@@ -1,0 +1,22 @@
+// This is a test file for the CHTL parser.
+// It includes comments, elements, and text nodes.
+
+html {
+    head {
+        title {
+            text { "My CHTL Page" }
+        }
+    }
+
+    body {
+        // A multi-line comment just to make sure the lexer skips it.
+        /*
+         * This should not appear in the AST.
+         */
+
+        # A generator comment that should be in the AST
+        div {
+            text { Unquoted text works too }
+        }
+    }
+}

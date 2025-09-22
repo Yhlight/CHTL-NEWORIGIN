@@ -1,0 +1,7 @@
+# Build artifacts
+test_parser
+*.o
+*.out
+
+# IDE files
+.vscode/
