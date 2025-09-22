@@ -1,0 +1,27 @@
+[Import] @Chtl from "theme.chtl";
+
+[Namespace] MyUI {
+    [Template] @Element Card {
+        div {
+            class: "card";
+            style {
+                @Style BaseCard from MyTheme {
+                    background-color: white;
+                }
+
+                .card-title {
+                    font-size: 1.5rem;
+                    margin-bottom: 0.5rem;
+                }
+            }
+
+            h2 {
+                class: "card-title";
+                text: "A Component Card";
+            }
+            p {
+                text: "This card uses styles from the theme.";
+            }
+        }
+    }
+}

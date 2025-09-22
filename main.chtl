@@ -1,0 +1,10 @@
+[Import] @Chtl from "components.chtl";
+
+html {
+    head {
+        title { text: "Comprehensive Test"; }
+    }
+    body {
+        @Element Card from MyUI;
+    }
+}

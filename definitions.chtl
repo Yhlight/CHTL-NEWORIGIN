@@ -1,0 +1,4 @@
+[Template] @Style ImportedStyle {
+    color: blue;
+    font-weight: bold;
+}

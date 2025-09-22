@@ -1,0 +1,21 @@
+Start testing: Sep 22 15:59 UTC
+----------------------------------------------------------
+1/1 Testing: RunComprehensiveTest
+1/1 Test: RunComprehensiveTest
+Command: "/app/build/CHTL/CHTLCompiler" "/app/main.chtl"
+Directory: /app
+"RunComprehensiveTest" start time: Sep 22 15:59 UTC
+Output:
+----------------------------------------------------------
+<html><head><title>Comprehensive Test</title></head><body><div class="card card-title" style="padding: 1rem; border-radius: 8px; box-shadow: 0 4px 8px rgba( 0, 0, 0, 0.1); background-color: white"><h2 class="card-title">A Component Card</h2><p>This card uses styles from the theme.</p></div></body></html>
+<style>.card-title { font-size: 1.5rem; margin-bottom: 0.5rem; }
+</style>
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"RunComprehensiveTest" end time: Sep 22 15:59 UTC
+"RunComprehensiveTest" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 22 15:59 UTC
