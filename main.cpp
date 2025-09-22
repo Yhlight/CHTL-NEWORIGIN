@@ -34,7 +34,7 @@ int main() {
         for (const auto& error : errors) {
             std::cerr << error << std::endl;
         }
-        return 1;
+        // Don't exit on error, let's see what the generator produces anyway
     }
 
     if (!astRoot) {

@@ -1,18 +1,40 @@
+// Main test file for CHTL core features
+
+# This is a generator comment, it will be tokenized but ignored by the parser.
+
 html {
     head {
         title {
-            text { "My CHTL Page" }
+            // Using the text: property syntax with a quoted string
+            text: "CHTL Test Page";
         }
+
+        // Global styles will be collected here
     }
     body {
+        // This div uses a style block
         div {
-            id: "main";
-            class: "container";
-            h1 {
-                text { "Welcome to CHTL!" }
+            id: "main-content";
+
+            style {
+                border: 1px solid black;
+                padding: 15px;
+                background-color: #f0f0f0;
             }
+
+            h1 {
+                // Using unquoted text block syntax
+                text {
+                    Welcome to CHTL
+                }
+                style {
+                    color: blue;
+                    font-family: Arial;
+                }
+            }
+
             p {
-                text { "This is generated from CHTL source." }
+                text: This is a paragraph with an unquoted text property;
             }
         }
     }

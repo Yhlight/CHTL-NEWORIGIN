@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include <utility>
+#include <sstream>
 
 namespace CHTL {
 
@@ -40,7 +41,6 @@ bool Parser::peekTokenIs(TokenType type) const {
     return m_peekToken.type == type;
 }
 
-// The main entry point. Creates a root node to hold all top-level statements.
 std::unique_ptr<ElementNode> Parser::ParseProgram() {
     auto root = std::make_unique<ElementNode>("__ROOT__");
     while (!currentTokenIs(TokenType::Eof)) {
@@ -48,23 +48,22 @@ std::unique_ptr<ElementNode> Parser::ParseProgram() {
         if (stmt) {
             root->children.push_back(std::move(stmt));
         } else {
-            // An error occurred and parseStatement returned nullptr.
-            // The token is unparseable. Skip it to avoid an infinite loop.
-            m_errors.push_back("Skipping unparseable token: " + m_currentToken.literal);
+            if (!currentTokenIs(TokenType::GeneratorComment) && !currentTokenIs(TokenType::Eof)) {
+                 m_errors.push_back("Skipping unparseable token: " + m_currentToken.literal);
+            }
         }
 
         if (currentTokenIs(TokenType::Eof)) break;
-
-        // After parsing a statement, we must advance to the next token.
-        // `parseStatement` leaves us on the LAST token of the statement (e.g. '}')
-        // so we need to advance to get to the start of the next one.
         nextToken();
     }
     return root;
 }
 
-// Dispatches to the correct parsing function based on the current token.
 std::unique_ptr<BaseNode> Parser::parseStatement() {
+    if (currentTokenIs(TokenType::GeneratorComment)) {
+        return nullptr;
+    }
+
     if (currentTokenIs(TokenType::Identifier)) {
         if (m_currentToken.literal == "text") {
             return parseTextNode();
@@ -75,25 +74,39 @@ std::unique_ptr<BaseNode> Parser::parseStatement() {
     return nullptr;
 }
 
-// Parses a complete element, including its attributes and children.
-// Assumes m_currentToken is the element's tag (Identifier).
 std::unique_ptr<ElementNode> Parser::parseElementNode() {
     auto element = std::make_unique<ElementNode>(m_currentToken.literal);
 
     if (!expectPeek(TokenType::LBrace)) return nullptr;
 
     while (!peekTokenIs(TokenType::RBrace) && !peekTokenIs(TokenType::Eof)) {
-        nextToken(); // Consume '{' or the last token of the previous statement.
+        nextToken();
+
+        if (currentTokenIs(TokenType::GeneratorComment)) {
+            continue;
+        }
 
         if (!currentTokenIs(TokenType::Identifier)) {
              m_errors.push_back("Unexpected token inside element block.");
-             continue; // Skip to the next token
+             continue;
         }
 
-        if (peekTokenIs(TokenType::Colon) || peekTokenIs(TokenType::Equals)) {
-            auto attr = parseAttributeNode();
-            if (attr) {
-                element->attributes.push_back(std::move(attr));
+        if (m_currentToken.literal == "style" && peekTokenIs(TokenType::LBrace)) {
+            auto styleNode = parseStyleNode();
+            if (styleNode) {
+                element->children.push_back(std::move(styleNode));
+            }
+        } else if (peekTokenIs(TokenType::Colon) || peekTokenIs(TokenType::Equals)) {
+            if (m_currentToken.literal == "text") {
+                auto textNode = parseTextProperty();
+                if (textNode) {
+                    element->children.push_back(std::move(textNode));
+                }
+            } else {
+                auto attr = parseAttributeNode();
+                if (attr) {
+                    element->attributes.push_back(std::move(attr));
+                }
             }
         } else {
             auto child = parseStatement();
@@ -108,8 +121,6 @@ std::unique_ptr<ElementNode> Parser::parseElementNode() {
     return element;
 }
 
-// Parses a single attribute from name to semicolon.
-// Assumes m_currentToken is the attribute's name (Identifier).
 std::unique_ptr<AttributeNode> Parser::parseAttributeNode() {
     std::string name = m_currentToken.literal;
 
@@ -117,9 +128,9 @@ std::unique_ptr<AttributeNode> Parser::parseAttributeNode() {
         m_errors.push_back("Expected ':' or '=' after attribute name.");
         return nullptr;
     }
-    nextToken(); // Consume name, currentToken is now ':' or '='
+    nextToken();
 
-    nextToken(); // Consume ':', currentToken is now the value
+    nextToken();
 
     if (!currentTokenIs(TokenType::Identifier) && !currentTokenIs(TokenType::String)) {
         m_errors.push_back("Invalid attribute value. Must be an identifier or a string.");
@@ -134,17 +145,84 @@ std::unique_ptr<AttributeNode> Parser::parseAttributeNode() {
     return attr;
 }
 
-// Parses a text block from `text` to `}`.
-// Assumes m_currentToken is the 'text' identifier.
 std::unique_ptr<TextNode> Parser::parseTextNode() {
     if (!expectPeek(TokenType::LBrace)) return nullptr;
-    if (!expectPeek(TokenType::String)) return nullptr;
 
-    auto node = std::make_unique<TextNode>(m_currentToken.literal);
+    if (peekTokenIs(TokenType::String)) {
+        nextToken();
+        auto node = std::make_unique<TextNode>(m_currentToken.literal);
+        if (!expectPeek(TokenType::RBrace)) return nullptr;
+        return node;
+    }
 
-    if (!expectPeek(TokenType::RBrace)) return nullptr;
+    nextToken();
+    std::string content;
+    while (!currentTokenIs(TokenType::RBrace) && !currentTokenIs(TokenType::Eof)) {
+        content += m_currentToken.literal;
+        nextToken();
+        if (!currentTokenIs(TokenType::RBrace)) {
+             content += " ";
+        }
+    }
 
-    return node;
+    if (!content.empty() && content.back() == ' ') {
+        content.pop_back();
+    }
+
+    if (!currentTokenIs(TokenType::RBrace)) {
+        m_errors.push_back("Unclosed text block.");
+        return nullptr;
+    }
+
+    return std::make_unique<TextNode>(content);
+}
+
+std::unique_ptr<TextNode> Parser::parseTextProperty() {
+    nextToken(); // consume 'text'
+    nextToken(); // consume ':' or '='
+
+    std::stringstream content;
+    while(!currentTokenIs(TokenType::Semicolon) && !currentTokenIs(TokenType::Eof)) {
+        content << m_currentToken.literal;
+        if (peekTokenIs(TokenType::Semicolon)) {
+            // don't add space before the end
+        } else {
+            content << " ";
+        }
+        nextToken();
+    }
+
+    if (!currentTokenIs(TokenType::Semicolon)) {
+        m_errors.push_back("Expected semicolon to end text property.");
+        return nullptr;
+    }
+
+    return std::make_unique<TextNode>(content.str());
+}
+
+std::unique_ptr<StyleNode> Parser::parseStyleNode() {
+    if (!expectPeek(TokenType::LBrace)) return nullptr;
+
+    nextToken();
+
+    std::stringstream content;
+    int brace_level = 1;
+
+    while (brace_level > 0 && !currentTokenIs(TokenType::Eof)) {
+        if (currentTokenIs(TokenType::LBrace)) brace_level++;
+        if (currentTokenIs(TokenType::RBrace)) brace_level--;
+
+        if (brace_level > 0) {
+            content << m_currentToken.literal << " ";
+        }
+
+        // This check ensures we don't advance past the final brace
+        if (brace_level > 0) {
+            nextToken();
+        }
+    }
+
+    return std::make_unique<StyleNode>(content.str());
 }
 
 } // CHTL

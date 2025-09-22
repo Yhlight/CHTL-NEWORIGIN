@@ -12,7 +12,7 @@ class Parser {
 public:
     explicit Parser(Lexer& lexer);
 
-    std::unique_ptr<ElementNode> ParseProgram(); // Changed to ParseProgram to better reflect it parses the whole thing.
+    std::unique_ptr<ElementNode> ParseProgram();
     const std::vector<std::string>& Errors() const;
 
 private:
@@ -22,6 +22,8 @@ private:
     std::unique_ptr<ElementNode> parseElementNode();
     std::unique_ptr<AttributeNode> parseAttributeNode();
     std::unique_ptr<TextNode> parseTextNode();
+    std::unique_ptr<TextNode> parseTextProperty();
+    std::unique_ptr<StyleNode> parseStyleNode();
 
     // Helper methods for checking tokens
     bool currentTokenIs(TokenType type) const;

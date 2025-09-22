@@ -11,15 +11,18 @@ enum class TokenType {
     Illegal,
 
     // Literals
-    Identifier, // div, id, width
-    String,     // "hello", 'world', helloworld
+    Identifier, // div, id, width, 100px, background-color
+    String,     // "hello", 'world'
+
+    // Comments
+    GeneratorComment, // # a comment
 
     // Symbols
     LBrace,     // {
     RBrace,     // }
     Colon,      // :
     Semicolon,  // ;
-    Equals,     // = (CE对等式)
+    Equals,     // =
 };
 
 struct Token {

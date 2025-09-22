@@ -13,10 +13,11 @@ public:
 
 private:
     void generateNode(const BaseNode& node, std::stringstream& ss);
-    // Overloads for specific node types
     void generateNode(const ElementNode& element, std::stringstream& ss);
     void generateNode(const TextNode& text, std::stringstream& ss);
-    // Note: AttributeNode is handled within generateElement
+    void generateNode(const StyleNode& style, std::stringstream& ss);
+
+    std::stringstream m_global_css;
 };
 
 } // CHTL

@@ -5,28 +5,43 @@ namespace CHTL {
 
 std::string Generator::Generate(const ElementNode& root) {
     std::stringstream ss;
-    // The root node is a virtual container (__ROOT__), so we generate its children directly.
+    m_global_css.str("");
+
     for (const auto& child : root.children) {
         generateNode(*child, ss);
     }
-    return ss.str();
+
+    std::string html = ss.str();
+    std::string styles = m_global_css.str();
+
+    if (!styles.empty()) {
+        size_t head_pos = html.find("</head>");
+        if (head_pos != std::string::npos) {
+            std::string style_tag = "<style>" + styles + "</style>";
+            html.insert(head_pos, style_tag);
+        } else {
+            html = "<style>" + styles + "</style>" + html;
+        }
+    }
+
+    return html;
 }
 
 void Generator::generateNode(const BaseNode& node, std::stringstream& ss) {
-    // Use dynamic_cast to determine the concrete type of the node.
     if (const auto* element = dynamic_cast<const ElementNode*>(&node)) {
         generateNode(*element, ss);
     } else if (const auto* text = dynamic_cast<const TextNode*>(&node)) {
         generateNode(*text, ss);
-    } else {
-        // In a real application, you might want to log this or handle other node types.
-        // For now, we can throw or ignore.
-        throw std::runtime_error("Unknown node type encountered in generator.");
+    } else if (const auto* style = dynamic_cast<const StyleNode*>(&node)) {
+        generateNode(*style, ss);
+    }
+    else {
+        // This case can be reached for nodes that don't produce output, like comments.
+        // We can just ignore them.
     }
 }
 
 void Generator::generateNode(const ElementNode& element, std::stringstream& ss) {
-    // Don't render the virtual root element.
     if (element.tagName == "__ROOT__") {
         for (const auto& child : element.children) {
             generateNode(*child, ss);
@@ -40,7 +55,6 @@ void Generator::generateNode(const ElementNode& element, std::stringstream& ss) 
         ss << " " << attr->name << "=\"" << attr->value << "\"";
     }
 
-    // For now, we assume no self-closing tags.
     ss << ">";
 
     for (const auto& child : element.children) {
@@ -51,8 +65,11 @@ void Generator::generateNode(const ElementNode& element, std::stringstream& ss) 
 }
 
 void Generator::generateNode(const TextNode& text, std::stringstream& ss) {
-    // For now, no HTML escaping.
     ss << text.content;
+}
+
+void Generator::generateNode(const StyleNode& style, std::stringstream& ss) {
+    m_global_css << style.content;
 }
 
 } // CHTL

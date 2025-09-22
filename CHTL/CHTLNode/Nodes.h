@@ -32,6 +32,17 @@ public:
     }
 };
 
+class StyleNode : public BaseNode {
+public:
+    std::string content;
+
+    explicit StyleNode(std::string c) : content(std::move(c)) {}
+
+    std::string toString() const override {
+        return "style { " + content + " }";
+    }
+};
+
 class ElementNode : public BaseNode {
 public:
     std::string tagName;
@@ -47,7 +58,6 @@ public:
             ss << "  " << attr->toString() << "\n";
         }
         for (const auto& child : children) {
-            // This could get messy with deep nesting, but it's for debug.
             ss << "  " << child->toString() << "\n";
         }
         ss << "}";
