@@ -77,28 +77,6 @@ Token Lexer::stringLiteral(char quoteType) {
     return {TokenType::String, value, line, startCol};
 }
 
-Token Lexer::hashComment() {
-    int startCol = column;
-    advance(); // Consume '#'
-
-    // Spec: "#" must be followed by a space to be a valid comment.
-    if (peek() != ' ') {
-        std::string value = "#";
-        // It's not a valid comment, read until whitespace/newline and flag as unexpected.
-        while (peek() != '\0' && !isspace(peek())) {
-            value += advance();
-        }
-        return {TokenType::Unexpected, value, line, startCol};
-    }
-
-    advance(); // Consume space
-
-    std::string value;
-    while (peek() != '\n' && peek() != '\0') {
-        value += advance();
-    }
-    return {TokenType::HashComment, value, line, startCol};
-}
 
 Token Lexer::number() {
     std::string value;
@@ -186,8 +164,24 @@ Token Lexer::getNextToken() {
         }
 
         if (current == '#') {
-            return hashComment();
+            // If # is followed by a space, it's a comment. Otherwise, it's a selector Hash.
+            if ((position + 1 < source.length()) && isspace(source[position + 1])) {
+                int startCol = column;
+                advance(); // consume '#'
+                advance(); // consume ' '
+                std::string value;
+                while (peek() != '\n' && peek() != '\0') {
+                    value += advance();
+                }
+                return {TokenType::HashComment, value, line, startCol};
+            } else {
+                int startCol = column; advance(); return {TokenType::Hash, "#", line, startCol};
+            }
         }
+
+        // CSS Selector tokens
+        if (current == '.') { int startCol = column; advance(); return {TokenType::Dot, ".", line, startCol}; }
+        if (current == '&') { int startCol = column; advance(); return {TokenType::Ampersand, "&", line, startCol}; }
 
         // Arithmetic and grouping operators
         if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }

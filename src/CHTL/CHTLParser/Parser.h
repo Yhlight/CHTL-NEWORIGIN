@@ -33,6 +33,9 @@ public:
     // A context node for states that need to modify a parent, e.g.,
     // a state for parsing attributes needs to know which element to modify.
     ElementNode* contextNode = nullptr;
+
+    // A string to accumulate global CSS rules from style blocks.
+    std::string globalStyleContent;
     // --- End public interface for states ---
 
 private:

@@ -20,11 +20,4 @@ private:
     // Helpers for parsing content within an element.
     void parseElementBody(Parser& parser, ElementNode& element);
     void parseAttribute(Parser& parser, ElementNode& element);
-    void parseStyleBlock(Parser& parser, ElementNode& element);
-
-    // Expression parsing for style values
-    std::string parseStyleExpression(Parser& parser);
-    std::pair<double, std::string> parseAdditiveExpr(Parser& parser);
-    std::pair<double, std::string> parseMultiplicativeExpr(Parser& parser);
-    std::pair<double, std::string> parsePrimaryExpr(Parser& parser);
 };

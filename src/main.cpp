@@ -12,24 +12,33 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the latest features, including
-    // parser states and style property arithmetic.
+    // A CHTL source string to test the latest features:
+    // - Automatic class/id attribute generation from style blocks.
+    // - Global CSS generation from selector rules.
+    // - The '&' context reference for pseudo-classes.
     std::string chtlSource = R"(
-div {
-    id: main;
-    style {
-        // Test precedence and parentheses
-        padding: (10px + 5) * 2;
-
-        // Test division
-        height: 100% / 2;
-
-        // Test simple addition
-        width: 50px + 25px;
+html {
+    head {
+        title: "Advanced Styles Test";
     }
+    body {
+        div {
+            style {
+                .container {
+                    border: 1px solid black;
+                    padding: 10px;
+                }
 
-    // Test text attribute
-    text: "Styled Content";
+                &:hover {
+                    background-color: #f0f0f0;
+                }
+            }
+
+            p {
+                text: "Hello, CHTL styles!";
+            }
+        }
+    }
 }
 )";
 
@@ -37,13 +46,13 @@ div {
         // 1. Lexing Stage
         Lexer lexer(chtlSource);
 
-        // 2. Parsing Stage (now using the state pattern)
+        // 2. Parsing Stage
         Parser parser(lexer);
         std::vector<std::unique_ptr<BaseNode>> ast = parser.parse();
 
         // 3. Generation Stage
         Generator generator;
-        std::string htmlOutput = generator.generate(ast);
+        std::string htmlOutput = generator.generate(ast, parser.globalStyleContent);
 
         // 4. Output Results
         std::cout << "--- CHTL Source ---" << std::endl;

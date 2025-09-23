@@ -27,9 +27,10 @@ void Generator::appendLine(const std::string& str) {
     result += getIndent() + str + "\n";
 }
 
-std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& roots) {
+std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss) {
     result.clear();
     indentLevel = 0;
+    this->globalCssToInject = globalCss; // Store the CSS for later injection.
     for (const auto& root : roots) {
         generateNode(root.get());
     }
@@ -81,12 +82,25 @@ void Generator::generateElement(const ElementNode* node) {
         return;
     }
 
-    if (!node->children.empty()) {
+    // Handle children and potential global style injection
+    if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
         append("\n");
         indent();
+
+        // 1. Generate all children from the AST
         for (const auto& child : node->children) {
             generateNode(child.get());
         }
+
+        // 2. If this is the head tag, inject the collected global styles
+        if (node->tagName == "head" && !globalCssToInject.empty()) {
+            appendLine("<style>");
+            indent();
+            result += globalCssToInject; // Append raw CSS content
+            outdent();
+            appendLine("</style>");
+        }
+
         outdent();
         append(getIndent());
     }

@@ -28,5 +28,4 @@ private:
     Token number();
     Token identifier();
     Token stringLiteral(char quoteType);
-    Token hashComment();
 };

@@ -32,7 +32,12 @@ enum class TokenType {
 
     // Parentheses
     OpenParen,   // (
-    CloseParen   // )
+    CloseParen,  // )
+
+    // CSS Selectors
+    Dot,         // .
+    Hash,        // # (for selectors)
+    Ampersand    // &
 };
 
 // Represents a single token extracted from the source code.
