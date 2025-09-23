@@ -423,6 +423,7 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
                         break;
                     }
                 }
+                parser.expectToken(TokenType::Semicolon); // Consume the semicolon
             } else {
                 // Handle property completion
                 std::string key = parser.currentToken.value;
