@@ -29,6 +29,15 @@ enum class TokenType {
     PERCENT,        // %
     DOUBLE_STAR,    // **
 
+    // Logical & Conditional Operators
+    GREATER,        // >
+    LESS,           // <
+    EQUAL_EQUAL,    // ==
+    NOT_EQUAL,      // !=
+    LOGICAL_AND,    // &&
+    LOGICAL_OR,     // ||
+    QUESTION_MARK,  // ?
+
     // Literals
     IDENTIFIER,     // e.g., div, my_variable
     STRING,         // "hello", 'world', or unquoted_literal

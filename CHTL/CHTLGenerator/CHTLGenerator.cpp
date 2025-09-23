@@ -51,11 +51,11 @@ void CHTLGenerator::visitElement(const std::shared_ptr<ElementNode>& node) {
         output << " " << attr->key << "=\"" << attr->value << "\"";
     }
 
-    // Generate inline styles
-    if (!node->inlineStyles.empty()) {
+    // Generate inline styles from the evaluated results
+    if (!node->finalStyles.empty()) {
         output << " style=\"";
-        for (auto it = node->inlineStyles.begin(); it != node->inlineStyles.end(); ++it) {
-            output << it->first << ": " << it->second << ";";
+        for (const auto& stylePair : node->finalStyles) {
+            output << stylePair.first << ": " << stylePair.second << ";";
         }
         output << "\"";
     }

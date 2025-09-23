@@ -6,12 +6,14 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include "../CHTLExpr/BaseExprNode.h"
 
 struct ElementNode : public BaseNode {
     std::string tagName;
     std::vector<std::shared_ptr<AttributeNode>> attributes;
     std::vector<std::shared_ptr<BaseNode>> children;
-    std::map<std::string, std::string> inlineStyles;
+    std::map<std::string, std::shared_ptr<BaseExprNode>> inlineStyles;
+    std::map<std::string, std::string> finalStyles;
 
     explicit ElementNode(const std::string& tagName) : tagName(tagName) {}
 

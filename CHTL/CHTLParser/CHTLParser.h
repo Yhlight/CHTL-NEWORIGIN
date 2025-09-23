@@ -16,6 +16,12 @@ public:
     explicit CHTLParser(CHTLLexer& lexer, CHTLContext& context);
     std::shared_ptr<ElementNode> parse();
 
+    // Methods for ExprParser to access the token stream
+    void consumeToken();
+    const Token& getCurrentToken() const;
+    Token peekNextToken();
+
+
 private:
     CHTLLexer& lexer;
     CHTLContext& context;
@@ -29,7 +35,7 @@ private:
     // Parsing helpers
     void parseDirective();
     void parseTemplateDefinition();
-    std::map<std::string, std::string> parseStyleProperties();
+    std::map<std::string, std::shared_ptr<BaseExprNode>> parseStyleProperties();
     std::shared_ptr<BaseNode> parseStatement();
     std::shared_ptr<ElementNode> parseElement();
     void parseBlock(const std::shared_ptr<ElementNode>& element);

@@ -182,6 +182,41 @@ Token CHTLLexer::generateNextToken() {
         return makeToken(TokenType::STAR, "*");
     }
 
+    if (current == '=') {
+        if (peekChar() == '=') {
+            advance();
+            advance();
+            return makeToken(TokenType::EQUAL_EQUAL, "==");
+        }
+        advance();
+        return makeToken(TokenType::EQUAL, "=");
+    }
+
+    if (current == '!') {
+        if (peekChar() == '=') {
+            advance();
+            advance();
+            return makeToken(TokenType::NOT_EQUAL, "!=");
+        }
+        // Add ! as a logical NOT operator later if needed
+    }
+
+    if (current == '&') {
+        if (peekChar() == '&') {
+            advance();
+            advance();
+            return makeToken(TokenType::LOGICAL_AND, "&&");
+        }
+    }
+
+    if (current == '|') {
+        if (peekChar() == '|') {
+            advance();
+            advance();
+            return makeToken(TokenType::LOGICAL_OR, "||");
+        }
+    }
+
     if (current == '#') {
         advance(); // consume '#'
         std::string comment_value;
@@ -206,11 +241,13 @@ Token CHTLLexer::generateNextToken() {
         case ':': advance(); return makeToken(TokenType::COLON, ":");
         case ';': advance(); return makeToken(TokenType::SEMICOLON, ";");
         case ',': advance(); return makeToken(TokenType::COMMA, ",");
-        case '=': advance(); return makeToken(TokenType::EQUAL, "=");
         case '+': advance(); return makeToken(TokenType::PLUS, "+");
         case '-': advance(); return makeToken(TokenType::MINUS, "-");
         case '%': advance(); return makeToken(TokenType::PERCENT, "%");
         case '@': advance(); return makeToken(TokenType::AT, "@");
+        case '>': advance(); return makeToken(TokenType::GREATER, ">");
+        case '<': advance(); return makeToken(TokenType::LESS, "<");
+        case '?': advance(); return makeToken(TokenType::QUESTION_MARK, "?");
     }
 
     // If nothing matches, it's an unknown character

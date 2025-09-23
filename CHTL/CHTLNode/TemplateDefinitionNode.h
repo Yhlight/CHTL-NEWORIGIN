@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BaseNode.h"
+#include "../CHTLExpr/BaseExprNode.h" // Correct placement
 #include <string>
 #include <vector>
 #include <map>
@@ -17,7 +18,7 @@ struct TemplateDefinitionNode : public BaseNode {
     TemplateType templateType;
 
     // Content for Style templates
-    std::map<std::string, std::string> styleProperties;
+    std::map<std::string, std::shared_ptr<BaseExprNode>> styleProperties;
 
     // Content for Element templates
     std::vector<std::shared_ptr<BaseNode>> children;

@@ -1,15 +1,24 @@
 #include "CHTLParser.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLExpr/ExprParser.h"
 #include <iostream>
 
 const std::string VIRTUAL_ROOT_TAG = "__ROOT__";
 
 CHTLParser::CHTLParser(CHTLLexer& lexer, CHTLContext& context) : lexer(lexer), context(context) {
-    advanceToken(); // Initialize currentToken
+    consumeToken(); // Initialize currentToken
 }
 
-void CHTLParser::advanceToken() {
+void CHTLParser::consumeToken() {
     currentToken = lexer.getNextToken();
+}
+
+const Token& CHTLParser::getCurrentToken() const {
+    return currentToken;
+}
+
+Token CHTLParser::peekNextToken() {
+    return lexer.peekToken();
 }
 
 void CHTLParser::error(const std::string& message) {
@@ -23,7 +32,7 @@ void CHTLParser::expect(TokenType type, const std::string& message) {
     if (currentToken.type != type) {
         error(message);
     }
-    advanceToken();
+    consumeToken();
 }
 
 std::shared_ptr<ElementNode> CHTLParser::parse() {
@@ -67,7 +76,7 @@ std::shared_ptr<BaseNode> CHTLParser::parseStatement() {
 
 std::shared_ptr<ElementNode> CHTLParser::parseElement() {
     auto element = std::make_shared<ElementNode>(currentToken.value);
-    advanceToken();
+    consumeToken();
 
     if (currentToken.type == TokenType::LEFT_BRACE) {
         parseBlock(element);
@@ -114,10 +123,10 @@ void CHTLParser::parseBlock(const std::shared_ptr<ElementNode>& element) {
 
 std::shared_ptr<AttributeNode> CHTLParser::parseAttribute() {
     std::string key = currentToken.value;
-    advanceToken();
+    consumeToken();
 
     if (currentToken.type == TokenType::COLON || currentToken.type == TokenType::EQUAL) {
-        advanceToken();
+        consumeToken();
     } else {
         error("Expected ':' or '=' after attribute name.");
     }
@@ -127,7 +136,7 @@ std::shared_ptr<AttributeNode> CHTLParser::parseAttribute() {
     }
 
     std::string value = currentToken.value;
-    advanceToken();
+    consumeToken();
 
     expect(TokenType::SEMICOLON, "Expected ';' after attribute value.");
 
@@ -143,7 +152,7 @@ std::shared_ptr<TextNode> CHTLParser::parseTextNode() {
     }
 
     std::string content = currentToken.value;
-    advanceToken();
+    consumeToken();
 
     expect(TokenType::RIGHT_BRACE, "Expected '}' to end text block.");
 
@@ -153,7 +162,7 @@ std::shared_ptr<TextNode> CHTLParser::parseTextNode() {
 std::shared_ptr<CommentNode> CHTLParser::parseCommentNode() {
     std::string content = currentToken.value;
     auto node = std::make_shared<CommentNode>(content, true);
-    advanceToken();
+    consumeToken();
     return node;
 }
 
@@ -162,9 +171,10 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
     expect(TokenType::LEFT_BRACE, "Expected '{' for style block.");
     state.enter(ParseState::IN_STYLE_BLOCK);
 
-    while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
-        if (currentToken.type == TokenType::AT) {
-            advanceToken();
+    while(getCurrentToken().type != TokenType::RIGHT_BRACE && getCurrentToken().type != TokenType::END_OF_FILE) {
+        std::cout << "StyleBlock Loop Start: " << getCurrentToken().value << std::endl;
+        if (getCurrentToken().type == TokenType::AT) {
+            consumeToken();
             expect(TokenType::KEYWORD_STYLE, "Expected 'Style' after '@' for template usage.");
 
             std::string templateName = currentToken.value;
@@ -182,39 +192,17 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
 
         } else if (currentToken.type == TokenType::IDENTIFIER) {
             std::string key = currentToken.value;
-            advanceToken();
+            consumeToken();
 
             expect(TokenType::COLON, "Expected ':' after style property name.");
 
-            std::string value;
-            while(currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
-                if (currentToken.type == TokenType::IDENTIFIER && lexer.peekToken().type == TokenType::LEFT_PAREN) {
-                    std::string tplName = currentToken.value;
-                    advanceToken();
-                    advanceToken();
-                    std::string varName = currentToken.value;
-                    expect(TokenType::IDENTIFIER, "Expected variable name inside parentheses.");
-                    expect(TokenType::RIGHT_PAREN, "Expected ')' after variable name.");
+            ExprParser exprParser(*this, context);
+            auto valueExpr = exprParser.parse();
 
-                    if (context.varTemplates.count(tplName) && context.varTemplates[tplName]->variables.count(varName)) {
-                        value += context.varTemplates[tplName]->variables[varName];
-                    } else {
-                        error("Undefined variable '" + varName + "' in template '" + tplName + "'");
-                    }
-                } else {
-                    value += currentToken.value;
-                    advanceToken();
-                }
-
-                if (currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
-                    value += " ";
-                }
-            }
-
-            element->inlineStyles[key] = value;
+            element->inlineStyles[key] = valueExpr;
 
             if (currentToken.type == TokenType::SEMICOLON) {
-                advanceToken();
+                consumeToken();
             }
         } else {
             error("Expected a style property or a template usage (@Style).");
@@ -229,7 +217,7 @@ void CHTLParser::parseDirective() {
     expect(TokenType::LEFT_BRACKET, "Expected '[' to start a directive.");
 
     if (currentToken.type == TokenType::KEYWORD_TEMPLATE) {
-        advanceToken();
+        consumeToken();
         expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Template' keyword.");
         parseTemplateDefinition();
     } else {
@@ -241,13 +229,13 @@ void CHTLParser::parseTemplateDefinition() {
     expect(TokenType::AT, "Expected '@' for template type.");
 
     if (currentToken.type == TokenType::KEYWORD_STYLE) {
-        advanceToken();
+        consumeToken();
 
         if (currentToken.type != TokenType::IDENTIFIER) {
             error("Expected a name for the style template.");
         }
         std::string templateName = currentToken.value;
-        advanceToken();
+        consumeToken();
 
         expect(TokenType::LEFT_BRACE, "Expected '{' for template block.");
 
@@ -259,7 +247,7 @@ void CHTLParser::parseTemplateDefinition() {
             // Handle inheritance
             if (currentToken.type == TokenType::KEYWORD_INHERIT || currentToken.type == TokenType::AT) {
                 if (currentToken.type == TokenType::KEYWORD_INHERIT) {
-                    advanceToken(); // consume 'inherit'
+                    consumeToken(); // consume 'inherit'
                 }
                 expect(TokenType::AT, "Expected '@' for template inheritance.");
                 expect(TokenType::KEYWORD_STYLE, "Expected 'Style' for template inheritance.");
@@ -281,38 +269,17 @@ void CHTLParser::parseTemplateDefinition() {
 
             if(currentToken.type != TokenType::IDENTIFIER) error("Expected a style property name.");
             std::string key = currentToken.value;
-            advanceToken();
+            consumeToken();
 
             expect(TokenType::COLON, "Expected ':' after style property name.");
 
-            std::string value;
-            while(currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
-                if (currentToken.type == TokenType::IDENTIFIER && lexer.peekToken().type == TokenType::LEFT_PAREN) {
-                    std::string tplName = currentToken.value;
-                    advanceToken();
-                    advanceToken();
-                    std::string varName = currentToken.value;
-                    expect(TokenType::IDENTIFIER, "Expected variable name inside parentheses.");
-                    expect(TokenType::RIGHT_PAREN, "Expected ')' after variable name.");
+            ExprParser exprParser(*this, context);
+            auto valueExpr = exprParser.parse();
 
-                    if (context.varTemplates.count(tplName) && context.varTemplates[tplName]->variables.count(varName)) {
-                        value += context.varTemplates[tplName]->variables[varName];
-                    } else {
-                        error("Undefined variable '" + varName + "' in template '" + tplName + "'");
-                    }
-                } else {
-                    value += currentToken.value;
-                    advanceToken();
-                }
-
-                if (currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE) {
-                    value += " ";
-                }
-            }
-            templateNode->styleProperties[key] = value;
+            templateNode->styleProperties[key] = valueExpr;
 
             if (currentToken.type == TokenType::SEMICOLON) {
-                advanceToken();
+                consumeToken();
             }
         }
 
@@ -321,13 +288,13 @@ void CHTLParser::parseTemplateDefinition() {
         expect(TokenType::RIGHT_BRACE, "Expected '}' to end template block.");
 
     } else if (currentToken.type == TokenType::KEYWORD_ELEMENT) {
-        advanceToken(); // Consume 'Element'
+        consumeToken(); // Consume 'Element'
 
         if (currentToken.type != TokenType::IDENTIFIER) {
             error("Expected a name for the element template.");
         }
         std::string templateName = currentToken.value;
-        advanceToken();
+        consumeToken();
 
         auto templateNode = std::make_shared<TemplateDefinitionNode>(templateName, TemplateType::Element);
 
@@ -340,13 +307,13 @@ void CHTLParser::parseTemplateDefinition() {
         context.elementTemplates[templateName] = templateNode;
 
     } else if (currentToken.type == TokenType::KEYWORD_VAR) {
-        advanceToken(); // Consume 'Var'
+        consumeToken(); // Consume 'Var'
 
         if (currentToken.type != TokenType::IDENTIFIER) {
             error("Expected a name for the var template.");
         }
         std::string templateName = currentToken.value;
-        advanceToken();
+        consumeToken();
 
         auto templateNode = std::make_shared<TemplateDefinitionNode>(templateName, TemplateType::Var);
 
@@ -354,7 +321,7 @@ void CHTLParser::parseTemplateDefinition() {
         while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
             if(currentToken.type != TokenType::IDENTIFIER) error("Expected a variable name.");
             std::string key = currentToken.value;
-            advanceToken();
+            consumeToken();
 
             expect(TokenType::COLON, "Expected ':' after variable name.");
 
@@ -363,7 +330,7 @@ void CHTLParser::parseTemplateDefinition() {
                 error("Expected a value for the variable.");
             }
             templateNode->variables[key] = currentToken.value;
-            advanceToken();
+            consumeToken();
 
             expect(TokenType::SEMICOLON, "Expected ';' after variable value.");
         }

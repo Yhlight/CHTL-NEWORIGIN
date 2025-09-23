@@ -8,6 +8,7 @@
 #include "CHTL/CHTLGenerator/CHTLGenerator.h"
 #include "CHTL/CHTLContext/CHTLContext.h"
 #include "CHTL/CHTLResolver/CHTLResolver.h"
+#include "CHTL/CHTLEvaluator/StyleEvaluator.h"
 
 int main() {
     std::string filename = "Test/test.chtl";
@@ -40,11 +41,15 @@ int main() {
         CHTLResolver resolver(context);
         std::shared_ptr<ElementNode> resolved_ast = resolver.resolve(initial_ast);
 
-        // 4. Generator
+        // 4. Evaluator
+        StyleEvaluator evaluator;
+        evaluator.evaluate(resolved_ast);
+
+        // 5. Generator
         CHTLGenerator generator(resolved_ast);
         std::string html_output = generator.generate();
 
-        // 4. Output
+        // 6. Output
         std::cout << "--- CHTL Compiler Output ---\n" << std::endl;
         std::cout << html_output << std::endl;
 

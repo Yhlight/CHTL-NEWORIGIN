@@ -41,9 +41,12 @@ html {
 
             h1 {
                 style {
+                    width: 100px;
                     color: red;
                     background-color: ThemeColor(mainColor);
-                    font-size: 24px;
+                    font-size: 12px * 2;
+                    border: width > 50px ? "1px solid green" : "1px solid red";
+                    height: width + 10px;
                 }
                 text { "Welcome to CHTL!" }
             }
