@@ -51,7 +51,8 @@ enum class TokenType {
     KEYWORD_NAMESPACE,
     KEYWORD_USE,
     KEYWORD_FROM,
-    KEYWORD_AS
+    KEYWORD_AS,
+    KEYWORD_INHERIT
 };
 
 struct Token {

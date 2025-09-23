@@ -87,7 +87,8 @@ Token CHTLLexer::identifier() {
         {"Namespace", TokenType::KEYWORD_NAMESPACE},
         {"use", TokenType::KEYWORD_USE},
         {"from", TokenType::KEYWORD_FROM},
-        {"as", TokenType::KEYWORD_AS}
+        {"as", TokenType::KEYWORD_AS},
+        {"inherit", TokenType::KEYWORD_INHERIT}
     };
 
     std::string value;

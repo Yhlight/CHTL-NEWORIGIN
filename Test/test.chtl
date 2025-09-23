@@ -3,10 +3,18 @@
     mainColor: "rgb(255, 192, 203)";
 }
 
+[Template] @Style BaseStyle
+{
+    font-size: 16px;
+    font-family: Arial;
+}
+
 [Template] @Style DefaultText
 {
+    inherit @Style BaseStyle;
 	color: blue;
 	line-height: 1.6;
+    font-size: 18px; // Overwrite base style
 }
 
 [Template] @Element Box

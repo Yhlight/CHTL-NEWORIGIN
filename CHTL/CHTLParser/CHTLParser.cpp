@@ -255,6 +255,30 @@ void CHTLParser::parseTemplateDefinition() {
 
         // Manually parse properties here, avoiding the problematic helper
         while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+
+            // Handle inheritance
+            if (currentToken.type == TokenType::KEYWORD_INHERIT || currentToken.type == TokenType::AT) {
+                if (currentToken.type == TokenType::KEYWORD_INHERIT) {
+                    advanceToken(); // consume 'inherit'
+                }
+                expect(TokenType::AT, "Expected '@' for template inheritance.");
+                expect(TokenType::KEYWORD_STYLE, "Expected 'Style' for template inheritance.");
+
+                std::string parentTemplateName = currentToken.value;
+                expect(TokenType::IDENTIFIER, "Expected parent template name.");
+
+                if (context.styleTemplates.count(parentTemplateName)) {
+                    auto parentTemplate = context.styleTemplates[parentTemplateName];
+                    for (const auto& pair : parentTemplate->styleProperties) {
+                        templateNode->styleProperties[pair.first] = pair.second;
+                    }
+                } else {
+                    error("Attempting to inherit from undefined style template: " + parentTemplateName);
+                }
+                expect(TokenType::SEMICOLON, "Expected ';' after template inheritance.");
+                continue; // Continue to next property/inheritance
+            }
+
             if(currentToken.type != TokenType::IDENTIFIER) error("Expected a style property name.");
             std::string key = currentToken.value;
             advanceToken();
