@@ -52,12 +52,14 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
             cloned->isCustom = source->isCustom;
             cloned->styles = source->styles;
             cloned->valuelessProperties = source->valuelessProperties;
+            cloned->parentNames = source->parentNames; // Add this line
             return cloned;
         }
         case NodeType::ElementTemplate: {
             const auto* source = static_cast<const ElementTemplateNode*>(node);
             auto cloned = std::make_unique<ElementTemplateNode>();
             cloned->isCustom = source->isCustom;
+            cloned->parentNames = source->parentNames; // Add this line
             for (const auto& child : source->children) {
                 cloned->children.push_back(clone(child.get()));
             }
@@ -68,6 +70,7 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
             auto cloned = std::make_unique<VarTemplateNode>();
             cloned->isCustom = source->isCustom;
             cloned->variables = source->variables;
+            cloned->parentNames = source->parentNames; // Add this line
             return cloned;
         }
         default:

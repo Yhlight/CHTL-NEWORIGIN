@@ -13,5 +13,8 @@ public:
 
     bool isCustom = false;
 
+    // The names of any parent templates this template inherits from.
+    std::vector<std::string> parentNames;
+
     std::map<std::string, std::string> variables;
 };

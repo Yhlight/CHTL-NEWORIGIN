@@ -234,6 +234,112 @@ void test_import() {
     remove("imported_file.chtl");
 }
 
+void test_power_operator() {
+    std::string source = R"(
+        div { style { width: 2 ** 8; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("width: 256;") != std::string::npos);
+}
+
+void test_modulo_operator() {
+    std::string source = R"(
+        div { style { width: 10.5px % 4px; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    // fmod(10.5, 4) is 2.5
+    assert(result.find("width: 2.5px;") != std::string::npos);
+}
+
+void test_string_decoupling_arithmetic() {
+    std::string source = R"(
+        div { style { width: 100px + "25.5s ease-out whatever"; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("width: calc(100px + 25.5s);") != std::string::npos);
+}
+
+void test_element_template_inheritance() {
+    std::string source = R"(
+        [Template] @Element Parent {
+            span { text: "parent"; }
+        }
+        [Template] @Element Child {
+            inherit @Element Parent;
+            div { text: "child"; }
+        }
+        body {
+            @Element Child;
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    // Assert that the key parts exist, without being strict about whitespace
+    assert(result.find("<span>") != std::string::npos);
+    assert(result.find("parent") != std::string::npos);
+    assert(result.find("</span>") != std::string::npos);
+    assert(result.find("<div>") != std::string::npos);
+    assert(result.find("child") != std::string::npos);
+    assert(result.find("</div>") != std::string::npos);
+    assert(result.find("<span>") < result.find("<div>")); // Check order
+}
+
+void test_var_template_inheritance() {
+    std::string source = R"(
+        [Template] @Var GrandParent { primary_color: "red"; }
+        [Template] @Var Parent { inherit @Var GrandParent; secondary_color: "blue"; }
+        [Template] @Var Child { inherit @Var Parent; primary_color: "green"; }
+        div {
+            style {
+                background-color: Child(primary_color);
+                border-color: Child(secondary_color);
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("background-color: green;") != std::string::npos); // Overridden value
+    assert(result.find("border-color: blue;") != std::string::npos); // Inherited value
+}
+
+void test_var_template_inheritance_cycle() {
+    std::string source = R"(
+        [Template] @Var A { inherit @Var C; }
+        [Template] @Var B { inherit @Var A; }
+        [Template] @Var C { inherit @Var B; }
+        div { style { color: A(some_var); } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    bool exception_thrown = false;
+    try {
+        parser.parse();
+    } catch (const std::runtime_error& e) {
+        exception_thrown = true;
+        std::string msg = e.what();
+        assert(msg.find("Circular dependency") != std::string::npos);
+    }
+    assert(exception_thrown);
+}
+
 
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
@@ -252,6 +358,15 @@ int main() {
     run_test(test_named_origin_and_import, "Named Origin and Import");
     run_test(test_delete_style_inheritance, "Delete Style Inheritance");
 
-    std::cout << "Tests finished." << std::endl;
+    std::cout << "\n--- New Tests ---\n" << std::endl;
+    run_test(test_power_operator, "Style Property Power Operator (**)");
+    run_test(test_modulo_operator, "Style Property Modulo Operator (%)");
+    run_test(test_string_decoupling_arithmetic, "Style Property String Decoupling for Arithmetic");
+    run_test(test_element_template_inheritance, "Element Template Inheritance");
+    run_test(test_var_template_inheritance, "Var Template Inheritance");
+    run_test(test_var_template_inheritance_cycle, "Var Template Inheritance Cycle Detection");
+
+
+    std::cout << "\nTests finished." << std::endl;
     return 0;
 }

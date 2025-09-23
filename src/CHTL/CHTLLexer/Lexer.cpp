@@ -54,7 +54,8 @@ void Lexer::skipBlockComment() {
 Token Lexer::identifier() {
     std::string value;
     int startCol = column;
-    while (isalnum(peek()) || peek() == '_') {
+    // Identifiers can contain alphanumeric chars, underscores, and hyphens.
+    while (isalnum(peek()) || peek() == '_' || peek() == '-') {
         value += advance();
     }
 
@@ -254,7 +255,15 @@ Token Lexer::getNextToken() {
         // Arithmetic and grouping operators
         if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }
         if (current == '-') { int startCol = column; advance(); return {TokenType::Minus, "-", line, startCol}; }
-        if (current == '*') { int startCol = column; advance(); return {TokenType::Asterisk, "*", line, startCol}; }
+        if (current == '*') {
+            int startCol = column;
+            advance();
+            if (peek() == '*') {
+                advance();
+                return {TokenType::Power, "**", line, startCol};
+            }
+            return {TokenType::Asterisk, "*", line, startCol};
+        }
         if (current == '/') { int startCol = column; advance(); return {TokenType::Slash, "/", line, startCol}; }
         if (current == '%') { int startCol = column; advance(); return {TokenType::Percent, "%", line, startCol}; }
         if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }

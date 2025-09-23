@@ -274,11 +274,8 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                ElementTemplateNode* parentTmpl = parser.templateManager.getElementTemplate(currentNs, parentName);
-                if (!parentTmpl) throw std::runtime_error("Parent element template not found: " + parentName);
-                for (const auto& child : parentTmpl->children) {
-                    elementNode->children.push_back(NodeCloner::clone(child.get()));
-                }
+                // Instead of cloning nodes, just record the parent's name for lazy resolution.
+                elementNode->parentNames.push_back(parentName);
             } else {
                 elementNode->children.push_back(handle(parser));
             }
@@ -296,17 +293,29 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                VarTemplateNode* parentTmpl = parser.templateManager.getVarTemplate(currentNs, parentName);
-                if (!parentTmpl) throw std::runtime_error("Parent var template not found: " + parentName);
-                for (const auto& pair : parentTmpl->variables) {
-                    varNode->variables[pair.first] = pair.second;
-                }
+                // Instead of copying variables, just record the parent's name for lazy resolution.
+                varNode->parentNames.push_back(parentName);
             } else {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Colon);
-                varNode->variables[key] = parser.currentToken.value;
-                parser.expectToken(TokenType::String);
+
+                std::stringstream value;
+                bool firstToken = true;
+                // Greedily consume tokens until the semicolon, allowing for unquoted literals.
+                while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
+                    if (parser.currentToken.type == TokenType::CloseBrace) {
+                         throw std::runtime_error("Missing semicolon for var '" + key + "'.");
+                    }
+                    if (!firstToken) {
+                        value << " ";
+                    }
+                    value << parser.currentToken.value;
+                    parser.advanceTokens();
+                    firstToken = false;
+                }
+                varNode->variables[key] = value.str();
+
                 parser.expectToken(TokenType::Semicolon);
             }
         }
@@ -336,17 +345,16 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
         parser.expectToken(TokenType::Identifier);
     }
 
-    // Get the template from the manager
+    // Get the template from the manager to check if it's custom.
+    // The actual children will be retrieved by the new resolution method.
     ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(ns, templateName);
     if (!tmpl) {
         throw std::runtime_error("Element template not found: " + templateName);
     }
 
-    // Create a fragment node to hold the cloned children.
+    // Create a fragment node to hold the final, resolved children.
     auto fragment = std::make_unique<FragmentNode>();
-    for (const auto& child : tmpl->children) {
-        fragment->children.push_back(NodeCloner::clone(child.get()));
-    }
+    fragment->children = parser.templateManager.getResolvedElementChildren(ns, templateName);
 
     // Handle specialization block for custom templates
     if (tmpl->isCustom) {

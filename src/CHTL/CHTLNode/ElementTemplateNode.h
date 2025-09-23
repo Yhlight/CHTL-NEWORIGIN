@@ -14,6 +14,9 @@ public:
 
     bool isCustom = false;
 
+    // The names of any parent templates this template inherits from.
+    std::vector<std::string> parentNames;
+
     // The child nodes that make up the template's content.
     std::vector<std::unique_ptr<BaseNode>> children;
 };

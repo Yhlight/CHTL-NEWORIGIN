@@ -165,4 +165,9 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLManage/TemplateManager.cpp.o: \
  /app/src/CHTL/CHTLManage/../CHTLNode/VarTemplateNode.h \
  /app/src/CHTL/CHTLManage/../CHTLNode/OriginNode.h \
  /app/src/CHTL/CHTLManage/../Util/NodeCloner.h \
- /usr/include/c++/13/stdexcept
+ /usr/include/c++/13/stdexcept /usr/include/c++/13/algorithm \
+ /usr/include/c++/13/bits/stl_algo.h \
+ /usr/include/c++/13/bits/algorithmfwd.h \
+ /usr/include/c++/13/bits/stl_heap.h \
+ /usr/include/c++/13/bits/uniform_int_dist.h \
+ /usr/include/c++/13/pstl/glue_algorithm_defs.h

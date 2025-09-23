@@ -1,6 +1,8 @@
 #include "TemplateManager.h"
 #include "../Util/NodeCloner.h" // For cloning nodes during merge
 #include <stdexcept>
+#include <algorithm> // For std::find
+#include <vector>
 
 // --- Style Templates ---
 
@@ -15,6 +17,77 @@ StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, cons
     }
     auto name_it = ns_it->second.find(name);
     return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+}
+
+// --- Resolution Implementation ---
+
+void TemplateManager::resolveElementParents(const std::string& ns, const std::string& name, std::vector<std::unique_ptr<BaseNode>>& finalChildren, std::vector<std::string>& visited) {
+    // Cycle detection
+    if (std::find(visited.begin(), visited.end(), name) != visited.end()) {
+        throw std::runtime_error("Circular dependency in @Element template inheritance: " + name);
+    }
+    visited.push_back(name);
+
+    ElementTemplateNode* tmpl = getElementTemplate(ns, name);
+    if (!tmpl) {
+        throw std::runtime_error("Element template '" + name + "' not found in namespace '" + ns + "'.");
+    }
+
+    // Recurse on parents first
+    for (const auto& parentName : tmpl->parentNames) {
+        resolveElementParents(ns, parentName, finalChildren, visited);
+    }
+
+    // Then, add this template's own children
+    for (const auto& child : tmpl->children) {
+        finalChildren.push_back(NodeCloner::clone(child.get()));
+    }
+
+    visited.pop_back();
+}
+
+std::vector<std::unique_ptr<BaseNode>> TemplateManager::getResolvedElementChildren(const std::string& ns, const std::string& name) {
+    std::vector<std::unique_ptr<BaseNode>> finalChildren;
+    std::vector<std::string> visited;
+    resolveElementParents(ns, name, finalChildren, visited);
+    return finalChildren;
+}
+
+std::pair<bool, std::string> TemplateManager::findVariableRecursive(const std::string& ns, const std::string& templateName, const std::string& varName, std::vector<std::string>& visited) {
+    // Cycle detection
+    if (std::find(visited.begin(), visited.end(), templateName) != visited.end()) {
+        throw std::runtime_error("Circular dependency in @Var template inheritance: " + templateName);
+    }
+    visited.push_back(templateName);
+
+    VarTemplateNode* tmpl = getVarTemplate(ns, templateName);
+    if (!tmpl) {
+        throw std::runtime_error("Var template '" + templateName + "' not found in namespace '" + ns + "'.");
+    }
+
+    // Check current template first
+    auto it = tmpl->variables.find(varName);
+    if (it != tmpl->variables.end()) {
+        visited.pop_back();
+        return {true, it->second};
+    }
+
+    // Recurse on parents
+    for (const auto& parentName : tmpl->parentNames) {
+        auto result = findVariableRecursive(ns, parentName, varName, visited);
+        if (result.first) {
+            visited.pop_back();
+            return result;
+        }
+    }
+
+    visited.pop_back();
+    return {false, ""};
+}
+
+std::pair<bool, std::string> TemplateManager::getVariableFromTemplate(const std::string& ns, const std::string& templateName, const std::string& varName) {
+    std::vector<std::string> visited;
+    return findVariableRecursive(ns, templateName, varName, visited);
 }
 
 // --- Named Origins ---

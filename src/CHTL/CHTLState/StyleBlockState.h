@@ -44,6 +44,7 @@ private:
     // --- Style Value Parsing (used by both conditional and simple expressions) ---
     StyleValue parseAdditiveExpr(Parser& parser);
     StyleValue parseMultiplicativeExpr(Parser& parser);
+    StyleValue parsePowerExpr(Parser& parser);
     StyleValue parsePrimaryExpr(Parser& parser);
     StyleValue parseReferencedProperty(Parser& parser);
     Selector parseSelector(Parser& parser);
