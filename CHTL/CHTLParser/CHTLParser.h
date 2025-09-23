@@ -14,6 +14,10 @@
 
 struct OriginNode; // Forward Declaration
 struct CustomDefinitionNode; // Forward Declaration
+struct ElementSpecializationNode; // Forward Declaration
+struct DeleteElementNode; // Forward Declaration
+struct ModifyElementNode; // Forward Declaration
+struct InsertElementNode; // Forward Declaration
 
 class CHTLParser {
 public:
@@ -48,6 +52,7 @@ private:
     void parseIdentifierInBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<AttributeNode> parseAttribute();
     std::shared_ptr<BaseNode> parseTemplateUsage();
+    std::shared_ptr<ElementSpecializationNode> parseElementSpecializationBlock();
     void parseStyleBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<TextNode> parseTextNode();
     std::shared_ptr<CommentNode> parseCommentNode();

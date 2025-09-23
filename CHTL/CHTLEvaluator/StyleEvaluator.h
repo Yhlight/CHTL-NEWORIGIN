@@ -15,10 +15,12 @@ struct EvaluatedValue;
 
 class StyleEvaluator {
 public:
+    explicit StyleEvaluator(CHTLContext& context);
     void evaluate(const std::shared_ptr<ElementNode>& root);
-    void evaluateGlobalRules(CHTLContext& context);
+    void evaluateGlobalRules();
 
 private:
+    CHTLContext& context;
     void evaluateNode(const std::shared_ptr<ElementNode>& node);
-    EvaluatedValue evaluateExpression(const std::shared_ptr<BaseExprNode>& expr, const std::map<std::string, EvaluatedValue>& context);
+    EvaluatedValue evaluateExpression(const std::shared_ptr<BaseExprNode>& expr, const std::map<std::string, EvaluatedValue>& local_context);
 };

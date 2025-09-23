@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include "../CHTLContext/CHTLContext.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
+#include "VarUsageNode.h"
 
 ExprParser::ExprParser(CHTLParser& chtlParser, CHTLContext& context) : parser(chtlParser), context(context) {}
 
@@ -157,20 +158,26 @@ std::shared_ptr<BaseExprNode> ExprParser::parsePrimary() {
     if (token.type == TokenType::NUMBER || token.type == TokenType::IDENTIFIER || token.type == TokenType::STRING) {
         // Variable template usage is a special case of identifier
         if (token.type == TokenType::IDENTIFIER && parser.peekNextToken().type == TokenType::LEFT_PAREN) {
-            std::string tplName = token.value;
+            std::string groupName = token.value;
             parser.consumeToken(); // consume IDENTIFIER
             parser.consumeToken(); // consume '('
-            std::string varName = parser.getCurrentToken().value;
+
             if(parser.getCurrentToken().type != TokenType::IDENTIFIER) throw std::runtime_error("Expected variable name.");
-            parser.consumeToken();
-            if(parser.getCurrentToken().type != TokenType::RIGHT_PAREN) throw std::runtime_error("Expected ')'.");
+            std::string varName = parser.getCurrentToken().value;
             parser.consumeToken();
 
-            if (context.varTemplates.count(tplName) && context.varTemplates[tplName]->variables.count(varName)) {
-                return std::make_shared<LiteralNode>(context.varTemplates[tplName]->variables[varName]);
-            } else {
-                throw std::runtime_error("Undefined variable '" + varName + "' in template '" + tplName + "'");
+            auto varUsageNode = std::make_shared<VarUsageNode>(groupName, varName);
+
+            // Check for specialization: `(varName = value)`
+            if (parser.getCurrentToken().type == TokenType::EQUAL) {
+                parser.consumeToken(); // consume '='
+                varUsageNode->overrideExpr = parseExpression(); // Recursively parse the override value
             }
+
+            if(parser.getCurrentToken().type != TokenType::RIGHT_PAREN) throw std::runtime_error("Expected ')' to close variable usage.");
+            parser.consumeToken(); // consume ')'
+
+            return varUsageNode;
         }
 
         // It's a potential multi-word literal or a single identifier/property

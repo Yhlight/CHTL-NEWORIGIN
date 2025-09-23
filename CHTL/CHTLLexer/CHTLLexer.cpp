@@ -106,7 +106,12 @@ Token CHTLLexer::identifier() {
         {"JavaScript", TokenType::KEYWORD_JAVASCRIPT},
         {"from", TokenType::KEYWORD_FROM},
         {"as", TokenType::KEYWORD_AS},
-        {"inherit", TokenType::KEYWORD_INHERIT}
+        {"inherit", TokenType::KEYWORD_INHERIT},
+        {"delete", TokenType::KEYWORD_DELETE},
+        {"insert", TokenType::KEYWORD_INSERT},
+        {"after", TokenType::KEYWORD_AFTER},
+        {"before", TokenType::KEYWORD_BEFORE},
+        {"replace", TokenType::KEYWORD_REPLACE}
     };
 
     std::string value;

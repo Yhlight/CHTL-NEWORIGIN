@@ -4,7 +4,11 @@
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/CustomDefinitionNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/ElementSpecializationNode.h"
+#include "../CHTLNode/DeleteElementNode.h"
 #include <iostream>
+#include <algorithm>
 
 // A simple clone function for nodes that don't have children to resolve
 template <typename T>
@@ -33,17 +37,46 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
         case NodeType::TemplateUsage: {
             auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(node);
             if (usageNode->templateType == TemplateType::Element) {
+                std::vector<std::shared_ptr<BaseNode>> childrenToProcess;
+                bool found = false;
+
+                // Get the initial list of children from the definition
                 if (context.elementTemplates.count(usageNode->name)) {
-                    auto templateDef = context.elementTemplates[usageNode->name];
-                    return resolveChildren(templateDef->children);
+                    childrenToProcess = context.elementTemplates[usageNode->name]->children;
+                    found = true;
                 } else if (context.elementCustoms.count(usageNode->name)) {
-                    auto customDef = context.elementCustoms[usageNode->name];
-                    return resolveChildren(customDef->children);
+                    childrenToProcess = context.elementCustoms[usageNode->name]->children;
+                    found = true;
                 }
-                else {
-                    std::cerr << "Warning: Undefined element template or custom used: " << usageNode->name << std::endl;
-                    return {};
+
+                if (!found) {
+                     std::cerr << "Warning: Undefined element template or custom used: " << usageNode->name << std::endl;
+                     return {};
                 }
+
+                // Apply specializations if they exist
+                if (usageNode->specialization) {
+                    for (const auto& instruction : usageNode->specialization->instructions) {
+                        if (instruction->getType() == NodeType::DeleteElement) {
+                            auto deleteInstruction = std::dynamic_pointer_cast<DeleteElementNode>(instruction);
+                            // Erase-remove idiom to delete elements matching the selector
+                            childrenToProcess.erase(
+                                std::remove_if(childrenToProcess.begin(), childrenToProcess.end(),
+                                    [&](const std::shared_ptr<BaseNode>& child) {
+                                        if (child->getType() == NodeType::Element) {
+                                            auto elem = std::dynamic_pointer_cast<ElementNode>(child);
+                                            // Simple tag name selector for now
+                                            return elem->tagName == deleteInstruction->targetSelector;
+                                        }
+                                        return false;
+                                    }),
+                                childrenToProcess.end());
+                        }
+                    }
+                }
+
+                // Finally, resolve the (potentially modified) children
+                return resolveChildren(childrenToProcess);
             }
             return {}; // Other template types are not nodes
         }
@@ -86,6 +119,11 @@ std::shared_ptr<ElementNode> CHTLResolver::resolveElement(const std::shared_ptr<
             // Note: valueless properties and specialization are not handled yet.
         } else {
             std::cerr << "Warning: Undefined style template or custom: " << usage->name << std::endl;
+        }
+
+        // After merging, apply deletions
+        for (const auto& propToDelete : usage->deletedProperties) {
+            newElement->inlineStyles.erase(propToDelete);
         }
     }
 

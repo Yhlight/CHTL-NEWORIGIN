@@ -19,7 +19,12 @@ enum class NodeType {
     TemplateDefinition,
     TemplateUsage,
     Origin,
-    CustomDefinition
+    CustomDefinition,
+    // For element specialization
+    ElementSpecialization,
+    DeleteElement,
+    ModifyElement,
+    InsertElement
 };
 
 struct BaseNode {

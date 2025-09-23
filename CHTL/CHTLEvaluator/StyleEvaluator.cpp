@@ -3,7 +3,10 @@
 #include "../CHTLExpr/TernaryOpNode.h"
 #include "../CHTLExpr/PropertyAccessNode.h"
 #include "../CHTLExpr/IdentifierNode.h"
+#include "../CHTLExpr/VarUsageNode.h"
 #include "../CHTLNode/CssRuleNode.h"
+#include "../CHTLNode/TemplateDefinitionNode.h" // For var lookups
+#include "../CHTLNode/CustomDefinitionNode.h"  // For var lookups
 #include <stdexcept>
 #include <cmath>
 #include <iostream>
@@ -29,20 +32,17 @@ std::string valueToString(const EvaluatedValue& ev) {
     return std::to_string(pv.value) + pv.unit;
 }
 
-// New helper to find dependencies in an expression
 void findDependencies(const std::shared_ptr<BaseExprNode>& expr, const std::map<std::string, std::shared_ptr<BaseExprNode>>& styles, std::set<std::string>& deps) {
     if (!expr) return;
     switch (expr->getType()) {
         case ExprNodeType::Identifier: {
             auto ident = std::dynamic_pointer_cast<IdentifierNode>(expr);
-            if (styles.count(ident->name)) { // Check if the identifier is a known property
+            if (styles.count(ident->name)) {
                 deps.insert(ident->name);
             }
             break;
         }
         case ExprNodeType::PropertyAccess: {
-            // Cross-element dependencies are not handled in this pass.
-            // They should be resolved by the CHTLResolver before evaluation.
             break;
         }
         case ExprNodeType::BinaryOp: {
@@ -59,10 +59,11 @@ void findDependencies(const std::shared_ptr<BaseExprNode>& expr, const std::map<
             break;
         }
         default:
-            // Literal nodes have no dependencies
             break;
     }
 }
+
+StyleEvaluator::StyleEvaluator(CHTLContext& context) : context(context) {}
 
 void StyleEvaluator::evaluate(const std::shared_ptr<ElementNode>& root) {
     if (!root) return;
@@ -71,9 +72,7 @@ void StyleEvaluator::evaluate(const std::shared_ptr<ElementNode>& root) {
 
 void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
     const auto& stylesToProcess = node->inlineStyles;
-
-    // 1. Graph Building Phase
-    std::map<std::string, std::set<std::string>> adjList; // u -> v means u is a dependency for v
+    std::map<std::string, std::set<std::string>> adjList;
     std::map<std::string, int> inDegree;
 
     for (const auto& pair : stylesToProcess) {
@@ -91,7 +90,6 @@ void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
         }
     }
 
-    // 2. Topological Sort (Kahn's Algorithm)
     std::queue<std::string> q;
     for (const auto& pair : inDegree) {
         if (pair.second == 0) {
@@ -104,7 +102,6 @@ void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
         std::string u = q.front();
         q.pop();
         sortedOrder.push_back(u);
-
         if (adjList.count(u)) {
             for (const auto& v : adjList[u]) {
                 inDegree[v]--;
@@ -115,7 +112,6 @@ void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
         }
     }
 
-    // 3. Cycle Detection & Evaluation
     std::map<std::string, EvaluatedValue> localContext;
     if (sortedOrder.size() != stylesToProcess.size()) {
         for (auto const& [prop, expr] : stylesToProcess) {
@@ -125,7 +121,6 @@ void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
         }
     }
 
-    // 4. Evaluation Phase
     for (const auto& propName : sortedOrder) {
         try {
             auto expr = stylesToProcess.at(propName);
@@ -136,7 +131,6 @@ void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
         }
     }
 
-    // Recursively evaluate for all children
     for (const auto& child : node->children) {
         if (child->getType() == NodeType::Element) {
             evaluateNode(std::dynamic_pointer_cast<ElementNode>(child));
@@ -144,7 +138,7 @@ void StyleEvaluator::evaluateNode(const std::shared_ptr<ElementNode>& node) {
     }
 }
 
-EvaluatedValue StyleEvaluator::evaluateExpression(const std::shared_ptr<BaseExprNode>& expr, const std::map<std::string, EvaluatedValue>& context) {
+EvaluatedValue StyleEvaluator::evaluateExpression(const std::shared_ptr<BaseExprNode>& expr, const std::map<std::string, EvaluatedValue>& local_context) {
     if (!expr) throw std::runtime_error("Cannot evaluate null expression.");
 
     switch (expr->getType()) {
@@ -155,11 +149,24 @@ EvaluatedValue StyleEvaluator::evaluateExpression(const std::shared_ptr<BaseExpr
         }
         case ExprNodeType::Identifier: {
             auto ident = std::dynamic_pointer_cast<IdentifierNode>(expr);
-            if (context.count(ident->name)) {
-                return context.at(ident->name);
+            if (local_context.count(ident->name)) {
+                return local_context.at(ident->name);
             } else {
                 return {false, {}, ident->name};
             }
+        }
+        case ExprNodeType::VarUsage: {
+            auto usage = std::dynamic_pointer_cast<VarUsageNode>(expr);
+            if (usage->overrideExpr) {
+                return evaluateExpression(usage->overrideExpr, local_context);
+            }
+            if (context.varTemplates.count(usage->groupName) && context.varTemplates[usage->groupName]->variables.count(usage->varName)) {
+                std::string rawValue = context.varTemplates[usage->groupName]->variables[usage->varName];
+                LiteralNode tempLiteral(rawValue);
+                if (tempLiteral.isNumeric) return {true, tempLiteral.numericValue, ""};
+                return {false, {}, tempLiteral.rawValue};
+            }
+            throw std::runtime_error("Undefined variable '" + usage->varName + "' in group '" + usage->groupName + "'.");
         }
         case ExprNodeType::PropertyAccess: {
             auto access = std::dynamic_pointer_cast<PropertyAccessNode>(expr);
@@ -168,23 +175,22 @@ EvaluatedValue StyleEvaluator::evaluateExpression(const std::shared_ptr<BaseExpr
         }
         case ExprNodeType::TernaryOp: {
             auto ternOp = std::dynamic_pointer_cast<TernaryOpNode>(expr);
-            EvaluatedValue cond = evaluateExpression(ternOp->condition, context);
+            EvaluatedValue cond = evaluateExpression(ternOp->condition, local_context);
             if (!cond.isNumeric) throw std::runtime_error("Condition for ternary must be numeric.");
             if (cond.numericVal.value != 0) {
-                return evaluateExpression(ternOp->trueExpr, context);
+                return evaluateExpression(ternOp->trueExpr, local_context);
             } else {
                 if (ternOp->falseExpr) {
-                    return evaluateExpression(ternOp->falseExpr, context);
+                    return evaluateExpression(ternOp->falseExpr, local_context);
                 } else {
-                    // Optional false branch evaluates to empty string
                     return {false, {}, ""};
                 }
             }
         }
         case ExprNodeType::BinaryOp: {
             auto binOp = std::dynamic_pointer_cast<BinaryOpNode>(expr);
-            EvaluatedValue left = evaluateExpression(binOp->left, context);
-            EvaluatedValue right = evaluateExpression(binOp->right, context);
+            EvaluatedValue left = evaluateExpression(binOp->left, local_context);
+            EvaluatedValue right = evaluateExpression(binOp->right, local_context);
 
             if (!left.isNumeric || !right.isNumeric) {
                  if (binOp->op == TokenType::EQUAL_EQUAL) return {true, { (double)(left.stringVal == right.stringVal), ""}, ""};
@@ -228,7 +234,7 @@ EvaluatedValue StyleEvaluator::evaluateExpression(const std::shared_ptr<BaseExpr
     }
 }
 
-void StyleEvaluator::evaluateGlobalRules(CHTLContext& context) {
+void StyleEvaluator::evaluateGlobalRules() {
     for (const auto& ruleNode : context.globalCssRuleNodes) {
         std::string ruleString = ruleNode->selector + " { ";
         for (const auto& propPair : ruleNode->properties) {

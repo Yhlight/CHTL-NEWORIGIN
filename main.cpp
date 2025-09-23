@@ -42,9 +42,9 @@ int main() {
         std::shared_ptr<ElementNode> resolved_ast = resolver.resolve(initial_ast);
 
         // 4. Evaluator
-        StyleEvaluator evaluator;
+        StyleEvaluator evaluator(context);
         evaluator.evaluate(resolved_ast);
-        evaluator.evaluateGlobalRules(context);
+        evaluator.evaluateGlobalRules();
 
         // 5. Generator
         CHTLGenerator generator(resolved_ast, context);

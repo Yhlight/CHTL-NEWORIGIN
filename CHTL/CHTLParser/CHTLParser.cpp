@@ -2,6 +2,8 @@
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/CustomDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/ElementSpecializationNode.h"
+#include "../CHTLNode/DeleteElementNode.h"
 #include "../CHTLExpr/ExprParser.h"
 #include "../CHTLExpr/LiteralNode.h"
 #include "../CHTLNode/CssRuleNode.h"
@@ -167,12 +169,44 @@ std::shared_ptr<BaseNode> CHTLParser::parseTemplateUsage() {
         if (currentToken.type != TokenType::IDENTIFIER) error("Expected template name.");
         std::string templateName = currentToken.value;
         consumeToken();
-        expect(TokenType::SEMICOLON, "Expected ';' after element template usage.");
-        return std::make_shared<TemplateUsageNode>(templateName, TemplateType::Element);
+
+        auto usageNode = std::make_shared<TemplateUsageNode>(templateName, TemplateType::Element);
+
+        if (getCurrentToken().type == TokenType::LEFT_BRACE) {
+            usageNode->specialization = parseElementSpecializationBlock();
+        } else {
+            expect(TokenType::SEMICOLON, "Expected ';' or '{' after element template usage.");
+        }
+        return usageNode;
+
     } else {
         error("Unsupported template usage @" + currentToken.value + " in this context.");
         return nullptr;
     }
+}
+
+std::shared_ptr<ElementSpecializationNode> CHTLParser::parseElementSpecializationBlock() {
+    auto specNode = std::make_shared<ElementSpecializationNode>();
+    expect(TokenType::LEFT_BRACE, "Expected '{' to start specialization block.");
+
+    while(getCurrentToken().type != TokenType::RIGHT_BRACE) {
+        if (getCurrentToken().type == TokenType::KEYWORD_DELETE) {
+            consumeToken(); // consume 'delete'
+            if (getCurrentToken().type != TokenType::IDENTIFIER) error("Expected selector for delete instruction.");
+            // For now, assume simple tag selector. Indexed selectors to be added later.
+            std::string selector = getCurrentToken().value;
+            consumeToken();
+            specNode->addInstruction(std::make_shared<DeleteElementNode>(selector));
+            expect(TokenType::SEMICOLON, "Expected ';' after delete instruction.");
+        }
+        // TODO: Add parsing for 'insert' and element modification instructions
+        else {
+            error("Unsupported instruction in element specialization block.");
+        }
+    }
+
+    expect(TokenType::RIGHT_BRACE, "Expected '}' to end specialization block.");
+    return specNode;
 }
 
 std::shared_ptr<TextNode> CHTLParser::parseTextNode() {
@@ -204,9 +238,37 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
                 expect(TokenType::IDENTIFIER, "Expected template name.");
 
                 auto usageNode = std::make_shared<TemplateUsageNode>(templateName, TemplateType::Style);
-                element->styleUsages.push_back(usageNode);
 
-                expect(TokenType::SEMICOLON, "Expected ';'");
+                if (getCurrentToken().type == TokenType::LEFT_BRACE) {
+                    consumeToken(); // consume '{'
+
+                    while (getCurrentToken().type != TokenType::RIGHT_BRACE) {
+                        if (getCurrentToken().type == TokenType::KEYWORD_DELETE) {
+                            consumeToken(); // consume 'delete'
+                            while (getCurrentToken().type != TokenType::SEMICOLON) {
+                                if (getCurrentToken().type != TokenType::IDENTIFIER) {
+                                    error("Expected property name after 'delete'.");
+                                }
+                                usageNode->deletedProperties.push_back(getCurrentToken().value);
+                                consumeToken();
+                                if (getCurrentToken().type == TokenType::COMMA) {
+                                    consumeToken();
+                                } else if (getCurrentToken().type != TokenType::SEMICOLON) {
+                                    error("Expected ',' or ';' after property name in delete list.");
+                                }
+                            }
+                        } else {
+                            error("Unsupported keyword in style usage block. Only 'delete' is allowed.");
+                        }
+                        expect(TokenType::SEMICOLON, "Expected ';' to end statement in style usage block.");
+                    }
+                    expect(TokenType::RIGHT_BRACE, "Expected '}' to end style usage block.");
+
+                } else {
+                    expect(TokenType::SEMICOLON, "Expected ';' or '{' after style usage.");
+                }
+
+                element->styleUsages.push_back(usageNode);
                 break;
             }
             case TokenType::DOT:
