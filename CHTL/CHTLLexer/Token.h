@@ -64,7 +64,10 @@ enum class TokenType {
     KEYWORD_USE,
     KEYWORD_FROM,
     KEYWORD_AS,
-    KEYWORD_INHERIT
+    KEYWORD_INHERIT,
+    KEYWORD_HTML5,
+    KEYWORD_HTML,
+    KEYWORD_JAVASCRIPT
 };
 
 struct Token {

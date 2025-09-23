@@ -1,6 +1,7 @@
 #include "CHTLResolver.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include <iostream>
 
 // A simple clone function for nodes that don't have children to resolve
@@ -47,6 +48,9 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
         }
         case NodeType::Comment: {
              return { cloneNode<CommentNode>(node) };
+        }
+        case NodeType::Origin: {
+            return { cloneNode<OriginNode>(node) };
         }
         default:
             return {}; // Return empty vector for unknown or irrelevant nodes

@@ -11,6 +11,8 @@
 #include <memory>
 #include <stdexcept>
 
+struct OriginNode; // Forward Declaration
+
 class CHTLParser {
 public:
     explicit CHTLParser(CHTLLexer& lexer, CHTLContext& context);
@@ -33,8 +35,9 @@ private:
     void expect(TokenType type, const std::string& message);
 
     // Parsing helpers
-    void parseDirective();
+    std::shared_ptr<BaseNode> parseDirective();
     void parseTemplateDefinition();
+    std::shared_ptr<OriginNode> parseOriginBlock();
     std::map<std::string, std::shared_ptr<BaseExprNode>> parseCssRuleProperties();
     std::shared_ptr<BaseNode> parseStatement();
     std::shared_ptr<ElementNode> parseElement();

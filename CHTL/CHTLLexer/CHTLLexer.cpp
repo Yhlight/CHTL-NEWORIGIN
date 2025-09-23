@@ -2,6 +2,21 @@
 #include <cctype>
 #include <unordered_map>
 
+const std::string& CHTLLexer::getSource() const {
+    return source;
+}
+
+size_t CHTLLexer::getPosition() const {
+    return pos;
+}
+
+void CHTLLexer::setPosition(size_t newPos) {
+    pos = newPos;
+    // Note: This simplified implementation doesn't update line/column counts.
+    // This is acceptable for the raw parsing feature, which will immediately
+    // re-sync the parser by calling consumeToken().
+}
+
 CHTLLexer::CHTLLexer(const std::string& source)
     : source(source), pos(0), line(1), column(1), isPeeked(false) {}
 
@@ -86,6 +101,9 @@ Token CHTLLexer::identifier() {
         {"Origin", TokenType::KEYWORD_ORIGIN},
         {"Namespace", TokenType::KEYWORD_NAMESPACE},
         {"use", TokenType::KEYWORD_USE},
+        {"html5", TokenType::KEYWORD_HTML5},
+        {"Html", TokenType::KEYWORD_HTML},
+        {"JavaScript", TokenType::KEYWORD_JAVASCRIPT},
         {"from", TokenType::KEYWORD_FROM},
         {"as", TokenType::KEYWORD_AS},
         {"inherit", TokenType::KEYWORD_INHERIT}

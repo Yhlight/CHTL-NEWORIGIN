@@ -10,6 +10,12 @@ public:
     Token getNextToken();
     Token peekToken();
 
+    // Methods for raw string parsing
+    const std::string& getSource() const;
+    size_t getPosition() const;
+    void setPosition(size_t pos);
+
+
 private:
     Token generateNextToken();
     std::string source;

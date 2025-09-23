@@ -19,4 +19,7 @@ public:
     std::vector<std::shared_ptr<CssRuleNode>> globalCssRuleNodes;
     // To store the final, evaluated CSS rule strings for the generator
     std::vector<std::string> finalGlobalCssRules;
+
+    // Flag for HTML5 doctype generation
+    bool useHtml5Doctype = false;
 };

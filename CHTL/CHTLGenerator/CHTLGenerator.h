@@ -22,6 +22,7 @@ private:
     void visitElement(const std::shared_ptr<ElementNode>& node);
     void visitText(const std::shared_ptr<TextNode>& node);
     void visitComment(const std::shared_ptr<CommentNode>& node);
+    void visitOrigin(const std::shared_ptr<class OriginNode>& node);
 
     std::shared_ptr<ElementNode> rootNode;
     std::stringstream output;

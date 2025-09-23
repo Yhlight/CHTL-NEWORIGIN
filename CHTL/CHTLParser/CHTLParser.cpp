@@ -2,6 +2,7 @@
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLExpr/ExprParser.h"
 #include "../CHTLNode/CssRuleNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include <iostream>
 
 const std::string VIRTUAL_ROOT_TAG = "__ROOT__";
@@ -39,7 +40,10 @@ std::shared_ptr<ElementNode> CHTLParser::parse() {
     state.enter(ParseState::GLOBAL_SCOPE);
     while (currentToken.type != TokenType::END_OF_FILE) {
         if (currentToken.type == TokenType::LEFT_BRACKET) {
-            parseDirective();
+            auto node = parseDirective();
+            if (node) {
+                root->addChild(node);
+            }
         } else {
             auto statement = parseStatement();
             if (statement) {
@@ -58,6 +62,12 @@ std::shared_ptr<BaseNode> CHTLParser::parseStatement() {
         auto node = std::make_shared<CommentNode>(getCurrentToken().value, true);
         consumeToken();
         return node;
+    } else if (currentToken.type == TokenType::KEYWORD_USE) {
+        consumeToken();
+        expect(TokenType::KEYWORD_HTML5, "Expected 'html5' after 'use'.");
+        expect(TokenType::SEMICOLON, "Expected ';' after 'use html5'.");
+        context.useHtml5Doctype = true;
+        return nullptr;
     } else if (currentToken.type == TokenType::AT) {
         expect(TokenType::AT, "Expected '@'");
         expect(TokenType::KEYWORD_ELEMENT, "Expected 'Element' keyword for template usage.");
@@ -102,6 +112,10 @@ void CHTLParser::parseBlock(const std::shared_ptr<ElementNode>& element) {
         }
         else if (currentToken.type == TokenType::AT) {
              element->addChild(parseStatement());
+        }
+        else if (currentToken.type == TokenType::LEFT_BRACKET) {
+            auto node = parseDirective();
+            if (node) element->addChild(node);
         }
         else {
             if (currentToken.type == TokenType::RIGHT_BRACE) break;
@@ -207,15 +221,53 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
     state.leave();
 }
 
-void CHTLParser::parseDirective() {
+std::shared_ptr<BaseNode> CHTLParser::parseDirective() {
     expect(TokenType::LEFT_BRACKET, "Expected '[' to start a directive.");
     if (currentToken.type == TokenType::KEYWORD_TEMPLATE) {
         consumeToken();
         expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Template' keyword.");
         parseTemplateDefinition();
+        return nullptr;
+    } else if (currentToken.type == TokenType::KEYWORD_ORIGIN) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Origin' keyword.");
+        return parseOriginBlock();
     } else {
         error("Unsupported directive found: " + currentToken.value);
+        return nullptr;
     }
+}
+
+std::shared_ptr<OriginNode> CHTLParser::parseOriginBlock() {
+    expect(TokenType::AT, "Expected '@' for origin type.");
+    std::string type = getCurrentToken().value;
+    consumeToken();
+
+    expect(TokenType::LEFT_BRACE, "Expected '{' for origin block.");
+
+    const std::string& source = lexer.getSource();
+    size_t startPos = lexer.getPosition();
+    size_t currentPos = startPos;
+    int brace_level = 1;
+
+    while (brace_level > 0 && currentPos < source.length()) {
+        if (source[currentPos] == '{') {
+            brace_level++;
+        } else if (source[currentPos] == '}') {
+            brace_level--;
+        }
+        currentPos++;
+    }
+
+    if (brace_level != 0) {
+        error("Unmatched braces in origin block.");
+    }
+
+    std::string rawContent = source.substr(startPos, currentPos - startPos - 1);
+    lexer.setPosition(currentPos);
+    consumeToken();
+
+    return std::make_shared<OriginNode>(type, rawContent);
 }
 
 void CHTLParser::parseTemplateDefinition() {

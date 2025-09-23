@@ -1,19 +1,25 @@
 #include "CHTLGenerator.h"
 #include "../CHTLContext/CHTLContext.h"
+#include "../CHTLNode/OriginNode.h"
 #include <iostream>
 
 CHTLGenerator::CHTLGenerator(std::shared_ptr<ElementNode> root, CHTLContext& context) : context(context), rootNode(root) {}
 
 std::string CHTLGenerator::generate() {
-    output.str(""); // Clear the stream
+    output.str("");
     output.clear();
+
+    if (context.useHtml5Doctype) {
+        output << "<!DOCTYPE html>\n";
+    }
+
     visit(rootNode);
     return output.str();
 }
 
 void CHTLGenerator::indent() {
     for (int i = 0; i < indentLevel; ++i) {
-        output << "  "; // 2 spaces for indentation
+        output << "  ";
     }
 }
 
@@ -30,15 +36,16 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
         case NodeType::Comment:
             visitComment(std::dynamic_pointer_cast<CommentNode>(node));
             break;
+        case NodeType::Origin:
+            visitOrigin(std::dynamic_pointer_cast<OriginNode>(node));
+            break;
         default:
-            // Ignore other node types for now
             break;
     }
 }
 
 void CHTLGenerator::visitElement(const std::shared_ptr<ElementNode>& node) {
     if (node->tagName == "__ROOT__") {
-        // Special case for the virtual root, just process its children
         for (const auto& child : node->children) {
             visit(child);
         }
@@ -52,7 +59,6 @@ void CHTLGenerator::visitElement(const std::shared_ptr<ElementNode>& node) {
         output << " " << attr->key << "=\"" << attr->value << "\"";
     }
 
-    // Generate inline styles from the evaluated results
     if (!node->finalStyles.empty()) {
         output << " style=\"";
         for (const auto& stylePair : node->finalStyles) {
@@ -69,7 +75,6 @@ void CHTLGenerator::visitElement(const std::shared_ptr<ElementNode>& node) {
     output << ">\n";
     indentLevel++;
 
-    // Inject global styles into the head
     if (node->tagName == "head" && !context.finalGlobalCssRules.empty()) {
         indent();
         output << "<style>\n";
@@ -102,5 +107,9 @@ void CHTLGenerator::visitComment(const std::shared_ptr<CommentNode>& node) {
         indent();
         output << "<!-- " << node->content << " -->\n";
     }
-    // Non-generator-aware comments are ignored as per the spec
+}
+
+void CHTLGenerator::visitOrigin(const std::shared_ptr<OriginNode>& node) {
+    // Output raw content exactly as is, without indentation
+    output << node->rawContent;
 }

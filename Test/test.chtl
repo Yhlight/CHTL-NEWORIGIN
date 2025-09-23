@@ -1,3 +1,5 @@
+use html5;
+
 [Template] @Var ThemeColor
 {
     mainColor: "rgb(255, 192, 203)";
@@ -68,6 +70,10 @@ html {
                     }
                 }
                 text { "This text should be highlighted." }
+            }
+
+            [Origin] @Html {
+                <!-- This is a raw HTML comment inside an Origin block -->
             }
         }
     }
