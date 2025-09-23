@@ -15,4 +15,11 @@ struct VarUsageNode : public BaseExprNode {
         : groupName(group), varName(var), overrideExpr(nullptr) {}
 
     ExprNodeType getType() const override { return ExprNodeType::VarUsage; }
+    std::shared_ptr<BaseExprNode> clone() const override {
+        auto newNode = std::make_shared<VarUsageNode>(groupName, varName);
+        if (overrideExpr) {
+            newNode->overrideExpr = overrideExpr->clone();
+        }
+        return newNode;
+    }
 };

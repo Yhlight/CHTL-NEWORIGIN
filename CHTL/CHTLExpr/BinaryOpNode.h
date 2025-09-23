@@ -13,4 +13,7 @@ struct BinaryOpNode : public BaseExprNode {
         : left(left), op(op), right(right) {}
 
     ExprNodeType getType() const override { return ExprNodeType::BinaryOp; }
+    std::shared_ptr<BaseExprNode> clone() const override {
+        return std::make_shared<BinaryOpNode>(left->clone(), op, right->clone());
+    }
 };

@@ -76,6 +76,10 @@ html {
 
             @Element Box;
 
+            hr {} // Add a separator for clarity
+
+            @Element Box;
+
             span {
                 style {
                     .highlight {

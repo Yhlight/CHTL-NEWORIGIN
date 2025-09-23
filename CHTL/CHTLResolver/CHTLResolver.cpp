@@ -1,4 +1,5 @@
 #include "CHTLResolver.h"
+#include "../CHTLExpr/VarUsageNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/OriginNode.h"
@@ -75,7 +76,8 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
                     }
                 }
 
-                // Finally, resolve the (potentially modified) children
+                // The list of children from the template definition is a blueprint.
+                // We need to create new instances of these children by resolving them.
                 return resolveChildren(childrenToProcess);
             }
             return {}; // Other template types are not nodes
@@ -94,38 +96,81 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
     }
 }
 
+std::map<std::string, std::shared_ptr<BaseExprNode>> CHTLResolver::resolveStyleTemplate(const std::string& templateName) {
+    // Memoization check
+    if (resolvedStyleTemplates.count(templateName)) {
+        return resolvedStyleTemplates[templateName];
+    }
+
+    if (!context.styleTemplates.count(templateName)) {
+        std::cerr << "Warning: Undefined style template used: " << templateName << std::endl;
+        return {};
+    }
+
+    auto templateDef = context.styleTemplates[templateName];
+    std::map<std::string, std::shared_ptr<BaseExprNode>> resolvedProps;
+
+    // First, recursively resolve and apply parent templates
+    for (const auto& prop : templateDef->styleProperties) {
+        if (prop.second->getType() == ExprNodeType::VarUsage) {
+             auto varUsage = std::dynamic_pointer_cast<VarUsageNode>(prop.second);
+             // This is a simplified check for @Style inheritance
+             if (varUsage && varUsage->groupName == "Style") {
+                 auto parentProps = resolveStyleTemplate(varUsage->varName);
+                 for (const auto& parentPair : parentProps) {
+                     resolvedProps[parentPair.first] = parentPair.second;
+                 }
+             }
+        }
+    }
+
+    // Then, apply the properties from the current template, overwriting any from parents
+    for (const auto& prop : templateDef->styleProperties) {
+         if (prop.second->getType() != ExprNodeType::VarUsage || std::dynamic_pointer_cast<VarUsageNode>(prop.second)->groupName != "Style") {
+            resolvedProps[prop.first] = prop.second;
+        }
+    }
+
+    // Cache the result
+    resolvedStyleTemplates[templateName] = resolvedProps;
+    return resolvedProps;
+}
+
+
 std::shared_ptr<ElementNode> CHTLResolver::resolveElement(const std::shared_ptr<ElementNode>& node) {
     // Create a new element, cloning properties
     auto newElement = std::make_shared<ElementNode>(node->tagName);
     newElement->attributes = node->attributes;
-    newElement->inlineStyles = node->inlineStyles; // Copy existing styles first
+
+    // Start with a copy of the element's own inline styles
+    std::map<std::string, std::shared_ptr<BaseExprNode>> finalStyles;
+    for(const auto& pair : node->inlineStyles) {
+        finalStyles[pair.first] = pair.second->clone();
+    }
 
     // --- Resolve @Style usages ---
     for (const auto& usage : node->styleUsages) {
-        if (context.styleTemplates.count(usage->name)) {
-            // It's a template
-            auto templateDef = context.styleTemplates[usage->name];
-            for (const auto& pair : templateDef->styleProperties) {
-                // Add or overwrite properties from the template
-                newElement->inlineStyles[pair.first] = pair.second;
-            }
-        } else if (context.styleCustoms.count(usage->name)) {
-            // It's a custom style
-            auto customDef = context.styleCustoms[usage->name];
-            for (const auto& pair : customDef->styleProperties) {
-                // Add or overwrite properties from the custom definition
-                newElement->inlineStyles[pair.first] = pair.second;
-            }
-            // Note: valueless properties and specialization are not handled yet.
-        } else {
-            std::cerr << "Warning: Undefined style template or custom: " << usage->name << std::endl;
+        auto resolvedProps = resolveStyleTemplate(usage->name);
+
+        // Merge resolved template properties. The element's own styles (already in
+        // finalStyles) will not be overwritten unless they are also in the template.
+        // To ensure element styles have precedence, we apply them again at the end.
+        for (const auto& pair : resolvedProps) {
+            finalStyles[pair.first] = pair.second->clone();
         }
 
-        // After merging, apply deletions
+        // After merging, apply deletions from the usage block
         for (const auto& propToDelete : usage->deletedProperties) {
-            newElement->inlineStyles.erase(propToDelete);
+            finalStyles.erase(propToDelete);
         }
     }
+
+    // Re-apply the original inline styles to ensure they have the highest precedence
+    for(const auto& pair : node->inlineStyles) {
+        finalStyles[pair.first] = pair.second->clone();
+    }
+
+    newElement->inlineStyles = finalStyles;
 
     // Resolve the children
     newElement->children = resolveChildren(node->children);

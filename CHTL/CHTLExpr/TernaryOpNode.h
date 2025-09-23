@@ -15,4 +15,7 @@ struct TernaryOpNode : public BaseExprNode {
     ) : condition(condition), trueExpr(trueExpr), falseExpr(falseExpr) {}
 
     ExprNodeType getType() const override { return ExprNodeType::TernaryOp; }
+    std::shared_ptr<BaseExprNode> clone() const override {
+        return std::make_shared<TernaryOpNode>(condition->clone(), trueExpr->clone(), falseExpr->clone());
+    }
 };

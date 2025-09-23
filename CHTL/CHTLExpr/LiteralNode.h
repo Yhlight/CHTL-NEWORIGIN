@@ -43,4 +43,7 @@ struct LiteralNode : public BaseExprNode {
     }
 
     ExprNodeType getType() const override { return ExprNodeType::Literal; }
+    std::shared_ptr<BaseExprNode> clone() const override {
+        return std::make_shared<LiteralNode>(rawValue);
+    }
 };

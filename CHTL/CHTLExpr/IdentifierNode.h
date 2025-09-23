@@ -11,4 +11,7 @@ struct IdentifierNode : public BaseExprNode {
     explicit IdentifierNode(const std::string& name) : name(name) {}
 
     ExprNodeType getType() const override { return ExprNodeType::Identifier; }
+    std::shared_ptr<BaseExprNode> clone() const override {
+        return std::make_shared<IdentifierNode>(name);
+    }
 };

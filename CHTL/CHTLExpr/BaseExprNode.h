@@ -18,4 +18,5 @@ enum class ExprNodeType {
 struct BaseExprNode {
     virtual ~BaseExprNode() = default;
     virtual ExprNodeType getType() const { return ExprNodeType::Base; }
+    virtual std::shared_ptr<BaseExprNode> clone() const = 0;
 };
