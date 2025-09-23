@@ -2010,6 +2010,8 @@ util a < b -> change {print("发生变化");} -> then {print("a < b");}  // 多�
 CJmod与Cmod采用相同的路径搜索策略。  
 
 ## 项目结构建议
+由于CHTL项目的复杂性，我们强烈建议使用状态机(state) + 策略模式模式(Strategy)来组织CHTL项目  
+
 ```chtl
 CHTL(项目文件夹，可以换成src)
     -CHTL(CHTL编译器)
@@ -2021,6 +2023,7 @@ CHTL(项目文件夹，可以换成src)
         -CHTLNode(内含BaseNode文件，ElementNode，TextNode，CommentNode，TemplateNode，CustomNode，StyleNode，ScriptNode，OriginNode，ImportNode，ConfigNode，NamespaceNode，OperatorNode(delete，insert，use...)等文件)
         -CHTLParser
         -CHTLState
+        -CHTLStrategy
 	    -CHTLIOStream(如果需要IO流)
         -CMODSystem
 
@@ -2033,6 +2036,7 @@ CHTL(项目文件夹，可以换成src)
         -CHTLJSNode(CHTLJSBaseNode等CHTL JS节点)
         -CHTLJSParser
         -CHTLJSState
+        -CHTLJSStrategy
 	    -CHTLJSIOStream(如果需要IO流)
         -CJMODSystem
 
