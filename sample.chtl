@@ -1,0 +1,7 @@
+div{
+  id: box;
+  style{ width: 100px; }
+  text{
+    Hello
+  }
+}
