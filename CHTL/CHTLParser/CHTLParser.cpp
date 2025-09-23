@@ -206,7 +206,10 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
         } else if (getCurrentToken().type == TokenType::IDENTIFIER) {
             std::string key = getCurrentToken().value;
             consumeToken();
-            expect(TokenType::COLON, "Expected ':' after style property name.");
+            if (getCurrentToken().type != TokenType::COLON && getCurrentToken().type != TokenType::EQUAL) {
+                error("Expected ':' or '=' after style property name.");
+            }
+            consumeToken();
             ExprParser exprParser(*this, context);
             auto valueExpr = exprParser.parse();
             element->inlineStyles[key] = valueExpr;
@@ -298,7 +301,10 @@ void CHTLParser::parseTemplateDefinition() {
             } else if (getCurrentToken().type == TokenType::IDENTIFIER) {
                 std::string key = getCurrentToken().value;
                 consumeToken();
-                expect(TokenType::COLON, "Expected ':'");
+                if (getCurrentToken().type != TokenType::COLON && getCurrentToken().type != TokenType::EQUAL) {
+                    error("Expected ':' or '=' after style property name.");
+                }
+                consumeToken();
                 ExprParser exprParser(*this, context);
                 templateNode->styleProperties[key] = exprParser.parse();
                 if(getCurrentToken().type == TokenType::SEMICOLON) consumeToken();
@@ -354,7 +360,10 @@ std::map<std::string, std::shared_ptr<BaseExprNode>> CHTLParser::parseCssRulePro
         if(getCurrentToken().type != TokenType::IDENTIFIER) error("Expected a style property name.");
         std::string key = getCurrentToken().value;
         consumeToken();
-        expect(TokenType::COLON, "Expected ':' after style property name.");
+        if (getCurrentToken().type != TokenType::COLON && getCurrentToken().type != TokenType::EQUAL) {
+            error("Expected ':' or '=' after style property name.");
+        }
+        consumeToken();
         ExprParser exprParser(*this, context);
         auto valueExpr = exprParser.parse();
         properties[key] = valueExpr;
