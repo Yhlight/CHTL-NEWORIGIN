@@ -9,6 +9,7 @@ enum class TokenType {
     Unexpected,
 
     // Literals
+    Number,     // e.g., 100, 3.14
     Identifier, // e.g., div, my_element
     String,     // e.g., "hello world"
 
@@ -20,7 +21,18 @@ enum class TokenType {
     Semicolon,  // ;
 
     // Comments
-    HashComment // # a special comment to be processed
+    HashComment, // # a special comment to be processed
+
+    // Operators
+    Plus,        // +
+    Minus,       // -
+    Asterisk,    // *
+    Slash,       // /
+    Percent,     // %
+
+    // Parentheses
+    OpenParen,   // (
+    CloseParen   // )
 };
 
 // Represents a single token extracted from the source code.

@@ -100,6 +100,31 @@ Token Lexer::hashComment() {
     return {TokenType::HashComment, value, line, startCol};
 }
 
+Token Lexer::number() {
+    std::string value;
+    int startCol = column;
+
+    // Integer part
+    while (isdigit(peek())) {
+        value += advance();
+    }
+
+    // Decimal part
+    if (peek() == '.') {
+        value += advance();
+        while (isdigit(peek())) {
+            value += advance();
+        }
+    }
+
+    // Unit part (e.g., px, em, %)
+    while (isalpha(peek()) || peek() == '%') {
+        value += advance();
+    }
+
+    return {TokenType::Number, value, line, startCol};
+}
+
 Token Lexer::getNextToken() {
     while (position < source.length()) {
         char current = peek();
@@ -121,6 +146,10 @@ Token Lexer::getNextToken() {
                 skipBlockComment();
                 continue;
             }
+        }
+
+        if (isdigit(current)) {
+            return number();
         }
 
         if (isalpha(current) || current == '_') {
@@ -159,6 +188,15 @@ Token Lexer::getNextToken() {
         if (current == '#') {
             return hashComment();
         }
+
+        // Arithmetic and grouping operators
+        if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }
+        if (current == '-') { int startCol = column; advance(); return {TokenType::Minus, "-", line, startCol}; }
+        if (current == '*') { int startCol = column; advance(); return {TokenType::Asterisk, "*", line, startCol}; }
+        if (current == '/') { int startCol = column; advance(); return {TokenType::Slash, "/", line, startCol}; }
+        if (current == '%') { int startCol = column; advance(); return {TokenType::Percent, "%", line, startCol}; }
+        if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }
+        if (current == ')') { int startCol = column; advance(); return {TokenType::CloseParen, ")", line, startCol}; }
 
         // If we reach here, the character is not part of any recognized token.
         int startCol = column;

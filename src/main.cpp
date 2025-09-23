@@ -12,40 +12,40 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A simple CHTL source code string for testing the compiler pipeline.
-    // This includes nested elements, a standard comment (to be ignored),
-    // a text block, and a hash comment (to be rendered).
+    // A CHTL source string to test the latest features, including
+    // parser states and style property arithmetic.
     std::string chtlSource = R"(
-html {
-    head {
-        // A title would go here, but this comment will be ignored.
+div {
+    id: main;
+    style {
+        // Test precedence and parentheses
+        padding: (10px + 5) * 2;
+
+        // Test division
+        height: 100% / 2;
+
+        // Test simple addition
+        width: 50px + 25px;
     }
-    body {
-        div {
-            text { "Hello, CHTL!" }
-        }
-        # This is a CHTL comment that will be rendered to HTML.
-    }
+
+    // Test text attribute
+    text: "Styled Content";
 }
 )";
 
     try {
         // 1. Lexing Stage
-        // The Lexer takes the raw CHTL source and converts it into a stream of tokens.
         Lexer lexer(chtlSource);
 
-        // 2. Parsing Stage
-        // The Parser takes the token stream and builds an Abstract Syntax Tree (AST).
+        // 2. Parsing Stage (now using the state pattern)
         Parser parser(lexer);
         std::vector<std::unique_ptr<BaseNode>> ast = parser.parse();
 
         // 3. Generation Stage
-        // The Generator traverses the AST to produce the final HTML output.
         Generator generator;
         std::string htmlOutput = generator.generate(ast);
 
         // 4. Output Results
-        // Print the original source and the generated HTML for verification.
         std::cout << "--- CHTL Source ---" << std::endl;
         std::cout << chtlSource << std::endl;
         std::cout << "--- Generated HTML ---" << std::endl;
