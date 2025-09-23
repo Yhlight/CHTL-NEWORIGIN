@@ -7,6 +7,7 @@
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../Util/NodeCloner.h"
+#include "../CHTLLoader/Loader.h"
 #include <stdexcept>
 #include <string>
 #include <utility> // For std::pair
@@ -22,7 +23,11 @@ class ElementNode;
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     if (parser.currentToken.type == TokenType::OpenBracket) {
-        if (parser.peekToken.value == "Template") {
+        // Peek ahead to see what's inside the brackets
+        if (parser.peekToken.type == TokenType::Import) {
+            parseImportStatement(parser);
+            return nullptr;
+        } else if (parser.peekToken.type == TokenType::Custom || parser.peekToken.value == "Template") {
             parseTemplateDefinition(parser);
             return nullptr; // Template definitions don't produce a node in the main AST
         } else if (parser.peekToken.value == "Origin") {
@@ -154,9 +159,10 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
     // 4. Parse block and register with manager
     if (templateType == "Style") {
         auto styleNode = std::make_unique<StyleTemplateNode>();
-        styleNode->isCustom = isCustom; // Set the flag here
+        styleNode->isCustom = isCustom;
         while (parser.currentToken.type != TokenType::CloseBrace) {
             if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
+                // ... (inheritance logic remains the same)
                 if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
                 parser.expectToken(TokenType::At);
                 if (parser.currentToken.value != "Style") throw std::runtime_error("Can only inherit from an @Style template.");
@@ -164,7 +170,6 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                // For now, assume parent is in the same namespace. Cross-namespace inheritance will be handled with `from`.
                 StyleTemplateNode* parentTmpl = parser.templateManager.getStyleTemplate(currentNs, parentName);
                 if (!parentTmpl) throw std::runtime_error("Parent style template not found: " + parentName);
                 for (const auto& pair : parentTmpl->styles) {
@@ -174,10 +179,12 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
 
-                // Handle valueless properties for custom templates
-                if (isCustom && parser.currentToken.type == TokenType::Semicolon) {
-                    styleNode->styles[key] = ""; // Store with empty value
-                    parser.advanceTokens();
+                // Correctly handle valueless properties for custom templates
+                if (isCustom && parser.currentToken.type != TokenType::Colon) {
+                    styleNode->valuelessProperties.push_back(key);
+                    if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
+                        parser.advanceTokens();
+                    }
                     continue;
                 }
 
@@ -193,10 +200,9 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
             }
         }
         parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
-    } else if (isCustom) {
-        throw std::runtime_error("[Custom] is only supported for @Style templates at this time.");
     } else if (templateType == "Element") {
         auto elementNode = std::make_unique<ElementTemplateNode>();
+        elementNode->isCustom = isCustom; // Enable [Custom] for elements
         while (parser.currentToken.type != TokenType::CloseBrace) {
              if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
                 if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
@@ -218,6 +224,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
         parser.templateManager.addElementTemplate(currentNs, templateName, std::move(elementNode));
     } else if (templateType == "Var") {
         auto varNode = std::make_unique<VarTemplateNode>();
+        varNode->isCustom = isCustom; // Enable [Custom] for vars
         while (parser.currentToken.type != TokenType::CloseBrace) {
             if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
                 if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
@@ -267,8 +274,6 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
         parser.expectToken(TokenType::Identifier);
     }
 
-    parser.expectToken(TokenType::Semicolon);
-
     // Get the template from the manager
     ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(ns, templateName);
     if (!tmpl) {
@@ -281,7 +286,210 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
         fragment->children.push_back(NodeCloner::clone(child.get()));
     }
 
+    // Handle specialization block for custom templates
+    if (tmpl->isCustom) {
+        if (parser.currentToken.type == TokenType::OpenBrace) {
+            parseElementSpecializationBlock(parser, *fragment);
+        }
+    } else {
+        parser.expectToken(TokenType::Semicolon);
+    }
+
+
     return fragment;
+}
+
+// Forward declarations for helpers
+void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment);
+void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment);
+void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment);
+
+
+void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNode& fragment) {
+    parser.expectToken(TokenType::OpenBrace);
+
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        if (parser.currentToken.type == TokenType::Delete) {
+            parseDeleteInSpecialization(parser, fragment);
+        } else if (parser.currentToken.type == TokenType::Insert) {
+            parseInsertInSpecialization(parser, fragment);
+        } else if (parser.currentToken.type == TokenType::Identifier) {
+            parseStyleModificationInSpecialization(parser, fragment);
+        } else {
+            // To prevent infinite loops on unexpected tokens
+            parser.advanceTokens();
+        }
+    }
+
+    parser.expectToken(TokenType::CloseBrace);
+}
+
+void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
+    parser.expectToken(TokenType::Insert);
+
+    // 1. Parse position
+    TokenType posToken = parser.currentToken.type;
+    parser.advanceTokens();
+    if (posToken != TokenType::After && posToken != TokenType::Before && posToken != TokenType::Replace &&
+        posToken != TokenType::AtTop && posToken != TokenType::AtBottom) {
+        throw std::runtime_error("Invalid position for insert statement.");
+    }
+
+    // 2. Find target node iterator (if needed)
+    std::vector<std::unique_ptr<BaseNode>>::iterator targetIt;
+    bool needsTarget = (posToken == TokenType::After || posToken == TokenType::Before || posToken == TokenType::Replace);
+    if (needsTarget) {
+        std::string tagName = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        parser.expectToken(TokenType::OpenBracket);
+        int index = std::stoi(parser.currentToken.value);
+        parser.expectToken(TokenType::Number);
+        parser.expectToken(TokenType::CloseBracket);
+
+        int current_tag_index = 0;
+        bool found = false;
+        for (targetIt = fragment.children.begin(); targetIt != fragment.children.end(); ++targetIt) {
+            if ((*targetIt)->getType() == NodeType::Element) {
+                auto* element = static_cast<ElementNode*>((*targetIt).get());
+                if (element->tagName == tagName) {
+                    if (current_tag_index == index) {
+                        found = true;
+                        break;
+                    }
+                    current_tag_index++;
+                }
+            }
+        }
+        if (!found) {
+            throw std::runtime_error("Could not find target for insert statement.");
+        }
+    }
+
+    // 3. Parse the block of new nodes
+    parser.expectToken(TokenType::OpenBrace);
+    std::vector<std::unique_ptr<BaseNode>> newNodes;
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        StatementState s; // Create a temp state to parse the inner nodes
+        newNodes.push_back(s.handle(parser));
+    }
+    parser.expectToken(TokenType::CloseBrace);
+
+    // 4. Perform the insertion
+    if (posToken == TokenType::AtTop) {
+        fragment.children.insert(fragment.children.begin(), std::make_move_iterator(newNodes.begin()), std::make_move_iterator(newNodes.end()));
+    } else if (posToken == TokenType::AtBottom) {
+        fragment.children.insert(fragment.children.end(), std::make_move_iterator(newNodes.begin()), std::make_move_iterator(newNodes.end()));
+    } else if (posToken == TokenType::Before) {
+        fragment.children.insert(targetIt, std::make_move_iterator(newNodes.begin()), std::make_move_iterator(newNodes.end()));
+    } else if (posToken == TokenType::After) {
+        fragment.children.insert(std::next(targetIt), std::make_move_iterator(newNodes.begin()), std::make_move_iterator(newNodes.end()));
+    } else if (posToken == TokenType::Replace) {
+        targetIt = fragment.children.erase(targetIt);
+        fragment.children.insert(targetIt, std::make_move_iterator(newNodes.begin()), std::make_move_iterator(newNodes.end()));
+    }
+}
+
+void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
+    std::string tagName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    int index = 0; // Default to first element if no index provided
+    bool indexProvided = false;
+    if (parser.currentToken.type == TokenType::OpenBracket) {
+        indexProvided = true;
+        parser.advanceTokens();
+        if (parser.currentToken.type != TokenType::Number) {
+            throw std::runtime_error("Expected index number inside [].");
+        }
+        index = std::stoi(parser.currentToken.value);
+        parser.advanceTokens();
+        parser.expectToken(TokenType::CloseBracket);
+    }
+
+    // Find the target node
+    ElementNode* targetNode = nullptr;
+    int current_tag_index = 0;
+    for (auto& child : fragment.children) {
+        if (child->getType() == NodeType::Element) {
+            auto* element = static_cast<ElementNode*>(child.get());
+            if (element->tagName == tagName) {
+                if (current_tag_index == index) {
+                    targetNode = element;
+                    break;
+                }
+                current_tag_index++;
+            }
+        }
+    }
+
+    if (!targetNode) {
+        throw std::runtime_error("Could not find element '" + tagName + "' with index " + std::to_string(index) + " to modify.");
+    }
+
+    // Parse the modification block
+    parser.expectToken(TokenType::OpenBrace);
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style") {
+            // Use the StyleBlockState to parse the style block, but with the targetNode as context.
+            parser.contextNode = targetNode;
+            StyleBlockState styleState;
+            styleState.handle(parser);
+            parser.contextNode = nullptr; // Reset context
+        } else {
+            throw std::runtime_error("Only 'style' blocks are allowed inside an element specialization.");
+        }
+    }
+    parser.expectToken(TokenType::CloseBrace);
+}
+
+void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
+    parser.expectToken(TokenType::Delete);
+
+    while (parser.currentToken.type != TokenType::Semicolon) {
+        if (parser.currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected tag name after 'delete'.");
+        }
+        std::string tagName = parser.currentToken.value;
+        parser.advanceTokens();
+
+        int index = -1; // -1 means delete all matching tags
+        if (parser.currentToken.type == TokenType::OpenBracket) {
+            parser.advanceTokens();
+            if (parser.currentToken.type != TokenType::Number) {
+                throw std::runtime_error("Expected index number inside [].");
+            }
+            index = std::stoi(parser.currentToken.value);
+            parser.advanceTokens();
+            parser.expectToken(TokenType::CloseBracket);
+        }
+
+        auto& children = fragment.children;
+        int current_tag_index = 0;
+        for (auto it = children.begin(); it != children.end(); ) {
+            bool removed = false;
+            if ((*it)->getType() == NodeType::Element) {
+                auto* element = static_cast<ElementNode*>((*it).get());
+                if (element->tagName == tagName) {
+                    if (index == -1 || index == current_tag_index) {
+                        it = children.erase(it);
+                        removed = true;
+                        if (index != -1) break; // Stop after deleting one indexed element
+                    }
+                    current_tag_index++;
+                }
+            }
+            if (!removed) {
+                ++it;
+            }
+        }
+
+        if (parser.currentToken.type == TokenType::Comma) {
+            parser.advanceTokens();
+        } else {
+            break;
+        }
+    }
+    parser.expectToken(TokenType::Semicolon);
 }
 
 void StatementState::parseUseDirective(Parser& parser) {
@@ -361,4 +569,44 @@ void StatementState::parseNamespaceDefinition(Parser& parser) {
 
     // 4. Pop namespace from stack
     parser.namespaceStack.pop_back();
+}
+
+void StatementState::parseImportStatement(Parser& parser) {
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectToken(TokenType::Import);
+    parser.expectToken(TokenType::CloseBracket);
+
+    parser.expectToken(TokenType::At);
+    if (parser.currentToken.value != "Chtl") {
+        throw std::runtime_error("Only '@Chtl' imports are supported at this time.");
+    }
+    parser.expectToken(TokenType::Identifier);
+
+    parser.expectToken(TokenType::From);
+
+    if (parser.currentToken.type != TokenType::String) {
+        throw std::runtime_error("Import path must be a string literal.");
+    }
+    std::string path = parser.currentToken.value;
+    parser.advanceTokens();
+
+    parser.expectToken(TokenType::Semicolon);
+
+    // --- Core Import Logic ---
+    try {
+        std::string fileContent = Loader::loadFile(path);
+
+        // Create a new parser for the imported file
+        Lexer importLexer(fileContent);
+        Parser importParser(importLexer);
+
+        // Parse the imported file. This will populate the importParser's templateManager.
+        importParser.parse();
+
+        // Merge the templates from the imported parser into the main parser
+        parser.templateManager.merge(importParser.templateManager);
+
+    } catch (const std::runtime_error& e) {
+        throw std::runtime_error("Failed to import file '" + path + "': " + e.what());
+    }
 }

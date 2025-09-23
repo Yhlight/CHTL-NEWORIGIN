@@ -79,6 +79,37 @@ Token Lexer::identifier() {
     if (value == "delete") {
         return {TokenType::Delete, value, line, startCol};
     }
+    if (value == "insert") {
+        return {TokenType::Insert, value, line, startCol};
+    }
+    if (value == "after") {
+        return {TokenType::After, value, line, startCol};
+    }
+    if (value == "before") {
+        return {TokenType::Before, value, line, startCol};
+    }
+    if (value == "replace") {
+        return {TokenType::Replace, value, line, startCol};
+    }
+    if (value == "at") {
+        // Look ahead for "at top" or "at bottom"
+        size_t savedPos = position;
+        std::string nextWord;
+        skipWhitespace();
+        if (peek() == 't' || peek() == 'b') {
+             while (isalpha(peek())) {
+                nextWord += advance();
+            }
+        }
+        position = savedPos; // backtrack
+
+        if (nextWord == "top") return {TokenType::AtTop, "at top", line, startCol};
+        if (nextWord == "bottom") return {TokenType::AtBottom, "at bottom", line, startCol};
+    }
+    if (value == "Import") {
+        return {TokenType::Import, value, line, startCol};
+    }
+
 
     return {TokenType::Identifier, value, line, startCol};
 }
@@ -192,11 +223,6 @@ Token Lexer::getNextToken() {
             return {TokenType::Colon, ":", line, startCol};
         }
 
-        if (current == '=') {
-            int startCol = column; advance();
-            return {TokenType::Equals, "=", line, startCol};
-        }
-
         if (current == ';') {
             int startCol = column; advance();
             return {TokenType::Semicolon, ";", line, startCol};
@@ -224,7 +250,6 @@ Token Lexer::getNextToken() {
 
         // CSS Selector tokens
         if (current == '.') { int startCol = column; advance(); return {TokenType::Dot, ".", line, startCol}; }
-        if (current == '&') { int startCol = column; advance(); return {TokenType::Ampersand, "&", line, startCol}; }
 
         // Arithmetic and grouping operators
         if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }
@@ -235,6 +260,40 @@ Token Lexer::getNextToken() {
         if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }
         if (current == ')') { int startCol = column; advance(); return {TokenType::CloseParen, ")", line, startCol}; }
         if (current == ',') { int startCol = column; advance(); return {TokenType::Comma, ",", line, startCol}; }
+
+        // Conditional and logical operators
+        if (current == '?') { int startCol = column; advance(); return {TokenType::QuestionMark, "?", line, startCol}; }
+        if (current == '>') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::GreaterThanEquals, ">=", line, startCol}; }
+            return {TokenType::GreaterThan, ">", line, startCol};
+        }
+        if (current == '<') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::LessThanEquals, "<=", line, startCol}; }
+            return {TokenType::LessThan, "<", line, startCol};
+        }
+        if (current == '=') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::EqualsEquals, "==", line, startCol}; }
+            return {TokenType::Equals, "=", line, startCol}; // Already exists but good to have it here for context
+        }
+        if (current == '!') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::NotEquals, "!=", line, startCol}; }
+            return {TokenType::Unexpected, "!", line, startCol}; // '!' by itself is not a valid token
+        }
+        if (current == '&') {
+            int startCol = column; advance();
+            if (peek() == '&') { advance(); return {TokenType::LogicalAnd, "&&", line, startCol}; }
+            return {TokenType::Ampersand, "&", line, startCol}; // Already exists but good to have it here for context
+        }
+        if (current == '|') {
+            int startCol = column; advance();
+            if (peek() == '|') { advance(); return {TokenType::LogicalOr, "||", line, startCol}; }
+            return {TokenType::Unexpected, "|", line, startCol}; // '|' by itself is not a valid token
+        }
+
 
         // If we reach here, the character is not part of any recognized token.
         int startCol = column;

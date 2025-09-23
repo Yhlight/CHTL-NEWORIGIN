@@ -11,5 +11,7 @@ public:
     VarTemplateNode() = default;
     NodeType getType() const override { return NodeType::VarTemplate; }
 
+    bool isCustom = false;
+
     std::map<std::string, std::string> variables;
 };

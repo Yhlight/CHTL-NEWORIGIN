@@ -1,4 +1,6 @@
 #include "TemplateManager.h"
+#include "../Util/NodeCloner.h" // For cloning nodes during merge
+#include <stdexcept>
 
 // --- Style Templates ---
 
@@ -13,6 +15,47 @@ StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, cons
     }
     auto name_it = ns_it->second.find(name);
     return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+}
+
+void TemplateManager::merge(const TemplateManager& other) {
+    // Merge Style Templates
+    for (const auto& ns_pair : other.styleTemplates) {
+        for (const auto& name_pair : ns_pair.second) {
+            if (getStyleTemplate(ns_pair.first, name_pair.first)) {
+                throw std::runtime_error("Import collision: Style template '" + name_pair.first + "' in namespace '" + ns_pair.first + "' already exists.");
+            }
+            auto cloned_node = NodeCloner::clone(name_pair.second.get());
+            auto* raw_ptr = dynamic_cast<StyleTemplateNode*>(cloned_node.release());
+            if (!raw_ptr) throw std::runtime_error("Failed to cast cloned node to StyleTemplateNode.");
+            addStyleTemplate(ns_pair.first, name_pair.first, std::unique_ptr<StyleTemplateNode>(raw_ptr));
+        }
+    }
+
+    // Merge Element Templates
+    for (const auto& ns_pair : other.elementTemplates) {
+        for (const auto& name_pair : ns_pair.second) {
+            if (getElementTemplate(ns_pair.first, name_pair.first)) {
+                throw std::runtime_error("Import collision: Element template '" + name_pair.first + "' in namespace '" + ns_pair.first + "' already exists.");
+            }
+            auto cloned_node = NodeCloner::clone(name_pair.second.get());
+            auto* raw_ptr = dynamic_cast<ElementTemplateNode*>(cloned_node.release());
+            if (!raw_ptr) throw std::runtime_error("Failed to cast cloned node to ElementTemplateNode.");
+            addElementTemplate(ns_pair.first, name_pair.first, std::unique_ptr<ElementTemplateNode>(raw_ptr));
+        }
+    }
+
+    // Merge Var Templates
+    for (const auto& ns_pair : other.varTemplates) {
+        for (const auto& name_pair : ns_pair.second) {
+            if (getVarTemplate(ns_pair.first, name_pair.first)) {
+                throw std::runtime_error("Import collision: Var template '" + name_pair.first + "' in namespace '" + ns_pair.first + "' already exists.");
+            }
+            auto cloned_node = NodeCloner::clone(name_pair.second.get());
+            auto* raw_ptr = dynamic_cast<VarTemplateNode*>(cloned_node.release());
+            if (!raw_ptr) throw std::runtime_error("Failed to cast cloned node to VarTemplateNode.");
+            addVarTemplate(ns_pair.first, name_pair.first, std::unique_ptr<VarTemplateNode>(raw_ptr));
+        }
+    }
 }
 
 // --- Element Templates ---

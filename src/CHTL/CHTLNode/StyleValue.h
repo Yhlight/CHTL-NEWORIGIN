@@ -2,12 +2,10 @@
 
 #include <string>
 
-// Represents the value of a CSS property.
-// A value can be a numeric quantity with a unit (e.g., 10px), which
-// can be used in arithmetic expressions, or a simple string literal
-// (e.g., "red", "solid", "auto").
+// Represents the value of a CSS property or an intermediate value in an expression.
+// Can hold a numeric value, a string, a boolean, or be empty.
 struct StyleValue {
-    enum ValueType { NUMERIC, STRING, EMPTY } type = EMPTY;
+    enum ValueType { NUMERIC, STRING, BOOL, EMPTY } type = EMPTY;
 
     // For NUMERIC types
     double numeric_val = 0.0;
@@ -15,4 +13,7 @@ struct StyleValue {
 
     // For STRING types
     std::string string_val;
+
+    // For BOOL types
+    bool bool_val = false;
 };

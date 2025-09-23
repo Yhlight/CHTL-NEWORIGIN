@@ -1,0 +1,27 @@
+Start testing: Sep 23 14:07 UTC
+----------------------------------------------------------
+1/1 Testing: RunCHTLTests
+1/1 Test: RunCHTLTests
+Command: "/app/build/chtl_tests"
+Directory: /app/build
+"RunCHTLTests" start time: Sep 23 14:07 UTC
+Output:
+----------------------------------------------------------
+Running CHTL tests...
+[PASS] Referenced Property
+[PASS] Conditional Expression (True)
+[PASS] Conditional Expression (False)
+[FAIL] Custom Style Specialization - Unexpected token: ';' at line 3, column 64. Expected type 3
+[PASS] Custom Element Deletion
+[PASS] Custom Element Insertion
+[PASS] Import Statement
+Tests finished.
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"RunCHTLTests" end time: Sep 23 14:07 UTC
+"RunCHTLTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 23 14:07 UTC

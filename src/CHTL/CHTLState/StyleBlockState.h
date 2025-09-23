@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ParserState.h"
+#include "../CHTLNode/StyleValue.h"
 #include <string>
 #include <utility> // For std::pair
 
@@ -24,9 +25,23 @@ private:
     std::string parseCssRuleBlock(Parser& parser);
     void parseInlineProperty(Parser& parser);
 
-    // Expression parsing logic for style property values.
+    // --- Expression Parsing ---
+    // Top-level entry point for parsing a style value.
     StyleValue parseStyleExpression(Parser& parser);
+
+private:
+    // --- Conditional Expression Parsing ---
+    // Parses a full conditional chain: cond ? val, cond ? val ...
+    StyleValue parseConditionalExpr(Parser& parser);
+
+    // --- Boolean Condition Parsing (for inside conditionals) ---
+    StyleValue parseBooleanOrExpr(Parser& parser);
+    StyleValue parseBooleanAndExpr(Parser& parser);
+    StyleValue parseBooleanRelationalExpr(Parser& parser);
+
+    // --- Style Value Parsing (used by both conditional and simple expressions) ---
     StyleValue parseAdditiveExpr(Parser& parser);
     StyleValue parseMultiplicativeExpr(Parser& parser);
     StyleValue parsePrimaryExpr(Parser& parser);
+    StyleValue parseReferencedProperty(Parser& parser);
 };

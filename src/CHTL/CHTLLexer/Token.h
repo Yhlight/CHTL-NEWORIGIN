@@ -48,13 +48,31 @@ enum class TokenType {
     // Punctuation
     Comma,        // ,
 
+    // Conditional and Logical Operators
+    QuestionMark,      // ?
+    LogicalAnd,        // &&
+    LogicalOr,         // ||
+    EqualsEquals,      // ==
+    NotEquals,         // !=
+    GreaterThan,       // >
+    LessThan,          // <
+    GreaterThanEquals, // >=
+    LessThanEquals,    // <=
+
     // Keywords
     Origin,       // Origin
     Use,          // use
     Namespace,    // Namespace
     From,         // from
     Custom,       // Custom
-    Delete        // delete
+    Delete,       // delete
+    Insert,       // insert
+    After,        // after
+    Before,       // before
+    Replace,      // replace
+    AtTop,        // at top
+    AtBottom,     // at bottom
+    Import        // [Import]
 };
 
 // Represents a single token extracted from the source code.

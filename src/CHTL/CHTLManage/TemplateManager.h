@@ -20,6 +20,9 @@ public:
     void addVarTemplate(const std::string& ns, const std::string& name, std::unique_ptr<VarTemplateNode> node);
     VarTemplateNode* getVarTemplate(const std::string& ns, const std::string& name);
 
+    // Merges templates from another manager into this one.
+    void merge(const TemplateManager& other);
+
 private:
     // Use type aliases for cleaner nested map declarations
     using StyleTemplateMap = std::map<std::string, std::unique_ptr<StyleTemplateNode>>;

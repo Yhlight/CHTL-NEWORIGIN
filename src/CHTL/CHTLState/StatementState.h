@@ -1,6 +1,9 @@
 #pragma once
 
 #include "ParserState.h"
+#include "../CHTLNode/FragmentNode.h"
+
+class ElementNode; // Forward declaration
 
 // The state for parsing a single CHTL statement.
 // This state is the main dispatcher that determines the type of statement
@@ -26,4 +29,10 @@ private:
     // Helpers for parsing content within an element.
     void parseElementBody(Parser& parser, ElementNode& element);
     void parseAttribute(Parser& parser, ElementNode& element);
+
+    // Helper for specializing an element template usage
+    void parseElementSpecializationBlock(Parser& parser, FragmentNode& fragment);
+
+    // Helper for parsing an import statement
+    void parseImportStatement(Parser& parser);
 };

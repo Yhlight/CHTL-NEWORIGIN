@@ -4,6 +4,10 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/FragmentNode.h"
+#include "../CHTLNode/StyleTemplateNode.h"
+#include "../CHTLNode/ElementTemplateNode.h"
+#include "../CHTLNode/VarTemplateNode.h"
+
 
 // Recursively performs a deep copy of a given node.
 std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
@@ -37,9 +41,32 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
             }
             return cloned;
         }
+        case NodeType::StyleTemplate: {
+            const auto* source = static_cast<const StyleTemplateNode*>(node);
+            auto cloned = std::make_unique<StyleTemplateNode>();
+            cloned->isCustom = source->isCustom;
+            cloned->styles = source->styles;
+            cloned->valuelessProperties = source->valuelessProperties;
+            return cloned;
+        }
+        case NodeType::ElementTemplate: {
+            const auto* source = static_cast<const ElementTemplateNode*>(node);
+            auto cloned = std::make_unique<ElementTemplateNode>();
+            cloned->isCustom = source->isCustom;
+            for (const auto& child : source->children) {
+                cloned->children.push_back(clone(child.get()));
+            }
+            return cloned;
+        }
+        case NodeType::VarTemplate: {
+            const auto* source = static_cast<const VarTemplateNode*>(node);
+            auto cloned = std::make_unique<VarTemplateNode>();
+            cloned->isCustom = source->isCustom;
+            cloned->variables = source->variables;
+            return cloned;
+        }
         default:
-            // Other node types (like template definitions) are not meant to be
-            // cloned and placed in the main AST, so we ignore them.
+            // Other node types are not meant to be cloned.
             return nullptr;
     }
 }

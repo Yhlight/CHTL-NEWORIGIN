@@ -16,6 +16,7 @@ class ElementNode;
 class Parser {
 public:
     explicit Parser(Lexer& lexer);
+    ~Parser(); // Add destructor declaration
 
     // The main entry point for parsing.
     std::vector<std::unique_ptr<BaseNode>> parse();
@@ -27,6 +28,7 @@ public:
     Lexer& lexer;
     Token currentToken;
     Token peekToken;
+    Token peekToken2;
 
     void advanceTokens();
     void expectToken(TokenType type);
@@ -46,6 +48,10 @@ public:
     // The stack of active namespaces.
     std::vector<std::string> namespaceStack;
     std::string getCurrentNamespace() const;
+
+    // A pointer to the list of root nodes parsed so far.
+    // This allows states to perform lookups on the current AST.
+    const std::vector<std::unique_ptr<BaseNode>>* parsedNodes = nullptr;
     // --- End public interface for states ---
 
 private:

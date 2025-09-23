@@ -18,4 +18,7 @@ public:
     // string because it might contain an expression that needs to be
     // evaluated later in the context where the template is used.
     std::map<std::string, std::string> styles;
+
+    // For custom templates, stores properties defined without a value.
+    std::vector<std::string> valuelessProperties;
 };

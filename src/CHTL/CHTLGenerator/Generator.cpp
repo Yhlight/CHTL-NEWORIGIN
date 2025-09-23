@@ -1,4 +1,7 @@
 #include "Generator.h"
+#include "../Util/StyleUtil.h" // For styleValueToString
+#include "../CHTLNode/FragmentNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include <stdexcept>
 #include <algorithm> // For std::find
 
@@ -82,9 +85,24 @@ void Generator::generateElement(const ElementNode* node) {
 
     append(getIndent() + "<" + node->tagName);
 
+    // Combine attributes from the map and the inlineStyles map
+    auto finalAttributes = node->attributes;
+    if (!node->inlineStyles.empty()) {
+        std::string styleString;
+        for (const auto& stylePair : node->inlineStyles) {
+            styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
+        }
+        // Prepend generated styles to any manually set style attribute
+        if (finalAttributes.count("style")) {
+            finalAttributes["style"] = styleString + finalAttributes["style"];
+        } else {
+            finalAttributes["style"] = styleString;
+        }
+    }
+
     // Append attributes to the opening tag.
-    if (!node->attributes.empty()) {
-        for (const auto& attr : node->attributes) {
+    if (!finalAttributes.empty()) {
+        for (const auto& attr : finalAttributes) {
             append(" " + attr.first + "=\"" + attr.second + "\"");
         }
     }

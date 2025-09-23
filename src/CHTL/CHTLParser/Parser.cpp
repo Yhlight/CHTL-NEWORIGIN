@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "CHTL/CHTLState/StatementState.h" // Include the concrete state
+#include "CHTL/CHTLState/ParserState.h" // Include full definition for destructor
 #include <stdexcept>
 
 // The constructor now initializes the token stream and sets the initial state.
@@ -7,8 +8,10 @@ Parser::Parser(Lexer& lexer)
     : lexer(lexer),
       currentToken({TokenType::Unexpected, ""}),
       peekToken({TokenType::Unexpected, ""}),
+      peekToken2({TokenType::Unexpected, ""}),
       contextNode(nullptr) {
-    // Initialize the token stream.
+    // Initialize the token stream to fill all three lookahead tokens.
+    advanceTokens();
     advanceTokens();
     advanceTokens();
     // Set the initial state for parsing.
@@ -18,13 +21,20 @@ Parser::Parser(Lexer& lexer)
 // The main parse loop now delegates to the current state's handle method.
 std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
     std::vector<std::unique_ptr<BaseNode>> statements;
+    this->parsedNodes = &statements; // Point to the vector we are building.
+
     while (currentToken.type != TokenType::EndOfFile) {
         if (!currentState) {
             throw std::runtime_error("Parser is not in a valid state.");
         }
         // Delegate parsing to the current state.
-        statements.push_back(currentState->handle(*this));
+        auto node = currentState->handle(*this);
+        if (node) { // The state might not return a node (e.g., for a template definition)
+             statements.push_back(std::move(node));
+        }
     }
+
+    this->parsedNodes = nullptr; // Clean up the pointer.
     return statements;
 }
 
@@ -37,7 +47,8 @@ void Parser::setState(std::unique_ptr<ParserState> newState) {
 
 void Parser::advanceTokens() {
     currentToken = peekToken;
-    peekToken = lexer.getNextToken();
+    peekToken = peekToken2;
+    peekToken2 = lexer.getNextToken();
 }
 
 void Parser::expectToken(TokenType type) {
@@ -64,3 +75,5 @@ std::string Parser::getCurrentNamespace() const {
     }
     return result;
 }
+
+Parser::~Parser() = default;
