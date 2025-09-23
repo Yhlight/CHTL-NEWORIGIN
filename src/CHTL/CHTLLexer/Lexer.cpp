@@ -54,12 +54,15 @@ void Lexer::skipBlockComment() {
 Token Lexer::identifier() {
     std::string value;
     int startCol = column;
-    while (isalnum(peek()) || peek() == '_') {
+    while (isalnum(peek()) || peek() == '_' || peek() == '-') {
         value += advance();
     }
 
     if (value == "inherit") {
         return {TokenType::Inherit, value, line, startCol};
+    }
+    if (value == "Import") {
+        return {TokenType::Import, value, line, startCol};
     }
     if (value == "Origin") {
         return {TokenType::Origin, value, line, startCol};
@@ -78,6 +81,18 @@ Token Lexer::identifier() {
     }
     if (value == "delete") {
         return {TokenType::Delete, value, line, startCol};
+    }
+    if (value == "insert") {
+        return {TokenType::Insert, value, line, startCol};
+    }
+    if (value == "after") {
+        return {TokenType::After, value, line, startCol};
+    }
+    if (value == "before") {
+        return {TokenType::Before, value, line, startCol};
+    }
+    if (value == "replace") {
+        return {TokenType::Replace, value, line, startCol};
     }
 
     return {TokenType::Identifier, value, line, startCol};
@@ -193,7 +208,12 @@ Token Lexer::getNextToken() {
         }
 
         if (current == '=') {
-            int startCol = column; advance();
+            int startCol = column;
+            advance();
+            if (peek() == '=') {
+                advance();
+                return {TokenType::EqualsEquals, "==", line, startCol};
+            }
             return {TokenType::Equals, "=", line, startCol};
         }
 
@@ -224,7 +244,15 @@ Token Lexer::getNextToken() {
 
         // CSS Selector tokens
         if (current == '.') { int startCol = column; advance(); return {TokenType::Dot, ".", line, startCol}; }
-        if (current == '&') { int startCol = column; advance(); return {TokenType::Ampersand, "&", line, startCol}; }
+        if (current == '&') {
+            int startCol = column;
+            advance();
+            if (peek() == '&') {
+                advance();
+                return {TokenType::LogicalAnd, "&&", line, startCol};
+            }
+            return {TokenType::Ampersand, "&", line, startCol};
+        }
 
         // Arithmetic and grouping operators
         if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }
@@ -235,6 +263,32 @@ Token Lexer::getNextToken() {
         if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }
         if (current == ')') { int startCol = column; advance(); return {TokenType::CloseParen, ")", line, startCol}; }
         if (current == ',') { int startCol = column; advance(); return {TokenType::Comma, ",", line, startCol}; }
+
+        if (current == '?') { int startCol = column; advance(); return {TokenType::QuestionMark, "?", line, startCol}; }
+
+        if (current == '<') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::LessThanEquals, "<=", line, startCol}; }
+            return {TokenType::LessThan, "<", line, startCol};
+        }
+
+        if (current == '>') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::GreaterThanEquals, ">=", line, startCol}; }
+            return {TokenType::GreaterThan, ">", line, startCol};
+        }
+
+        if (current == '!') {
+            int startCol = column; advance();
+            if (peek() == '=') { advance(); return {TokenType::NotEquals, "!=", line, startCol}; }
+            // Fall through to unexpected token by not returning here
+        }
+
+        if (current == '|') {
+            int startCol = column; advance();
+            if (peek() == '|') { advance(); return {TokenType::LogicalOr, "||", line, startCol}; }
+            // Fall through to unexpected token by not returning here
+        }
 
         // If we reach here, the character is not part of any recognized token.
         int startCol = column;

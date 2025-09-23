@@ -12,6 +12,8 @@ public:
     ElementTemplateNode() = default;
     NodeType getType() const override { return NodeType::ElementTemplate; }
 
+    bool isCustom = false;
+
     // The child nodes that make up the template's content.
     std::vector<std::unique_ptr<BaseNode>> children;
 };

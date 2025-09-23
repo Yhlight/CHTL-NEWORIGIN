@@ -1,6 +1,7 @@
 #include "Generator.h"
 #include <stdexcept>
 #include <algorithm> // For std::find
+#include "../Util/StyleValueUtil.h"
 
 Generator::Generator() : indentLevel(0) {}
 
@@ -83,10 +84,21 @@ void Generator::generateElement(const ElementNode* node) {
     append(getIndent() + "<" + node->tagName);
 
     // Append attributes to the opening tag.
-    if (!node->attributes.empty()) {
-        for (const auto& attr : node->attributes) {
+    for (const auto& attr : node->attributes) {
+        // The style attribute is handled separately below from the inlineStyles map.
+        if (attr.first != "style") {
             append(" " + attr.first + "=\"" + attr.second + "\"");
         }
+    }
+
+    // Serialize the inlineStyles map into a style attribute.
+    if (!node->inlineStyles.empty()) {
+        std::string styleString = " style=\"";
+        for (const auto& stylePair : node->inlineStyles) {
+            styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
+        }
+        styleString += "\"";
+        append(styleString);
     }
 
     append(">");

@@ -1,0 +1,8 @@
+# Ignore compiled binaries
+chtl_compiler
+*.o
+*.out
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db

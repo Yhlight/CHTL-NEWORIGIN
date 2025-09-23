@@ -15,6 +15,18 @@ StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, cons
     return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
 }
 
+void TemplateManager::merge(TemplateManager& other) {
+    for (auto& ns_pair : other.styleTemplates) {
+        styleTemplates[ns_pair.first].merge(ns_pair.second);
+    }
+    for (auto& ns_pair : other.elementTemplates) {
+        elementTemplates[ns_pair.first].merge(ns_pair.second);
+    }
+    for (auto& ns_pair : other.varTemplates) {
+        varTemplates[ns_pair.first].merge(ns_pair.second);
+    }
+}
+
 // --- Element Templates ---
 
 void TemplateManager::addElementTemplate(const std::string& ns, const std::string& name, std::unique_ptr<ElementTemplateNode> node) {

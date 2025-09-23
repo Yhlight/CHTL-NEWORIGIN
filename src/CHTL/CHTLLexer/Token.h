@@ -29,6 +29,15 @@ enum class TokenType {
     Asterisk,    // *
     Slash,       // /
     Percent,     // %
+    QuestionMark, // ?
+    LogicalOr,    // ||
+    LogicalAnd,   // &&
+    EqualsEquals, // ==
+    NotEquals,    // !=
+    LessThan,     // <
+    GreaterThan,  // >
+    LessThanEquals, // <=
+    GreaterThanEquals, // >=
 
     // Parentheses
     OpenParen,   // (
@@ -49,12 +58,17 @@ enum class TokenType {
     Comma,        // ,
 
     // Keywords
+    Import,       // Import
     Origin,       // Origin
     Use,          // use
     Namespace,    // Namespace
     From,         // from
     Custom,       // Custom
-    Delete        // delete
+    Delete,       // delete
+    Insert,       // insert
+    After,        // after
+    Before,       // before
+    Replace       // replace
 };
 
 // Represents a single token extracted from the source code.

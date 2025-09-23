@@ -2,6 +2,8 @@
 
 #include "ParserState.h"
 
+class ElementNode; // Forward declaration
+
 // The state for parsing a single CHTL statement.
 // This state is the main dispatcher that determines the type of statement
 // (e.g., element, text block, comment) and contains the logic to parse it.
@@ -26,4 +28,6 @@ private:
     // Helpers for parsing content within an element.
     void parseElementBody(Parser& parser, ElementNode& element);
     void parseAttribute(Parser& parser, ElementNode& element);
+    void parseElementSpecializationBlock(Parser& parser, std::vector<std::unique_ptr<BaseNode>>& nodes);
+    std::unique_ptr<BaseNode> parseImportDirective(Parser& parser);
 };

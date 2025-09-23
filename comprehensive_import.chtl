@@ -1,0 +1,14 @@
+[Custom] @Element TestWidget {
+    div {
+        class: widget-header;
+        text: "Default Header";
+    }
+    div {
+        class: widget-body;
+        p { text: "Default content"; }
+    }
+    div {
+        class: widget-footer;
+        text: "Default Footer";
+    }
+}

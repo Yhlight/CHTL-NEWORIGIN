@@ -1,0 +1,5 @@
+[Template] @Element ImportedBox {
+    div {
+        text: "This content was imported from another file!";
+    }
+}

@@ -4,6 +4,8 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/FragmentNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include <string>
 #include <vector>
 #include <memory>

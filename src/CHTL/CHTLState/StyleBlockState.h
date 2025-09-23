@@ -9,6 +9,7 @@ class ElementNode;
 
 // State for parsing the contents of a 'style { ... }' block.
 // This state handles parsing both inline styles and selector-based rules.
+struct StyleValue; // Forward declaration
 class StyleBlockState : public ParserState {
 public:
     // The handle method will parse the entire style block.
@@ -26,6 +27,11 @@ private:
 
     // Expression parsing logic for style property values.
     StyleValue parseStyleExpression(Parser& parser);
+    StyleValue parseTernaryExpr(Parser& parser);
+    StyleValue parseLogicalOrExpr(Parser& parser);
+    StyleValue parseLogicalAndExpr(Parser& parser);
+    StyleValue parseEqualityExpr(Parser& parser);
+    StyleValue parseComparisonExpr(Parser& parser);
     StyleValue parseAdditiveExpr(Parser& parser);
     StyleValue parseMultiplicativeExpr(Parser& parser);
     StyleValue parsePrimaryExpr(Parser& parser);

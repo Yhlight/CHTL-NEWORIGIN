@@ -12,37 +12,34 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the [Custom] @Style feature,
-    // including specialization with property completion and deletion.
-    std::string chtlSource = R"(
-[Template] @Style BaseStyle {
-    font-family: "Arial";
-    font-size: 16px;
-    padding: 10px;
-}
+    // A comprehensive CHTL source string to test multiple features together.
+    std::string chtlSource = R"---(
+[Import] @Chtl from "comprehensive_import.chtl";
 
-[Custom] @Style CustomBox {
-    inherit @Style BaseStyle;
-    border: 1px solid black;
-    color; // Valueless property to be completed upon use
-}
+body {
+    @Element TestWidget from comprehensive_import {
+        // Delete the footer
+        delete div[2];
 
-html {
-    head { }
-    body {
-        div {
-            text: "This box is specialized.";
+        // Add style to the header
+        div[0] {
+            style {
+                padding: 10px;
+                background-color: padding > 5px ? "lightgray" : "white";
+            }
+        }
 
-            // Use and specialize the CustomBox template
-            @Style CustomBox {
-                delete font-family; // Delete an inherited property
-                font-size: 18px;   // Overwrite an inherited property
-                color: "red";      // Complete the valueless property
+        // Replace the entire widget-body div
+        insert replace div[1] {
+            div {
+                class: "new-widget-body";
+                p { text: "This is the new, specialized content!"; }
+                p { text: "It has multiple lines."; }
             }
         }
     }
 }
-)";
+)---";
 
     try {
         // 1. Lexing Stage

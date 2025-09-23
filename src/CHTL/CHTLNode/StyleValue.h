@@ -7,7 +7,7 @@
 // can be used in arithmetic expressions, or a simple string literal
 // (e.g., "red", "solid", "auto").
 struct StyleValue {
-    enum ValueType { NUMERIC, STRING, EMPTY } type = EMPTY;
+    enum ValueType { NUMERIC, STRING, BOOL, EMPTY } type = EMPTY;
 
     // For NUMERIC types
     double numeric_val = 0.0;
@@ -15,4 +15,7 @@ struct StyleValue {
 
     // For STRING types
     std::string string_val;
+
+    // For BOOL types
+    bool bool_val = false;
 };

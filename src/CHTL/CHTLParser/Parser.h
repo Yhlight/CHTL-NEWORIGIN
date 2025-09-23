@@ -9,6 +9,13 @@
 // Forward declarations to avoid circular dependencies
 class ParserState;
 class ElementNode;
+struct Token; // Forward declare Token for the snapshot
+
+struct ParserStateSnapshot {
+    Token currentToken;
+    Token peekToken;
+    size_t lexerPosition;
+};
 
 // The Parser class is the main context for the state machine. It holds the
 // current state and provides the interface for states to interact with the
@@ -16,6 +23,10 @@ class ElementNode;
 class Parser {
 public:
     explicit Parser(Lexer& lexer);
+    ~Parser();
+
+    ParserStateSnapshot saveState();
+    void restoreState(const ParserStateSnapshot& snapshot);
 
     // The main entry point for parsing.
     std::vector<std::unique_ptr<BaseNode>> parse();

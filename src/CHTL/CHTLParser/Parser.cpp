@@ -1,6 +1,20 @@
 #include "Parser.h"
 #include "CHTL/CHTLState/StatementState.h" // Include the concrete state
+#include "CHTL/CHTLState/ParserState.h"    // Include full definition for destructor
+#include "../CHTLLexer/Token.h"               // Include full Token definition for snapshot
 #include <stdexcept>
+
+Parser::~Parser() = default;
+
+ParserStateSnapshot Parser::saveState() {
+    return {currentToken, peekToken, lexer.getPosition()};
+}
+
+void Parser::restoreState(const ParserStateSnapshot& snapshot) {
+    lexer.setPosition(snapshot.lexerPosition);
+    currentToken = snapshot.currentToken;
+    peekToken = snapshot.peekToken;
+}
 
 // The constructor now initializes the token stream and sets the initial state.
 Parser::Parser(Lexer& lexer)
