@@ -34,6 +34,8 @@ public:
     ImportNode(ImportType type, const std::string& path)
         : type(type), path(path) {}
 
+    NodeType getType() const override { return NodeType::Import; }
+
     virtual void print(int level = 0) const override {
         for (int i = 0; i < level; ++i) std::cout << "  ";
         std::cout << "ImportNode (";

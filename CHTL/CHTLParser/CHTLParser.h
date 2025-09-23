@@ -24,7 +24,7 @@ struct InsertElementNode; // Forward Declaration
 
 class CHTLParser {
 public:
-    explicit CHTLParser(CHTLLexer& lexer, CHTLContext& context);
+    explicit CHTLParser(CHTLLexer& lexer, CHTLContext& context, const std::string& filePath = "");
     std::shared_ptr<ElementNode> parse();
 
     // Methods for ExprParser to access the token stream
@@ -36,6 +36,7 @@ public:
 private:
     CHTLLexer& lexer;
     CHTLContext& context;
+    std::string filePath;
     Token currentToken;
     CHTLState state;
 

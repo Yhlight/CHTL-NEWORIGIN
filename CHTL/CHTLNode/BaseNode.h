@@ -20,6 +20,8 @@ enum class NodeType {
     TemplateDefinition,
     TemplateUsage,
     Origin,
+    Import,
+    Namespace,
     CustomDefinition,
     // For element specialization
     ElementSpecialization,

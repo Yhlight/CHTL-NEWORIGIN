@@ -16,6 +16,8 @@ public:
         children.push_back(child);
     }
 
+    NodeType getType() const override { return NodeType::Namespace; }
+
     virtual void print(int level = 0) const override {
         for (int i = 0; i < level; ++i) std::cout << "  ";
         std::cout << "NamespaceNode (" << name << ")" << std::endl;

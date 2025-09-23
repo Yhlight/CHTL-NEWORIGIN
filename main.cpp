@@ -34,12 +34,12 @@ int main() {
         CHTLLexer lexer(source);
 
         // 2. Parser
-        CHTLParser parser(lexer, context);
+        CHTLParser parser(lexer, context, filename);
         std::shared_ptr<ElementNode> initial_ast = parser.parse();
 
         // 3. Resolver
         CHTLResolver resolver(context);
-        std::shared_ptr<ElementNode> resolved_ast = resolver.resolve(initial_ast);
+        std::shared_ptr<ElementNode> resolved_ast = resolver.resolve(initial_ast, filename);
 
         // 4. Evaluator
         StyleEvaluator evaluator(context);

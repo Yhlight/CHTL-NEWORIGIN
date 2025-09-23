@@ -26,6 +26,9 @@ struct TemplateDefinitionNode : public BaseNode {
     // Content for Var templates
     std::map<std::string, std::string> variables;
 
+    // For inheritance
+    std::vector<std::string> inheritedTemplates;
+
     TemplateDefinitionNode(const std::string& name, TemplateType type)
         : name(name), templateType(type) {}
 

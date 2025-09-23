@@ -1,0 +1,7 @@
+[Namespace] ModNS {
+    [Template] @Element ImportedBox {
+        p {
+            text { "This content comes from an imported module." }
+        }
+    }
+}

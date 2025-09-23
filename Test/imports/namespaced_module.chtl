@@ -1,0 +1,7 @@
+[Namespace] ModNS {
+    [Template] @Element NamespacedBox {
+        h3 {
+            text { "This is from a namespaced module!" }
+        }
+    }
+}

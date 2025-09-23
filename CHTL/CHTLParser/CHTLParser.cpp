@@ -4,6 +4,7 @@
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/ElementSpecializationNode.h"
 #include "../CHTLNode/DeleteElementNode.h"
+#include "../CHTLNode/InsertElementNode.h"
 #include "../CHTLExpr/ExprParser.h"
 #include "../CHTLExpr/LiteralNode.h"
 #include "../CHTLNode/CssRuleNode.h"
@@ -15,7 +16,8 @@
 
 const std::string VIRTUAL_ROOT_TAG = "__ROOT__";
 
-CHTLParser::CHTLParser(CHTLLexer& lexer, CHTLContext& context) : lexer(lexer), context(context) {
+CHTLParser::CHTLParser(CHTLLexer& lexer, CHTLContext& context, const std::string& filePath)
+    : lexer(lexer), context(context), filePath(filePath) {
     consumeToken();
 }
 
@@ -207,9 +209,35 @@ std::shared_ptr<ElementSpecializationNode> CHTLParser::parseElementSpecializatio
             consumeToken();
             specNode->addInstruction(std::make_shared<DeleteElementNode>(selector));
             expect(TokenType::SEMICOLON, "Expected ';' after delete instruction.");
-        }
-        // TODO: Add parsing for 'insert' and element modification instructions
-        else {
+        } else if (getCurrentToken().type == TokenType::KEYWORD_INSERT) {
+            consumeToken(); // consume 'insert'
+
+            InsertPosition position;
+            if (getCurrentToken().type == TokenType::KEYWORD_AFTER) {
+                position = InsertPosition::After;
+            } else if (getCurrentToken().type == TokenType::KEYWORD_BEFORE) {
+                position = InsertPosition::Before;
+            } else if (getCurrentToken().type == TokenType::KEYWORD_REPLACE) {
+                position = InsertPosition::Replace;
+            } else {
+                error("Expected 'after', 'before', or 'replace' after 'insert'.");
+            }
+            consumeToken(); // consume position keyword
+
+            if (getCurrentToken().type != TokenType::IDENTIFIER) error("Expected selector for insert instruction.");
+            std::string selector = getCurrentToken().value;
+            consumeToken();
+
+            auto insertNode = std::make_shared<InsertElementNode>(position, selector);
+
+            expect(TokenType::LEFT_BRACE, "Expected '{' for insert block.");
+            while(getCurrentToken().type != TokenType::RIGHT_BRACE) {
+                insertNode->nodesToInsert.push_back(parseStatement());
+            }
+            expect(TokenType::RIGHT_BRACE, "Expected '}' to close insert block.");
+            specNode->addInstruction(insertNode);
+
+        } else {
             error("Unsupported instruction in element specialization block.");
         }
     }
@@ -500,8 +528,6 @@ void CHTLParser::parseExceptClause(const std::shared_ptr<ElementNode>& element) 
             break;
         }
     } while (true);
-
-    expect(TokenType::SEMICOLON, "Expected ';' to terminate except clause.");
 }
 
 std::shared_ptr<NamespaceNode> CHTLParser::parseNamespaceDirective() {
@@ -740,13 +766,10 @@ void CHTLParser::parseTemplateDefinition() {
                 expect(TokenType::KEYWORD_STYLE, "Expected 'Style'");
                 std::string parentName = getCurrentToken().value;
                 expect(TokenType::IDENTIFIER, "Expected parent template name.");
-                if(context.styleTemplates.count(parentName)) {
-                    for(const auto& pair : context.styleTemplates[parentName]->styleProperties) {
-                        templateNode->styleProperties[pair.first] = pair.second;
-                    }
-                } else {
-                    error("Undefined parent style template: " + parentName);
-                }
+
+                // Just record the inheritance relationship. The resolver will handle it.
+                templateNode->inheritedTemplates.push_back(parentName);
+
                 expect(TokenType::SEMICOLON, "Expected ';'");
             } else if (getCurrentToken().type == TokenType::IDENTIFIER) {
                 std::string key = getCurrentToken().value;

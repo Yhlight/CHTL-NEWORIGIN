@@ -17,11 +17,93 @@ std::shared_ptr<T> cloneNode(const std::shared_ptr<BaseNode>& node) {
     return std::make_shared<T>(*original);
 }
 
+#include "../CHTLLoader/CHTLLoader.h"
+#include "../CHTLLexer/CHTLLexer.h"
+#include "../CHTLParser/CHTLParser.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
+#include "../CHTLNode/InsertElementNode.h"
+
 CHTLResolver::CHTLResolver(CHTLContext& context) : context(context) {}
 
-std::shared_ptr<ElementNode> CHTLResolver::resolve(const std::shared_ptr<ElementNode>& root) {
+void CHTLResolver::processImports(const std::shared_ptr<ElementNode>& root, const std::string& currentFilePath) {
+    std::vector<std::shared_ptr<ImportNode>> importNodes;
+
+    // First, find all import nodes
+    for (const auto& node : root->children) {
+        if (node->getType() == NodeType::Import) {
+            importNodes.push_back(std::dynamic_pointer_cast<ImportNode>(node));
+        }
+    }
+
+    for (const auto& importNode : importNodes) {
+        if (importNode->type == ImportType::Chtl) {
+            try {
+                std::string content = CHTLLoader::loadFile(importNode->path, currentFilePath);
+
+                CHTLContext importedContext;
+                CHTLLexer importedLexer(content);
+                CHTLParser importedParser(importedLexer, importedContext, importNode->path);
+
+                auto importedAST = importedParser.parse(); // This populates the importedContext
+
+                // Determine the namespace for the imported file
+                std::string importNamespace;
+                bool foundNamespace = false;
+                if (importedAST && !importedAST->children.empty()) {
+                    if (auto nsNode = std::dynamic_pointer_cast<NamespaceNode>(importedAST->children[0])) {
+                        importNamespace = nsNode->name;
+                        foundNamespace = true;
+                    }
+                }
+                if (!foundNamespace) {
+                    importNamespace = std::filesystem::path(importNode->path).stem().string();
+                }
+
+                // Merge definitions with namespace prefix
+                auto mergeWithNamespace = [&](auto& targetMap, const auto& sourceMap) {
+                    for (const auto& pair : sourceMap) {
+                        std::string key = importNamespace + "::" + pair.first;
+                        targetMap[key] = pair.second;
+                    }
+                };
+
+                mergeWithNamespace(context.styleTemplates, importedContext.styleTemplates);
+                mergeWithNamespace(context.elementTemplates, importedContext.elementTemplates);
+                mergeWithNamespace(context.varTemplates, importedContext.varTemplates);
+                mergeWithNamespace(context.styleCustoms, importedContext.styleCustoms);
+                mergeWithNamespace(context.elementCustoms, importedContext.elementCustoms);
+                mergeWithNamespace(context.varCustoms, importedContext.varCustoms);
+
+            } catch (const std::runtime_error& e) {
+                std::cerr << "Warning: Failed to process import for '" << importNode->path << "'. Reason: " << e.what() << std::endl;
+            }
+        }
+    }
+
+    // After processing, remove import nodes from the AST so they aren't processed further
+    root->children.erase(
+        std::remove_if(root->children.begin(), root->children.end(),
+            [](const std::shared_ptr<BaseNode>& node) {
+                return node->getType() == NodeType::Import;
+            }),
+        root->children.end());
+}
+
+
+std::shared_ptr<ElementNode> CHTLResolver::resolve(const std::shared_ptr<ElementNode>& root, const std::string& currentFilePath) {
     if (!root) return nullptr;
-    // The top-level resolve call should return a single element node
+
+    // 1. Process all imports first to populate the context
+    processImports(root, currentFilePath);
+
+    // 2. Resolve inheritance between templates
+    resolveInheritance();
+
+    // 3. Validate constraints on the pre-resolution tree
+    validateNodeConstraints(root);
+
+    // 4. Now resolve the main tree with the populated context
     auto resolved_nodes = resolveNode(root);
     if (resolved_nodes.empty()) return nullptr;
     return std::dynamic_pointer_cast<ElementNode>(resolved_nodes[0]);
@@ -41,10 +123,23 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
                 bool found = false;
 
                 // Get the initial list of children from the definition
-                if (context.elementTemplates.count(usageNode->name)) {
+                // Try to resolve in the current namespace first, then globally.
+                std::string namespacedName;
+                if (!context.namespaceStack.empty()) {
+                    namespacedName = context.namespaceStack.back() + "::" + usageNode->name;
+                }
+
+                if (!namespacedName.empty() && context.elementTemplates.count(namespacedName)) {
+                    childrenToProcess = context.elementTemplates[namespacedName]->children;
+                    found = true;
+                } else if (context.elementTemplates.count(usageNode->name)) {
                     childrenToProcess = context.elementTemplates[usageNode->name]->children;
                     found = true;
-                } else if (context.elementCustoms.count(usageNode->name)) {
+                } else if (!namespacedName.empty() && context.elementCustoms.count(namespacedName)) {
+                    childrenToProcess = context.elementCustoms[namespacedName]->children;
+                    found = true;
+                }
+                else if (context.elementCustoms.count(usageNode->name)) {
                     childrenToProcess = context.elementCustoms[usageNode->name]->children;
                     found = true;
                 }
@@ -59,18 +154,41 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
                     for (const auto& instruction : usageNode->specialization->instructions) {
                         if (instruction->getType() == NodeType::DeleteElement) {
                             auto deleteInstruction = std::dynamic_pointer_cast<DeleteElementNode>(instruction);
-                            // Erase-remove idiom to delete elements matching the selector
                             childrenToProcess.erase(
                                 std::remove_if(childrenToProcess.begin(), childrenToProcess.end(),
-                                    [&](const std::shared_ptr<BaseNode>& child) {
-                                        if (child->getType() == NodeType::Element) {
-                                            auto elem = std::dynamic_pointer_cast<ElementNode>(child);
-                                            // Simple tag name selector for now
+                                    [&](const auto& child) {
+                                        if (auto elem = std::dynamic_pointer_cast<ElementNode>(child)) {
                                             return elem->tagName == deleteInstruction->targetSelector;
                                         }
                                         return false;
                                     }),
                                 childrenToProcess.end());
+                        } else if (instruction->getType() == NodeType::InsertElement) {
+                            auto insertInstruction = std::dynamic_pointer_cast<InsertElementNode>(instruction);
+                            auto it = std::find_if(childrenToProcess.begin(), childrenToProcess.end(),
+                                [&](const auto& child) {
+                                    if (auto elem = std::dynamic_pointer_cast<ElementNode>(child)) {
+                                        return elem->tagName == insertInstruction->targetSelector;
+                                    }
+                                    return false;
+                                });
+
+                            if (it != childrenToProcess.end()) {
+                                switch (insertInstruction->position) {
+                                    case InsertPosition::After:
+                                        childrenToProcess.insert(std::next(it), insertInstruction->nodesToInsert.begin(), insertInstruction->nodesToInsert.end());
+                                        break;
+                                    case InsertPosition::Before:
+                                        childrenToProcess.insert(it, insertInstruction->nodesToInsert.begin(), insertInstruction->nodesToInsert.end());
+                                        break;
+                                    case InsertPosition::Replace:
+                                        it = childrenToProcess.erase(it);
+                                        childrenToProcess.insert(it, insertInstruction->nodesToInsert.begin(), insertInstruction->nodesToInsert.end());
+                                        break;
+                                    default: // AtTop and AtBottom not handled yet
+                                        break;
+                                }
+                            }
                         }
                     }
                 }
@@ -89,6 +207,13 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
         case NodeType::Origin: {
             return { cloneNode<OriginNode>(node) };
         }
+        case NodeType::Namespace: {
+            auto nsNode = std::dynamic_pointer_cast<NamespaceNode>(node);
+            context.namespaceStack.push_back(nsNode->name);
+            auto resolvedChildren = resolveChildren(nsNode->children);
+            context.namespaceStack.pop_back();
+            return resolvedChildren;
+        }
         default:
             return {}; // Return empty vector for unknown or irrelevant nodes
     }
@@ -102,23 +227,42 @@ std::shared_ptr<ElementNode> CHTLResolver::resolveElement(const std::shared_ptr<
 
     // --- Resolve @Style usages ---
     for (const auto& usage : node->styleUsages) {
-        if (context.styleTemplates.count(usage->name)) {
-            // It's a template
+        std::string namespacedName;
+        if (!context.namespaceStack.empty()) {
+            namespacedName = context.namespaceStack.back() + "::" + usage->name;
+        }
+
+        bool found = false;
+        if (!namespacedName.empty() && context.styleTemplates.count(namespacedName)) {
+            auto templateDef = context.styleTemplates[namespacedName];
+            for (const auto& pair : templateDef->styleProperties) {
+                newElement->inlineStyles[pair.first] = pair.second;
+            }
+            found = true;
+        } else if (context.styleTemplates.count(usage->name)) {
             auto templateDef = context.styleTemplates[usage->name];
             for (const auto& pair : templateDef->styleProperties) {
-                // Add or overwrite properties from the template
                 newElement->inlineStyles[pair.first] = pair.second;
             }
+            found = true;
+        }
+
+        if (!namespacedName.empty() && context.styleCustoms.count(namespacedName)) {
+             auto customDef = context.styleCustoms[namespacedName];
+            for (const auto& pair : customDef->styleProperties) {
+                newElement->inlineStyles[pair.first] = pair.second;
+            }
+            found = true;
         } else if (context.styleCustoms.count(usage->name)) {
-            // It's a custom style
             auto customDef = context.styleCustoms[usage->name];
             for (const auto& pair : customDef->styleProperties) {
-                // Add or overwrite properties from the custom definition
                 newElement->inlineStyles[pair.first] = pair.second;
             }
-            // Note: valueless properties and specialization are not handled yet.
-        } else {
-            std::cerr << "Warning: Undefined style template or custom: " << usage->name << std::endl;
+            found = true;
+        }
+
+        if (!found) {
+             std::cerr << "Warning: Undefined style template or custom: " << usage->name << std::endl;
         }
 
         // After merging, apply deletions
@@ -141,4 +285,106 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveChildren(const std::
         resolvedChildren.insert(resolvedChildren.end(), resolvedNodes.begin(), resolvedNodes.end());
     }
     return resolvedChildren;
+}
+
+
+void CHTLResolver::validateNodeConstraints(const std::shared_ptr<BaseNode>& node) {
+    if (!node) return;
+
+    // We only care about ElementNodes that can have children and constraints
+    if (node->getType() != NodeType::Element) {
+        return;
+    }
+
+    auto element = std::dynamic_pointer_cast<ElementNode>(node);
+    if (element->constraints.empty()) {
+        // No constraints on this node, but we still need to check its children
+        for (const auto& child : element->children) {
+            validateNodeConstraints(child);
+        }
+        return;
+    }
+
+    // This node has constraints, check every child against every constraint
+    for (const auto& child : element->children) {
+        for (const auto& constraint : element->constraints) {
+            bool violation = false;
+            switch (constraint.type) {
+                case ConstraintType::ExactTag:
+                    if (child->getType() == NodeType::Element && std::dynamic_pointer_cast<ElementNode>(child)->tagName == constraint.identifier) {
+                        violation = true;
+                    }
+                    break;
+                case ConstraintType::AnyHtml:
+                    if (child->getType() == NodeType::Element) {
+                        violation = true;
+                    }
+                    break;
+                case ConstraintType::AnyTemplate:
+                    if (child->getType() == NodeType::TemplateUsage) {
+                        violation = true;
+                    }
+                    break;
+                case ConstraintType::AnyCustom:
+                     if (child->getType() == NodeType::TemplateUsage) {
+                        auto usage = std::dynamic_pointer_cast<TemplateUsageNode>(child);
+                        if(context.elementCustoms.count(usage->name)) { // This check is basic, needs namespace handling later
+                             violation = true;
+                        }
+                    }
+                    break;
+                // Other constraint types can be added here
+                default:
+                    break;
+            }
+            if (violation) {
+                // In a real compiler, you'd want line/column numbers from the node
+                throw std::runtime_error("Constraint violation: Element '" + element->tagName + "' cannot contain the specified child.");
+            }
+        }
+    }
+
+    // Recurse to check children's constraints
+    for (const auto& child : element->children) {
+        validateNodeConstraints(child);
+    }
+}
+
+void CHTLResolver::resolveInheritance() {
+    // This is a simple, one-pass implementation. A more robust version
+    // would handle multi-level and circular inheritance by looping until
+    // no more changes occur.
+    for (auto& pair : context.styleTemplates) {
+        auto& childTemplate = pair.second;
+        if (childTemplate->inheritedTemplates.empty()) {
+            continue;
+        }
+
+        std::map<std::string, std::shared_ptr<BaseExprNode>> newProperties;
+
+        for (const auto& parentName : childTemplate->inheritedTemplates) {
+            // For now, we assume global namespace for inheritance.
+            // A full implementation would check namespaces.
+            if (context.styleTemplates.count(parentName)) {
+                auto& parentTemplate = context.styleTemplates[parentName];
+                // Recurse to ensure parent is resolved first (for multi-level)
+                // This is still tricky. A better approach is topological sort or looping.
+                // For now, let's assume one level of inheritance.
+                for (const auto& parentProp : parentTemplate->styleProperties) {
+                    newProperties[parentProp.first] = parentProp.second;
+                }
+            } else {
+                std::cerr << "Warning: Parent style template '" << parentName << "' not found for child '" << childTemplate->name << "'." << std::endl;
+            }
+        }
+
+        // Add the child's own properties, potentially overwriting parent's
+        for (const auto& childProp : childTemplate->styleProperties) {
+            newProperties[childProp.first] = childProp.second;
+        }
+
+        childTemplate->styleProperties = newProperties;
+        // Clear the inheritance list so we don't re-process
+        childTemplate->inheritedTemplates.clear();
+    }
 }
