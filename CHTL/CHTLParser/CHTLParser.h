@@ -6,6 +6,7 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/AttributeNode.h"
+#include "../CHTLNode/CustomDefinitionNode.h"
 #include "../CHTLState/CHTLState.h"
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
@@ -37,8 +38,10 @@ private:
     // Parsing helpers
     std::shared_ptr<BaseNode> parseDirective();
     void parseTemplateDefinition();
+    void parseCustomDefinition();
     std::shared_ptr<OriginNode> parseOriginBlock();
     std::map<std::string, std::shared_ptr<BaseExprNode>> parseCssRuleProperties();
+    std::shared_ptr<BaseExprNode> parseStyleValue();
     std::shared_ptr<BaseNode> parseStatement();
     std::shared_ptr<ElementNode> parseElement();
     void parseBlock(const std::shared_ptr<ElementNode>& element);

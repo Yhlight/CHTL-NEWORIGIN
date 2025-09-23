@@ -18,6 +18,7 @@ enum class NodeType {
     Attribute,
     TemplateDefinition,
     TemplateUsage,
+    CustomDefinition,
     Origin
 };
 

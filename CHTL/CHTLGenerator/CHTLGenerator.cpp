@@ -109,7 +109,27 @@ void CHTLGenerator::visitComment(const std::shared_ptr<CommentNode>& node) {
     }
 }
 
+#include <algorithm>
+
+// Helper to trim from start (in place)
+static inline void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+// Helper to trim from end (in place)
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
 void CHTLGenerator::visitOrigin(const std::shared_ptr<OriginNode>& node) {
-    // Output raw content exactly as is, without indentation
-    output << node->rawContent;
+    std::string trimmed_content = node->rawContent;
+    ltrim(trimmed_content);
+    rtrim(trimmed_content);
+
+    indent();
+    output << trimmed_content << "\n";
 }

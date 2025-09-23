@@ -12,6 +12,25 @@ struct ParsedValue {
 // Represents a literal value in an expression.
 // This could be a number with a unit ('100px'), a color ('red'),
 // or a plain string ('solid').
+#include <algorithm> // For std::find_if
+
+// Helper to trim from start (in place)
+static inline void ltrim_expr(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+// Helper to trim from end (in place)
+static inline void rtrim_expr(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
+// Represents a literal value in an expression.
+// This could be a number with a unit ('100px'), a color ('red'),
+// or a plain string ('solid').
 struct LiteralNode : public BaseExprNode {
     std::string rawValue;
 
@@ -26,6 +45,9 @@ struct LiteralNode : public BaseExprNode {
             try {
                 numericValue.value = std::stod(raw.substr(0, first_char));
                 numericValue.unit = raw.substr(first_char);
+                // Trim whitespace from the extracted unit
+                ltrim_expr(numericValue.unit);
+                rtrim_expr(numericValue.unit);
                 isNumeric = true;
             } catch (...) {
                 // Not a numeric value

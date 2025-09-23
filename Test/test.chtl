@@ -1,5 +1,9 @@
 use html5;
 
+[Custom] @Style MyCustomStyle {
+    border: 1px solid black;
+}
+
 [Template] @Var ThemeColor
 {
     mainColor: "rgb(255, 192, 203)";

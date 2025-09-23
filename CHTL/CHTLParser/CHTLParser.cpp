@@ -3,6 +3,7 @@
 #include "../CHTLExpr/ExprParser.h"
 #include "../CHTLNode/CssRuleNode.h"
 #include "../CHTLNode/OriginNode.h"
+#include "../CHTLExpr/LiteralNode.h"
 #include <iostream>
 
 const std::string VIRTUAL_ROOT_TAG = "__ROOT__";
@@ -37,8 +38,14 @@ void CHTLParser::expect(TokenType type, const std::string& message) {
 
 std::shared_ptr<ElementNode> CHTLParser::parse() {
     auto root = std::make_shared<ElementNode>(VIRTUAL_ROOT_TAG);
-    state.enter(ParseState::GLOBAL_SCOPE);
+    // The CHTLState constructor already sets the initial state to GLOBAL_SCOPE.
+    // state.enter(ParseState::GLOBAL_SCOPE); // This is redundant.
+
     while (currentToken.type != TokenType::END_OF_FILE) {
+        if (!state.isInState(ParseState::GLOBAL_SCOPE)) {
+            error("Attempting to parse a top-level statement while not in global scope.");
+        }
+
         if (currentToken.type == TokenType::LEFT_BRACKET) {
             auto node = parseDirective();
             if (node) {
@@ -51,11 +58,17 @@ std::shared_ptr<ElementNode> CHTLParser::parse() {
             }
         }
     }
-    state.leave();
     return root;
 }
 
 std::shared_ptr<BaseNode> CHTLParser::parseStatement() {
+    // This function can be called from GLOBAL_SCOPE (for top-level elements)
+    // or from within a template definition. We will need to enhance this check
+    // when we add a specific state for template definitions.
+    if (!state.isInState(ParseState::GLOBAL_SCOPE)) {
+        // For now, we allow this for template parsing, but a future refactor will improve this.
+    }
+
     if (currentToken.type == TokenType::IDENTIFIER) {
         return parseElement();
     } else if (currentToken.type == TokenType::HASH_COMMENT) {
@@ -94,34 +107,39 @@ std::shared_ptr<ElementNode> CHTLParser::parseElement() {
 void CHTLParser::parseBlock(const std::shared_ptr<ElementNode>& element) {
     expect(TokenType::LEFT_BRACE, "Expected '{' to start a block.");
     state.enter(ParseState::IN_ELEMENT_BODY);
+
     while (currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
-        if (currentToken.type == TokenType::KEYWORD_STYLE) {
-            parseStyleBlock(element);
-        }
-        else if (currentToken.type == TokenType::KEYWORD_TEXT) {
-            element->addChild(parseTextNode());
-        } else if (currentToken.type == TokenType::IDENTIFIER) {
-            Token peek = peekNextToken();
-            if (peek.type == TokenType::COLON || peek.type == TokenType::EQUAL) {
-                element->addAttribute(parseAttribute());
-            } else {
-                element->addChild(parseElement());
-            }
-        } else if (currentToken.type == TokenType::HASH_COMMENT) {
-            element->addChild(parseStatement());
-        }
-        else if (currentToken.type == TokenType::AT) {
-             element->addChild(parseStatement());
-        }
-        else if (currentToken.type == TokenType::LEFT_BRACKET) {
-            auto node = parseDirective();
-            if (node) element->addChild(node);
-        }
-        else {
-            if (currentToken.type == TokenType::RIGHT_BRACE) break;
-            error("Unexpected token inside element block: " + currentToken.value);
+        switch (state.getCurrentState()) {
+            case ParseState::IN_ELEMENT_BODY:
+                if (currentToken.type == TokenType::KEYWORD_STYLE) {
+                    parseStyleBlock(element);
+                } else if (currentToken.type == TokenType::KEYWORD_TEXT) {
+                    element->addChild(parseTextNode());
+                } else if (currentToken.type == TokenType::IDENTIFIER) {
+                    Token peek = peekNextToken();
+                    if (peek.type == TokenType::COLON || peek.type == TokenType::EQUAL) {
+                        element->addAttribute(parseAttribute());
+                    } else {
+                        element->addChild(parseElement());
+                    }
+                } else if (currentToken.type == TokenType::HASH_COMMENT) {
+                    element->addChild(parseStatement());
+                } else if (currentToken.type == TokenType::AT) {
+                    element->addChild(parseStatement());
+                } else if (currentToken.type == TokenType::LEFT_BRACKET) {
+                    auto node = parseDirective();
+                    if (node) element->addChild(node);
+                } else {
+                    if (currentToken.type == TokenType::RIGHT_BRACE) break;
+                    error("Unexpected token inside element block: " + currentToken.value);
+                }
+                break;
+            default:
+                error("Unhandled parsing state.");
+                break;
         }
     }
+
     expect(TokenType::RIGHT_BRACE, "Expected '}' to end a block.");
     state.leave();
 }
@@ -207,9 +225,7 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
             std::string key = getCurrentToken().value;
             consumeToken();
             expect(TokenType::COLON, "Expected ':' after style property name.");
-            ExprParser exprParser(*this, context);
-            auto valueExpr = exprParser.parse();
-            element->inlineStyles[key] = valueExpr;
+            element->inlineStyles[key] = parseStyleValue();
             if (getCurrentToken().type == TokenType::SEMICOLON) {
                 consumeToken();
             }
@@ -228,6 +244,11 @@ std::shared_ptr<BaseNode> CHTLParser::parseDirective() {
         expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Template' keyword.");
         parseTemplateDefinition();
         return nullptr;
+    } else if (currentToken.type == TokenType::KEYWORD_CUSTOM) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Custom' keyword.");
+        parseCustomDefinition();
+        return nullptr;
     } else if (currentToken.type == TokenType::KEYWORD_ORIGIN) {
         consumeToken();
         expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Origin' keyword.");
@@ -238,33 +259,50 @@ std::shared_ptr<BaseNode> CHTLParser::parseDirective() {
     }
 }
 
+#include "../CHTLNode/OriginNode.h" // Make sure this is included
+
 std::shared_ptr<OriginNode> CHTLParser::parseOriginBlock() {
     expect(TokenType::AT, "Expected '@' for origin type.");
+    if (getCurrentToken().type != TokenType::KEYWORD_HTML && getCurrentToken().type != TokenType::IDENTIFIER) {
+        error("Expected a valid type for the origin block (e.g., @Html).");
+    }
     std::string type = getCurrentToken().value;
-    consumeToken();
+    consumeToken(); // Consume type, currentToken is now '{'
 
-    expect(TokenType::LEFT_BRACE, "Expected '{' for origin block.");
+    if (getCurrentToken().type != TokenType::LEFT_BRACE) {
+        error("Expected '{' to begin origin block.");
+    }
 
+    // Get the position of the opening brace.
+    size_t brace_pos = getCurrentToken().pos;
+
+    // We now scan the raw source string manually.
     const std::string& source = lexer.getSource();
-    size_t startPos = lexer.getPosition();
-    size_t currentPos = startPos;
+    size_t scan_pos = brace_pos + 1; // Start scanning right after the brace
     int brace_level = 1;
 
-    while (brace_level > 0 && currentPos < source.length()) {
-        if (source[currentPos] == '{') {
+    while (brace_level > 0 && scan_pos < source.length()) {
+        if (source[scan_pos] == '{') {
             brace_level++;
-        } else if (source[currentPos] == '}') {
+        } else if (source[scan_pos] == '}') {
             brace_level--;
         }
-        currentPos++;
+        scan_pos++;
     }
 
     if (brace_level != 0) {
         error("Unmatched braces in origin block.");
     }
 
-    std::string rawContent = source.substr(startPos, currentPos - startPos - 1);
-    lexer.setPosition(currentPos);
+    // The content is between the braces.
+    size_t content_start = brace_pos + 1;
+    size_t content_len = scan_pos - content_start - 1;
+    std::string rawContent = source.substr(content_start, content_len);
+
+    // Now, we must move the lexer's state past this entire block.
+    lexer.setPosition(scan_pos);
+
+    // And re-sync the parser's token.
     consumeToken();
 
     return std::make_shared<OriginNode>(type, rawContent);
@@ -299,8 +337,7 @@ void CHTLParser::parseTemplateDefinition() {
                 std::string key = getCurrentToken().value;
                 consumeToken();
                 expect(TokenType::COLON, "Expected ':'");
-                ExprParser exprParser(*this, context);
-                templateNode->styleProperties[key] = exprParser.parse();
+                templateNode->styleProperties[key] = parseStyleValue();
                 if(getCurrentToken().type == TokenType::SEMICOLON) consumeToken();
             } else {
                 error("Expected style property or inheritance.");
@@ -355,12 +392,124 @@ std::map<std::string, std::shared_ptr<BaseExprNode>> CHTLParser::parseCssRulePro
         std::string key = getCurrentToken().value;
         consumeToken();
         expect(TokenType::COLON, "Expected ':' after style property name.");
-        ExprParser exprParser(*this, context);
-        auto valueExpr = exprParser.parse();
-        properties[key] = valueExpr;
+        properties[key] = parseStyleValue();
         if (getCurrentToken().type == TokenType::SEMICOLON) {
             consumeToken();
         }
     }
     return properties;
+}
+
+std::shared_ptr<BaseExprNode> CHTLParser::parseStyleValue() {
+    lexer.markPosition();
+
+    bool isComplexExpression = false;
+    Token lookaheadToken = getCurrentToken();
+
+    while (lookaheadToken.type != TokenType::SEMICOLON && lookaheadToken.type != TokenType::RIGHT_BRACE && lookaheadToken.type != TokenType::END_OF_FILE) {
+        switch (lookaheadToken.type) {
+            case TokenType::PLUS:
+            case TokenType::MINUS:
+            case TokenType::STAR:
+            case TokenType::SLASH:
+            case TokenType::PERCENT:
+            case TokenType::QUESTION_MARK:
+            case TokenType::GREATER:
+            case TokenType::LESS:
+            case TokenType::LOGICAL_AND:
+            case TokenType::LOGICAL_OR:
+            case TokenType::EQUAL_EQUAL:
+            case TokenType::NOT_EQUAL:
+                isComplexExpression = true;
+                break;
+            default:
+                break;
+        }
+        if (isComplexExpression) {
+            break;
+        }
+        lookaheadToken = lexer.getNextToken();
+    }
+
+    lexer.rewindToMark();
+
+    if (isComplexExpression) {
+        ExprParser exprParser(*this, context);
+        return exprParser.parse();
+    } else {
+        // It's a simple literal value
+        std::string literalValue;
+        while (currentToken.type != TokenType::SEMICOLON && currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+            if (!literalValue.empty()) {
+                literalValue += " ";
+            }
+            literalValue += currentToken.value;
+            consumeToken();
+        }
+        return std::make_shared<LiteralNode>(literalValue);
+    }
+}
+
+void CHTLParser::parseCustomDefinition() {
+    expect(TokenType::AT, "Expected '@' for custom type.");
+
+    if (currentToken.type == TokenType::KEYWORD_STYLE) {
+        consumeToken();
+        if (currentToken.type != TokenType::IDENTIFIER) error("Expected a name for the custom style.");
+        std::string customName = currentToken.value;
+        consumeToken();
+        expect(TokenType::LEFT_BRACE, "Expected '{' for custom block.");
+        auto customNode = std::make_shared<CustomDefinitionNode>(customName, CustomType::Style);
+        // For now, we just parse properties like a template. Specialization comes later.
+        while(getCurrentToken().type != TokenType::RIGHT_BRACE && getCurrentToken().type != TokenType::END_OF_FILE) {
+            if (getCurrentToken().type == TokenType::IDENTIFIER) {
+                std::string key = getCurrentToken().value;
+                consumeToken();
+                expect(TokenType::COLON, "Expected ':'");
+                customNode->styleProperties[key] = parseStyleValue();
+                if(getCurrentToken().type == TokenType::SEMICOLON) consumeToken();
+            } else {
+                error("Expected style property.");
+            }
+        }
+        context.customStyleTemplates[customName] = customNode;
+        expect(TokenType::RIGHT_BRACE, "Expected '}' to end custom block.");
+
+    } else if (currentToken.type == TokenType::KEYWORD_ELEMENT) {
+        consumeToken();
+        if (currentToken.type != TokenType::IDENTIFIER) error("Expected a name for the custom element.");
+        std::string customName = currentToken.value;
+        consumeToken();
+        auto customNode = std::make_shared<CustomDefinitionNode>(customName, CustomType::Element);
+        expect(TokenType::LEFT_BRACE, "Expected '{' for custom block.");
+        while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+            customNode->children.push_back(parseStatement());
+        }
+        expect(TokenType::RIGHT_BRACE, "Expected '}' to end custom block.");
+        context.customElementTemplates[customName] = customNode;
+
+    } else if (currentToken.type == TokenType::KEYWORD_VAR) {
+        consumeToken();
+        if (currentToken.type != TokenType::IDENTIFIER) error("Expected a name for the custom var.");
+        std::string customName = currentToken.value;
+        consumeToken();
+        auto customNode = std::make_shared<CustomDefinitionNode>(customName, CustomType::Var);
+        expect(TokenType::LEFT_BRACE, "Expected '{' for custom block.");
+        while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+            if(currentToken.type != TokenType::IDENTIFIER) error("Expected a variable name.");
+            std::string key = currentToken.value;
+            consumeToken();
+            expect(TokenType::COLON, "Expected ':' after variable name.");
+            if (currentToken.type != TokenType::STRING && currentToken.type != TokenType::IDENTIFIER && currentToken.type != TokenType::NUMBER) {
+                error("Expected a value for the variable.");
+            }
+            customNode->variables[key] = currentToken.value;
+            consumeToken();
+            expect(TokenType::SEMICOLON, "Expected ';' after variable value.");
+        }
+        expect(TokenType::RIGHT_BRACE, "Expected '}' to end custom block.");
+        context.customVarTemplates[customName] = customNode;
+    } else {
+        error("Unsupported custom type found: @" + currentToken.value);
+    }
 }

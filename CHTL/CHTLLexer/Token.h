@@ -75,4 +75,5 @@ struct Token {
     std::string value;
     size_t line;
     size_t column;
+    size_t pos;
 };

@@ -18,7 +18,26 @@ void CHTLLexer::setPosition(size_t newPos) {
 }
 
 CHTLLexer::CHTLLexer(const std::string& source)
-    : source(source), pos(0), line(1), column(1), isPeeked(false) {}
+    : source(source), pos(0), line(1), column(1), isPeeked(false), is_marked(false) {}
+
+void CHTLLexer::markPosition() {
+    marked_pos = pos;
+    marked_line = line;
+    marked_column = column;
+    is_marked = true;
+    // Note: This simple implementation doesn't save/restore the peekBuffer state,
+    // so the parser must not use peekToken() during a lookahead scan.
+}
+
+void CHTLLexer::rewindToMark() {
+    if (is_marked) {
+        pos = marked_pos;
+        line = marked_line;
+        column = marked_column;
+        is_marked = false;
+        isPeeked = false; // invalidate peek buffer after a rewind
+    }
+}
 
 Token CHTLLexer::getNextToken() {
     if (isPeeked) {
@@ -83,11 +102,11 @@ void CHTLLexer::skipBlockComment() {
     if (currentChar() == '/') advance(); // Consume '/'
 }
 
-Token CHTLLexer::makeToken(TokenType type, const std::string& value) {
-    return {type, value, line, column};
+Token CHTLLexer::makeToken(TokenType type, const std::string& value, size_t token_pos, size_t token_col) {
+    return {type, value, line, token_col, token_pos};
 }
 
-Token CHTLLexer::identifier() {
+Token CHTLLexer::identifier(size_t start_pos, size_t start_col) {
     static const std::unordered_map<std::string, TokenType> keywords = {
         {"text", TokenType::KEYWORD_TEXT},
         {"style", TokenType::KEYWORD_STYLE},
@@ -110,7 +129,6 @@ Token CHTLLexer::identifier() {
     };
 
     std::string value;
-    size_t startCol = column;
     // Allow hyphens in identifiers, but not at the start
     while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_' || (currentChar() == '-' && !value.empty()))) {
         value += currentChar();
@@ -119,15 +137,14 @@ Token CHTLLexer::identifier() {
 
     auto it = keywords.find(value);
     if (it != keywords.end()) {
-        return {it->second, value, line, startCol};
+        return makeToken(it->second, value, start_pos, start_col);
     }
 
-    return {TokenType::IDENTIFIER, value, line, startCol};
+    return makeToken(TokenType::IDENTIFIER, value, start_pos, start_col);
 }
 
-Token CHTLLexer::number() {
+Token CHTLLexer::number(size_t start_pos, size_t start_col) {
     std::string value;
-    size_t startCol = column;
     bool has_dot = false;
     while (currentChar() != '\0' && (isdigit(currentChar()) || currentChar() == '.')) {
         if (currentChar() == '.') {
@@ -137,13 +154,12 @@ Token CHTLLexer::number() {
         value += currentChar();
         advance();
     }
-    return {TokenType::NUMBER, value, line, startCol};
+    return makeToken(TokenType::NUMBER, value, start_pos, start_col);
 }
 
 
-Token CHTLLexer::stringLiteral(char quote) {
+Token CHTLLexer::stringLiteral(char quote, size_t start_pos, size_t start_col) {
     std::string value;
-    size_t startCol = column;
     advance(); // Consume opening quote
     while (currentChar() != '\0' && currentChar() != quote) {
         // Handle escape sequences if necessary, for now, just consume
@@ -151,29 +167,31 @@ Token CHTLLexer::stringLiteral(char quote) {
         advance();
     }
     advance(); // Consume closing quote
-    return {TokenType::STRING, value, line, startCol};
+    return makeToken(TokenType::STRING, value, start_pos, start_col);
 }
 
 
 Token CHTLLexer::generateNextToken() {
     skipWhitespace();
 
+    size_t start_pos = pos;
+    size_t start_col = column;
     char current = currentChar();
-    if (current == '\0') return makeToken(TokenType::END_OF_FILE, "");
+    if (current == '\0') return makeToken(TokenType::END_OF_FILE, "", start_pos, start_col);
 
     // Identifiers and Keywords
     if (isalpha(current) || current == '_') {
-        return identifier();
+        return identifier(start_pos, start_col);
     }
 
     // Numbers
     if (isdigit(current)) {
-        return number();
+        return number(start_pos, start_col);
     }
 
     // String literals
     if (current == '"' || current == '\'') {
-        return stringLiteral(current);
+        return stringLiteral(current, start_pos, start_col);
     }
 
     // Comments and Operators
@@ -187,34 +205,34 @@ Token CHTLLexer::generateNextToken() {
             return generateNextToken(); // Get next token after comment
         }
         advance();
-        return makeToken(TokenType::SLASH, "/");
+        return makeToken(TokenType::SLASH, "/", start_pos, start_col);
     }
 
     if (current == '*') {
         if (peekChar() == '*') {
             advance();
             advance();
-            return makeToken(TokenType::DOUBLE_STAR, "**");
+            return makeToken(TokenType::DOUBLE_STAR, "**", start_pos, start_col);
         }
         advance();
-        return makeToken(TokenType::STAR, "*");
+        return makeToken(TokenType::STAR, "*", start_pos, start_col);
     }
 
     if (current == '=') {
         if (peekChar() == '=') {
             advance();
             advance();
-            return makeToken(TokenType::EQUAL_EQUAL, "==");
+            return makeToken(TokenType::EQUAL_EQUAL, "==", start_pos, start_col);
         }
         advance();
-        return makeToken(TokenType::EQUAL, "=");
+        return makeToken(TokenType::EQUAL, "=", start_pos, start_col);
     }
 
     if (current == '!') {
         if (peekChar() == '=') {
             advance();
             advance();
-            return makeToken(TokenType::NOT_EQUAL, "!=");
+            return makeToken(TokenType::NOT_EQUAL, "!=", start_pos, start_col);
         }
         // Add ! as a logical NOT operator later if needed
     }
@@ -223,7 +241,7 @@ Token CHTLLexer::generateNextToken() {
         if (peekChar() == '&') {
             advance();
             advance();
-            return makeToken(TokenType::LOGICAL_AND, "&&");
+            return makeToken(TokenType::LOGICAL_AND, "&&", start_pos, start_col);
         }
     }
 
@@ -231,7 +249,7 @@ Token CHTLLexer::generateNextToken() {
         if (peekChar() == '|') {
             advance();
             advance();
-            return makeToken(TokenType::LOGICAL_OR, "||");
+            return makeToken(TokenType::LOGICAL_OR, "||", start_pos, start_col);
         }
     }
 
@@ -245,39 +263,39 @@ Token CHTLLexer::generateNextToken() {
                 comment_value += currentChar();
                 advance();
             }
-            return makeToken(TokenType::HASH_COMMENT, comment_value);
+            return makeToken(TokenType::HASH_COMMENT, comment_value, start_pos, start_col);
         } else {
             // It's an ID selector
             advance();
-            return makeToken(TokenType::HASH, "#");
+            return makeToken(TokenType::HASH, "#", start_pos, start_col);
         }
     }
 
     // Single-character symbols
     switch (current) {
-        case '.': advance(); return makeToken(TokenType::DOT, ".");
-        case '&': advance(); return makeToken(TokenType::AMPERSAND, "&");
-        case '{': advance(); return makeToken(TokenType::LEFT_BRACE, "{");
-        case '}': advance(); return makeToken(TokenType::RIGHT_BRACE, "}");
-        case '(': advance(); return makeToken(TokenType::LEFT_PAREN, "(");
-        case ')': advance(); return makeToken(TokenType::RIGHT_PAREN, ")");
-        case '[': advance(); return makeToken(TokenType::LEFT_BRACKET, "[");
-        case ']': advance(); return makeToken(TokenType::RIGHT_BRACKET, "]");
-        case ':': advance(); return makeToken(TokenType::COLON, ":");
-        case ';': advance(); return makeToken(TokenType::SEMICOLON, ";");
-        case ',': advance(); return makeToken(TokenType::COMMA, ",");
-        case '+': advance(); return makeToken(TokenType::PLUS, "+");
-        case '-': advance(); return makeToken(TokenType::MINUS, "-");
-        case '%': advance(); return makeToken(TokenType::PERCENT, "%");
-        case '@': advance(); return makeToken(TokenType::AT, "@");
-        case '>': advance(); return makeToken(TokenType::GREATER, ">");
-        case '<': advance(); return makeToken(TokenType::LESS, "<");
-        case '?': advance(); return makeToken(TokenType::QUESTION_MARK, "?");
+        case '.': advance(); return makeToken(TokenType::DOT, ".", start_pos, start_col);
+        case '&': advance(); return makeToken(TokenType::AMPERSAND, "&", start_pos, start_col);
+        case '{': advance(); return makeToken(TokenType::LEFT_BRACE, "{", start_pos, start_col);
+        case '}': advance(); return makeToken(TokenType::RIGHT_BRACE, "}", start_pos, start_col);
+        case '(': advance(); return makeToken(TokenType::LEFT_PAREN, "(", start_pos, start_col);
+        case ')': advance(); return makeToken(TokenType::RIGHT_PAREN, ")", start_pos, start_col);
+        case '[': advance(); return makeToken(TokenType::LEFT_BRACKET, "[", start_pos, start_col);
+        case ']': advance(); return makeToken(TokenType::RIGHT_BRACKET, "]", start_pos, start_col);
+        case ':': advance(); return makeToken(TokenType::COLON, ":", start_pos, start_col);
+        case ';': advance(); return makeToken(TokenType::SEMICOLON, ";", start_pos, start_col);
+        case ',': advance(); return makeToken(TokenType::COMMA, ",", start_pos, start_col);
+        case '+': advance(); return makeToken(TokenType::PLUS, "+", start_pos, start_col);
+        case '-': advance(); return makeToken(TokenType::MINUS, "-", start_pos, start_col);
+        case '%': advance(); return makeToken(TokenType::PERCENT, "%", start_pos, start_col);
+        case '@': advance(); return makeToken(TokenType::AT, "@", start_pos, start_col);
+        case '>': advance(); return makeToken(TokenType::GREATER, ">", start_pos, start_col);
+        case '<': advance(); return makeToken(TokenType::LESS, "<", start_pos, start_col);
+        case '?': advance(); return makeToken(TokenType::QUESTION_MARK, "?", start_pos, start_col);
     }
 
     // If nothing matches, it's an unknown character
     std::string unknown_char;
     unknown_char += current;
     advance();
-    return makeToken(TokenType::UNKNOWN, unknown_char);
+    return makeToken(TokenType::UNKNOWN, unknown_char, start_pos, start_col);
 }
