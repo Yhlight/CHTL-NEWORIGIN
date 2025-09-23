@@ -27,4 +27,10 @@ public:
 
     // Flag for HTML5 doctype generation
     bool useHtml5Doctype = false;
+
+    // Configuration settings
+    std::map<std::string, std::string> configurations;
+
+    // The name of the configuration to be used, set by the 'use' keyword
+    std::string usedConfiguration;
 };

@@ -9,7 +9,5 @@ struct OriginNode : public BaseNode {
     std::string rawContent;
 
     OriginNode(const std::string& type, const std::string& content)
-        : type(type), rawContent(content) {}
-
-    NodeType getType() const override { return NodeType::Origin; }
+        : BaseNode(NodeType::Origin), type(type), rawContent(content) {}
 };

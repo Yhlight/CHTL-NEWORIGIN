@@ -18,7 +18,8 @@ struct ElementNode : public BaseNode {
     std::map<std::string, std::shared_ptr<BaseExprNode>> inlineStyles;
     std::map<std::string, std::string> finalStyles;
 
-    explicit ElementNode(const std::string& tagName) : tagName(tagName) {}
+    explicit ElementNode(const std::string& tagName)
+        : BaseNode(NodeType::Element), tagName(tagName) {}
 
     void addAttribute(const std::shared_ptr<AttributeNode>& attribute) {
         attributes.push_back(attribute);
@@ -27,6 +28,4 @@ struct ElementNode : public BaseNode {
     void addChild(const std::shared_ptr<BaseNode>& child) {
         children.push_back(child);
     }
-
-    NodeType getType() const override { return NodeType::Element; }
 };

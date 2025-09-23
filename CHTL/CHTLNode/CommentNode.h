@@ -8,7 +8,5 @@ struct CommentNode : public BaseNode {
     bool isGeneratorAware;
 
     CommentNode(const std::string& content, bool isGeneratorAware)
-        : content(content), isGeneratorAware(isGeneratorAware) {}
-
-    NodeType getType() const override { return NodeType::Comment; }
+        : BaseNode(NodeType::Comment), content(content), isGeneratorAware(isGeneratorAware) {}
 };

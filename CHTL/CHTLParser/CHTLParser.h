@@ -7,6 +7,9 @@
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/AttributeNode.h"
 #include "../CHTLNode/CustomDefinitionNode.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
+#include "../CHTLNode/ConfigNode.h"
 #include "../CHTLState/CHTLState.h"
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
@@ -14,6 +17,9 @@
 
 struct OriginNode; // Forward Declaration
 struct CustomDefinitionNode; // Forward Declaration
+struct ImportNode; // Forward Declaration
+struct NamespaceNode; // Forward Declaration
+struct ConfigNode; // Forward Declaration
 struct ElementSpecializationNode; // Forward Declaration
 struct DeleteElementNode; // Forward Declaration
 struct ModifyElementNode; // Forward Declaration
@@ -42,6 +48,9 @@ private:
 
     // Parsing helpers
     std::shared_ptr<BaseNode> parseDirective();
+    std::shared_ptr<ImportNode> parseImportDirective();
+    std::shared_ptr<NamespaceNode> parseNamespaceDirective();
+    std::shared_ptr<ConfigNode> parseConfigurationDirective();
     void parseTemplateDefinition();
     void parseCustomDefinition();
     std::shared_ptr<OriginNode> parseOriginBlock();

@@ -1,8 +1,21 @@
 use html5;
+use @Config Basic;
 
-[Template] @Var ThemeColor
+[Configuration]
 {
-    mainColor: "rgb(255, 192, 203)";
+    INDEX_INITIAL_COUNT = 0;
+    DEBUG_MODE = false;
+}
+
+[Import] @Chtl from "helpers/base.chtl";
+[Import] @Style from "components.css" as BaseStyles;
+[Import] [Custom] @Element MyButton from "components/button.chtl";
+
+[Namespace] MyTheme {
+    [Template] @Var ThemeColor
+    {
+        mainColor: "rgb(255, 192, 203)";
+    }
 }
 
 [Template] @Style BaseStyle

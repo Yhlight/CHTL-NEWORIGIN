@@ -16,7 +16,10 @@ enum class ParseState {
     IN_TEXT_BLOCK,
 
     // Inside a style block, `style { ... }`
-    IN_STYLE_BLOCK
+    IN_STYLE_BLOCK,
+
+    // Inside a namespace block, `[Namespace] name { ... }`
+    IN_NAMESPACE_BODY
 };
 
 class CHTLState {

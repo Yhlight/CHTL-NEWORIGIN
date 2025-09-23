@@ -27,7 +27,5 @@ struct TemplateDefinitionNode : public BaseNode {
     std::map<std::string, std::string> variables;
 
     TemplateDefinitionNode(const std::string& name, TemplateType type)
-        : name(name), templateType(type) {}
-
-    NodeType getType() const override { return NodeType::TemplateDefinition; }
+        : BaseNode(NodeType::TemplateDefinition), name(name), templateType(type) {}
 };

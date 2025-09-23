@@ -16,10 +16,14 @@ enum class NodeType {
     Text,
     Comment,
     Attribute,
+    CssRule,
     TemplateDefinition,
     TemplateUsage,
     Origin,
     CustomDefinition,
+    Import,
+    Namespace,
+    Configuration,
     // For element specialization
     ElementSpecialization,
     DeleteElement,
@@ -28,6 +32,12 @@ enum class NodeType {
 };
 
 struct BaseNode {
+    NodeType type;
+
+    BaseNode(NodeType type) : type(type) {}
     virtual ~BaseNode() = default;
-    virtual NodeType getType() const { return NodeType::Base; }
+    NodeType getType() const { return type; }
+    virtual void print(int level = 0) const {
+        // Base implementation does nothing.
+    }
 };

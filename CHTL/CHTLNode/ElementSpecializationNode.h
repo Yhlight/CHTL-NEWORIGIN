@@ -9,9 +9,9 @@
 struct ElementSpecializationNode : public BaseNode {
     std::vector<std::shared_ptr<BaseNode>> instructions;
 
+    ElementSpecializationNode() : BaseNode(NodeType::ElementSpecialization) {}
+
     void addInstruction(const std::shared_ptr<BaseNode>& instruction) {
         instructions.push_back(instruction);
     }
-
-    NodeType getType() const override { return NodeType::ElementSpecialization; }
 };

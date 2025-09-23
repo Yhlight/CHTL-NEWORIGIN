@@ -20,7 +20,5 @@ struct TemplateUsageNode : public BaseNode {
     std::shared_ptr<ElementSpecializationNode> specialization;
 
     TemplateUsageNode(const std::string& name, TemplateType type)
-        : name(name), templateType(type), specialization(nullptr) {}
-
-    NodeType getType() const override { return NodeType::TemplateUsage; }
+        : BaseNode(NodeType::TemplateUsage), name(name), templateType(type), specialization(nullptr) {}
 };

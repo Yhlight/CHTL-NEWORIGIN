@@ -44,15 +44,21 @@ std::shared_ptr<ElementNode> CHTLParser::parse() {
     auto root = std::make_shared<ElementNode>(VIRTUAL_ROOT_TAG);
     state.enter(ParseState::GLOBAL_SCOPE);
     while (currentToken.type != TokenType::END_OF_FILE) {
+        std::shared_ptr<BaseNode> node = nullptr;
         if (currentToken.type == TokenType::LEFT_BRACKET) {
-            auto node = parseDirective();
-            if (node) {
-                root->addChild(node);
-            }
+            node = parseDirective();
         } else {
-            auto statement = parseStatement();
-            if (statement) {
-                root->addChild(statement);
+            node = parseStatement();
+        }
+
+        if (node) {
+            root->addChild(node);
+        } else {
+            // Handle cases where a parsing function returns nullptr
+            // but the file is not at EOF, e.g., for definitions
+            // that are stored in context but not added to the tree.
+            if (currentToken.type == TokenType::END_OF_FILE) {
+                break;
             }
         }
     }
@@ -68,10 +74,23 @@ std::shared_ptr<BaseNode> CHTLParser::parseStatement() {
         consumeToken();
         return node;
     } else if (currentToken.type == TokenType::KEYWORD_USE) {
-        consumeToken();
-        expect(TokenType::KEYWORD_HTML5, "Expected 'html5' after 'use'.");
-        expect(TokenType::SEMICOLON, "Expected ';' after 'use html5'.");
-        context.useHtml5Doctype = true;
+        consumeToken(); // consume 'use'
+        if (currentToken.type == TokenType::KEYWORD_HTML5) {
+            consumeToken(); // consume 'html5'
+            context.useHtml5Doctype = true;
+        } else if (currentToken.type == TokenType::AT) {
+            consumeToken(); // consume '@'
+            expect(TokenType::KEYWORD_CONFIG, "Expected 'Config' after '@' in use statement.");
+            if (currentToken.type != TokenType::IDENTIFIER) {
+                error("Expected a configuration name after '@Config'.");
+            }
+            context.usedConfiguration = currentToken.value;
+            consumeToken(); // consume config name
+        } else {
+            error("Unsupported 'use' statement. Expected 'html5' or '@Config'.");
+        }
+
+        expect(TokenType::SEMICOLON, "Expected ';' after use statement.");
         return nullptr;
     } else if (currentToken.type == TokenType::AT) {
         return parseTemplateUsage();
@@ -338,6 +357,19 @@ std::shared_ptr<BaseNode> CHTLParser::parseDirective() {
         consumeToken();
         expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Origin' keyword.");
         return parseOriginBlock();
+    } else if (currentToken.type == TokenType::KEYWORD_IMPORT) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Import' keyword.");
+        return parseImportDirective();
+    } else if (currentToken.type == TokenType::KEYWORD_NAMESPACE) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Namespace' keyword.");
+        return parseNamespaceDirective();
+    } else if (currentToken.type == TokenType::KEYWORD_CONFIGURATION) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Configuration' keyword.");
+        parseConfigurationDirective();
+        return nullptr; // Configs modify context, not added to AST directly
     } else {
         error("Unsupported directive found: " + currentToken.value);
         return nullptr;
@@ -546,4 +578,130 @@ std::map<std::string, std::shared_ptr<BaseExprNode>> CHTLParser::parseCssRulePro
         }
     }
     return properties;
+}
+
+std::shared_ptr<ImportNode> CHTLParser::parseImportDirective() {
+    auto importNode = std::make_shared<ImportNode>();
+
+    // Parse the optional [Custom] or [Template]
+    if (currentToken.type == TokenType::LEFT_BRACKET) {
+        consumeToken();
+        if (currentToken.type == TokenType::KEYWORD_CUSTOM) {
+            importNode->import_type.is_custom = true;
+        } else if (currentToken.type == TokenType::KEYWORD_TEMPLATE) {
+            importNode->import_type.is_template = true;
+        } else {
+            error("Expected 'Custom' or 'Template' after '[' in import directive.");
+        }
+        consumeToken(); // consume keyword
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after custom/template specifier.");
+    }
+
+    // Parse the type, e.g., @Element
+    expect(TokenType::AT, "Expected '@' for import type.");
+    switch(currentToken.type) {
+        case TokenType::KEYWORD_CHTL:
+        case TokenType::KEYWORD_HTML:
+        case TokenType::KEYWORD_STYLE:
+        case TokenType::KEYWORD_JAVASCRIPT:
+        case TokenType::KEYWORD_ELEMENT:
+        case TokenType::KEYWORD_VAR:
+            importNode->import_type.type_name = currentToken.value;
+            consumeToken(); // consume type keyword
+            break;
+        default:
+            error("Unsupported or invalid type keyword (e.g., Chtl, Element, Style) for import directive.");
+    }
+
+    // Parse the optional item name
+    if (currentToken.type == TokenType::IDENTIFIER) {
+        importNode->item_name = currentToken.value;
+        consumeToken();
+    }
+
+    // Parse 'from' and path
+    expect(TokenType::KEYWORD_FROM, "Expected 'from' keyword in import directive.");
+
+    if (currentToken.type != TokenType::STRING && currentToken.type != TokenType::IDENTIFIER) {
+        error("Expected a path string or literal for import.");
+    }
+    importNode->path = currentToken.value;
+    consumeToken(); // consume path
+
+    // Parse optional 'as' alias
+    if (currentToken.type == TokenType::KEYWORD_AS) {
+        consumeToken();
+        if (currentToken.type != TokenType::IDENTIFIER) {
+            error("Expected an alias identifier after 'as'.");
+        }
+        importNode->alias = currentToken.value;
+        consumeToken();
+    }
+
+    // Imports should be terminated by a semicolon for consistency.
+    expect(TokenType::SEMICOLON, "Expected ';' after import directive.");
+
+    return importNode;
+}
+
+std::shared_ptr<NamespaceNode> CHTLParser::parseNamespaceDirective() {
+    if (currentToken.type != TokenType::IDENTIFIER) {
+        error("Expected a name for the namespace.");
+    }
+    std::string namespaceName = currentToken.value;
+    consumeToken();
+
+    auto namespaceNode = std::make_shared<NamespaceNode>(namespaceName);
+
+    expect(TokenType::LEFT_BRACE, "Expected '{' to start a namespace block.");
+    state.enter(ParseState::IN_NAMESPACE_BODY);
+
+    while (currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+        std::shared_ptr<BaseNode> node = nullptr;
+        if (currentToken.type == TokenType::LEFT_BRACKET) {
+            node = parseDirective();
+        } else {
+            node = parseStatement();
+        }
+
+        if (node) {
+            namespaceNode->addChild(node);
+        } else {
+             if (currentToken.type == TokenType::END_OF_FILE) {
+                break;
+            }
+        }
+    }
+
+    expect(TokenType::RIGHT_BRACE, "Expected '}' to end a namespace block.");
+    state.leave();
+
+    return namespaceNode;
+}
+
+std::shared_ptr<ConfigNode> CHTLParser::parseConfigurationDirective() {
+    expect(TokenType::LEFT_BRACE, "Expected '{' to start a configuration block.");
+
+    while (currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+        if (currentToken.type != TokenType::IDENTIFIER) {
+            error("Expected an identifier for a configuration key.");
+        }
+        std::string key = currentToken.value;
+        consumeToken();
+
+        expect(TokenType::EQUAL, "Expected '=' after configuration key.");
+
+        if (currentToken.type != TokenType::STRING && currentToken.type != TokenType::IDENTIFIER && currentToken.type != TokenType::NUMBER) {
+            error("Expected a string, identifier, or number for configuration value.");
+        }
+        std::string value = currentToken.value;
+        consumeToken();
+
+        context.configurations[key] = value;
+
+        expect(TokenType::SEMICOLON, "Expected ';' after configuration value.");
+    }
+
+    expect(TokenType::RIGHT_BRACE, "Expected '}' to end a configuration block.");
+    return nullptr;
 }

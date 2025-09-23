@@ -12,4 +12,6 @@
 struct CssRuleNode : public BaseNode {
     std::string selector;
     std::map<std::string, std::shared_ptr<BaseExprNode>> properties;
+
+    CssRuleNode() : BaseNode(NodeType::CssRule) {}
 };

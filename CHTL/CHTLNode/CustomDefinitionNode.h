@@ -28,7 +28,5 @@ struct CustomDefinitionNode : public BaseNode {
     std::map<std::string, std::string> variables;
 
     CustomDefinitionNode(const std::string& name, CustomType type)
-        : name(name), customType(type) {}
-
-    NodeType getType() const override { return NodeType::CustomDefinition; }
+        : BaseNode(NodeType::CustomDefinition), name(name), customType(type) {}
 };
