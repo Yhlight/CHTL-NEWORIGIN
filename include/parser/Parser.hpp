@@ -4,12 +4,12 @@
 #include <vector>
 #include <string>
 #include "lexer/Lexer.hpp"
+#include "ast/Ast.hpp"
 
 namespace chtl {
 
 // Forward declarations for AST
-struct Node { virtual ~Node() = default; };
-using NodePtr = std::unique_ptr<Node>;
+using NodePtr = std::unique_ptr<ast::Node>;
 
 // Parser driven by state machine + strategies
 enum class ParserStateId {

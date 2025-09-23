@@ -40,8 +40,12 @@ void Parser::popState() { if (stateStack.size() > 1) stateStack.pop_back(); }
 ParserStateId Parser::currentState() const { return stateStack.back(); }
 
 NodePtr Parser::parse() {
-	// Placeholder root until AST is defined
-	return nullptr;
+	auto doc = std::make_unique<ast::Document>();
+	// Minimal loop to consume tokens for now
+	while (lookahead().type != TokenType::EndOfFile) {
+		consume();
+	}
+	return doc;
 }
 
 void Parser::registerDefaultStrategies() {
