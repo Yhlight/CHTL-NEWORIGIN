@@ -42,6 +42,10 @@ public:
     TemplateManager templateManager;
 
     bool outputHtml5Doctype = false;
+
+    // The stack of active namespaces.
+    std::vector<std::string> namespaceStack;
+    std::string getCurrentNamespace() const;
     // --- End public interface for states ---
 
 private:

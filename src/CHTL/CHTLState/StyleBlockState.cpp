@@ -162,9 +162,18 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
 
         std::string varName = parser.currentToken.value;
         parser.expectToken(TokenType::Identifier);
+
+        // Handle optional 'from <namespace>' clause inside the parentheses
+        std::string ns = parser.getCurrentNamespace();
+        if (parser.currentToken.type == TokenType::From) {
+            parser.advanceTokens(); // consume 'from'
+            ns = parser.currentToken.value;
+            parser.expectToken(TokenType::Identifier);
+        }
+
         parser.expectToken(TokenType::CloseParen);
 
-        VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(templateName);
+        VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(ns, templateName);
         if (!varTmpl) throw std::runtime_error("Variable template not found: " + templateName);
 
         auto it = varTmpl->variables.find(varName);
@@ -248,9 +257,18 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
 
     std::string templateName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
+
+    // Handle optional 'from <namespace>' clause
+    std::string ns = parser.getCurrentNamespace();
+    if (parser.currentToken.type == TokenType::From) {
+        parser.advanceTokens(); // consume 'from'
+        ns = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+    }
+
     parser.expectToken(TokenType::Semicolon);
 
-    StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(templateName);
+    StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(ns, templateName);
     if (!tmpl) {
         throw std::runtime_error("Style template not found: " + templateName);
     }

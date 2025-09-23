@@ -19,6 +19,7 @@ private:
     void parseTemplateDefinition(Parser& parser);
     void parseUseDirective(Parser& parser);
     std::unique_ptr<BaseNode> parseOriginDefinition(Parser& parser);
+    void parseNamespaceDefinition(Parser& parser);
 
     std::unique_ptr<BaseNode> parseElementTemplateUsage(Parser& parser);
 

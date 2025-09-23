@@ -47,7 +47,9 @@ enum class TokenType {
 
     // Keywords
     Origin,       // Origin
-    Use           // use
+    Use,          // use
+    Namespace,    // Namespace
+    From          // from
 };
 
 // Represents a single token extracted from the source code.

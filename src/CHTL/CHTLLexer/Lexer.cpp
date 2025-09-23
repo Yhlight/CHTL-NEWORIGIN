@@ -67,6 +67,12 @@ Token Lexer::identifier() {
     if (value == "use") {
         return {TokenType::Use, value, line, startCol};
     }
+    if (value == "Namespace") {
+        return {TokenType::Namespace, value, line, startCol};
+    }
+    if (value == "from") {
+        return {TokenType::From, value, line, startCol};
+    }
 
     return {TokenType::Identifier, value, line, startCol};
 }

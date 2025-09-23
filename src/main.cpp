@@ -12,22 +12,38 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the `use` and `[Origin]` features.
+    // A CHTL source string to test the complete namespace system,
+    // including cross-namespace @Var usage.
     std::string chtlSource = R"(
-use html5;
+[Namespace] UI {
+    [Template] @Var Colors {
+        primary: "blue";
+    }
+
+    [Template] @Element Card {
+        p { text: "UI Card"; }
+    }
+}
+
+[Namespace] Page {
+    // This template uses a template from another namespace
+    [Template] @Element MyPage {
+        h1 { text: "My Page"; }
+        @Element Card from UI;
+    }
+}
 
 html {
-    head {
-        title: "Origin Test";
-    }
+    head { }
     body {
-        h1 { text: "Raw HTML Below"; }
+        div {
+            style {
+                // Use a variable from the UI namespace
+                color: Colors(primary from UI);
+            }
 
-        [Origin] @Html {
-            <div class="raw-html">
-                <p>This is a raw paragraph.</p>
-                <!-- This is a raw HTML comment -->
-            </div>
+            // Use a template from the 'Page' namespace
+            @Element MyPage from Page;
         }
     }
 }

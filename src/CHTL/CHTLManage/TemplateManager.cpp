@@ -2,33 +2,45 @@
 
 // --- Style Templates ---
 
-void TemplateManager::addStyleTemplate(const std::string& name, std::unique_ptr<StyleTemplateNode> node) {
-    styleTemplates[name] = std::move(node);
+void TemplateManager::addStyleTemplate(const std::string& ns, const std::string& name, std::unique_ptr<StyleTemplateNode> node) {
+    styleTemplates[ns][name] = std::move(node);
 }
 
-StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& name) {
-    auto it = styleTemplates.find(name);
-    return (it != styleTemplates.end()) ? it->second.get() : nullptr;
+StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, const std::string& name) {
+    auto ns_it = styleTemplates.find(ns);
+    if (ns_it == styleTemplates.end()) {
+        return nullptr;
+    }
+    auto name_it = ns_it->second.find(name);
+    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
 }
 
 // --- Element Templates ---
 
-void TemplateManager::addElementTemplate(const std::string& name, std::unique_ptr<ElementTemplateNode> node) {
-    elementTemplates[name] = std::move(node);
+void TemplateManager::addElementTemplate(const std::string& ns, const std::string& name, std::unique_ptr<ElementTemplateNode> node) {
+    elementTemplates[ns][name] = std::move(node);
 }
 
-ElementTemplateNode* TemplateManager::getElementTemplate(const std::string& name) {
-    auto it = elementTemplates.find(name);
-    return (it != elementTemplates.end()) ? it->second.get() : nullptr;
+ElementTemplateNode* TemplateManager::getElementTemplate(const std::string& ns, const std::string& name) {
+    auto ns_it = elementTemplates.find(ns);
+    if (ns_it == elementTemplates.end()) {
+        return nullptr;
+    }
+    auto name_it = ns_it->second.find(name);
+    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
 }
 
 // --- Variable Templates ---
 
-void TemplateManager::addVarTemplate(const std::string& name, std::unique_ptr<VarTemplateNode> node) {
-    varTemplates[name] = std::move(node);
+void TemplateManager::addVarTemplate(const std::string& ns, const std::string& name, std::unique_ptr<VarTemplateNode> node) {
+    varTemplates[ns][name] = std::move(node);
 }
 
-VarTemplateNode* TemplateManager::getVarTemplate(const std::string& name) {
-    auto it = varTemplates.find(name);
-    return (it != varTemplates.end()) ? it->second.get() : nullptr;
+VarTemplateNode* TemplateManager::getVarTemplate(const std::string& ns, const std::string& name) {
+    auto ns_it = varTemplates.find(ns);
+    if (ns_it == varTemplates.end()) {
+        return nullptr;
+    }
+    auto name_it = ns_it->second.find(name);
+    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
 }

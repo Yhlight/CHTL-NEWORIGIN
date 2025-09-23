@@ -27,6 +27,9 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return nullptr; // Template definitions don't produce a node in the main AST
         } else if (parser.peekToken.value == "Origin") {
             return parseOriginDefinition(parser);
+        } else if (parser.peekToken.value == "Namespace") {
+            parseNamespaceDefinition(parser);
+            return nullptr; // Namespace definitions don't produce a node
         }
     } else if (parser.currentToken.type == TokenType::Use) {
         parseUseDirective(parser);
@@ -138,6 +141,9 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
 
     parser.expectToken(TokenType::OpenBrace);
 
+    // Get the current namespace to register the template under.
+    std::string currentNs = parser.getCurrentNamespace();
+
     // 4. Parse block and register with manager
     if (templateType == "Style") {
         auto styleNode = std::make_unique<StyleTemplateNode>();
@@ -150,7 +156,8 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                StyleTemplateNode* parentTmpl = parser.templateManager.getStyleTemplate(parentName);
+                // For now, assume parent is in the same namespace. Cross-namespace inheritance will be handled with `from`.
+                StyleTemplateNode* parentTmpl = parser.templateManager.getStyleTemplate(currentNs, parentName);
                 if (!parentTmpl) throw std::runtime_error("Parent style template not found: " + parentName);
                 for (const auto& pair : parentTmpl->styles) {
                     styleNode->styles[pair.first] = pair.second;
@@ -169,7 +176,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
             }
         }
-        parser.templateManager.addStyleTemplate(templateName, std::move(styleNode));
+        parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
     } else if (templateType == "Element") {
         auto elementNode = std::make_unique<ElementTemplateNode>();
         while (parser.currentToken.type != TokenType::CloseBrace) {
@@ -181,7 +188,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                ElementTemplateNode* parentTmpl = parser.templateManager.getElementTemplate(parentName);
+                ElementTemplateNode* parentTmpl = parser.templateManager.getElementTemplate(currentNs, parentName);
                 if (!parentTmpl) throw std::runtime_error("Parent element template not found: " + parentName);
                 for (const auto& child : parentTmpl->children) {
                     elementNode->children.push_back(NodeCloner::clone(child.get()));
@@ -190,7 +197,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 elementNode->children.push_back(handle(parser));
             }
         }
-        parser.templateManager.addElementTemplate(templateName, std::move(elementNode));
+        parser.templateManager.addElementTemplate(currentNs, templateName, std::move(elementNode));
     } else if (templateType == "Var") {
         auto varNode = std::make_unique<VarTemplateNode>();
         while (parser.currentToken.type != TokenType::CloseBrace) {
@@ -202,7 +209,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                VarTemplateNode* parentTmpl = parser.templateManager.getVarTemplate(parentName);
+                VarTemplateNode* parentTmpl = parser.templateManager.getVarTemplate(currentNs, parentName);
                 if (!parentTmpl) throw std::runtime_error("Parent var template not found: " + parentName);
                 for (const auto& pair : parentTmpl->variables) {
                     varNode->variables[pair.first] = pair.second;
@@ -216,7 +223,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 parser.expectToken(TokenType::Semicolon);
             }
         }
-        parser.templateManager.addVarTemplate(templateName, std::move(varNode));
+        parser.templateManager.addVarTemplate(currentNs, templateName, std::move(varNode));
     } else {
         throw std::runtime_error("Unknown template type: " + templateType);
     }
@@ -233,10 +240,19 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
 
     std::string templateName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
+
+    // Handle optional 'from <namespace>' clause
+    std::string ns = parser.getCurrentNamespace();
+    if (parser.currentToken.type == TokenType::From) {
+        parser.advanceTokens(); // consume 'from'
+        ns = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+    }
+
     parser.expectToken(TokenType::Semicolon);
 
     // Get the template from the manager
-    ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(templateName);
+    ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(ns, templateName);
     if (!tmpl) {
         throw std::runtime_error("Element template not found: " + templateName);
     }
@@ -303,4 +319,28 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
     parser.expectToken(TokenType::CloseBrace); // Consume '}'
 
     return std::make_unique<OriginNode>(rawContent);
+}
+
+void StatementState::parseNamespaceDefinition(Parser& parser) {
+    // 1. Expect [Namespace] name
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectToken(TokenType::Namespace);
+    parser.expectToken(TokenType::CloseBracket);
+    std::string ns_name = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    // 2. Push namespace onto stack
+    parser.namespaceStack.push_back(ns_name);
+
+    // 3. Parse body
+    parser.expectToken(TokenType::OpenBrace);
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        // A namespace can contain template definitions, other namespaces, etc.
+        // We can just recursively call the main handle method.
+        handle(parser);
+    }
+    parser.expectToken(TokenType::CloseBrace);
+
+    // 4. Pop namespace from stack
+    parser.namespaceStack.pop_back();
 }

@@ -50,3 +50,17 @@ void Parser::expectToken(TokenType type) {
                                  std::to_string(static_cast<int>(type)));
     }
 }
+
+std::string Parser::getCurrentNamespace() const {
+    if (namespaceStack.empty()) {
+        return "_global"; // Default namespace for top-level items
+    }
+    std::string result;
+    for (size_t i = 0; i < namespaceStack.size(); ++i) {
+        result += namespaceStack[i];
+        if (i < namespaceStack.size() - 1) {
+            result += ".";
+        }
+    }
+    return result;
+}

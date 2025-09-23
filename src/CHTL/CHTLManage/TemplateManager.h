@@ -7,21 +7,27 @@
 #include <map>
 #include <memory>
 
-// Manages the storage and retrieval of all defined templates.
-// An instance of this class will be owned by the Parser.
+// Manages the storage and retrieval of all defined templates,
+// organized by namespace.
 class TemplateManager {
 public:
-    void addStyleTemplate(const std::string& name, std::unique_ptr<StyleTemplateNode> node);
-    StyleTemplateNode* getStyleTemplate(const std::string& name);
+    void addStyleTemplate(const std::string& ns, const std::string& name, std::unique_ptr<StyleTemplateNode> node);
+    StyleTemplateNode* getStyleTemplate(const std::string& ns, const std::string& name);
 
-    void addElementTemplate(const std::string& name, std::unique_ptr<ElementTemplateNode> node);
-    ElementTemplateNode* getElementTemplate(const std::string& name);
+    void addElementTemplate(const std::string& ns, const std::string& name, std::unique_ptr<ElementTemplateNode> node);
+    ElementTemplateNode* getElementTemplate(const std::string& ns, const std::string& name);
 
-    void addVarTemplate(const std::string& name, std::unique_ptr<VarTemplateNode> node);
-    VarTemplateNode* getVarTemplate(const std::string& name);
+    void addVarTemplate(const std::string& ns, const std::string& name, std::unique_ptr<VarTemplateNode> node);
+    VarTemplateNode* getVarTemplate(const std::string& ns, const std::string& name);
 
 private:
-    std::map<std::string, std::unique_ptr<StyleTemplateNode>> styleTemplates;
-    std::map<std::string, std::unique_ptr<ElementTemplateNode>> elementTemplates;
-    std::map<std::string, std::unique_ptr<VarTemplateNode>> varTemplates;
+    // Use type aliases for cleaner nested map declarations
+    using StyleTemplateMap = std::map<std::string, std::unique_ptr<StyleTemplateNode>>;
+    std::map<std::string, StyleTemplateMap> styleTemplates;
+
+    using ElementTemplateMap = std::map<std::string, std::unique_ptr<ElementTemplateNode>>;
+    std::map<std::string, ElementTemplateMap> elementTemplates;
+
+    using VarTemplateMap = std::map<std::string, std::unique_ptr<VarTemplateNode>>;
+    std::map<std::string, VarTemplateMap> varTemplates;
 };
