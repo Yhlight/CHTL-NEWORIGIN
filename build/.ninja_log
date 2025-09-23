@@ -1,0 +1,6 @@
+# ninja log v6
+1	219	1758616995155512621	CMakeFiles/chtl_core.dir/src/parser/Parser.cpp.o	51d24178b0636ee7
+0	242	1758616995155512621	CMakeFiles/chtl_core.dir/src/lexer/Lexer.cpp.o	610fc42b064da3a2
+242	276	1758616995399513434	libchtl_core.a	958dc2db6b48822e
+1	367	1758616995155512621	CMakeFiles/chtl.dir/src/main.cpp.o	ef7469b69e033c82
+367	418	1758616995523513847	chtl	8288497457099aba
