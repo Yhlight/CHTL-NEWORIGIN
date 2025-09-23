@@ -123,10 +123,17 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
 }
 
 void StatementState::parseTemplateDefinition(Parser& parser) {
-    // 1. Expect [Template]
+    // 1. Expect [Template] or [Custom]
     parser.expectToken(TokenType::OpenBracket);
-    if (parser.currentToken.value != "Template") throw std::runtime_error("Expected 'Template' keyword after '['.");
-    parser.expectToken(TokenType::Identifier);
+    bool isCustom = false;
+    if (parser.currentToken.type == TokenType::Custom) {
+        isCustom = true;
+        parser.advanceTokens();
+    } else if (parser.currentToken.value == "Template") {
+        parser.expectToken(TokenType::Identifier); // Consume "Template"
+    } else {
+        throw std::runtime_error("Expected 'Template' or 'Custom' keyword after '['.");
+    }
     parser.expectToken(TokenType::CloseBracket);
 
     // 2. Expect @Type
@@ -147,6 +154,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
     // 4. Parse block and register with manager
     if (templateType == "Style") {
         auto styleNode = std::make_unique<StyleTemplateNode>();
+        styleNode->isCustom = isCustom; // Set the flag here
         while (parser.currentToken.type != TokenType::CloseBrace) {
             if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
                 if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
@@ -165,6 +173,14 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
             } else {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
+
+                // Handle valueless properties for custom templates
+                if (isCustom && parser.currentToken.type == TokenType::Semicolon) {
+                    styleNode->styles[key] = ""; // Store with empty value
+                    parser.advanceTokens();
+                    continue;
+                }
+
                 parser.expectToken(TokenType::Colon);
                 std::string value;
                 while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
@@ -177,6 +193,8 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
             }
         }
         parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
+    } else if (isCustom) {
+        throw std::runtime_error("[Custom] is only supported for @Style templates at this time.");
     } else if (templateType == "Element") {
         auto elementNode = std::make_unique<ElementTemplateNode>();
         while (parser.currentToken.type != TokenType::CloseBrace) {

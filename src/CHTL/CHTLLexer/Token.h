@@ -45,11 +45,16 @@ enum class TokenType {
     At,           // @
     Inherit,      // inherit
 
+    // Punctuation
+    Comma,        // ,
+
     // Keywords
     Origin,       // Origin
     Use,          // use
     Namespace,    // Namespace
-    From          // from
+    From,         // from
+    Custom,       // Custom
+    Delete        // delete
 };
 
 // Represents a single token extracted from the source code.

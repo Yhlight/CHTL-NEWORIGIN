@@ -12,6 +12,8 @@ public:
     StyleTemplateNode() = default;
     NodeType getType() const override { return NodeType::StyleTemplate; }
 
+    bool isCustom = false;
+
     // The styles are stored as key-value pairs. The value is a raw
     // string because it might contain an expression that needs to be
     // evaluated later in the context where the template is used.

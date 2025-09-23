@@ -250,37 +250,69 @@ StyleValue StyleBlockState::parseStyleExpression(Parser& parser) {
 
 void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     parser.expectToken(TokenType::At);
-    if (parser.currentToken.value != "Style") {
-        throw std::runtime_error("Expected 'Style' after '@' for template usage.");
-    }
+    if (parser.currentToken.value != "Style") throw std::runtime_error("Expected 'Style' after '@' for template usage.");
     parser.expectToken(TokenType::Identifier); // consume "Style"
 
     std::string templateName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
-    // Handle optional 'from <namespace>' clause
     std::string ns = parser.getCurrentNamespace();
     if (parser.currentToken.type == TokenType::From) {
-        parser.advanceTokens(); // consume 'from'
+        parser.advanceTokens();
         ns = parser.currentToken.value;
         parser.expectToken(TokenType::Identifier);
     }
 
-    parser.expectToken(TokenType::Semicolon);
-
     StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(ns, templateName);
-    if (!tmpl) {
-        throw std::runtime_error("Style template not found: " + templateName);
-    }
+    if (!tmpl) throw std::runtime_error("Style template not found: " + templateName);
 
-    std::string styleString;
-    for (const auto& pair : tmpl->styles) {
-        styleString += pair.first + ": " + pair.second + "; ";
-    }
+    // Copy the base styles from the template
+    std::map<std::string, std::string> finalStyles = tmpl->styles;
 
-    if (parser.contextNode->attributes.count("style")) {
-        parser.contextNode->attributes["style"] += styleString;
+    // If the template is custom and a specialization block is provided, parse it.
+    if (tmpl->isCustom && parser.currentToken.type == TokenType::OpenBrace) {
+        parser.expectToken(TokenType::OpenBrace);
+        while (parser.currentToken.type != TokenType::CloseBrace) {
+            if (parser.currentToken.type == TokenType::Delete) {
+                parser.advanceTokens(); // consume 'delete'
+                while(parser.currentToken.type != TokenType::Semicolon) {
+                    if (parser.currentToken.type == TokenType::Identifier) {
+                        finalStyles.erase(parser.currentToken.value);
+                        parser.advanceTokens();
+                    }
+                    if (parser.currentToken.type == TokenType::Comma) {
+                        parser.advanceTokens();
+                    }
+                }
+                parser.expectToken(TokenType::Semicolon);
+            } else {
+                // Handle property completion
+                std::string key = parser.currentToken.value;
+                parser.expectToken(TokenType::Identifier);
+                parser.expectToken(TokenType::Colon);
+                StyleValue sv = parseStyleExpression(parser);
+                finalStyles[key] = styleValueToString(sv); // Add or overwrite
+                if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
+            }
+        }
+        parser.expectToken(TokenType::CloseBrace);
     } else {
-        parser.contextNode->attributes["style"] = styleString;
+        parser.expectToken(TokenType::Semicolon);
+    }
+
+    // Apply the final, specialized styles to the element
+    std::string styleString;
+    for (const auto& pair : finalStyles) {
+        if (!pair.second.empty()) { // Don't add valueless properties that weren't completed
+             styleString += pair.first + ": " + pair.second + "; ";
+        }
+    }
+
+    if (!styleString.empty()) {
+        if (parser.contextNode->attributes.count("style")) {
+            parser.contextNode->attributes["style"] += styleString;
+        } else {
+            parser.contextNode->attributes["style"] = styleString;
+        }
     }
 }

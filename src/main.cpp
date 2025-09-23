@@ -12,38 +12,33 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the complete namespace system,
-    // including cross-namespace @Var usage.
+    // A CHTL source string to test the [Custom] @Style feature,
+    // including specialization with property completion and deletion.
     std::string chtlSource = R"(
-[Namespace] UI {
-    [Template] @Var Colors {
-        primary: "blue";
-    }
-
-    [Template] @Element Card {
-        p { text: "UI Card"; }
-    }
+[Template] @Style BaseStyle {
+    font-family: "Arial";
+    font-size: 16px;
+    padding: 10px;
 }
 
-[Namespace] Page {
-    // This template uses a template from another namespace
-    [Template] @Element MyPage {
-        h1 { text: "My Page"; }
-        @Element Card from UI;
-    }
+[Custom] @Style CustomBox {
+    inherit @Style BaseStyle;
+    border: 1px solid black;
+    color; // Valueless property to be completed upon use
 }
 
 html {
     head { }
     body {
         div {
-            style {
-                // Use a variable from the UI namespace
-                color: Colors(primary from UI);
-            }
+            text: "This box is specialized.";
 
-            // Use a template from the 'Page' namespace
-            @Element MyPage from Page;
+            // Use and specialize the CustomBox template
+            @Style CustomBox {
+                delete font-family; // Delete an inherited property
+                font-size: 18px;   // Overwrite an inherited property
+                color: "red";      // Complete the valueless property
+            }
         }
     }
 }

@@ -73,6 +73,12 @@ Token Lexer::identifier() {
     if (value == "from") {
         return {TokenType::From, value, line, startCol};
     }
+    if (value == "Custom") {
+        return {TokenType::Custom, value, line, startCol};
+    }
+    if (value == "delete") {
+        return {TokenType::Delete, value, line, startCol};
+    }
 
     return {TokenType::Identifier, value, line, startCol};
 }
@@ -228,6 +234,7 @@ Token Lexer::getNextToken() {
         if (current == '%') { int startCol = column; advance(); return {TokenType::Percent, "%", line, startCol}; }
         if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }
         if (current == ')') { int startCol = column; advance(); return {TokenType::CloseParen, ")", line, startCol}; }
+        if (current == ',') { int startCol = column; advance(); return {TokenType::Comma, ",", line, startCol}; }
 
         // If we reach here, the character is not part of any recognized token.
         int startCol = column;
