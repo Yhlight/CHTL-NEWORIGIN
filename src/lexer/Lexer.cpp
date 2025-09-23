@@ -4,7 +4,7 @@
 namespace chtl {
 
 static const char* TOKEN_NAMES[] = {
-	"Identifier","Number","String","LBrace","RBrace","LBracket","RBracket","LParen","RParen","Colon","Equal","Semicolon","Comma","At","Hash","Slash","Dot","Plus","Minus","Star","SlashOp","Percent","Caret","Greater","Less","Question","Pipe","Ampersand","Arrow","CEEqual","TextBlock","EndOfFile","Error"
+	"Identifier","Number","String","LBrace","RBrace","LBracket","RBracket","LParen","RParen","Colon","Equal","Semicolon","Comma","At","Hash","Slash","Dot","Plus","Minus","Star","SlashOp","Percent","Caret","DoubleStar","AndAnd","OrOr","Greater","Less","Question","Pipe","Ampersand","Arrow","CEEqual","TextBlock","EndOfFile","Error"
 };
 
 const char* toString(TokenType t) {
@@ -128,7 +128,7 @@ Token Lexer::nextToken() {
 	if (c == '\0') return makeToken(TokenType::EndOfFile, "");
 
 	// strings
-	if (c == '"' || c == '\'') return string();
+    if (c == '"' || c == '\'') return string();
 
 	// numbers
 	if (std::isdigit(static_cast<unsigned char>(c))) return number();
@@ -137,7 +137,7 @@ Token Lexer::nextToken() {
 	if (std::isalpha(static_cast<unsigned char>(c)) || c == '_' ) return identifierOrLiteral();
 
 	// single/double char tokens
-	switch (advance()) {
+    switch (advance()) {
 		case '{': return makeToken(TokenType::LBrace, "{");
 		case '}': return makeToken(TokenType::RBrace, "}");
 		case '[': return makeToken(TokenType::LBracket, "[");
@@ -158,14 +158,20 @@ Token Lexer::nextToken() {
 		case '-':
 			if (match('>')) return makeToken(TokenType::Arrow, "->");
 			return makeToken(TokenType::Minus, "-");
-		case '*': return makeToken(TokenType::Star, "*");
+		case '*':
+			if (match('*')) return makeToken(TokenType::DoubleStar, "**");
+			return makeToken(TokenType::Star, "*");
 		case '%': return makeToken(TokenType::Percent, "%");
 		case '^': return makeToken(TokenType::Caret, "^");
 		case '>': return makeToken(TokenType::Greater, ">");
 		case '<': return makeToken(TokenType::Less, "<");
 		case '?': return makeToken(TokenType::Question, "?");
-		case '|': return makeToken(TokenType::Pipe, "|");
-		case '&': return makeToken(TokenType::Ampersand, "&");
+		case '|':
+			if (match('|')) return makeToken(TokenType::OrOr, "||");
+			return makeToken(TokenType::Pipe, "|");
+		case '&':
+			if (match('&')) return makeToken(TokenType::AndAnd, "&&");
+			return makeToken(TokenType::Ampersand, "&");
 	}
 
 	return makeToken(TokenType::Error, std::string("Unexpected char: ") + c);

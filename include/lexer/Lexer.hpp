@@ -22,7 +22,10 @@ enum class TokenType {
 	Hash,      // # (generator annotation)
 	Slash,     // /
 	Dot,       // .
-	Plus,Minus,Star,SlashOp,Percent,Caret, // + - * / % ^ (use ^ as ** helper)
+	Plus,Minus,Star,SlashOp,Percent,Caret, // + - * / % ^ (legacy)
+	DoubleStar, // ** power
+	AndAnd,     // &&
+	OrOr,       // ||
 	Greater,Less,
 	Question, // ?
 	Pipe,     // |
