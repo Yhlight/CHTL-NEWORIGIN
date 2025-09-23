@@ -8,6 +8,7 @@
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/ElementSpecializationNode.h"
 #include "../CHTLNode/DeleteElementNode.h"
+#include "../CHTLNode/InsertElementNode.h"
 #include <iostream>
 #include <algorithm>
 
@@ -66,12 +67,64 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
                                     [&](const std::shared_ptr<BaseNode>& child) {
                                         if (child->getType() == NodeType::Element) {
                                             auto elem = std::dynamic_pointer_cast<ElementNode>(child);
-                                            // Simple tag name selector for now
-                                            return elem->tagName == deleteInstruction->targetSelector;
+                                            if (elem->tagName != deleteInstruction->tagName) {
+                                                return false;
+                                            }
+                                            // If index is -1, it's a match on tag name alone.
+                                            // This will delete the first occurrence. A more robust implementation
+                                            // might delete all occurrences, but for now, this is fine.
+                                            if (deleteInstruction->index == -1) {
+                                                return true;
+                                            }
+
+                                            // Check if the current element is the nth of its type
+                                            int count = 0;
+                                            for (const auto& c : childrenToProcess) {
+                                                if (c->getType() == NodeType::Element) {
+                                                    auto e = std::dynamic_pointer_cast<ElementNode>(c);
+                                                    if (e->tagName == deleteInstruction->tagName) {
+                                                        if (count == deleteInstruction->index) {
+                                                            return c == child; // Is this the specific node to delete?
+                                                        }
+                                                        count++;
+                                                    }
+                                                }
+                                            }
                                         }
                                         return false;
                                     }),
                                 childrenToProcess.end());
+                        } else if (instruction->getType() == NodeType::InsertElement) {
+                             auto insertInstruction = std::dynamic_pointer_cast<InsertElementNode>(instruction);
+                             auto it = childrenToProcess.begin();
+                             bool found = false;
+                             int count = 0;
+                             while(it != childrenToProcess.end()) {
+                                 auto current_node = *it;
+                                 if (current_node->getType() == NodeType::Element) {
+                                     auto e = std::dynamic_pointer_cast<ElementNode>(current_node);
+                                     if(e->tagName == insertInstruction->targetTagName) {
+                                         if(insertInstruction->targetIndex == -1 || count == insertInstruction->targetIndex) {
+                                            // Found the target
+                                            found = true;
+                                            if (insertInstruction->position == InsertPosition::After) {
+                                                it++; // Advance iterator to the position after the current element
+                                            }
+
+                                            auto resolvedToInsert = resolveChildren(insertInstruction->nodesToInsert);
+                                            childrenToProcess.insert(it, resolvedToInsert.begin(), resolvedToInsert.end());
+
+                                            // 'replace' is not fully implemented yet, so we just break.
+                                            break;
+                                         }
+                                         count++;
+                                     }
+                                 }
+                                 it++;
+                             }
+                             if (!found) {
+                                 std::cerr << "Warning: Could not find target for insert instruction." << std::endl;
+                             }
                         }
                     }
                 }
@@ -96,44 +149,59 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
     }
 }
 
-std::map<std::string, std::shared_ptr<BaseExprNode>> CHTLResolver::resolveStyleTemplate(const std::string& templateName) {
+std::map<std::string, std::shared_ptr<BaseExprNode>> CHTLResolver::resolveStyleTemplate(const std::string& name) {
     // Memoization check
-    if (resolvedStyleTemplates.count(templateName)) {
-        return resolvedStyleTemplates[templateName];
+    if (resolvedStyleTemplates.count(name)) {
+        return resolvedStyleTemplates[name];
     }
 
-    if (!context.styleTemplates.count(templateName)) {
-        std::cerr << "Warning: Undefined style template used: " << templateName << std::endl;
-        return {};
-    }
+    // Check for a Template
+    if (context.styleTemplates.count(name)) {
+        auto templateDef = context.styleTemplates[name];
+        std::map<std::string, std::shared_ptr<BaseExprNode>> resolvedProps;
 
-    auto templateDef = context.styleTemplates[templateName];
-    std::map<std::string, std::shared_ptr<BaseExprNode>> resolvedProps;
-
-    // First, recursively resolve and apply parent templates
-    for (const auto& prop : templateDef->styleProperties) {
-        if (prop.second->getType() == ExprNodeType::VarUsage) {
-             auto varUsage = std::dynamic_pointer_cast<VarUsageNode>(prop.second);
-             // This is a simplified check for @Style inheritance
-             if (varUsage && varUsage->groupName == "Style") {
-                 auto parentProps = resolveStyleTemplate(varUsage->varName);
-                 for (const auto& parentPair : parentProps) {
-                     resolvedProps[parentPair.first] = parentPair.second;
+        // First, recursively resolve and apply parent templates
+        for (const auto& prop : templateDef->styleProperties) {
+            if (prop.second->getType() == ExprNodeType::VarUsage) {
+                 auto varUsage = std::dynamic_pointer_cast<VarUsageNode>(prop.second);
+                 // This is a simplified check for @Style inheritance
+                 if (varUsage && varUsage->groupName == "Style") {
+                     auto parentProps = resolveStyleTemplate(varUsage->varName);
+                     for (const auto& parentPair : parentProps) {
+                         resolvedProps[parentPair.first] = parentPair.second->clone();
+                     }
                  }
-             }
+            }
         }
+
+        // Then, apply the properties from the current template, overwriting any from parents
+        for (const auto& prop : templateDef->styleProperties) {
+             if (prop.second->getType() != ExprNodeType::VarUsage || std::dynamic_pointer_cast<VarUsageNode>(prop.second)->groupName != "Style") {
+                resolvedProps[prop.first] = prop.second;
+            }
+        }
+        // Cache the result
+        resolvedStyleTemplates[name] = resolvedProps;
+        return resolvedProps;
+
+    // Check for a Custom Style
+    } else if (context.styleCustoms.count(name)) {
+        auto customDef = context.styleCustoms[name];
+        std::map<std::string, std::shared_ptr<BaseExprNode>> resolvedProps;
+
+        // Custom styles don't have inheritance in the same way, just apply their properties.
+        // Valueless properties are handled by the specialization at the usage site.
+        for (const auto& pair : customDef->styleProperties) {
+            resolvedProps[pair.first] = pair.second;
+        }
+
+        // Cache the result
+        resolvedStyleTemplates[name] = resolvedProps;
+        return resolvedProps;
     }
 
-    // Then, apply the properties from the current template, overwriting any from parents
-    for (const auto& prop : templateDef->styleProperties) {
-         if (prop.second->getType() != ExprNodeType::VarUsage || std::dynamic_pointer_cast<VarUsageNode>(prop.second)->groupName != "Style") {
-            resolvedProps[prop.first] = prop.second;
-        }
-    }
-
-    // Cache the result
-    resolvedStyleTemplates[templateName] = resolvedProps;
-    return resolvedProps;
+    std::cerr << "Warning: Undefined style template or custom used: " << name << std::endl;
+    return {};
 }
 
 
@@ -163,6 +231,11 @@ std::shared_ptr<ElementNode> CHTLResolver::resolveElement(const std::shared_ptr<
         for (const auto& propToDelete : usage->deletedProperties) {
             finalStyles.erase(propToDelete);
         }
+
+        // Apply specialized properties from the usage block, giving them high precedence
+        for (const auto& pair : usage->specializedProperties) {
+            finalStyles[pair.first] = pair.second->clone();
+        }
     }
 
     // Re-apply the original inline styles to ensure they have the highest precedence
@@ -177,6 +250,7 @@ std::shared_ptr<ElementNode> CHTLResolver::resolveElement(const std::shared_ptr<
 
     return newElement;
 }
+
 
 std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveChildren(const std::vector<std::shared_ptr<BaseNode>>& children) {
     std::vector<std::shared_ptr<BaseNode>> resolvedChildren;

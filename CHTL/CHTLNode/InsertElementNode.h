@@ -16,8 +16,9 @@ enum class InsertPosition {
 // Represents an 'insert' instruction.
 struct InsertElementNode : public BaseNode {
     InsertPosition position;
-    std::string targetSelector; // Can be empty for AtTop/AtBottom
+    std::string targetTagName;
+    int targetIndex; // -1 if not specified
     std::vector<std::shared_ptr<BaseNode>> nodesToInsert;
 
-    NodeType getType() const override { return NodeType::InsertElement; }
+    InsertElementNode() : BaseNode(NodeType::InsertElement), targetIndex(-1) {}
 };

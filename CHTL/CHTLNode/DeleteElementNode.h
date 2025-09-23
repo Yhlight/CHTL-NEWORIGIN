@@ -3,10 +3,11 @@
 #include "BaseNode.h"
 #include <string>
 
-// Represents a 'delete element' instruction, e.g., `delete span;`
+// Represents a 'delete element' instruction, e.g., `delete span;` or `delete div[1];`
 struct DeleteElementNode : public BaseNode {
-    std::string targetSelector; // e.g., "span", "div[1]"
+    std::string tagName;
+    int index; // -1 if no index is specified
 
-    explicit DeleteElementNode(const std::string& selector)
-        : BaseNode(NodeType::DeleteElement), targetSelector(selector) {}
+    explicit DeleteElementNode(const std::string& tagName, int index = -1)
+        : BaseNode(NodeType::DeleteElement), tagName(tagName), index(index) {}
 };

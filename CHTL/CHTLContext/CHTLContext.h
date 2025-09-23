@@ -6,6 +6,7 @@
 #include <memory>
 
 // Forward declare to avoid circular dependencies if context needs to hold nodes
+struct BaseExprNode;
 struct TemplateDefinitionNode;
 struct CustomDefinitionNode;
 struct CssRuleNode;
@@ -29,7 +30,7 @@ public:
     bool useHtml5Doctype = false;
 
     // Configuration settings
-    std::map<std::string, std::string> configurations;
+    std::map<std::string, std::shared_ptr<BaseExprNode>> configurations;
 
     // The name of the configuration to be used, set by the 'use' keyword
     std::string usedConfiguration;

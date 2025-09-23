@@ -4,6 +4,7 @@
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/ElementSpecializationNode.h"
 #include "../CHTLNode/DeleteElementNode.h"
+#include "../CHTLNode/InsertElementNode.h"
 #include "../CHTLExpr/ExprParser.h"
 #include "../CHTLExpr/LiteralNode.h"
 #include "../CHTLNode/CssRuleNode.h"
@@ -211,14 +212,64 @@ std::shared_ptr<ElementSpecializationNode> CHTLParser::parseElementSpecializatio
     while(getCurrentToken().type != TokenType::RIGHT_BRACE) {
         if (getCurrentToken().type == TokenType::KEYWORD_DELETE) {
             consumeToken(); // consume 'delete'
-            if (getCurrentToken().type != TokenType::IDENTIFIER) error("Expected selector for delete instruction.");
-            // For now, assume simple tag selector. Indexed selectors to be added later.
-            std::string selector = getCurrentToken().value;
+            if (getCurrentToken().type != TokenType::IDENTIFIER) error("Expected a tag name for delete instruction.");
+
+            std::string tagName = getCurrentToken().value;
             consumeToken();
-            specNode->addInstruction(std::make_shared<DeleteElementNode>(selector));
+
+            int index = -1; // Default to no index
+            if (getCurrentToken().type == TokenType::LEFT_BRACKET) {
+                consumeToken(); // consume '['
+                if (getCurrentToken().type != TokenType::NUMBER) error("Expected a number for the index.");
+                try {
+                    index = std::stoi(getCurrentToken().value);
+                } catch (const std::invalid_argument& e) {
+                    error("Invalid number for index.");
+                }
+                consumeToken(); // consume number
+                expect(TokenType::RIGHT_BRACKET, "Expected ']' to close index.");
+            }
+
+            specNode->addInstruction(std::make_shared<DeleteElementNode>(tagName, index));
             expect(TokenType::SEMICOLON, "Expected ';' after delete instruction.");
+        } else if (getCurrentToken().type == TokenType::KEYWORD_INSERT) {
+            consumeToken(); // consume 'insert'
+            auto insertNode = std::make_shared<InsertElementNode>();
+
+            // Parse position
+            if (currentToken.type == TokenType::KEYWORD_AFTER) insertNode->position = InsertPosition::After;
+            else if (currentToken.type == TokenType::KEYWORD_BEFORE) insertNode->position = InsertPosition::Before;
+            else if (currentToken.type == TokenType::KEYWORD_REPLACE) insertNode->position = InsertPosition::Replace;
+            // TODO: Add at top / at bottom
+            else error("Invalid position for insert instruction.");
+            consumeToken();
+
+            // Parse target selector
+            if (currentToken.type != TokenType::IDENTIFIER) error("Expected a tag name for insert target.");
+            insertNode->targetTagName = currentToken.value;
+            consumeToken();
+            if (currentToken.type == TokenType::LEFT_BRACKET) {
+                 consumeToken(); // consume '['
+                if (getCurrentToken().type != TokenType::NUMBER) error("Expected a number for the index.");
+                try {
+                    insertNode->targetIndex = std::stoi(getCurrentToken().value);
+                } catch (const std::invalid_argument& e) {
+                    error("Invalid number for index.");
+                }
+                consumeToken(); // consume number
+                expect(TokenType::RIGHT_BRACKET, "Expected ']' to close index.");
+            }
+
+            // Parse block of nodes to insert
+            expect(TokenType::LEFT_BRACE, "Expected '{' to start insert block.");
+            while(currentToken.type != TokenType::RIGHT_BRACE && currentToken.type != TokenType::END_OF_FILE) {
+                insertNode->nodesToInsert.push_back(parseStatement());
+            }
+            expect(TokenType::RIGHT_BRACE, "Expected '}' to end insert block.");
+
+            specNode->addInstruction(insertNode);
         }
-        // TODO: Add parsing for 'insert' and element modification instructions
+        // TODO: Add parsing for element modification instructions
         else {
             error("Unsupported instruction in element specialization block.");
         }
@@ -276,10 +327,21 @@ void CHTLParser::parseStyleBlock(const std::shared_ptr<ElementNode>& element) {
                                     error("Expected ',' or ';' after property name in delete list.");
                                 }
                             }
-                        } else {
-                            error("Unsupported keyword in style usage block. Only 'delete' is allowed.");
+                             expect(TokenType::SEMICOLON, "Expected ';' to end delete statement.");
+                        } else if (getCurrentToken().type == TokenType::IDENTIFIER) {
+                            // This is a specialized property-value pair
+                            std::string key = getCurrentToken().value;
+                            consumeToken();
+                            expect(TokenType::COLON, "Expected ':' after style property name.");
+                            ExprParser exprParser(*this, context);
+                            usageNode->specializedProperties[key] = exprParser.parse();
+                            if (getCurrentToken().type == TokenType::SEMICOLON) {
+                                consumeToken();
+                            }
                         }
-                        expect(TokenType::SEMICOLON, "Expected ';' to end statement in style usage block.");
+                        else {
+                            error("Unsupported keyword or token in style usage block. Only 'delete' or property definitions are allowed.");
+                        }
                     }
                     expect(TokenType::RIGHT_BRACE, "Expected '}' to end style usage block.");
 
@@ -387,6 +449,10 @@ void CHTLParser::parseCustomDefinition() {
         expect(TokenType::LEFT_BRACE, "Expected '{' for custom block.");
         auto customNode = std::make_shared<CustomDefinitionNode>(customName, CustomType::Style);
         while(getCurrentToken().type != TokenType::RIGHT_BRACE && getCurrentToken().type != TokenType::END_OF_FILE) {
+            if (getCurrentToken().type != TokenType::IDENTIFIER) {
+                error("Expected a property identifier in custom style definition.");
+            }
+
             if (peekNextToken().type == TokenType::COLON) { // Property with value
                 std::string key = getCurrentToken().value;
                 consumeToken();
@@ -396,19 +462,18 @@ void CHTLParser::parseCustomDefinition() {
                 if (getCurrentToken().type == TokenType::SEMICOLON) {
                     consumeToken();
                 }
-            } else { // Valueless property list
-                 while(getCurrentToken().type != TokenType::SEMICOLON && getCurrentToken().type != TokenType::RIGHT_BRACE) {
-                    if (getCurrentToken().type != TokenType::IDENTIFIER) error("Expected identifier for valueless property.");
-                    customNode->valuelessProperties.push_back(getCurrentToken().value);
-                    consumeToken();
-                    if (getCurrentToken().type == TokenType::COMMA) {
-                        consumeToken();
-                    } else {
-                        break;
-                    }
+            } else { // Valueless property
+                customNode->valuelessProperties.push_back(getCurrentToken().value);
+                consumeToken(); // consume identifier
+                if (getCurrentToken().type == TokenType::COMMA) {
+                    consumeToken(); // consume comma, continue list
+                } else if (getCurrentToken().type == TokenType::SEMICOLON) {
+                    consumeToken(); // consume semicolon, end of list for now
+                } else if (getCurrentToken().type == TokenType::RIGHT_BRACE) {
+                    // This is fine, loop will terminate
+                } else {
+                    error("Expected ',', ';', or '}' after valueless property.");
                 }
-                expect(TokenType::SEMICOLON, "Expected ';' to end property definition.");
-                consumeToken();
             }
         }
         context.styleCustoms[customName] = customNode;
@@ -691,15 +756,12 @@ std::shared_ptr<ConfigNode> CHTLParser::parseConfigurationDirective() {
 
         expect(TokenType::EQUAL, "Expected '=' after configuration key.");
 
-        if (currentToken.type != TokenType::STRING && currentToken.type != TokenType::IDENTIFIER && currentToken.type != TokenType::NUMBER) {
-            error("Expected a string, identifier, or number for configuration value.");
+        ExprParser exprParser(*this, context);
+        context.configurations[key] = exprParser.parse();
+
+        if (currentToken.type == TokenType::SEMICOLON) {
+            consumeToken();
         }
-        std::string value = currentToken.value;
-        consumeToken();
-
-        context.configurations[key] = value;
-
-        expect(TokenType::SEMICOLON, "Expected ';' after configuration value.");
     }
 
     expect(TokenType::RIGHT_BRACE, "Expected '}' to end a configuration block.");

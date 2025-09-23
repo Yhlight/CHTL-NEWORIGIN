@@ -15,6 +15,7 @@ struct TemplateUsageNode : public BaseNode {
 
     // For @Style specialization
     std::vector<std::string> deletedProperties;
+    std::map<std::string, std::shared_ptr<BaseExprNode>> specializedProperties;
 
     // For @Element specialization
     std::shared_ptr<ElementSpecializationNode> specialization;

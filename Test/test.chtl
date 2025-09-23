@@ -18,10 +18,17 @@ use @Config Basic;
     }
 }
 
+[Custom] @Style ValuelessText
+{
+    color,
+    font-size;
+}
+
 [Template] @Style BaseStyle
 {
     font-size: 16px;
     font-family: Arial;
+    border: 1px solid black;
 }
 
 [Template] @Style DefaultText
@@ -37,6 +44,13 @@ use @Config Basic;
     div {
         text { "This is a box from a template." }
     }
+}
+
+[Custom] @Element SpecializationTest
+{
+    div { text { "first" } }
+    div { text { "second" } }
+    span { text { "third" } }
 }
 
 # This is a generator-aware comment that should appear in the output.
@@ -76,9 +90,35 @@ html {
 
             @Element Box;
 
-            hr {} // Add a separator for clarity
+            hr {}
 
             @Element Box;
+
+            div {
+                style {
+                    @Style ValuelessText {
+                        color: purple;
+                        font-size: 22px;
+                    }
+                }
+                text { "This text uses a specialized custom style." }
+            }
+
+            div {
+                style {
+                    @Style BaseStyle {
+                        delete border;
+                    }
+                }
+                text { "This text should have no border." }
+            }
+
+            @Element SpecializationTest {
+                delete div[0];
+                insert after span {
+                    p { text { "inserted text" } }
+                }
+            }
 
             span {
                 style {
