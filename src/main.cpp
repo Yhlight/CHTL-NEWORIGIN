@@ -12,36 +12,53 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the template system:
-    // - Defines Var, Style, and Element templates.
-    // - Uses each type of template.
+    // A CHTL source string to test the template inheritance system.
     std::string chtlSource = R"(
-[Template] @Var Theme {
-    primaryColor: "blue";
-    basePadding: "10px";
+// Base templates
+[Template] @Var BaseTheme {
+    textColor: "black";
+    bgColor: "#fff";
 }
 
-[Template] @Style BoxStyle {
-    border: 1px solid black;
-    background-color: #eee;
+[Template] @Style BaseStyle {
+    font-family: "Arial, sans-serif";
+    font-size: 16px;
 }
 
-[Template] @Element Card {
-    h2 { text: "Card Title"; }
-    p { text: "Some card content."; }
+[Template] @Element BaseCard {
+    p { text: "This is a base card."; }
+}
+
+// Derived templates that inherit and override
+[Template] @Var DarkTheme {
+    inherit @Var BaseTheme;
+    textColor: "white";
+    bgColor: "#333";
+}
+
+[Template] @Style TitleStyle {
+    @Style BaseStyle;
+    font-size: 24px; // Override base
+    font-weight: bold;
+}
+
+[Template] @Element FancyCard {
+    inherit @Element BaseCard;
+    h2 { text: "This is a fancy card!"; }
 }
 
 html {
     head { }
     body {
+        // Use the derived templates
         div {
-            id: main-card;
             style {
-                padding: Theme(basePadding);
-                color: Theme(primaryColor);
-                @Style BoxStyle;
+                color: DarkTheme(textColor);
+                background-color: DarkTheme(bgColor);
+                @Style TitleStyle;
             }
-            @Element Card;
+
+            @Element FancyCard;
         }
     }
 }

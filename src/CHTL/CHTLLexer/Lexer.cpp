@@ -57,6 +57,11 @@ Token Lexer::identifier() {
     while (isalnum(peek()) || peek() == '_') {
         value += advance();
     }
+
+    if (value == "inherit") {
+        return {TokenType::Inherit, value, line, startCol};
+    }
+
     return {TokenType::Identifier, value, line, startCol};
 }
 

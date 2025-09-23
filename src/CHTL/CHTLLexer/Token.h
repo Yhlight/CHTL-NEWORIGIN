@@ -42,7 +42,8 @@ enum class TokenType {
     // Template Syntax
     OpenBracket,  // [
     CloseBracket, // ]
-    At            // @
+    At,           // @
+    Inherit       // inherit
 };
 
 // Represents a single token extracted from the source code.
