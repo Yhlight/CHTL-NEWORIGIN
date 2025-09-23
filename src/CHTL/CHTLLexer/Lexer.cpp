@@ -163,6 +163,10 @@ Token Lexer::getNextToken() {
             return {TokenType::Semicolon, ";", line, startCol};
         }
 
+        if (current == '[') { int startCol = column; advance(); return {TokenType::OpenBracket, "[", line, startCol}; }
+        if (current == ']') { int startCol = column; advance(); return {TokenType::CloseBracket, "]", line, startCol}; }
+        if (current == '@') { int startCol = column; advance(); return {TokenType::At, "@", line, startCol}; }
+
         if (current == '#') {
             // If # is followed by a space, it's a comment. Otherwise, it's a selector Hash.
             if ((position + 1 < source.length()) && isspace(source[position + 1])) {

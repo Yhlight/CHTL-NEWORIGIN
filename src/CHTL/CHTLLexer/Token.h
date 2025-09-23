@@ -37,7 +37,12 @@ enum class TokenType {
     // CSS Selectors
     Dot,         // .
     Hash,        // # (for selectors)
-    Ampersand    // &
+    Ampersand,   // &
+
+    // Template Syntax
+    OpenBracket,  // [
+    CloseBracket, // ]
+    At            // @
 };
 
 // Represents a single token extracted from the source code.

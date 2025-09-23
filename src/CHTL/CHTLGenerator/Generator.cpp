@@ -50,6 +50,12 @@ void Generator::generateNode(const BaseNode* node) {
         case NodeType::Comment:
             generateComment(static_cast<const CommentNode*>(node));
             break;
+        case NodeType::Fragment:
+            // For a fragment, just generate its children directly.
+            for (const auto& child : static_cast<const FragmentNode*>(node)->children) {
+                generateNode(child.get());
+            }
+            break;
         default:
             // This should not be reached if the parser is correct.
             throw std::runtime_error("Unknown node type encountered in generator.");

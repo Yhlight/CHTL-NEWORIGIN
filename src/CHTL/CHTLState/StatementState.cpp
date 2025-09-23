@@ -4,6 +4,8 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/FragmentNode.h"
+#include "../Util/NodeCloner.h"
 #include <stdexcept>
 #include <string>
 #include <utility> // For std::pair
@@ -18,7 +20,12 @@ class ElementNode;
 
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
-    if (parser.currentToken.type == TokenType::Identifier) {
+    if (parser.currentToken.type == TokenType::OpenBracket) {
+        parseTemplateDefinition(parser);
+        return nullptr; // Template definitions don't produce a node in the main AST
+    } else if (parser.currentToken.type == TokenType::At) {
+        return parseElementTemplateUsage(parser);
+    } else if (parser.currentToken.type == TokenType::Identifier) {
         if (parser.currentToken.value == "text") {
             return parseTextElement(parser);
         }
@@ -28,7 +35,7 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         return parseComment(parser);
     }
 
-    throw std::runtime_error("Statements must begin with an identifier or hash comment. Found '" + parser.currentToken.value + "' instead.");
+    throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
 }
 
 // Parses a full element, including its body.
@@ -102,4 +109,94 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     } else {
         element.attributes[key] = value;
     }
+}
+
+void StatementState::parseTemplateDefinition(Parser& parser) {
+    // 1. Expect [Template]
+    parser.expectToken(TokenType::OpenBracket);
+    if (parser.currentToken.value != "Template") {
+        throw std::runtime_error("Expected 'Template' keyword after '['.");
+    }
+    parser.expectToken(TokenType::Identifier);
+    parser.expectToken(TokenType::CloseBracket);
+
+    // 2. Expect @Type
+    parser.expectToken(TokenType::At);
+    if (parser.currentToken.type != TokenType::Identifier) {
+        throw std::runtime_error("Expected template type (Style, Element, Var) after '@'.");
+    }
+    std::string templateType = parser.currentToken.value;
+    parser.advanceTokens();
+
+    // 3. Parse Template Name
+    std::string templateName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    parser.expectToken(TokenType::OpenBrace);
+
+    // 4. Parse block and register with manager
+    if (templateType == "Style") {
+        auto styleNode = std::make_unique<StyleTemplateNode>();
+        while (parser.currentToken.type != TokenType::CloseBrace) {
+            std::string key = parser.currentToken.value;
+            parser.expectToken(TokenType::Identifier);
+            parser.expectToken(TokenType::Colon);
+            std::string value;
+            while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
+                value += parser.currentToken.value + " ";
+                parser.advanceTokens();
+            }
+            if (!value.empty()) value.pop_back(); // remove trailing space
+            styleNode->styles[key] = value;
+            if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
+        }
+        parser.templateManager.addStyleTemplate(templateName, std::move(styleNode));
+    } else if (templateType == "Element") {
+        auto elementNode = std::make_unique<ElementTemplateNode>();
+        while (parser.currentToken.type != TokenType::CloseBrace) {
+            elementNode->children.push_back(handle(parser));
+        }
+        parser.templateManager.addElementTemplate(templateName, std::move(elementNode));
+    } else if (templateType == "Var") {
+        auto varNode = std::make_unique<VarTemplateNode>();
+        while (parser.currentToken.type != TokenType::CloseBrace) {
+            std::string key = parser.currentToken.value;
+            parser.expectToken(TokenType::Identifier);
+            parser.expectToken(TokenType::Colon);
+            varNode->variables[key] = parser.currentToken.value;
+            parser.expectToken(TokenType::String); // For now, only support string literals
+            parser.expectToken(TokenType::Semicolon);
+        }
+        parser.templateManager.addVarTemplate(templateName, std::move(varNode));
+    } else {
+        throw std::runtime_error("Unknown template type: " + templateType);
+    }
+
+    parser.expectToken(TokenType::CloseBrace);
+}
+
+std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& parser) {
+    parser.expectToken(TokenType::At);
+    if (parser.currentToken.value != "Element") {
+        throw std::runtime_error("Expected 'Element' after '@' for template usage.");
+    }
+    parser.expectToken(TokenType::Identifier); // consume "Element"
+
+    std::string templateName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+    parser.expectToken(TokenType::Semicolon);
+
+    // Get the template from the manager
+    ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(templateName);
+    if (!tmpl) {
+        throw std::runtime_error("Element template not found: " + templateName);
+    }
+
+    // Create a fragment node to hold the cloned children.
+    auto fragment = std::make_unique<FragmentNode>();
+    for (const auto& child : tmpl->children) {
+        fragment->children.push_back(NodeCloner::clone(child.get()));
+    }
+
+    return fragment;
 }

@@ -18,14 +18,15 @@ public:
     std::unique_ptr<BaseNode> handle(Parser& parser) override;
 
 private:
+    void parseStyleTemplateUsage(Parser& parser);
     void parseClassOrIdSelector(Parser& parser);
     void parseAmpersandSelector(Parser& parser);
     std::string parseCssRuleBlock(Parser& parser);
     void parseInlineProperty(Parser& parser);
 
     // Expression parsing logic for style property values.
-    std::string parseStyleExpression(Parser& parser);
-    std::pair<double, std::string> parseAdditiveExpr(Parser& parser);
-    std::pair<double, std::string> parseMultiplicativeExpr(Parser& parser);
-    std::pair<double, std::string> parsePrimaryExpr(Parser& parser);
+    StyleValue parseStyleExpression(Parser& parser);
+    StyleValue parseAdditiveExpr(Parser& parser);
+    StyleValue parseMultiplicativeExpr(Parser& parser);
+    StyleValue parsePrimaryExpr(Parser& parser);
 };

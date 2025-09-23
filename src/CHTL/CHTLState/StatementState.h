@@ -16,6 +16,9 @@ private:
     std::unique_ptr<BaseNode> parseElement(Parser& parser);
     std::unique_ptr<BaseNode> parseTextElement(Parser& parser);
     std::unique_ptr<BaseNode> parseComment(Parser& parser);
+    void parseTemplateDefinition(Parser& parser);
+
+    std::unique_ptr<BaseNode> parseElementTemplateUsage(Parser& parser);
 
     // Helpers for parsing content within an element.
     void parseElementBody(Parser& parser, ElementNode& element);

@@ -2,6 +2,7 @@
 
 #include "../CHTLParser/Parser.h"
 #include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/StyleValue.h" // Include the new StyleValue struct
 #include <stdexcept>
 #include <sstream>
 
@@ -15,7 +16,9 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
     parser.expectToken(TokenType::OpenBrace);
 
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-        if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
+        if (parser.currentToken.type == TokenType::At) {
+            parseStyleTemplateUsage(parser);
+        } else if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
             parseClassOrIdSelector(parser);
         } else if (parser.currentToken.type == TokenType::Ampersand) {
             parseAmpersandSelector(parser);
@@ -30,12 +33,33 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
     return nullptr;
 }
 
+// Converts a StyleValue object to its final string representation for CSS.
+std::string styleValueToString(const StyleValue& sv) {
+    if (sv.type == StyleValue::NUMERIC) {
+        std::ostringstream oss;
+        oss << sv.numeric_val;
+        std::string numStr = oss.str();
+        // Clean up trailing zeros
+        size_t last_not_zero = numStr.find_last_not_of('0');
+        if (std::string::npos != last_not_zero) {
+            numStr.erase(last_not_zero + 1);
+        }
+        if (!numStr.empty() && numStr.back() == '.') {
+            numStr.pop_back();
+        }
+        return numStr + sv.unit;
+    }
+    return sv.string_val;
+}
+
 // Parses an inline property like 'color: red;'.
 void StyleBlockState::parseInlineProperty(Parser& parser) {
     std::string key = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
     parser.expectToken(TokenType::Colon);
-    std::string value = parseStyleExpression(parser);
+
+    StyleValue sv = parseStyleExpression(parser);
+    std::string value = styleValueToString(sv);
 
     if (parser.contextNode->attributes.count("style")) {
         parser.contextNode->attributes["style"] += key + ": " + value + "; ";
@@ -106,7 +130,8 @@ std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
         std::string key = parser.currentToken.value;
         parser.advanceTokens();
         parser.expectToken(TokenType::Colon);
-        std::string value = parseStyleExpression(parser);
+        StyleValue sv = parseStyleExpression(parser);
+        std::string value = styleValueToString(sv);
         cssRules += "  " + key + ": " + value + ";\n";
         if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
     }
@@ -114,90 +139,130 @@ std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
     return cssRules;
 }
 
-// --- Style Expression Parsing Methods ---
-// (Unchanged from previous step)
+// --- Expression Parser Refactored to use StyleValue ---
 
-std::pair<double, std::string> StyleBlockState::parsePrimaryExpr(Parser& parser) {
+StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     if (parser.currentToken.type == TokenType::Number) {
         std::string rawValue = parser.currentToken.value;
         parser.advanceTokens();
         size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
         double value = std::stod(rawValue.substr(0, unit_pos));
         std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
-        return {value, unit};
+        return {StyleValue::NUMERIC, value, unit, ""};
     } else if (parser.currentToken.type == TokenType::OpenParen) {
         parser.advanceTokens(); // consume '('
         auto result = parseAdditiveExpr(parser);
         parser.expectToken(TokenType::CloseParen); // consume ')'
         return result;
+    } else if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::OpenParen) {
+        // This is a variable template usage, e.g., MyTheme(primaryColor)
+        std::string templateName = parser.currentToken.value;
+        parser.advanceTokens(); // consume template name
+        parser.expectToken(TokenType::OpenParen);
+
+        std::string varName = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        parser.expectToken(TokenType::CloseParen);
+
+        VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(templateName);
+        if (!varTmpl) throw std::runtime_error("Variable template not found: " + templateName);
+
+        auto it = varTmpl->variables.find(varName);
+        if (it == varTmpl->variables.end()) throw std::runtime_error("Variable '" + varName + "' not found in template '" + templateName + "'.");
+
+        // The value is a simple string replacement.
+        return {StyleValue::STRING, 0.0, "", it->second};
+    } else if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
+        // A plain identifier or string (e.g., "solid", "red", "auto")
+        std::string val = parser.currentToken.value;
+        parser.advanceTokens();
+        return {StyleValue::STRING, 0.0, "", val};
     }
+
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
 }
 
-std::pair<double, std::string> StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
-    auto result = parsePrimaryExpr(parser);
-    double& leftVal = result.first;
-    std::string& unit = result.second;
+StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
+    StyleValue result = parsePrimaryExpr(parser);
 
     while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("Left-hand side of * or / must be numeric.");
+
         TokenType op = parser.currentToken.type;
         parser.advanceTokens();
-        auto rhs = parsePrimaryExpr(parser);
+        StyleValue rhs = parsePrimaryExpr(parser);
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("Right-hand side of * or / must be numeric.");
 
-        if (!unit.empty() && !rhs.second.empty()) {
+        if (!result.unit.empty() && !rhs.unit.empty()) {
             throw std::runtime_error("Cannot multiply or divide two values that both have units.");
         }
 
         if (op == TokenType::Asterisk) {
-            leftVal *= rhs.first;
+            result.numeric_val *= rhs.numeric_val;
         } else {
-            if (rhs.first == 0) throw std::runtime_error("Division by zero in style expression.");
-            leftVal /= rhs.first;
+            if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero in style expression.");
+            result.numeric_val /= rhs.numeric_val;
         }
 
-        if (unit.empty()) {
-            unit = rhs.second;
+        if (result.unit.empty()) {
+            result.unit = rhs.unit;
         }
     }
     return result;
 }
 
-std::pair<double, std::string> StyleBlockState::parseAdditiveExpr(Parser& parser) {
-    auto result = parseMultiplicativeExpr(parser);
-    double& leftVal = result.first;
-    std::string& unit = result.second;
+StyleValue StyleBlockState::parseAdditiveExpr(Parser& parser) {
+    StyleValue result = parseMultiplicativeExpr(parser);
 
     while (parser.currentToken.type == TokenType::Plus || parser.currentToken.type == TokenType::Minus) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("Left-hand side of + or - must be numeric.");
+
         TokenType op = parser.currentToken.type;
         parser.advanceTokens();
-        auto rhs = parseMultiplicativeExpr(parser);
+        StyleValue rhs = parseMultiplicativeExpr(parser);
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("Right-hand side of + or - must be numeric.");
 
-        if (unit != rhs.second) {
-            throw std::runtime_error("Mismatched units for addition/subtraction: '" + unit + "' and '" + rhs.second + "'.");
+        if (result.unit != rhs.unit) {
+            throw std::runtime_error("Mismatched units for + or - operation: '" + result.unit + "' and '" + rhs.unit + "'.");
         }
 
         if (op == TokenType::Plus) {
-            leftVal += rhs.first;
+            result.numeric_val += rhs.numeric_val;
         } else {
-            leftVal -= rhs.first;
+            result.numeric_val -= rhs.numeric_val;
         }
     }
     return result;
 }
 
-std::string StyleBlockState::parseStyleExpression(Parser& parser) {
-    auto final_result = parseAdditiveExpr(parser);
+StyleValue StyleBlockState::parseStyleExpression(Parser& parser) {
+    return parseAdditiveExpr(parser);
+}
 
-    std::ostringstream oss;
-    oss << final_result.first;
-    std::string numStr = oss.str();
-    size_t last_not_zero = numStr.find_last_not_of('0');
-    if (std::string::npos != last_not_zero) {
-        numStr.erase(last_not_zero + 1);
+void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
+    parser.expectToken(TokenType::At);
+    if (parser.currentToken.value != "Style") {
+        throw std::runtime_error("Expected 'Style' after '@' for template usage.");
     }
-    if (!numStr.empty() && numStr.back() == '.') {
-        numStr.pop_back();
+    parser.expectToken(TokenType::Identifier); // consume "Style"
+
+    std::string templateName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+    parser.expectToken(TokenType::Semicolon);
+
+    StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(templateName);
+    if (!tmpl) {
+        throw std::runtime_error("Style template not found: " + templateName);
     }
 
-    return numStr + final_result.second;
+    std::string styleString;
+    for (const auto& pair : tmpl->styles) {
+        styleString += pair.first + ": " + pair.second + "; ";
+    }
+
+    if (parser.contextNode->attributes.count("style")) {
+        parser.contextNode->attributes["style"] += styleString;
+    } else {
+        parser.contextNode->attributes["style"] = styleString;
+    }
 }

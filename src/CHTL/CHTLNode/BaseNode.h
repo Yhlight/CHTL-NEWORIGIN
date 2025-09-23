@@ -7,7 +7,15 @@
 enum class NodeType {
     Element,
     Text,
-    Comment
+    Comment,
+
+    // Template Definitions
+    StyleTemplate,
+    ElementTemplate,
+    VarTemplate,
+
+    // Utility Nodes
+    Fragment
     // More types will be added as more CHTL features are implemented.
 };
 

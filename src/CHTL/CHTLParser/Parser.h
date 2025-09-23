@@ -2,6 +2,7 @@
 
 #include "../CHTLLexer/Lexer.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLManage/TemplateManager.h"
 #include <memory>
 #include <vector>
 
@@ -36,6 +37,9 @@ public:
 
     // A string to accumulate global CSS rules from style blocks.
     std::string globalStyleContent;
+
+    // The manager for storing and retrieving template definitions.
+    TemplateManager templateManager;
     // --- End public interface for states ---
 
 private:

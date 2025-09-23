@@ -12,31 +12,36 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the latest features:
-    // - Automatic class/id attribute generation from style blocks.
-    // - Global CSS generation from selector rules.
-    // - The '&' context reference for pseudo-classes.
+    // A CHTL source string to test the template system:
+    // - Defines Var, Style, and Element templates.
+    // - Uses each type of template.
     std::string chtlSource = R"(
+[Template] @Var Theme {
+    primaryColor: "blue";
+    basePadding: "10px";
+}
+
+[Template] @Style BoxStyle {
+    border: 1px solid black;
+    background-color: #eee;
+}
+
+[Template] @Element Card {
+    h2 { text: "Card Title"; }
+    p { text: "Some card content."; }
+}
+
 html {
-    head {
-        title: "Advanced Styles Test";
-    }
+    head { }
     body {
         div {
+            id: main-card;
             style {
-                .container {
-                    border: 1px solid black;
-                    padding: 10px;
-                }
-
-                &:hover {
-                    background-color: #f0f0f0;
-                }
+                padding: Theme(basePadding);
+                color: Theme(primaryColor);
+                @Style BoxStyle;
             }
-
-            p {
-                text: "Hello, CHTL styles!";
-            }
+            @Element Card;
         }
     }
 }
