@@ -72,7 +72,9 @@ enum class TokenType {
     Replace,      // replace
     AtTop,        // at top
     AtBottom,     // at bottom
-    Import        // [Import]
+    Import,       // [Import]
+    Configuration, // [Configuration]
+    Except        // except
 };
 
 // Represents a single token extracted from the source code.

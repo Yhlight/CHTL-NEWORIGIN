@@ -62,6 +62,29 @@ void Parser::expectToken(TokenType type) {
     }
 }
 
+bool Parser::tryExpectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue) {
+    std::string expectedValue = configManager.getKeyword(internalName, defaultValue);
+    // The default token might have a different value than the default keyword string (e.g. AtTop vs "at top")
+    // So we check the alias first.
+    if (currentToken.type == TokenType::Identifier && currentToken.value == expectedValue) {
+        advanceTokens();
+        return true;
+    }
+    // If it's not an alias, check for the default token type.
+    if (currentToken.type == type) {
+        advanceTokens();
+        return true;
+    }
+    return false;
+}
+
+void Parser::expectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue) {
+    if (!tryExpectKeyword(type, internalName, defaultValue)) {
+        std::string expectedValue = configManager.getKeyword(internalName, defaultValue);
+        throw std::runtime_error("Unexpected token: " + currentToken.value + ". Expected keyword '" + expectedValue + "'.");
+    }
+}
+
 std::string Parser::getCurrentNamespace() const {
     if (namespaceStack.empty()) {
         return "_global"; // Default namespace for top-level items

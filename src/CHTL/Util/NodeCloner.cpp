@@ -4,6 +4,7 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/FragmentNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/StyleTemplateNode.h"
 #include "../CHTLNode/ElementTemplateNode.h"
 #include "../CHTLNode/VarTemplateNode.h"
@@ -24,6 +25,10 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
                 cloned->children.push_back(clone(child.get()));
             }
             return cloned;
+        }
+        case NodeType::Origin: {
+            const auto* source = static_cast<const OriginNode*>(node);
+            return std::make_unique<OriginNode>(source->type, source->content, source->name);
         }
         case NodeType::Text: {
             const auto* source = static_cast<const TextNode*>(node);

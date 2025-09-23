@@ -17,6 +17,21 @@ StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, cons
     return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
 }
 
+// --- Named Origins ---
+
+void TemplateManager::addNamedOrigin(const std::string& ns, const std::string& name, std::unique_ptr<OriginNode> node) {
+    namedOrigins[ns][name] = std::move(node);
+}
+
+OriginNode* TemplateManager::getNamedOrigin(const std::string& ns, const std::string& name) {
+    auto ns_it = namedOrigins.find(ns);
+    if (ns_it == namedOrigins.end()) {
+        return nullptr;
+    }
+    auto name_it = ns_it->second.find(name);
+    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+}
+
 void TemplateManager::merge(const TemplateManager& other) {
     // Merge Style Templates
     for (const auto& ns_pair : other.styleTemplates) {
@@ -54,6 +69,19 @@ void TemplateManager::merge(const TemplateManager& other) {
             auto* raw_ptr = dynamic_cast<VarTemplateNode*>(cloned_node.release());
             if (!raw_ptr) throw std::runtime_error("Failed to cast cloned node to VarTemplateNode.");
             addVarTemplate(ns_pair.first, name_pair.first, std::unique_ptr<VarTemplateNode>(raw_ptr));
+        }
+    }
+
+    // Merge Named Origins
+    for (const auto& ns_pair : other.namedOrigins) {
+        for (const auto& name_pair : ns_pair.second) {
+            if (getNamedOrigin(ns_pair.first, name_pair.first)) {
+                throw std::runtime_error("Import collision: Named origin '" + name_pair.first + "' in namespace '" + ns_pair.first + "' already exists.");
+            }
+            auto cloned_node = NodeCloner::clone(name_pair.second.get());
+            auto* raw_ptr = dynamic_cast<OriginNode*>(cloned_node.release());
+            if (!raw_ptr) throw std::runtime_error("Failed to cast cloned node to OriginNode.");
+            addNamedOrigin(ns_pair.first, name_pair.first, std::unique_ptr<OriginNode>(raw_ptr));
         }
     }
 }

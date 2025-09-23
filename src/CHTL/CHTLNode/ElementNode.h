@@ -25,4 +25,7 @@ public:
 
     // A vector of child nodes. Using unique_ptr for memory management.
     std::vector<std::unique_ptr<BaseNode>> children;
+
+    // A list of constraints defining which child types are not allowed.
+    std::vector<std::string> constraints;
 };

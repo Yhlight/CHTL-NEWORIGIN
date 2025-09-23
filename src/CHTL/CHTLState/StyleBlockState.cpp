@@ -123,31 +123,76 @@ std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
 
 // --- Start of Expression Parsing Implementation ---
 
-StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
-    std::string selector;
-    if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
-        selector += parser.currentToken.value;
-        parser.advanceTokens();
-        selector += parser.currentToken.value;
-        parser.expectToken(TokenType::Identifier);
-    } else {
-        throw std::runtime_error("Unsupported selector type for property reference.");
-    }
+Selector StyleBlockState::parseSelector(Parser& parser) {
+    Selector selector;
+    selector.parts.emplace_back(); // Start with the first part
 
+    while (true) {
+        SelectorPart& currentPart = selector.parts.back();
+
+        if (parser.currentToken.type == TokenType::Dot) {
+            parser.advanceTokens(); // consume '.'
+            if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected class name after '.'.");
+            currentPart.className = parser.currentToken.value;
+            parser.advanceTokens();
+        } else if (parser.currentToken.type == TokenType::Hash) {
+            parser.advanceTokens(); // consume '#'
+            if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected id name after '#'.");
+            currentPart.id = parser.currentToken.value;
+            parser.advanceTokens();
+        } else if (parser.currentToken.type == TokenType::Identifier) {
+            currentPart.tagName = parser.currentToken.value;
+            parser.advanceTokens();
+        }
+
+        // Check for an index, e.g., [0]
+        if (parser.currentToken.type == TokenType::OpenBracket) {
+            parser.advanceTokens(); // consume '['
+            if (parser.currentToken.type != TokenType::Number) throw std::runtime_error("Expected number inside index '[]'.");
+            currentPart.index = std::stoi(parser.currentToken.value);
+            parser.advanceTokens();
+            parser.expectToken(TokenType::CloseBracket);
+        }
+
+        // Peek ahead to see if there's a descendant selector (another part)
+        // or if the selector is ending (e.g., followed by a dot for the property).
+        if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
+            // If the next token is a property-dot, the selector is done.
+            if(parser.currentToken.type == TokenType::Dot && parser.peekToken.type == TokenType::Identifier && parser.peekToken2.type != TokenType::OpenBracket) {
+                break;
+            }
+             // Otherwise, it's a new part of a descendant selector
+            selector.parts.emplace_back();
+        } else {
+            // Any other token ends the selector
+            break;
+        }
+    }
+    return selector;
+}
+
+StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
+    // 1. Use the new selector parser
+    Selector selector = parseSelector(parser);
+
+    // 2. The selector parser stops right before the property's dot.
     parser.expectToken(TokenType::Dot);
     std::string propertyName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
+    // 3. Find the node using the new findNodeBySelector (which we'll update next)
     if (!parser.parsedNodes) {
         throw std::runtime_error("Parser context does not have access to parsed nodes for lookup.");
     }
+    // Note: This will fail to compile until we update ASTUtil.h/cpp
     const ElementNode* referencedNode = findNodeBySelector(*parser.parsedNodes, selector);
     if (!referencedNode) {
-        throw std::runtime_error("Could not find element with selector: " + selector);
+        // TODO: Create a utility to serialize the selector struct to a string for better error messages
+        throw std::runtime_error("Could not find element for property reference.");
     }
     auto it = referencedNode->inlineStyles.find(propertyName);
     if (it == referencedNode->inlineStyles.end()) {
-        throw std::runtime_error("Property '" + propertyName + "' not found on element '" + selector + "'.");
+        throw std::runtime_error("Property '" + propertyName + "' not found on referenced element.");
     }
     return it->second;
 }
@@ -163,9 +208,18 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         }
     }
 
-    if ((parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) &&
-        parser.peekToken.type == TokenType::Identifier &&
-        parser.peekToken2.type == TokenType::Dot) {
+    // Check if the expression is a property reference.
+    // This can start with a tag name (Identifier), class (Dot), or id (Hash).
+    if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash ||
+       (parser.currentToken.type == TokenType::Identifier && parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()))
+    {
+        // To distinguish "div" (a string literal) from "div.width" (a reference),
+        // we need to look ahead for the property-access dot. This is tricky.
+        // For now, let's assume if it starts with a potential selector and isn't a self-property,
+        // it's a reference. The selector parser itself has the lookahead to stop before the property dot.
+        // A better check might involve more lookahead, but let's try this.
+        // The check for `contextNode->inlineStyles` prevents mistaking a self-reference property
+        // (e.g. `height: width`) for a tag selector reference (`width.someProperty`).
         return parseReferencedProperty(parser);
     }
 
@@ -198,12 +252,19 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         bool isSpecialized = false;
         if (parser.currentToken.type == TokenType::Equals) {
             parser.advanceTokens(); // consume '='
-            if (parser.currentToken.type != TokenType::String && parser.currentToken.type != TokenType::Identifier && parser.currentToken.type != TokenType::Number) {
-                 throw std::runtime_error("Invalid value for variable specialization.");
+
+            std::stringstream ss;
+            bool first = true;
+            while(parser.currentToken.type != TokenType::CloseParen && parser.currentToken.type != TokenType::EndOfFile) {
+                if (!first) ss << " ";
+                ss << parser.currentToken.value;
+                parser.advanceTokens();
+                first = false;
             }
-            specializedValue = parser.currentToken.value;
+
+            specializedValue = ss.str();
             isSpecialized = true;
-            parser.advanceTokens();
+            // Do not advance tokens here, the loop consumes up to the ')'
         }
 
         parser.expectToken(TokenType::CloseParen);
@@ -224,9 +285,18 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     }
 
     if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
-        std::string val = parser.currentToken.value;
+        std::stringstream ss;
+        ss << parser.currentToken.value;
         parser.advanceTokens();
-        return {StyleValue::STRING, 0.0, "", val};
+
+        // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
+        // This allows for values like `font-family: Times New Roman;`
+        while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
+             ss << " " << parser.currentToken.value;
+             parser.advanceTokens();
+        }
+
+        return {StyleValue::STRING, 0.0, "", ss.str()};
     }
 
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
@@ -240,13 +310,23 @@ StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
         parser.advanceTokens();
         StyleValue rhs = parsePrimaryExpr(parser);
         if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of * or / must be numeric.");
-        if (!result.unit.empty() && !rhs.unit.empty()) throw std::runtime_error("Cannot operate on two values with units.");
-        if (op == TokenType::Asterisk) result.numeric_val *= rhs.numeric_val;
-        else {
+
+        // For multiplication and division, one of the operands must be unitless.
+        if (!result.unit.empty() && !rhs.unit.empty()) {
+            throw std::runtime_error("Cannot multiply or divide two values with units.");
+        }
+
+        if (op == TokenType::Asterisk) {
+            result.numeric_val *= rhs.numeric_val;
+        } else {
             if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero.");
             result.numeric_val /= rhs.numeric_val;
         }
-        if (result.unit.empty()) result.unit = rhs.unit;
+
+        // The result should adopt the unit of whichever operand had one.
+        if (result.unit.empty()) {
+            result.unit = rhs.unit;
+        }
     }
     return result;
 }
@@ -259,9 +339,22 @@ StyleValue StyleBlockState::parseAdditiveExpr(Parser& parser) {
         parser.advanceTokens();
         StyleValue rhs = parseMultiplicativeExpr(parser);
         if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of + or - must be numeric.");
-        if (result.unit != rhs.unit) throw std::runtime_error("Mismatched units for + or -.");
-        if (op == TokenType::Plus) result.numeric_val += rhs.numeric_val;
-        else result.numeric_val -= rhs.numeric_val;
+
+        // If units are different and both are non-empty, generate a calc() expression.
+        if (result.unit != rhs.unit && !result.unit.empty() && !rhs.unit.empty()) {
+            std::string lhs_str = styleValueToString(result);
+            std::string rhs_str = styleValueToString(rhs);
+            std::string op_str = (op == TokenType::Plus) ? " + " : " - ";
+            result = {StyleValue::STRING, 0.0, "", "calc(" + lhs_str + op_str + rhs_str + ")"};
+        } else {
+            // Otherwise, perform the calculation directly.
+            if (op == TokenType::Plus) result.numeric_val += rhs.numeric_val;
+            else result.numeric_val -= rhs.numeric_val;
+            // If the original value had no unit, adopt the unit of the RHS.
+            if (result.unit.empty()) {
+                result.unit = rhs.unit;
+            }
+        }
     }
     return result;
 }
@@ -381,6 +474,48 @@ StyleValue StyleBlockState::parseStyleExpression(Parser& parser) {
     return finalValue;
 }
 
+void StyleBlockState::applyStyleTemplateRecursive(
+    Parser& parser,
+    const std::string& ns,
+    const std::string& templateName,
+    std::map<std::string, std::string>& finalStyles,
+    const std::vector<std::string>& deletedTemplates,
+    std::vector<std::string>& visitedTemplates)
+{
+    // Check for circular dependencies.
+    for(const auto& visited : visitedTemplates) {
+        if (visited == templateName) {
+            throw std::runtime_error("Circular dependency detected in style template inheritance involving '" + templateName + "'.");
+        }
+    }
+    visitedTemplates.push_back(templateName);
+
+    // Check if this template was deleted in the specialization block.
+    for(const auto& deleted : deletedTemplates) {
+        if (deleted == templateName) {
+            return; // Do not apply this template or its parents.
+        }
+    }
+
+    StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(ns, templateName);
+    if (!tmpl) {
+        throw std::runtime_error("Style template '" + templateName + "' not found in namespace '" + ns + "'.");
+    }
+
+    // Recursively apply parent styles first.
+    for (const auto& parentName : tmpl->parentNames) {
+        applyStyleTemplateRecursive(parser, ns, parentName, finalStyles, deletedTemplates, visitedTemplates);
+    }
+
+    // Apply this template's own styles, overwriting any parent styles.
+    for (const auto& pair : tmpl->styles) {
+        finalStyles[pair.first] = pair.second;
+    }
+
+    visitedTemplates.pop_back(); // Backtrack
+}
+
+
 void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     parser.expectToken(TokenType::At);
     if (parser.currentToken.value != "Style") throw std::runtime_error("Expected 'Style' after '@' for template usage.");
@@ -399,58 +534,50 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(ns, templateName);
     if (!tmpl) throw std::runtime_error("Style template not found: " + templateName);
 
-    // Copy the base styles from the template
-    std::map<std::string, std::string> finalStyles = tmpl->styles;
+    std::map<std::string, std::string> finalStyles;
+    std::vector<std::string> deletedTemplates;
+    std::map<std::string, StyleValue> specializedStyles;
+    std::vector<std::string> completedProperties;
 
-    // If the template is custom and a specialization block is provided, parse it.
+
+    // If the template is custom and a specialization block is provided, parse it first.
     if (tmpl->isCustom && parser.currentToken.type == TokenType::OpenBrace) {
         parser.expectToken(TokenType::OpenBrace);
-
-        std::vector<std::string> completedProperties;
-
         while (parser.currentToken.type != TokenType::CloseBrace) {
             if (parser.currentToken.type == TokenType::Delete) {
                 parser.advanceTokens(); // consume 'delete'
+
                 while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
-                    if (parser.currentToken.type == TokenType::Identifier) {
-                        finalStyles.erase(parser.currentToken.value);
-                        parser.advanceTokens();
-                    }
-                    if (parser.currentToken.type == TokenType::Comma) {
+                    if (parser.currentToken.type == TokenType::At) {
+                        parser.advanceTokens(); // consume '@'
+                        if (parser.currentToken.value != "Style") throw std::runtime_error("Can only delete @Style templates.");
+                        parser.advanceTokens(); // consume 'Style'
+                        deletedTemplates.push_back(parser.currentToken.value);
                         parser.advanceTokens();
                     } else {
-                        // break if there is no comma, e.g. delete prop1;
-                        break;
+                        // This is a property deletion, store it to apply later.
+                        specializedStyles[parser.currentToken.value] = { StyleValue::DELETED };
+                        parser.advanceTokens();
+                    }
+
+                    if (parser.currentToken.type == TokenType::Comma) {
+                        parser.advanceTokens(); // Consume comma and continue loop
+                    } else {
+                        break; // No comma, so the list of items to delete is done.
                     }
                 }
-                parser.expectToken(TokenType::Semicolon); // Consume the semicolon
-            } else {
-                // Handle property completion
+                parser.expectToken(TokenType::Semicolon);
+
+            } else { // Handle property completion/override
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Colon);
-                StyleValue sv = parseStyleExpression(parser);
-                finalStyles[key] = styleValueToString(sv); // Add or overwrite
+                specializedStyles[key] = parseStyleExpression(parser);
                 completedProperties.push_back(key);
                 if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
             }
         }
         parser.expectToken(TokenType::CloseBrace);
-
-        // Check if all valueless properties were completed
-        for (const auto& valueless : tmpl->valuelessProperties) {
-            bool found = false;
-            for (const auto& completed : completedProperties) {
-                if (valueless == completed) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                throw std::runtime_error("Valueless property '" + valueless + "' was not assigned a value in custom template usage.");
-            }
-        }
-
     } else {
         if (tmpl->isCustom && !tmpl->valuelessProperties.empty()) {
             throw std::runtime_error("Custom style template with valueless properties requires a specialization block '{...}'.");
@@ -458,16 +585,39 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
         parser.expectToken(TokenType::Semicolon);
     }
 
-    // Apply the final, specialized styles to the element's inlineStyles map.
-    for (const auto& pair : finalStyles) {
-        if (!pair.second.empty()) { // Don't add valueless properties that weren't completed
-            // This is a bit tricky, as the template stores raw strings.
-            // For now, we'll just create a STRING-type StyleValue.
-            // A future refactor could make templates store StyleValues directly.
-            StyleValue sv;
-            sv.type = StyleValue::STRING;
-            sv.string_val = pair.second;
-            parser.contextNode->inlineStyles[pair.first] = sv;
+    // --- Apply styles ---
+    // 1. Recursively apply all parent and template styles.
+    std::vector<std::string> visited;
+    applyStyleTemplateRecursive(parser, ns, templateName, finalStyles, deletedTemplates, visited);
+
+    // 2. Apply specialized styles from the { ... } block.
+    for (const auto& pair : specializedStyles) {
+        if (pair.second.type == StyleValue::DELETED) {
+            finalStyles.erase(pair.first);
+        } else {
+            finalStyles[pair.first] = styleValueToString(pair.second);
         }
+    }
+
+    // 3. Check if all valueless properties were completed
+    for (const auto& valueless : tmpl->valuelessProperties) {
+        bool found = false;
+        for (const auto& completed : completedProperties) {
+            if (valueless == completed) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            throw std::runtime_error("Valueless property '" + valueless + "' was not assigned a value in custom template usage.");
+        }
+    }
+
+    // 4. Apply the final, specialized styles to the element's inlineStyles map.
+    for (const auto& pair : finalStyles) {
+        StyleValue sv;
+        sv.type = StyleValue::STRING; // For now, treat all template results as strings
+        sv.string_val = pair.second;
+        parser.contextNode->inlineStyles[pair.first] = sv;
     }
 }

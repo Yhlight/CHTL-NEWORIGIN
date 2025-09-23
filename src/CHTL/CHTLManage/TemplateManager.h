@@ -3,6 +3,7 @@
 #include "../CHTLNode/StyleTemplateNode.h"
 #include "../CHTLNode/ElementTemplateNode.h"
 #include "../CHTLNode/VarTemplateNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include <string>
 #include <map>
 #include <memory>
@@ -20,6 +21,9 @@ public:
     void addVarTemplate(const std::string& ns, const std::string& name, std::unique_ptr<VarTemplateNode> node);
     VarTemplateNode* getVarTemplate(const std::string& ns, const std::string& name);
 
+    void addNamedOrigin(const std::string& ns, const std::string& name, std::unique_ptr<OriginNode> node);
+    OriginNode* getNamedOrigin(const std::string& ns, const std::string& name);
+
     // Merges templates from another manager into this one.
     void merge(const TemplateManager& other);
 
@@ -33,4 +37,7 @@ private:
 
     using VarTemplateMap = std::map<std::string, std::unique_ptr<VarTemplateNode>>;
     std::map<std::string, VarTemplateMap> varTemplates;
+
+    using NamedOriginMap = std::map<std::string, std::unique_ptr<OriginNode>>;
+    std::map<std::string, NamedOriginMap> namedOrigins;
 };

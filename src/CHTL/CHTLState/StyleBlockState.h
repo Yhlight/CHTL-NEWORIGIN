@@ -2,7 +2,9 @@
 
 #include "ParserState.h"
 #include "../CHTLNode/StyleValue.h"
+#include "../Util/Selector.h" // Include the new selector struct
 #include <string>
+#include <map> // Add map include
 #include <utility> // For std::pair
 
 // Forward declare to avoid circular dependencies
@@ -44,4 +46,15 @@ private:
     StyleValue parseMultiplicativeExpr(Parser& parser);
     StyleValue parsePrimaryExpr(Parser& parser);
     StyleValue parseReferencedProperty(Parser& parser);
+    Selector parseSelector(Parser& parser);
+
+    // --- Helper for template style resolution ---
+    void applyStyleTemplateRecursive(
+        Parser& parser,
+        const std::string& ns,
+        const std::string& templateName,
+        std::map<std::string, std::string>& finalStyles,
+        const std::vector<std::string>& deletedTemplates,
+        std::vector<std::string>& visitedTemplates
+    );
 };

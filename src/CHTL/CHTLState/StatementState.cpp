@@ -15,7 +15,9 @@
 
 // Forward declare to resolve circular dependency with StyleBlockState.h
 class StyleBlockState;
+class ConfigurationState;
 #include "StyleBlockState.h"
+#include "ConfigurationState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -35,6 +37,10 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         } else if (parser.peekToken.value == "Namespace") {
             parseNamespaceDefinition(parser);
             return nullptr; // Namespace definitions don't produce a node
+        } else if (parser.peekToken.type == TokenType::Configuration) {
+            ConfigurationState configState;
+            configState.handle(parser);
+            return nullptr; // Configuration does not produce a node
         }
     } else if (parser.currentToken.type == TokenType::Use) {
         parseUseDirective(parser);
@@ -42,6 +48,16 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     } else if (parser.currentToken.type == TokenType::At) {
         return parseElementTemplateUsage(parser);
     } else if (parser.currentToken.type == TokenType::Identifier) {
+        // Check for constraints before parsing the element
+        if (parser.contextNode) {
+            for (const auto& constraint : parser.contextNode->constraints) {
+                // Simple check for now: just compares the tag name
+                if (parser.currentToken.value == constraint) {
+                    throw std::runtime_error("Element <" + parser.currentToken.value + "> is not allowed inside <" + parser.contextNode->tagName + "> due to an 'except' constraint.");
+                }
+            }
+        }
+
         if (parser.currentToken.value == "text") {
             return parseTextElement(parser);
         }
@@ -53,6 +69,29 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
 
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
 }
+
+void StatementState::parseExceptClause(Parser& parser, ElementNode& element) {
+    // The 'except' keyword has already been consumed by tryExpectKeyword in the caller.
+
+    while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
+        // For now, we'll just store the raw identifier of the forbidden element.
+        // A more advanced implementation would parse complex types like [Custom] @Element Box
+        if (parser.currentToken.type == TokenType::Identifier) {
+            element.constraints.push_back(parser.currentToken.value);
+            parser.advanceTokens();
+        }
+
+        // Consume comma if it exists
+        if (parser.currentToken.type == TokenType::Comma) {
+            parser.advanceTokens();
+        } else {
+            // If there's no comma, we must be at the end of the list.
+            break;
+        }
+    }
+    parser.expectToken(TokenType::Semicolon);
+}
+
 
 // Parses a full element, including its body.
 std::unique_ptr<BaseNode> StatementState::parseElement(Parser& parser) {
@@ -68,29 +107,47 @@ std::unique_ptr<BaseNode> StatementState::parseElement(Parser& parser) {
 
 // Parses the body of an element, dispatching to helpers for attributes, styles, or child nodes.
 void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
+    // Set the context node so that child parsing can be aware of the parent.
+    parser.contextNode = &element;
+
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
         if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style" && parser.peekToken.type == TokenType::OpenBrace) {
-            // Set context for the style state and use it to parse the block.
-            parser.contextNode = &element;
             StyleBlockState styleState;
             styleState.handle(parser); // This will parse the entire style block.
-            parser.contextNode = nullptr; // Reset context.
-        } else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
+        } else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
+            parseExceptClause(parser, element);
+        }
+        else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
             parseAttribute(parser, element);
         } else {
-            element.children.push_back(handle(parser));
+            auto childNode = handle(parser);
+            if (childNode) {
+                 element.children.push_back(std::move(childNode));
+            }
         }
     }
+    // Reset the context node after parsing the body.
+    parser.contextNode = nullptr;
 }
 
-// Parses a 'text { "..." }' block.
+// Parses a 'text { ... }' block, allowing unquoted literals.
 std::unique_ptr<BaseNode> StatementState::parseTextElement(Parser& parser) {
     parser.expectToken(TokenType::Identifier); // consume 'text'
     parser.expectToken(TokenType::OpenBrace);
-    std::string textContent = parser.currentToken.value;
-    parser.expectToken(TokenType::String);
+
+    std::stringstream textContent;
+    bool firstToken = true;
+    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        if (!firstToken) {
+            textContent << " ";
+        }
+        textContent << parser.currentToken.value;
+        parser.advanceTokens();
+        firstToken = false;
+    }
+
     parser.expectToken(TokenType::CloseBrace);
-    return std::make_unique<TextNode>(textContent);
+    return std::make_unique<TextNode>(textContent.str());
 }
 
 // Parses a '# comment' line.
@@ -100,7 +157,7 @@ std::unique_ptr<BaseNode> StatementState::parseComment(Parser& parser) {
     return comment;
 }
 
-// Parses an attribute 'key: value;'.
+// Parses an attribute 'key: value;', allowing unquoted multi-word literals.
 void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     std::string key = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
@@ -108,22 +165,30 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
         throw std::runtime_error("Expected ':' or '=' after attribute key '" + key + "'.");
     }
-    parser.advanceTokens();
+    parser.advanceTokens(); // Consume ':' or '='
 
-    std::string value;
-    if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
-        value = parser.currentToken.value;
+    std::stringstream value;
+    bool firstToken = true;
+    // Consume tokens until the terminator
+    while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
+        // This check prevents consuming the brace of a parent element if a semicolon is missed.
+        if (parser.currentToken.type == TokenType::CloseBrace) {
+             throw std::runtime_error("Missing semicolon for attribute '" + key + "'.");
+        }
+        if (!firstToken) {
+            value << " ";
+        }
+        value << parser.currentToken.value;
         parser.advanceTokens();
-    } else {
-        throw std::runtime_error("Attribute value for '" + key + "' must be an identifier or a string.");
+        firstToken = false;
     }
 
     parser.expectToken(TokenType::Semicolon);
 
     if (key == "text") {
-        element.children.push_back(std::make_unique<TextNode>(value));
+        element.children.push_back(std::make_unique<TextNode>(value.str()));
     } else {
-        element.attributes[key] = value;
+        element.attributes[key] = value.str();
     }
 }
 
@@ -170,11 +235,8 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                StyleTemplateNode* parentTmpl = parser.templateManager.getStyleTemplate(currentNs, parentName);
-                if (!parentTmpl) throw std::runtime_error("Parent style template not found: " + parentName);
-                for (const auto& pair : parentTmpl->styles) {
-                    styleNode->styles[pair.first] = pair.second;
-                }
+                // Instead of copying styles, just record the parent's name.
+                styleNode->parentNames.push_back(parentName);
             } else {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
@@ -325,14 +387,22 @@ void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNod
 }
 
 void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
-    parser.expectToken(TokenType::Insert);
+    parser.expectKeyword(TokenType::Insert, "KEYWORD_INSERT", "insert");
 
     // 1. Parse position
-    TokenType posToken = parser.currentToken.type;
-    parser.advanceTokens();
-    if (posToken != TokenType::After && posToken != TokenType::Before && posToken != TokenType::Replace &&
-        posToken != TokenType::AtTop && posToken != TokenType::AtBottom) {
-        throw std::runtime_error("Invalid position for insert statement.");
+    TokenType posToken = TokenType::Unexpected;
+    if (parser.tryExpectKeyword(TokenType::After, "KEYWORD_AFTER", "after")) {
+        posToken = TokenType::After;
+    } else if (parser.tryExpectKeyword(TokenType::Before, "KEYWORD_BEFORE", "before")) {
+        posToken = TokenType::Before;
+    } else if (parser.tryExpectKeyword(TokenType::Replace, "KEYWORD_REPLACE", "replace")) {
+        posToken = TokenType::Replace;
+    } else if (parser.tryExpectKeyword(TokenType::AtTop, "KEYWORD_ATTOP", "at top")) {
+        posToken = TokenType::AtTop;
+    } else if (parser.tryExpectKeyword(TokenType::AtBottom, "KEYWORD_ATBOTTOM", "at bottom")) {
+        posToken = TokenType::AtBottom;
+    } else {
+        throw std::runtime_error("Invalid position for insert statement. Found '" + parser.currentToken.value + "'.");
     }
 
     // 2. Find target node iterator (if needed)
@@ -443,7 +513,7 @@ void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragme
 }
 
 void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
-    parser.expectToken(TokenType::Delete);
+    parser.expectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete");
 
     while (parser.currentToken.type != TokenType::Semicolon) {
         if (parser.currentToken.type != TokenType::Identifier) {
@@ -504,47 +574,66 @@ void StatementState::parseUseDirective(Parser& parser) {
 }
 
 std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) {
-    // 1. Expect [Origin] @Type
     parser.expectToken(TokenType::OpenBracket);
     parser.expectToken(TokenType::Origin);
     parser.expectToken(TokenType::CloseBracket);
     parser.expectToken(TokenType::At);
-    // We don't use the type for now, but we must parse it.
+
+    std::string type = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
-    parser.expectToken(TokenType::OpenBrace);
 
-    // 2. Find the raw content
-    const std::string& source = parser.lexer.getSource();
-    size_t startPos = parser.lexer.getPosition();
-    size_t braceLevel = 1;
-    size_t currentPos = startPos;
+    std::string name = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
 
-    while (currentPos < source.length()) {
-        if (source[currentPos] == '{') {
-            braceLevel++;
-        } else if (source[currentPos] == '}') {
-            braceLevel--;
-            if (braceLevel == 0) {
-                break; // Found the matching closing brace
+    // Check if this is a definition or a usage
+    if (parser.currentToken.type == TokenType::OpenBrace) {
+        // --- Definition: [Origin] @Type name { ... } ---
+        parser.advanceTokens(); // Consume '{'
+
+        std::stringstream rawContent;
+        int braceLevel = 1;
+
+        while (true) {
+            if (parser.currentToken.type == TokenType::EndOfFile) {
+                throw std::runtime_error("Unmatched braces in [Origin] block.");
             }
+            if (parser.currentToken.type == TokenType::OpenBrace) {
+                braceLevel++;
+            } else if (parser.currentToken.type == TokenType::CloseBrace) {
+                braceLevel--;
+                if (braceLevel == 0) {
+                    break; // Found the end, do not include the closing brace in content.
+                }
+            }
+            rawContent << parser.currentToken.value;
+            parser.advanceTokens();
         }
-        currentPos++;
+
+        // Consume the final '}'
+        parser.expectToken(TokenType::CloseBrace);
+
+        auto originNode = std::make_unique<OriginNode>(type, rawContent.str(), name);
+
+        // Store a clone in the manager for later use
+        auto cloneForManager = NodeCloner::clone(originNode.get());
+        parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), name, std::unique_ptr<OriginNode>(static_cast<OriginNode*>(cloneForManager.release())));
+
+        return originNode;
+
+    } else if (parser.currentToken.type == TokenType::Semicolon) {
+        // --- Usage: [Origin] @Type name; ---
+        parser.advanceTokens(); // Consume ';'
+
+        std::string ns = parser.getCurrentNamespace(); // For now, only look in current namespace
+        OriginNode* storedNode = parser.templateManager.getNamedOrigin(ns, name);
+        if (!storedNode) {
+            throw std::runtime_error("Named origin block '" + name + "' not found.");
+        }
+        // Return a clone of the stored node
+        return NodeCloner::clone(storedNode);
+    } else {
+        throw std::runtime_error("Invalid syntax for [Origin] block. Expected '{' for definition or ';' for usage.");
     }
-
-    if (braceLevel != 0) {
-        throw std::runtime_error("Unmatched braces in [Origin] block.");
-    }
-
-    std::string rawContent = source.substr(startPos, currentPos - startPos);
-
-    // 3. Manually advance the lexer's position past the raw block
-    parser.lexer.setPosition(currentPos);
-
-    // 4. Reset the parser's tokens to the new position
-    parser.advanceTokens(); // currentToken is now '}'
-    parser.expectToken(TokenType::CloseBrace); // Consume '}'
-
-    return std::make_unique<OriginNode>(rawContent);
 }
 
 void StatementState::parseNamespaceDefinition(Parser& parser) {
@@ -574,15 +663,29 @@ void StatementState::parseNamespaceDefinition(Parser& parser) {
 void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::OpenBracket);
     parser.expectToken(TokenType::Import);
-    parser.expectToken(TokenType::CloseBracket);
+
+    // This is where we'd parse the optional [Custom], [Template] part
+    // For now, we'll skip this and assume a simple @Type syntax for all imports.
+    if (parser.currentToken.type == TokenType::CloseBracket) {
+         parser.advanceTokens(); // Consume ']'
+    } else {
+        // In a full implementation, parse [Custom] etc. here
+        parser.advanceTokens();
+        parser.advanceTokens();
+    }
 
     parser.expectToken(TokenType::At);
-    if (parser.currentToken.value != "Chtl") {
-        throw std::runtime_error("Only '@Chtl' imports are supported at this time.");
-    }
+    std::string importType = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
-    parser.expectToken(TokenType::From);
+    // For precise CHTL imports, the name of the item to import comes next.
+    std::string itemName;
+    if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::From) {
+        itemName = parser.currentToken.value;
+        parser.advanceTokens();
+    }
+
+    parser.expectKeyword(TokenType::From, "KEYWORD_FROM", "from");
 
     if (parser.currentToken.type != TokenType::String) {
         throw std::runtime_error("Import path must be a string literal.");
@@ -590,23 +693,58 @@ void StatementState::parseImportStatement(Parser& parser) {
     std::string path = parser.currentToken.value;
     parser.advanceTokens();
 
+    std::string alias;
+    if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_AS", "as")) {
+        alias = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+    }
+
     parser.expectToken(TokenType::Semicolon);
 
-    // --- Core Import Logic ---
-    try {
-        std::string fileContent = Loader::loadFile(path);
+    // --- Import Logic ---
+    if (importType == "Chtl") {
+        // This is now a full file import
+        try {
+            std::string fileContent = Loader::loadFile(path);
+            Lexer importLexer(fileContent);
+            Parser importParser(importLexer);
+            importParser.parse();
+            parser.templateManager.merge(importParser.templateManager);
+        } catch (const std::runtime_error& e) {
+            throw std::runtime_error("Failed to import file '" + path + "': " + e.what());
+        }
+    } else if (importType == "Html" || importType == "Style" || importType == "JavaScript") {
+        if (alias.empty()) throw std::runtime_error("Import for non-CHTL types must use 'as'.");
+        try {
+            std::string fileContent = Loader::loadFile(path);
+            auto originNode = std::make_unique<OriginNode>(importType, fileContent, alias);
+            parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), alias, std::move(originNode));
+        } catch (const std::runtime_error& e) {
+            throw std::runtime_error("Failed to import file '" + path + "' as origin block '" + alias + "': " + e.what());
+        }
+    } else if (importType == "Element" || importType == "Var" || importType == "Style") { // Precise imports
+         if (itemName.empty()) throw std::runtime_error("Precise import requires an item name before 'from'.");
+         try {
+            std::string fileContent = Loader::loadFile(path);
+            Lexer importLexer(fileContent);
+            Parser importParser(importLexer);
+            importParser.parse();
 
-        // Create a new parser for the imported file
-        Lexer importLexer(fileContent);
-        Parser importParser(importLexer);
+            std::string finalName = alias.empty() ? itemName : alias;
 
-        // Parse the imported file. This will populate the importParser's templateManager.
-        importParser.parse();
+            if (importType == "Element") {
+                ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
+                if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + path);
+                auto cloned_node = NodeCloner::clone(nodeToImport);
+                parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
+            }
+            // Add similar logic for Style and Var templates here...
 
-        // Merge the templates from the imported parser into the main parser
-        parser.templateManager.merge(importParser.templateManager);
+         } catch (const std::runtime_error& e) {
+            throw std::runtime_error("Failed to import '" + itemName + "' from file '" + path + "': " + e.what());
+        }
 
-    } catch (const std::runtime_error& e) {
-        throw std::runtime_error("Failed to import file '" + path + "': " + e.what());
+    } else {
+        throw std::runtime_error("Unsupported import type: @" + importType);
     }
 }

@@ -35,4 +35,7 @@ private:
 
     // Helper for parsing an import statement
     void parseImportStatement(Parser& parser);
+
+    // Helper for parsing an 'except' clause
+    void parseExceptClause(Parser& parser, ElementNode& element);
 };

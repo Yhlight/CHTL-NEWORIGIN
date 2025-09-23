@@ -2,6 +2,7 @@
 
 #include "BaseNode.h"
 #include <string>
+#include <vector>
 #include <map>
 
 // Represents a [Template] @Style definition in the AST.
@@ -21,4 +22,7 @@ public:
 
     // For custom templates, stores properties defined without a value.
     std::vector<std::string> valuelessProperties;
+
+    // Stores the names of parent templates for inheritance.
+    std::vector<std::string> parentNames;
 };

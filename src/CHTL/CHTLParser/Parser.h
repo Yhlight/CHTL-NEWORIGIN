@@ -3,6 +3,7 @@
 #include "../CHTLLexer/Lexer.h"
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLManage/TemplateManager.h"
+#include "../CHTLManage/ConfigurationManager.h" // Add config manager
 #include <memory>
 #include <vector>
 
@@ -32,6 +33,10 @@ public:
 
     void advanceTokens();
     void expectToken(TokenType type);
+    // Expects a keyword, throwing an error if not found. Allows for user-defined aliases.
+    void expectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue);
+    // Tries to match a keyword. Returns true and advances if successful, false otherwise.
+    bool tryExpectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue);
 
     // A context node for states that need to modify a parent, e.g.,
     // a state for parsing attributes needs to know which element to modify.
@@ -42,6 +47,9 @@ public:
 
     // The manager for storing and retrieving template definitions.
     TemplateManager templateManager;
+
+    // The manager for storing and retrieving configuration settings.
+    ConfigurationManager configManager;
 
     bool outputHtml5Doctype = false;
 
