@@ -1,7 +1,8 @@
 #include "CHTLGenerator.h"
+#include "../CHTLContext/CHTLContext.h"
 #include <iostream>
 
-CHTLGenerator::CHTLGenerator(std::shared_ptr<ElementNode> root) : rootNode(root) {}
+CHTLGenerator::CHTLGenerator(std::shared_ptr<ElementNode> root, CHTLContext& context) : context(context), rootNode(root) {}
 
 std::string CHTLGenerator::generate() {
     output.str(""); // Clear the stream
@@ -67,6 +68,20 @@ void CHTLGenerator::visitElement(const std::shared_ptr<ElementNode>& node) {
 
     output << ">\n";
     indentLevel++;
+
+    // Inject global styles into the head
+    if (node->tagName == "head" && !context.finalGlobalCssRules.empty()) {
+        indent();
+        output << "<style>\n";
+        indentLevel++;
+        for (const auto& rule : context.finalGlobalCssRules) {
+            indent();
+            output << rule << "\n";
+        }
+        indentLevel--;
+        indent();
+        output << "</style>\n";
+    }
 
     for (const auto& child : node->children) {
         visit(child);

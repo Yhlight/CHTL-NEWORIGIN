@@ -2,6 +2,7 @@
 #include "../CHTLExpr/BinaryOpNode.h"
 #include "../CHTLExpr/TernaryOpNode.h"
 #include "../CHTLExpr/PropertyAccessNode.h"
+#include "../CHTLNode/CssRuleNode.h"
 #include <stdexcept>
 #include <cmath>
 #include <iostream>
@@ -144,5 +145,23 @@ EvaluatedValue StyleEvaluator::evaluateExpression(const std::shared_ptr<BaseExpr
         }
         default:
             throw std::runtime_error("Unsupported expression node type for evaluation.");
+    }
+}
+
+void StyleEvaluator::evaluateGlobalRules(CHTLContext& context) {
+    for (const auto& ruleNode : context.globalCssRuleNodes) {
+        std::string ruleString = ruleNode->selector + " { ";
+        for (const auto& propPair : ruleNode->properties) {
+            try {
+                // Global rules have no local context for property access
+                std::map<std::string, EvaluatedValue> emptyContext;
+                EvaluatedValue result = evaluateExpression(propPair.second, emptyContext);
+                ruleString += propPair.first + ": " + valueToString(result) + "; ";
+            } catch (const std::exception& e) {
+                // Skip problematic properties in global rules
+            }
+        }
+        ruleString += "}";
+        context.finalGlobalCssRules.push_back(ruleString);
     }
 }

@@ -60,6 +60,15 @@ html {
             }
 
             @Element Box;
+
+            span {
+                style {
+                    .highlight {
+                        background-color: yellow;
+                    }
+                }
+                text { "This text should be highlighted." }
+            }
         }
     }
 }

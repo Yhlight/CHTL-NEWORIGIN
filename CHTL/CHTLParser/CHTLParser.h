@@ -35,7 +35,7 @@ private:
     // Parsing helpers
     void parseDirective();
     void parseTemplateDefinition();
-    std::map<std::string, std::shared_ptr<BaseExprNode>> parseStyleProperties();
+    std::map<std::string, std::shared_ptr<BaseExprNode>> parseCssRuleProperties();
     std::shared_ptr<BaseNode> parseStatement();
     std::shared_ptr<ElementNode> parseElement();
     void parseBlock(const std::shared_ptr<ElementNode>& element);

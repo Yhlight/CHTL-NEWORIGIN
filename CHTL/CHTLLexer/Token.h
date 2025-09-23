@@ -19,6 +19,9 @@ enum class TokenType {
     SEMICOLON,      // ;
     COMMA,          // ,
     AT,             // @
+    DOT,            // .
+    HASH,           // #
+    AMPERSAND,      // &
 
     // Operators
     EQUAL,          // =

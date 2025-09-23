@@ -218,20 +218,27 @@ Token CHTLLexer::generateNextToken() {
     }
 
     if (current == '#') {
-        advance(); // consume '#'
-        std::string comment_value;
-        if (currentChar() == ' ') { // require space after #
-            advance(); // consume space
+        if (peekChar() == ' ') {
+            // It's a generator comment
+            advance(); // consume '#'
+            advance(); // consume ' '
+            std::string comment_value;
             while (currentChar() != '\0' && currentChar() != '\n') {
                 comment_value += currentChar();
                 advance();
             }
+            return makeToken(TokenType::HASH_COMMENT, comment_value);
+        } else {
+            // It's an ID selector
+            advance();
+            return makeToken(TokenType::HASH, "#");
         }
-        return makeToken(TokenType::HASH_COMMENT, comment_value);
     }
 
     // Single-character symbols
     switch (current) {
+        case '.': advance(); return makeToken(TokenType::DOT, ".");
+        case '&': advance(); return makeToken(TokenType::AMPERSAND, "&");
         case '{': advance(); return makeToken(TokenType::LEFT_BRACE, "{");
         case '}': advance(); return makeToken(TokenType::RIGHT_BRACE, "}");
         case '(': advance(); return makeToken(TokenType::LEFT_PAREN, "(");

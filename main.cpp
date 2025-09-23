@@ -44,9 +44,10 @@ int main() {
         // 4. Evaluator
         StyleEvaluator evaluator;
         evaluator.evaluate(resolved_ast);
+        evaluator.evaluateGlobalRules(context);
 
         // 5. Generator
-        CHTLGenerator generator(resolved_ast);
+        CHTLGenerator generator(resolved_ast, context);
         std::string html_output = generator.generate();
 
         // 6. Output
