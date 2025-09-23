@@ -8,10 +8,13 @@
 #include <map>
 #include "../CHTLExpr/BaseExprNode.h"
 
+struct TemplateUsageNode; // Forward Declaration
+
 struct ElementNode : public BaseNode {
     std::string tagName;
     std::vector<std::shared_ptr<AttributeNode>> attributes;
     std::vector<std::shared_ptr<BaseNode>> children;
+    std::vector<std::shared_ptr<TemplateUsageNode>> styleUsages;
     std::map<std::string, std::shared_ptr<BaseExprNode>> inlineStyles;
     std::map<std::string, std::string> finalStyles;
 

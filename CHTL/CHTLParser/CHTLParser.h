@@ -6,12 +6,14 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/AttributeNode.h"
+#include "../CHTLNode/CustomDefinitionNode.h"
 #include "../CHTLState/CHTLState.h"
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
 #include <stdexcept>
 
 struct OriginNode; // Forward Declaration
+struct CustomDefinitionNode; // Forward Declaration
 
 class CHTLParser {
 public:
@@ -37,13 +39,15 @@ private:
     // Parsing helpers
     std::shared_ptr<BaseNode> parseDirective();
     void parseTemplateDefinition();
+    void parseCustomDefinition();
     std::shared_ptr<OriginNode> parseOriginBlock();
     std::map<std::string, std::shared_ptr<BaseExprNode>> parseCssRuleProperties();
     std::shared_ptr<BaseNode> parseStatement();
     std::shared_ptr<ElementNode> parseElement();
     void parseBlock(const std::shared_ptr<ElementNode>& element);
+    void parseIdentifierInBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<AttributeNode> parseAttribute();
-    std::shared_ptr<BaseNode> parseTemplateUsage(const std::shared_ptr<ElementNode>& element);
+    std::shared_ptr<BaseNode> parseTemplateUsage();
     void parseStyleBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<TextNode> parseTextNode();
     std::shared_ptr<CommentNode> parseCommentNode();

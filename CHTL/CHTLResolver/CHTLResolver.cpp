@@ -2,6 +2,8 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/OriginNode.h"
+#include "../CHTLNode/TemplateDefinitionNode.h"
+#include "../CHTLNode/CustomDefinitionNode.h"
 #include <iostream>
 
 // A simple clone function for nodes that don't have children to resolve
@@ -33,11 +35,13 @@ std::vector<std::shared_ptr<BaseNode>> CHTLResolver::resolveNode(const std::shar
             if (usageNode->templateType == TemplateType::Element) {
                 if (context.elementTemplates.count(usageNode->name)) {
                     auto templateDef = context.elementTemplates[usageNode->name];
-                    // Recursively resolve the children of the template definition
                     return resolveChildren(templateDef->children);
-                } else {
-                    // In a real compiler, we'd throw an error here. For now, just ignore.
-                    std::cerr << "Warning: Undefined element template used: " << usageNode->name << std::endl;
+                } else if (context.elementCustoms.count(usageNode->name)) {
+                    auto customDef = context.elementCustoms[usageNode->name];
+                    return resolveChildren(customDef->children);
+                }
+                else {
+                    std::cerr << "Warning: Undefined element template or custom used: " << usageNode->name << std::endl;
                     return {};
                 }
             }
@@ -61,7 +65,29 @@ std::shared_ptr<ElementNode> CHTLResolver::resolveElement(const std::shared_ptr<
     // Create a new element, cloning properties
     auto newElement = std::make_shared<ElementNode>(node->tagName);
     newElement->attributes = node->attributes;
-    newElement->inlineStyles = node->inlineStyles;
+    newElement->inlineStyles = node->inlineStyles; // Copy existing styles first
+
+    // --- Resolve @Style usages ---
+    for (const auto& usage : node->styleUsages) {
+        if (context.styleTemplates.count(usage->name)) {
+            // It's a template
+            auto templateDef = context.styleTemplates[usage->name];
+            for (const auto& pair : templateDef->styleProperties) {
+                // Add or overwrite properties from the template
+                newElement->inlineStyles[pair.first] = pair.second;
+            }
+        } else if (context.styleCustoms.count(usage->name)) {
+            // It's a custom style
+            auto customDef = context.styleCustoms[usage->name];
+            for (const auto& pair : customDef->styleProperties) {
+                // Add or overwrite properties from the custom definition
+                newElement->inlineStyles[pair.first] = pair.second;
+            }
+            // Note: valueless properties and specialization are not handled yet.
+        } else {
+            std::cerr << "Warning: Undefined style template or custom: " << usage->name << std::endl;
+        }
+    }
 
     // Resolve the children
     newElement->children = resolveChildren(node->children);

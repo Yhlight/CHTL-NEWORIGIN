@@ -8,7 +8,8 @@ enum class ExprNodeType {
     Literal,
     BinaryOp,
     TernaryOp,
-    PropertyAccess // For accessing properties like 'width'
+    PropertyAccess, // For accessing properties like '.box.width'
+    Identifier      // For ambiguous identifiers like 'red' or 'width'
 };
 
 struct BaseExprNode {

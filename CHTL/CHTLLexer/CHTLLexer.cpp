@@ -246,8 +246,19 @@ Token CHTLLexer::generateNextToken() {
                 advance();
             }
             return makeToken(TokenType::HASH_COMMENT, comment_value);
-        } else {
-            // It's an ID selector
+        } else if (isxdigit(peekChar())) {
+            // It's a hex color code
+            std::string hex_value;
+            hex_value += currentChar();
+            advance();
+            while (isxdigit(currentChar())) {
+                hex_value += currentChar();
+                advance();
+            }
+            return makeToken(TokenType::STRING, hex_value);
+        }
+        else {
+            // It's an ID selector token
             advance();
             return makeToken(TokenType::HASH, "#");
         }
