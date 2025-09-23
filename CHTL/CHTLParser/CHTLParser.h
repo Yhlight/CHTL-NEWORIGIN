@@ -13,6 +13,9 @@
 #include <stdexcept>
 
 struct OriginNode; // Forward Declaration
+struct ImportNode; // Forward Declaration
+struct NamespaceNode; // Forward Declaration
+struct ConfigNode; // Forward Declaration
 struct CustomDefinitionNode; // Forward Declaration
 struct ElementSpecializationNode; // Forward Declaration
 struct DeleteElementNode; // Forward Declaration
@@ -56,6 +59,10 @@ private:
     void parseStyleBlock(const std::shared_ptr<ElementNode>& element);
     std::shared_ptr<TextNode> parseTextNode();
     std::shared_ptr<CommentNode> parseCommentNode();
+    std::shared_ptr<ImportNode> parseImportDirective();
+    std::shared_ptr<NamespaceNode> parseNamespaceDirective();
+    void parseConfigurationDirective();
+    void parseExceptClause(const std::shared_ptr<ElementNode>& element);
 
     // Error handling
     void error(const std::string& message);

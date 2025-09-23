@@ -31,4 +31,12 @@ struct CustomDefinitionNode : public BaseNode {
         : name(name), customType(type) {}
 
     NodeType getType() const override { return NodeType::CustomDefinition; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "CustomDefinitionNode (" << name << ")" << std::endl;
+        for (const auto& child : children) {
+            child->print(level + 1);
+        }
+    }
 };

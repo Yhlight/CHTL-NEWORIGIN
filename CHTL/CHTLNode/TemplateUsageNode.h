@@ -23,4 +23,12 @@ struct TemplateUsageNode : public BaseNode {
         : name(name), templateType(type), specialization(nullptr) {}
 
     NodeType getType() const override { return NodeType::TemplateUsage; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "TemplateUsageNode (@" << name << ")" << std::endl;
+        if (specialization) {
+            specialization->print(level + 1);
+        }
+    }
 };

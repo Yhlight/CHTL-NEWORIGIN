@@ -26,6 +26,7 @@ private:
     std::shared_ptr<BaseExprNode> parseComparison();
     std::shared_ptr<BaseExprNode> parseTerm();
     std::shared_ptr<BaseExprNode> parseFactor();
+    std::shared_ptr<BaseExprNode> parsePower();
     std::shared_ptr<BaseExprNode> parsePrimary();
 
     // Helper to get precedence of a token

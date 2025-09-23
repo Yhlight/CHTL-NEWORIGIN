@@ -12,4 +12,9 @@ struct OriginNode : public BaseNode {
         : type(type), rawContent(content) {}
 
     NodeType getType() const override { return NodeType::Origin; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "OriginNode (@" << type << ")" << std::endl;
+    }
 };

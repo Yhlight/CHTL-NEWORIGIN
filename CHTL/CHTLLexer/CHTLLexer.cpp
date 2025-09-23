@@ -100,10 +100,13 @@ Token CHTLLexer::identifier() {
         {"Custom", TokenType::KEYWORD_CUSTOM},
         {"Origin", TokenType::KEYWORD_ORIGIN},
         {"Namespace", TokenType::KEYWORD_NAMESPACE},
+        {"Configuration", TokenType::KEYWORD_CONFIGURATION},
+        {"Name", TokenType::KEYWORD_NAME},
         {"use", TokenType::KEYWORD_USE},
         {"html5", TokenType::KEYWORD_HTML5},
         {"Html", TokenType::KEYWORD_HTML},
         {"JavaScript", TokenType::KEYWORD_JAVASCRIPT},
+        {"Chtl", TokenType::KEYWORD_CHTL},
         {"from", TokenType::KEYWORD_FROM},
         {"as", TokenType::KEYWORD_AS},
         {"inherit", TokenType::KEYWORD_INHERIT},
@@ -111,7 +114,8 @@ Token CHTLLexer::identifier() {
         {"insert", TokenType::KEYWORD_INSERT},
         {"after", TokenType::KEYWORD_AFTER},
         {"before", TokenType::KEYWORD_BEFORE},
-        {"replace", TokenType::KEYWORD_REPLACE}
+        {"replace", TokenType::KEYWORD_REPLACE},
+        {"except", TokenType::KEYWORD_EXCEPT}
     };
 
     std::string value;

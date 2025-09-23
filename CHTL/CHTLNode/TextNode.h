@@ -9,4 +9,9 @@ struct TextNode : public BaseNode {
     explicit TextNode(const std::string& content) : content(content) {}
 
     NodeType getType() const override { return NodeType::Text; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "TextNode (\"" << content << "\")" << std::endl;
+    }
 };

@@ -30,4 +30,12 @@ struct TemplateDefinitionNode : public BaseNode {
         : name(name), templateType(type) {}
 
     NodeType getType() const override { return NodeType::TemplateDefinition; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "TemplateDefinitionNode (" << name << ")" << std::endl;
+        for (const auto& child : children) {
+            child->print(level + 1);
+        }
+    }
 };

@@ -14,4 +14,12 @@ struct ElementSpecializationNode : public BaseNode {
     }
 
     NodeType getType() const override { return NodeType::ElementSpecialization; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "ElementSpecializationNode" << std::endl;
+        for (const auto& instruction : instructions) {
+            instruction->print(level + 1);
+        }
+    }
 };

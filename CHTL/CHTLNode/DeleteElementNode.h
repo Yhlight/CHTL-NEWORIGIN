@@ -9,4 +9,9 @@ struct DeleteElementNode : public BaseNode {
 
     explicit DeleteElementNode(const std::string& selector) : targetSelector(selector) {}
     NodeType getType() const override { return NodeType::DeleteElement; }
+
+    void print(int level = 0) const override {
+        for (int i = 0; i < level; ++i) std::cout << "  ";
+        std::cout << "DeleteElementNode (target: " << targetSelector << ")" << std::endl;
+    }
 };

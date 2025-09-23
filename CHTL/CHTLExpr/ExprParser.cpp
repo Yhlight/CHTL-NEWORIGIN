@@ -100,12 +100,25 @@ std::shared_ptr<BaseExprNode> ExprParser::parseTerm() {
 }
 
 std::shared_ptr<BaseExprNode> ExprParser::parseFactor() {
-    auto left = parsePrimary();
+    auto left = parsePower();
     while (parser.getCurrentToken().type == TokenType::STAR || parser.getCurrentToken().type == TokenType::SLASH || parser.getCurrentToken().type == TokenType::PERCENT) {
         TokenType op = parser.getCurrentToken().type;
         parser.consumeToken();
-        auto right = parsePrimary();
+        auto right = parsePower();
         left = std::make_shared<BinaryOpNode>(left, op, right);
+    }
+    return left;
+}
+
+// Handles power operator: base ** exponent (right-associative)
+std::shared_ptr<BaseExprNode> ExprParser::parsePower() {
+    auto left = parsePrimary();
+    if (parser.getCurrentToken().type == TokenType::DOUBLE_STAR) {
+        TokenType op = parser.getCurrentToken().type;
+        parser.consumeToken();
+        // Recurse on parsePower for right-associativity
+        auto right = parsePower();
+        return std::make_shared<BinaryOpNode>(left, op, right);
     }
     return left;
 }

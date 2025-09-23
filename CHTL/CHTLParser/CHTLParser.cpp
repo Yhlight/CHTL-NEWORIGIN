@@ -8,6 +8,9 @@
 #include "../CHTLExpr/LiteralNode.h"
 #include "../CHTLNode/CssRuleNode.h"
 #include "../CHTLNode/OriginNode.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
+#include "../CHTLNode/ConfigNode.h"
 #include <iostream>
 
 const std::string VIRTUAL_ROOT_TAG = "__ROOT__";
@@ -85,6 +88,12 @@ std::shared_ptr<BaseNode> CHTLParser::parseStatement() {
 std::shared_ptr<ElementNode> CHTLParser::parseElement() {
     auto element = std::make_shared<ElementNode>(currentToken.value);
     consumeToken();
+
+    // Check for an optional 'except' clause before the block
+    if (currentToken.type == TokenType::KEYWORD_EXCEPT) {
+        parseExceptClause(element);
+    }
+
     if (currentToken.type == TokenType::LEFT_BRACE) {
         parseBlock(element);
     }
@@ -338,10 +347,271 @@ std::shared_ptr<BaseNode> CHTLParser::parseDirective() {
         consumeToken();
         expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Origin' keyword.");
         return parseOriginBlock();
+    }
+    else if (currentToken.type == TokenType::KEYWORD_IMPORT) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Import' keyword.");
+        return parseImportDirective();
+    }
+    else if (currentToken.type == TokenType::KEYWORD_NAMESPACE) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Namespace' keyword.");
+        return parseNamespaceDirective();
+    }
+    else if (currentToken.type == TokenType::KEYWORD_CONFIGURATION) {
+        consumeToken();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Configuration' keyword.");
+        parseConfigurationDirective();
+        return nullptr; // Directives that modify context don't return a node to be added to the tree
     } else {
         error("Unsupported directive found: " + currentToken.value);
         return nullptr;
     }
+}
+
+void CHTLParser::parseConfigurationDirective() {
+    // Check for named config, e.g., [Configuration] @Config Basic
+    // For now, we only handle the single, unnamed, active configuration.
+    // The logic to handle named configs can be added later.
+    if (getCurrentToken().type == TokenType::AT) {
+        // This is a named config, skip for now.
+        // A more robust implementation would parse and store it.
+        consumeToken(); // @
+        consumeToken(); // Config
+        consumeToken(); // Basic
+    }
+
+    expect(TokenType::LEFT_BRACE, "Expected '{' for configuration block.");
+
+    while(getCurrentToken().type != TokenType::RIGHT_BRACE) {
+        if (getCurrentToken().type == TokenType::LEFT_BRACKET) {
+            // It's a [Name] block
+            consumeToken();
+            expect(TokenType::KEYWORD_NAME, "Expected 'Name' for name mapping block.");
+            expect(TokenType::RIGHT_BRACKET, "Expected ']' after 'Name'.");
+            expect(TokenType::LEFT_BRACE, "Expected '{' for [Name] block.");
+
+            while(getCurrentToken().type != TokenType::RIGHT_BRACE) {
+                if(getCurrentToken().type != TokenType::IDENTIFIER) error("Expected internal keyword name for mapping.");
+                std::string key = getCurrentToken().value;
+                consumeToken();
+                expect(TokenType::EQUAL, "Expected '=' for name mapping.");
+
+                std::vector<std::string> values;
+                if (getCurrentToken().type == TokenType::LEFT_BRACKET) {
+                    // List of values
+                    consumeToken();
+                    while(getCurrentToken().type != TokenType::RIGHT_BRACKET) {
+                        if (getCurrentToken().type != TokenType::AT && getCurrentToken().type != TokenType::IDENTIFIER) {
+                            error("Expected identifier or @-keyword in name mapping list.");
+                        }
+                        values.push_back(getCurrentToken().value);
+                        consumeToken();
+                        if (getCurrentToken().type == TokenType::COMMA) consumeToken();
+                    }
+                    expect(TokenType::RIGHT_BRACKET, "Expected ']' to close name mapping list.");
+                } else {
+                    // Single value
+                    if (getCurrentToken().type != TokenType::AT && getCurrentToken().type != TokenType::IDENTIFIER) {
+                        error("Expected identifier or @-keyword for name mapping.");
+                    }
+                    values.push_back(getCurrentToken().value);
+                    consumeToken();
+                }
+                context.activeConfig->nameMappings[key] = values;
+                expect(TokenType::SEMICOLON, "Expected ';' after name mapping.");
+            }
+            expect(TokenType::RIGHT_BRACE, "Expected '}' to close [Name] block.");
+
+        } else if (getCurrentToken().type == TokenType::IDENTIFIER) {
+            // It's a simple key-value setting
+            std::string key = getCurrentToken().value;
+            consumeToken();
+            expect(TokenType::EQUAL, "Expected '=' for setting.");
+            if (getCurrentToken().type != TokenType::IDENTIFIER && getCurrentToken().type != TokenType::STRING && getCurrentToken().type != TokenType::NUMBER) {
+                error("Expected a value for the setting.");
+            }
+            std::string value = getCurrentToken().value;
+            consumeToken();
+            context.activeConfig->settings[key] = value;
+            expect(TokenType::SEMICOLON, "Expected ';' after setting.");
+        } else {
+            error("Unexpected token in configuration block.");
+        }
+    }
+    expect(TokenType::RIGHT_BRACE, "Expected '}' to close configuration block.");
+}
+
+void CHTLParser::parseExceptClause(const std::shared_ptr<ElementNode>& element) {
+    expect(TokenType::KEYWORD_EXCEPT, "Expected 'except' keyword.");
+
+    do {
+        Constraint constraint;
+        if (getCurrentToken().type == TokenType::LEFT_BRACKET) {
+            consumeToken(); // consume '['
+            if (getCurrentToken().type == TokenType::KEYWORD_TEMPLATE) {
+                consumeToken(); // consume 'Template'
+                if (getCurrentToken().type == TokenType::RIGHT_BRACKET) {
+                    constraint.type = ConstraintType::AnyTemplate;
+                    constraint.identifier = "Template";
+                } else {
+                    expect(TokenType::AT, "Expected '@' for typed template constraint.");
+                    constraint.type = ConstraintType::TemplateType;
+                    constraint.identifier = getCurrentToken().value;
+                    consumeToken();
+                }
+            } else if (getCurrentToken().type == TokenType::KEYWORD_CUSTOM) {
+                consumeToken(); // consume 'Custom'
+                 if (getCurrentToken().type == TokenType::RIGHT_BRACKET) {
+                    constraint.type = ConstraintType::AnyCustom;
+                    constraint.identifier = "Custom";
+                } else {
+                    expect(TokenType::AT, "Expected '@' for typed custom constraint.");
+                    constraint.type = ConstraintType::CustomType;
+                    constraint.identifier = getCurrentToken().value;
+                    consumeToken();
+                }
+            } else {
+                error("Unsupported constraint category.");
+            }
+            expect(TokenType::RIGHT_BRACKET, "Expected ']' to close constraint category.");
+        } else if (getCurrentToken().type == TokenType::AT) {
+            consumeToken(); // consume '@'
+            if (getCurrentToken().type == TokenType::KEYWORD_HTML) {
+                constraint.type = ConstraintType::AnyHtml;
+                constraint.identifier = "Html";
+                consumeToken();
+            } else {
+                error("Unsupported @-constraint type.");
+            }
+        } else if (getCurrentToken().type == TokenType::IDENTIFIER) {
+            constraint.type = ConstraintType::ExactTag;
+            constraint.identifier = getCurrentToken().value;
+            consumeToken();
+        } else {
+            error("Invalid token in except clause. Expected identifier, '[', or '@'.");
+        }
+
+        element->constraints.push_back(constraint);
+
+        if (getCurrentToken().type == TokenType::COMMA) {
+            consumeToken();
+        } else {
+            break;
+        }
+    } while (true);
+
+    expect(TokenType::SEMICOLON, "Expected ';' to terminate except clause.");
+}
+
+std::shared_ptr<NamespaceNode> CHTLParser::parseNamespaceDirective() {
+    if (getCurrentToken().type != TokenType::IDENTIFIER) {
+        error("Expected a name for the namespace.");
+    }
+    std::string namespaceName = getCurrentToken().value;
+    consumeToken();
+
+    auto node = std::make_shared<NamespaceNode>(namespaceName);
+    context.namespaceStack.push_back(namespaceName);
+
+    // Namespaces can be single-line or have a block
+    if (getCurrentToken().type == TokenType::LEFT_BRACE) {
+        consumeToken(); // consume '{'
+        while(getCurrentToken().type != TokenType::RIGHT_BRACE && getCurrentToken().type != TokenType::END_OF_FILE) {
+            if (currentToken.type == TokenType::LEFT_BRACKET) {
+                auto directive = parseDirective();
+                if (directive) node->addChild(directive);
+            } else {
+                auto statement = parseStatement();
+                if(statement) node->addChild(statement);
+            }
+        }
+        expect(TokenType::RIGHT_BRACE, "Expected '}' to close namespace block.");
+    }
+    return node;
+}
+
+std::shared_ptr<ImportNode> CHTLParser::parseImportDirective() {
+    // This is a complex parser due to the many forms of import.
+    // Example: [Import] @Html from "path.html" as MyHtml
+    // Example: [Import] [Custom] @Element Box from "./box.chtl"
+
+    ImportCategory category = ImportCategory::None;
+    ImportType type = ImportType::Chtl; // Default
+    std::optional<std::string> itemToImport;
+    std::string path;
+    std::optional<std::string> alias;
+
+    // Check for category [Custom], [Template], etc.
+    if (getCurrentToken().type == TokenType::LEFT_BRACKET) {
+        consumeToken(); // consume '['
+        if (getCurrentToken().type == TokenType::KEYWORD_CUSTOM) {
+            category = ImportCategory::Custom;
+        } else if (getCurrentToken().type == TokenType::KEYWORD_TEMPLATE) {
+            category = ImportCategory::Template;
+        } else {
+            error("Unsupported import category.");
+        }
+        consumeToken(); // consume category keyword
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after import category.");
+    }
+
+    // Check for type @Html, @Element, etc.
+    expect(TokenType::AT, "Expected '@' for import type.");
+    Token typeToken = getCurrentToken();
+    consumeToken(); // consume type keyword
+
+    switch(typeToken.type) {
+        case TokenType::KEYWORD_HTML: type = ImportType::Html; break;
+        case TokenType::KEYWORD_STYLE: type = ImportType::Style; break;
+        case TokenType::KEYWORD_JAVASCRIPT: type = ImportType::JavaScript; break;
+        case TokenType::KEYWORD_CHTL: type = ImportType::Chtl; break;
+        // The following are for typed CHTL imports
+        case TokenType::KEYWORD_ELEMENT:
+        case TokenType::KEYWORD_VAR:
+            // These are valid, but we handle them below.
+            break;
+        default:
+            error("Invalid @type for import: " + typeToken.value);
+    }
+
+    // Check for specific item to import (e.g. "Box" in @Element Box)
+    // This is not applicable for @Chtl, @Html, etc.
+    if (typeToken.type == TokenType::KEYWORD_ELEMENT || typeToken.type == TokenType::KEYWORD_STYLE || typeToken.type == TokenType::KEYWORD_VAR) {
+        if (getCurrentToken().type == TokenType::IDENTIFIER) {
+            itemToImport = getCurrentToken().value;
+            consumeToken(); // consume item name
+        }
+    }
+
+    // Expect 'from'
+    expect(TokenType::KEYWORD_FROM, "Expected 'from' keyword in import statement.");
+
+    // Expect path
+    if (getCurrentToken().type != TokenType::STRING && getCurrentToken().type != TokenType::IDENTIFIER) {
+        error("Expected a path string or literal for import.");
+    }
+    path = getCurrentToken().value;
+    consumeToken();
+
+    // Check for optional 'as'
+    if (getCurrentToken().type == TokenType::KEYWORD_AS) {
+        consumeToken();
+        if (getCurrentToken().type != TokenType::IDENTIFIER) {
+            error("Expected an alias name after 'as'.");
+        }
+        alias = getCurrentToken().value;
+        consumeToken();
+    }
+
+    expect(TokenType::SEMICOLON, "Expected ';' to terminate import statement.");
+
+    auto node = std::make_shared<ImportNode>(type, path);
+    node->category = category;
+    node->importedItem = itemToImport;
+    node->alias = alias;
+
+    return node;
 }
 
 void CHTLParser::parseCustomDefinition() {

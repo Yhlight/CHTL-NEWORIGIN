@@ -9,6 +9,7 @@
 struct TemplateDefinitionNode;
 struct CustomDefinitionNode;
 struct CssRuleNode;
+struct ConfigNode;
 
 class CHTLContext {
 public:
@@ -27,4 +28,12 @@ public:
 
     // Flag for HTML5 doctype generation
     bool useHtml5Doctype = false;
+
+    // Stack to manage current namespace
+    std::vector<std::string> namespaceStack;
+
+    // Active configuration
+    std::shared_ptr<ConfigNode> activeConfig;
+
+    CHTLContext(); // Constructor to initialize with default config
 };
