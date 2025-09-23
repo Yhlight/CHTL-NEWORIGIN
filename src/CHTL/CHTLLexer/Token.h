@@ -43,7 +43,11 @@ enum class TokenType {
     OpenBracket,  // [
     CloseBracket, // ]
     At,           // @
-    Inherit       // inherit
+    Inherit,      // inherit
+
+    // Keywords
+    Origin,       // Origin
+    Use           // use
 };
 
 // Represents a single token extracted from the source code.

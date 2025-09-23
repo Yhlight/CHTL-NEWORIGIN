@@ -40,6 +40,8 @@ public:
 
     // The manager for storing and retrieving template definitions.
     TemplateManager templateManager;
+
+    bool outputHtml5Doctype = false;
     // --- End public interface for states ---
 
 private:

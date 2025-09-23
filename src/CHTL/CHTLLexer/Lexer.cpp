@@ -61,8 +61,30 @@ Token Lexer::identifier() {
     if (value == "inherit") {
         return {TokenType::Inherit, value, line, startCol};
     }
+    if (value == "Origin") {
+        return {TokenType::Origin, value, line, startCol};
+    }
+    if (value == "use") {
+        return {TokenType::Use, value, line, startCol};
+    }
 
     return {TokenType::Identifier, value, line, startCol};
+}
+
+const std::string& Lexer::getSource() const {
+    return source;
+}
+
+size_t Lexer::getPosition() const {
+    return position;
+}
+
+void Lexer::setPosition(size_t newPosition) {
+    // This is a simple implementation. It doesn't update line/column counts,
+    // as it's only intended to be used after a raw string scan where the
+    // main parser will then resume tokenizing by calling getNextToken().
+    // The first call to advance() will fix the line/column.
+    position = newPosition;
 }
 
 Token Lexer::stringLiteral(char quoteType) {

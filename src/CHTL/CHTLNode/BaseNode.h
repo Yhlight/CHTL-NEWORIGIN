@@ -15,7 +15,10 @@ enum class NodeType {
     VarTemplate,
 
     // Utility Nodes
-    Fragment
+    Fragment,
+
+    // Raw Content
+    Origin
     // More types will be added as more CHTL features are implemented.
 };
 

@@ -13,6 +13,11 @@ public:
     // Returns the next token from the source code.
     Token getNextToken();
 
+    // -- Raw string parsing helpers for the Parser --
+    const std::string& getSource() const;
+    size_t getPosition() const;
+    void setPosition(size_t position);
+
 private:
     std::string source;
     size_t position;

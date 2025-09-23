@@ -27,10 +27,15 @@ void Generator::appendLine(const std::string& str) {
     result += getIndent() + str + "\n";
 }
 
-std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss) {
+std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, bool outputDoctype) {
     result.clear();
     indentLevel = 0;
     this->globalCssToInject = globalCss; // Store the CSS for later injection.
+
+    if (outputDoctype) {
+        result += "<!DOCTYPE html>\n";
+    }
+
     for (const auto& root : roots) {
         generateNode(root.get());
     }
@@ -55,6 +60,10 @@ void Generator::generateNode(const BaseNode* node) {
             for (const auto& child : static_cast<const FragmentNode*>(node)->children) {
                 generateNode(child.get());
             }
+            break;
+        case NodeType::Origin:
+            // For an origin node, just print its raw content.
+            append(static_cast<const OriginNode*>(node)->content);
             break;
         default:
             // This should not be reached if the parser is correct.

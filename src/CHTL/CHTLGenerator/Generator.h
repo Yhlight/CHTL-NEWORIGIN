@@ -15,8 +15,8 @@ public:
     Generator();
 
     // The main entry point for the generation process.
-    // Takes the AST and a string of global CSS to be injected.
-    std::string generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss);
+    // Takes the AST, global CSS, and a flag for the doctype.
+    std::string generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, bool outputDoctype);
 
 private:
     std::string result;

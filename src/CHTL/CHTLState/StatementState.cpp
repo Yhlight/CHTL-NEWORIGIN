@@ -5,6 +5,7 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/FragmentNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include "../Util/NodeCloner.h"
 #include <stdexcept>
 #include <string>
@@ -21,8 +22,15 @@ class ElementNode;
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     if (parser.currentToken.type == TokenType::OpenBracket) {
-        parseTemplateDefinition(parser);
-        return nullptr; // Template definitions don't produce a node in the main AST
+        if (parser.peekToken.value == "Template") {
+            parseTemplateDefinition(parser);
+            return nullptr; // Template definitions don't produce a node in the main AST
+        } else if (parser.peekToken.value == "Origin") {
+            return parseOriginDefinition(parser);
+        }
+    } else if (parser.currentToken.type == TokenType::Use) {
+        parseUseDirective(parser);
+        return nullptr; // `use` directive does not produce a node
     } else if (parser.currentToken.type == TokenType::At) {
         return parseElementTemplateUsage(parser);
     } else if (parser.currentToken.type == TokenType::Identifier) {
@@ -240,4 +248,59 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
     }
 
     return fragment;
+}
+
+void StatementState::parseUseDirective(Parser& parser) {
+    parser.expectToken(TokenType::Use);
+    if (parser.currentToken.value == "html5") {
+        parser.outputHtml5Doctype = true;
+        parser.expectToken(TokenType::Identifier);
+        parser.expectToken(TokenType::Semicolon);
+    } else {
+        throw std::runtime_error("Unsupported 'use' directive: " + parser.currentToken.value);
+    }
+}
+
+std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) {
+    // 1. Expect [Origin] @Type
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectToken(TokenType::Origin);
+    parser.expectToken(TokenType::CloseBracket);
+    parser.expectToken(TokenType::At);
+    // We don't use the type for now, but we must parse it.
+    parser.expectToken(TokenType::Identifier);
+    parser.expectToken(TokenType::OpenBrace);
+
+    // 2. Find the raw content
+    const std::string& source = parser.lexer.getSource();
+    size_t startPos = parser.lexer.getPosition();
+    size_t braceLevel = 1;
+    size_t currentPos = startPos;
+
+    while (currentPos < source.length()) {
+        if (source[currentPos] == '{') {
+            braceLevel++;
+        } else if (source[currentPos] == '}') {
+            braceLevel--;
+            if (braceLevel == 0) {
+                break; // Found the matching closing brace
+            }
+        }
+        currentPos++;
+    }
+
+    if (braceLevel != 0) {
+        throw std::runtime_error("Unmatched braces in [Origin] block.");
+    }
+
+    std::string rawContent = source.substr(startPos, currentPos - startPos);
+
+    // 3. Manually advance the lexer's position past the raw block
+    parser.lexer.setPosition(currentPos);
+
+    // 4. Reset the parser's tokens to the new position
+    parser.advanceTokens(); // currentToken is now '}'
+    parser.expectToken(TokenType::CloseBrace); // Consume '}'
+
+    return std::make_unique<OriginNode>(rawContent);
 }
