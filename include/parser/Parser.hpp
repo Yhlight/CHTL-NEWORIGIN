@@ -36,6 +36,7 @@ public:
 
 	// helpers
 	const Token& lookahead();
+	const Token& lookahead2();
 	Token consume();
 	bool match(TokenType t);
 	bool expect(TokenType t, const char* what);
@@ -48,10 +49,18 @@ private:
 	Lexer lexer;
 	Token current;
 	bool hasCurrent;
+	Token next;
+	bool hasNext;
 	std::vector<ParserStateId> stateStack;
 	std::vector<std::unique_ptr<IParseStrategy>> strategies;
 
 	void registerDefaultStrategies();
+
+	// helpers used by strategies
+	NodePtr parseElement();
+	std::unique_ptr<ast::Attribute> parseAttribute();
+	std::unique_ptr<ast::Text> parseTextBlock();
+	std::unique_ptr<ast::StyleBlock> parseStyleBlock();
 };
 
 } // namespace chtl
