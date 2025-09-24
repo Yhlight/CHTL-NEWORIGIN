@@ -6,6 +6,8 @@
 #include "CHTL/CHTLGenerator/Generator.h"
 #include "CHTL/CHTLNode/BaseNode.h"
 #include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/TextNode.h"
+
 
 // A very simple function to print the AST structure for verification
 void PrintAst(const CHTL::AST::BaseNode* node, int indent = 0)
@@ -16,7 +18,7 @@ void PrintAst(const CHTL::AST::BaseNode* node, int indent = 0)
 
     if (auto element = dynamic_cast<const CHTL::AST::ElementNode*>(node))
     {
-        std::cout << "Element: <" << element->tagName << "> (" << element->attributes.size() << " attrs, " << element->children.size() << " children)" << std::endl;
+        std::cout << "Element: <" << element->tagName << ">" << std::endl;
         for (const auto& attr : element->attributes)
         {
             for (int i = 0; i < indent + 1; ++i) std::cout << "  ";
@@ -27,16 +29,24 @@ void PrintAst(const CHTL::AST::BaseNode* node, int indent = 0)
             PrintAst(child.get(), indent + 1);
         }
     }
+    else if (auto text = dynamic_cast<const CHTL::AST::TextNode*>(node))
+    {
+        std::cout << "Text: \"" << text->content << "\"" << std::endl;
+    }
 }
 
 
 int main(int argc, char* argv[]) {
     std::string source = R"(
-        html {
-            id: "main-page";
+        div {
+            style {
+                width: 100px * 2 + 50px; // Should be 250.000000px
+                height: 1000px / 10; // Should be 100.000000px
+                border: 1px solid black;
+            }
 
-            body {
-                class: "container";
+            p {
+                text: "This box should have calculated dimensions.";
             }
         }
     )";

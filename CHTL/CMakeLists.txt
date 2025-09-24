@@ -18,6 +18,14 @@ add_library(CHTL_Compiler STATIC
     CHTLNode/TextNode.h
     CHTLNode/StyleNode.h
     CHTLNode/CommentNode.h
+    CHTLNode/CssPropertyNode.h
+    CHTLState/StyleBlockState.h
+    CHTLState/StyleBlockState.cpp
+    CHTLStrategy/IStyleValueParseStrategy.h
+    CHTLStrategy/SimpleValueStrategy.h
+    CHTLStrategy/SimpleValueStrategy.cpp
+    CHTLStrategy/ArithmeticExpressionStrategy.h
+    CHTLStrategy/ArithmeticExpressionStrategy.cpp
     CHTLGenerator/Generator.h
     CHTLGenerator/Generator.cpp
 )

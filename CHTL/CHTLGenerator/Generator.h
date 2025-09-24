@@ -21,6 +21,7 @@ namespace CHTL
         void Visit(AST::TextNode& node) override;
         void Visit(AST::StyleNode& node) override;
         void Visit(AST::CommentNode& node) override;
+        void Visit(AST::CssPropertyNode& node) override;
 
     private:
         std::stringstream m_htmlStream;

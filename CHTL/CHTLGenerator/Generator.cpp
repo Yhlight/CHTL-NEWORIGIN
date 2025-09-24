@@ -4,6 +4,7 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/CssPropertyNode.h"
 
 namespace CHTL
 {
@@ -32,13 +33,29 @@ namespace CHTL
             attr->Accept(*this);
         }
 
+        // Find and process any StyleNode children to create an inline style attribute
+        std::stringstream styleAttrStream;
+        for (const auto& child : node.children) {
+            if (auto styleNode = dynamic_cast<AST::StyleNode*>(child.get())) {
+                for(const auto& prop : styleNode->properties) {
+                    styleAttrStream << prop->property << ": " << prop->value << ";";
+                }
+            }
+        }
+        if (styleAttrStream.str().length() > 0) {
+            m_htmlStream << " style=\"" << styleAttrStream.str() << "\"";
+        }
+
         m_htmlStream << ">" << std::endl;
 
-        // Visit children
+        // Visit children, skipping any StyleNodes we just processed
         m_indent++;
         for (const auto& child : node.children)
         {
-            child->Accept(*this);
+            if (dynamic_cast<AST::StyleNode*>(child.get()) == nullptr)
+            {
+                child->Accept(*this);
+            }
         }
         m_indent--;
 
@@ -72,6 +89,12 @@ namespace CHTL
         // For now, we'll comment out all of them.
         Indent();
         m_htmlStream << "<!-- " << node.comment << " -->" << std::endl;
+    }
+
+    void Generator::Visit(AST::CssPropertyNode& node)
+    {
+        // This is handled by the StyleNode visitor.
+        // This visit method is required to fulfill the visitor contract, but does nothing on its own.
     }
 
 } // namespace CHTL

@@ -3,7 +3,9 @@
 
 #include "BaseNode.h"
 #include "INodeVisitor.h"
-#include <string>
+#include "CssPropertyNode.h"
+#include <vector>
+#include <memory>
 
 namespace CHTL
 {
@@ -12,10 +14,9 @@ namespace CHTL
         class StyleNode : public BaseNode
         {
         public:
-            // For now, we store the raw content. Parsing this is a later step.
-            std::string rawContent;
+            std::vector<std::unique_ptr<CssPropertyNode>> properties;
 
-            StyleNode(const std::string& content) : rawContent(content) {}
+            StyleNode() = default;
 
             void Accept(INodeVisitor& visitor) override
             {

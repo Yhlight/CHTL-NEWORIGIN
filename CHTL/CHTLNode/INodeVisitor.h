@@ -11,6 +11,7 @@ namespace CHTL
         class TextNode;
         class StyleNode;
         class CommentNode;
+        class CssPropertyNode;
         // Add more as they are created...
 
         class INodeVisitor
@@ -23,6 +24,7 @@ namespace CHTL
             virtual void Visit(TextNode& node) = 0;
             virtual void Visit(StyleNode& node) = 0;
             virtual void Visit(CommentNode& node) = 0;
+            virtual void Visit(CssPropertyNode& node) = 0;
             // Add more Visit methods as new node types are created...
         };
     }
