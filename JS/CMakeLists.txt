@@ -2,8 +2,6 @@
 add_library(JS STATIC
     JSCompiler.h
     JSCompiler.cpp
-    ANTLRAdapter.h
-    ANTLRAdapter.cpp
 )
 
 target_include_directories(JS PUBLIC

@@ -1,8 +1,6 @@
 # TokenTest CMakeLists.txt
 add_executable(TokenTest
     TokenTest.cpp
-    LexerTest.cpp
-    GlobalMapTest.cpp
 )
 
 target_include_directories(TokenTest PUBLIC

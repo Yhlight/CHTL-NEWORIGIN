@@ -1,14 +1,13 @@
 # ThirdParty CMakeLists.txt
 cmake_minimum_required(VERSION 3.20)
 
-# Copy miniz files to ThirdParty
-configure_file(${CMAKE_SOURCE_DIR}/miniz.h ${CMAKE_BINARY_DIR}/ThirdParty/miniz.h COPYONLY)
-configure_file(${CMAKE_SOURCE_DIR}/miniz.c ${CMAKE_BINARY_DIR}/ThirdParty/miniz.c COPYONLY)
-
 # Create ThirdParty library
 add_library(ThirdParty STATIC
-    ${CMAKE_SOURCE_DIR}/miniz.c
+    miniz.c
 )
+
+# Explicitly set C language
+set_target_properties(ThirdParty PROPERTIES LINKER_LANGUAGE C)
 
 target_include_directories(ThirdParty PUBLIC
     ${CMAKE_SOURCE_DIR}

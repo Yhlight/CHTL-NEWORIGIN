@@ -7,7 +7,9 @@ add_subdirectory(ZipUtil)
 
 # Create combined Util library
 add_library(Util STATIC
-    # Common utility headers
+    FileSystem/FileSystem.cpp
+    StringUtil/StringUtil.cpp
+    ZipUtil/ZipUtil.cpp
 )
 
 target_include_directories(Util PUBLIC

@@ -236,7 +236,7 @@ bool StateMachine<StateEnum>::trigger(const std::string& triggerName) {
     for (const auto& transition : transitions_) {
         if (transition.getFrom() == currentState_ && 
             transition.getTrigger() == triggerName) {
-            return transition(transition.getTo(), triggerName);
+            return performTransition(transition.getTo(), triggerName);
         }
     }
     return false;

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
+#include <sstream>
 
 namespace CHTL {
 namespace CLI {

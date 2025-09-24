@@ -2,8 +2,6 @@
 add_library(CSS STATIC
     CSSCompiler.h
     CSSCompiler.cpp
-    ANTLRAdapter.h
-    ANTLRAdapter.cpp
 )
 
 target_include_directories(CSS PUBLIC

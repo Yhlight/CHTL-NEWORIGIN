@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <functional>
 
 namespace CHTL {
 namespace CLI {

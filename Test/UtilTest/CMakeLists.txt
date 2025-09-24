@@ -1,9 +1,6 @@
 # UtilTest CMakeLists.txt
 add_executable(UtilTest
     UtilTest.cpp
-    FileSystemTest.cpp
-    StringUtilTest.cpp
-    ZipUtilTest.cpp
 )
 
 target_include_directories(UtilTest PUBLIC

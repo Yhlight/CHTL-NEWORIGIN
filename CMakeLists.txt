@@ -57,7 +57,6 @@ add_subdirectory(CodeMerger)
 
 # Core compilers
 add_subdirectory(CHTL)
-add_subdirectory(CHTL_JS)
 
 # External compiler adapters
 add_subdirectory(CSS)
@@ -74,11 +73,11 @@ if(CHTL_BUILD_TESTS)
     add_subdirectory(Test)
 endif()
 
-# Module system
-add_subdirectory(Module)
+# Module system (placeholder)
+# add_subdirectory(Module)
 
 # Installation
-install(TARGETS CHTL CHTL_JS Scanner CompilerDispatcher CodeMerger
+install(TARGETS CHTL Scanner
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 

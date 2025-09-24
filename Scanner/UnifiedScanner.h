@@ -6,6 +6,8 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <atomic>
+#include <mutex>
 
 namespace CHTL {
 
@@ -57,7 +59,8 @@ private:
     
     std::map<std::string, CodeFragment> placeholders_;
     std::map<FragmentType, std::string> typePrefixes_;
-    size_t counter_;
+    std::atomic<size_t> counter_;
+    mutable std::mutex mutex_;
     
     void initializePrefixes();
 };

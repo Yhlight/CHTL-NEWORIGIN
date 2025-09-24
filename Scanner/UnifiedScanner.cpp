@@ -27,6 +27,7 @@ void PlaceholderRegistry::initializePrefixes() {
 }
 
 std::string PlaceholderRegistry::generatePlaceholder(FragmentType type) {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = typePrefixes_.find(type);
     if (it == typePrefixes_.end()) {
         return "UNKNOWN_PLACEHOLDER_" + std::to_string(++counter_);
@@ -59,19 +60,23 @@ bool PlaceholderRegistry::isValidPlaceholder(const std::string& placeholder) con
 }
 
 void PlaceholderRegistry::registerPlaceholder(const std::string& placeholder, const CodeFragment& fragment) {
+    std::lock_guard<std::mutex> lock(mutex_);
     placeholders_[placeholder] = fragment;
 }
 
 CodeFragment PlaceholderRegistry::getFragment(const std::string& placeholder) const {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = placeholders_.find(placeholder);
     return (it != placeholders_.end()) ? it->second : CodeFragment();
 }
 
 bool PlaceholderRegistry::hasPlaceholder(const std::string& placeholder) const {
+    std::lock_guard<std::mutex> lock(mutex_);
     return placeholders_.find(placeholder) != placeholders_.end();
 }
 
 void PlaceholderRegistry::clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
     placeholders_.clear();
     counter_ = 0;
 }

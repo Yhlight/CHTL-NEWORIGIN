@@ -2,10 +2,6 @@
 add_library(CompilerDispatcher STATIC
     Dispatcher.h
     Dispatcher.cpp
-    TaskQueue.h
-    TaskQueue.cpp
-    ParallelExecutor.h
-    ParallelExecutor.cpp
 )
 
 target_include_directories(CompilerDispatcher PUBLIC

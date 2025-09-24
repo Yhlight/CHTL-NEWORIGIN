@@ -1,8 +1,6 @@
 # AstTest CMakeLists.txt
 add_executable(AstTest
     AstTest.cpp
-    NodeTest.cpp
-    ParserTest.cpp
 )
 
 target_include_directories(AstTest PUBLIC

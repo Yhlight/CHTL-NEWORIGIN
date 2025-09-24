@@ -2,10 +2,6 @@
 add_library(CodeMerger STATIC
     Merger.h
     Merger.cpp
-    InlineStrategy.h
-    InlineStrategy.cpp
-    PlaceholderDecoder.h
-    PlaceholderDecoder.cpp
 )
 
 target_include_directories(CodeMerger PUBLIC
