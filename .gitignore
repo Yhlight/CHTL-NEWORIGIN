@@ -1,0 +1,17 @@
+# CMake build files
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Compiled library and object files
+*.a
+*.so
+*.o
+
+# Executables
+CHTL_Final
+
+# OS-specific files
+.DS_Store
