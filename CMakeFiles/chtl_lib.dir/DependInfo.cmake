@@ -19,9 +19,11 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/app/src/CHTL/CHTLState/ConfigurationState.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o.d"
   "/app/src/CHTL/CHTLState/StatementState.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o.d"
   "/app/src/CHTL/CHTLState/StyleBlockState.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o.d"
-  "/app/src/CHTL/Util/ASTUtil.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o.d"
-  "/app/src/CHTL/Util/NodeCloner.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.o.d"
-  "/app/src/CHTL/Util/StyleUtil.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o.d"
+  "/app/src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.o.d"
+  "/app/src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.o.d"
+  "/app/src/Util/ASTUtil.cpp" "CMakeFiles/chtl_lib.dir/src/Util/ASTUtil.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/Util/ASTUtil.cpp.o.d"
+  "/app/src/Util/NodeCloner.cpp" "CMakeFiles/chtl_lib.dir/src/Util/NodeCloner.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/Util/NodeCloner.cpp.o.d"
+  "/app/src/Util/StyleUtil.cpp" "CMakeFiles/chtl_lib.dir/src/Util/StyleUtil.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/Util/StyleUtil.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

@@ -1,5 +1,5 @@
 #include "Generator.h"
-#include "../Util/StyleUtil.h" // For styleValueToString
+#include "Util/StyleUtil.h" // For styleValueToString
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include <stdexcept>

@@ -1,13 +1,13 @@
 #include "NodeCloner.h"
 
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
-#include "../CHTLNode/CommentNode.h"
-#include "../CHTLNode/FragmentNode.h"
-#include "../CHTLNode/OriginNode.h"
-#include "../CHTLNode/StyleTemplateNode.h"
-#include "../CHTLNode/ElementTemplateNode.h"
-#include "../CHTLNode/VarTemplateNode.h"
+#include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/TextNode.h"
+#include "CHTL/CHTLNode/CommentNode.h"
+#include "CHTL/CHTLNode/FragmentNode.h"
+#include "CHTL/CHTLNode/OriginNode.h"
+#include "CHTL/CHTLNode/StyleTemplateNode.h"
+#include "CHTL/CHTLNode/ElementTemplateNode.h"
+#include "CHTL/CHTLNode/VarTemplateNode.h"
 
 
 // Recursively performs a deep copy of a given node.

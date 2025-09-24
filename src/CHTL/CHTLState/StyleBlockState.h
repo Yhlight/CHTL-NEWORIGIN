@@ -2,7 +2,7 @@
 
 #include "ParserState.h"
 #include "../CHTLNode/StyleValue.h"
-#include "../Util/Selector.h" // Include the new selector struct
+#include "Util/Selector.h" // Include the new selector struct
 #include <string>
 #include <map> // Add map include
 #include <utility> // For std::pair

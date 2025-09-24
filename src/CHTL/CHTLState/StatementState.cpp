@@ -6,8 +6,10 @@
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
-#include "../Util/NodeCloner.h"
+#include "Util/NodeCloner.h"
 #include "../CHTLLoader/Loader.h"
+#include "../CHTLStrategy/ElementParsingStrategy.h" // Include the new strategy
+#include "../CHTLStrategy/ImportParsingStrategy.h" // Include the import strategy
 #include <stdexcept>
 #include <string>
 #include <utility> // For std::pair
@@ -27,8 +29,8 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     if (parser.currentToken.type == TokenType::OpenBracket) {
         // Peek ahead to see what's inside the brackets
         if (parser.peekToken.type == TokenType::Import) {
-            parseImportStatement(parser);
-            return nullptr;
+            ImportParsingStrategy strategy;
+            return strategy.parse(parser);
         } else if (parser.peekToken.type == TokenType::Custom || parser.peekToken.value == "Template") {
             parseTemplateDefinition(parser);
             return nullptr; // Template definitions don't produce a node in the main AST
@@ -62,72 +64,14 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return parseTextElement(parser);
         }
         // Any other identifier is assumed to be an element tag.
-        return parseElement(parser);
+        // DELEGATE TO THE STRATEGY
+        ElementParsingStrategy strategy;
+        return strategy.parse(parser);
     } else if (parser.currentToken.type == TokenType::HashComment) {
         return parseComment(parser);
     }
 
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
-}
-
-void StatementState::parseExceptClause(Parser& parser, ElementNode& element) {
-    // The 'except' keyword has already been consumed by tryExpectKeyword in the caller.
-
-    while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
-        // For now, we'll just store the raw identifier of the forbidden element.
-        // A more advanced implementation would parse complex types like [Custom] @Element Box
-        if (parser.currentToken.type == TokenType::Identifier) {
-            element.constraints.push_back(parser.currentToken.value);
-            parser.advanceTokens();
-        }
-
-        // Consume comma if it exists
-        if (parser.currentToken.type == TokenType::Comma) {
-            parser.advanceTokens();
-        } else {
-            // If there's no comma, we must be at the end of the list.
-            break;
-        }
-    }
-    parser.expectToken(TokenType::Semicolon);
-}
-
-
-// Parses a full element, including its body.
-std::unique_ptr<BaseNode> StatementState::parseElement(Parser& parser) {
-    auto element = std::make_unique<ElementNode>(parser.currentToken.value);
-    parser.expectToken(TokenType::Identifier);
-    parser.expectToken(TokenType::OpenBrace);
-
-    parseElementBody(parser, *element);
-
-    parser.expectToken(TokenType::CloseBrace);
-    return element;
-}
-
-// Parses the body of an element, dispatching to helpers for attributes, styles, or child nodes.
-void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
-    // Set the context node so that child parsing can be aware of the parent.
-    parser.contextNode = &element;
-
-    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-        if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style" && parser.peekToken.type == TokenType::OpenBrace) {
-            StyleBlockState styleState;
-            styleState.handle(parser); // This will parse the entire style block.
-        } else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
-            parseExceptClause(parser, element);
-        }
-        else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
-            parseAttribute(parser, element);
-        } else {
-            auto childNode = handle(parser);
-            if (childNode) {
-                 element.children.push_back(std::move(childNode));
-            }
-        }
-    }
-    // Reset the context node after parsing the body.
-    parser.contextNode = nullptr;
 }
 
 // Parses a 'text { ... }' block, allowing unquoted literals.
@@ -155,41 +99,6 @@ std::unique_ptr<BaseNode> StatementState::parseComment(Parser& parser) {
     auto comment = std::make_unique<CommentNode>(parser.currentToken.value);
     parser.expectToken(TokenType::HashComment);
     return comment;
-}
-
-// Parses an attribute 'key: value;', allowing unquoted multi-word literals.
-void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
-    std::string key = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-
-    if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
-        throw std::runtime_error("Expected ':' or '=' after attribute key '" + key + "'.");
-    }
-    parser.advanceTokens(); // Consume ':' or '='
-
-    std::stringstream value;
-    bool firstToken = true;
-    // Consume tokens until the terminator
-    while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
-        // This check prevents consuming the brace of a parent element if a semicolon is missed.
-        if (parser.currentToken.type == TokenType::CloseBrace) {
-             throw std::runtime_error("Missing semicolon for attribute '" + key + "'.");
-        }
-        if (!firstToken) {
-            value << " ";
-        }
-        value << parser.currentToken.value;
-        parser.advanceTokens();
-        firstToken = false;
-    }
-
-    parser.expectToken(TokenType::Semicolon);
-
-    if (key == "text") {
-        element.children.push_back(std::make_unique<TextNode>(value.str()));
-    } else {
-        element.attributes[key] = value.str();
-    }
 }
 
 void StatementState::parseTemplateDefinition(Parser& parser) {
@@ -660,91 +569,3 @@ void StatementState::parseNamespaceDefinition(Parser& parser) {
     parser.namespaceStack.pop_back();
 }
 
-void StatementState::parseImportStatement(Parser& parser) {
-    parser.expectToken(TokenType::OpenBracket);
-    parser.expectToken(TokenType::Import);
-
-    // This is where we'd parse the optional [Custom], [Template] part
-    // For now, we'll skip this and assume a simple @Type syntax for all imports.
-    if (parser.currentToken.type == TokenType::CloseBracket) {
-         parser.advanceTokens(); // Consume ']'
-    } else {
-        // In a full implementation, parse [Custom] etc. here
-        parser.advanceTokens();
-        parser.advanceTokens();
-    }
-
-    parser.expectToken(TokenType::At);
-    std::string importType = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-
-    // For precise CHTL imports, the name of the item to import comes next.
-    std::string itemName;
-    if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::From) {
-        itemName = parser.currentToken.value;
-        parser.advanceTokens();
-    }
-
-    parser.expectKeyword(TokenType::From, "KEYWORD_FROM", "from");
-
-    if (parser.currentToken.type != TokenType::String) {
-        throw std::runtime_error("Import path must be a string literal.");
-    }
-    std::string path = parser.currentToken.value;
-    parser.advanceTokens();
-
-    std::string alias;
-    if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_AS", "as")) {
-        alias = parser.currentToken.value;
-        parser.expectToken(TokenType::Identifier);
-    }
-
-    parser.expectToken(TokenType::Semicolon);
-
-    // --- Import Logic ---
-    if (importType == "Chtl") {
-        // This is now a full file import
-        try {
-            std::string fileContent = Loader::loadFile(path);
-            Lexer importLexer(fileContent);
-            Parser importParser(importLexer);
-            importParser.parse();
-            parser.templateManager.merge(importParser.templateManager);
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import file '" + path + "': " + e.what());
-        }
-    } else if (importType == "Html" || importType == "Style" || importType == "JavaScript") {
-        if (alias.empty()) throw std::runtime_error("Import for non-CHTL types must use 'as'.");
-        try {
-            std::string fileContent = Loader::loadFile(path);
-            auto originNode = std::make_unique<OriginNode>(importType, fileContent, alias);
-            parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), alias, std::move(originNode));
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import file '" + path + "' as origin block '" + alias + "': " + e.what());
-        }
-    } else if (importType == "Element" || importType == "Var" || importType == "Style") { // Precise imports
-         if (itemName.empty()) throw std::runtime_error("Precise import requires an item name before 'from'.");
-         try {
-            std::string fileContent = Loader::loadFile(path);
-            Lexer importLexer(fileContent);
-            Parser importParser(importLexer);
-            importParser.parse();
-
-            std::string finalName = alias.empty() ? itemName : alias;
-
-            if (importType == "Element") {
-                ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
-                if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + path);
-                auto cloned_node = NodeCloner::clone(nodeToImport);
-                parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
-            }
-            // Add similar logic for Style and Var templates here...
-
-         } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import '" + itemName + "' from file '" + path + "': " + e.what());
-        }
-
-    } else {
-        throw std::runtime_error("Unsupported import type: @" + importType);
-    }
-}

@@ -189,8 +189,11 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
  /usr/include/c++/13/bits/erase_if.h \
  /app/tests/../src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/ElementTemplateNode.h \
  /app/tests/../src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
+ /app/tests/../src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
+ /app/tests/../src/CHTL/CHTLParser/../CHTLManage/ConfigurationManager.h \
  /app/tests/../src/CHTL/CHTLGenerator/Generator.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/StyleValue.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
- /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h
+ /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h \
+ /app/tests/../src/CHTL/CHTLNode/ImportNode.h

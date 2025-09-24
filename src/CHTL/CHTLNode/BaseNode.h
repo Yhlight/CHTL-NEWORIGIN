@@ -18,7 +18,10 @@ enum class NodeType {
     Fragment,
 
     // Raw Content
-    Origin
+    Origin,
+
+    // Statements
+    Import
     // More types will be added as more CHTL features are implemented.
 };
 

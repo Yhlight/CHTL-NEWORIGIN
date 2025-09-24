@@ -21,7 +21,8 @@ file(GLOB_RECURSE CHTL_SOURCES
     "src/CHTL/CHTLNode/*.cpp"
     "src/CHTL/CHTLParser/*.cpp"
     "src/CHTL/CHTLState/*.cpp"
-    "src/CHTL/Util/*.cpp"
+    "src/CHTL/CHTLStrategy/*.cpp"
+    "src/Util/*.cpp"
 )
 
 # Add a library for the CHTL compiler components

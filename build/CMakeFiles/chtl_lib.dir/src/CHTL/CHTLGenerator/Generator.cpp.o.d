@@ -164,7 +164,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLGenerator/Generator.cpp.o: \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/StyleValue.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h \
- /app/src/CHTL/CHTLGenerator/../Util/StyleUtil.h \
+ /app/src/Util/StyleUtil.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/FragmentNode.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/OriginNode.h \
  /usr/include/c++/13/stdexcept /usr/include/c++/13/algorithm \

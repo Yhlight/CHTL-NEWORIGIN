@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../CHTLNode/BaseNode.h"
+#include "CHTL/CHTLNode/BaseNode.h"
 #include <memory>
 
 // A utility class with a static method to perform a deep copy of an AST node

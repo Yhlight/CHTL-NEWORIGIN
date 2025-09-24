@@ -1,0 +1,23 @@
+# Build artifacts
+/build/
+/CMakeFiles/
+CMakeCache.txt
+*.a
+*.o
+*.out
+*.so
+*.d
+
+# Executables
+chtl_compiler
+chtl_tests
+
+# CTest files
+/Testing/
+CTestTestfile.cmake
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*~

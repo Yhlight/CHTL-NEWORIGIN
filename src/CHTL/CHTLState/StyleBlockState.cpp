@@ -3,8 +3,8 @@
 #include "../CHTLParser/Parser.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/StyleValue.h" // Include the new StyleValue struct
-#include "../Util/StyleUtil.h" // Include the new StyleUtil
-#include "../Util/ASTUtil.h" // For findNodeBySelector
+#include "Util/StyleUtil.h" // Include the new StyleUtil
+#include "Util/ASTUtil.h" // For findNodeBySelector
 #include <stdexcept>
 #include <sstream>
 

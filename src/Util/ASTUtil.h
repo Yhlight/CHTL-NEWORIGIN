@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../CHTLNode/BaseNode.h"
-#include "../CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/BaseNode.h"
+#include "CHTL/CHTLNode/ElementNode.h"
 #include <vector>
 #include <memory>
 #include <string>

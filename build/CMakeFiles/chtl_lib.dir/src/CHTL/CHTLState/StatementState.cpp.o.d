@@ -169,13 +169,17 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/c++/13/bits/erase_if.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/ElementTemplateNode.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/ConfigurationManager.h \
  /app/src/CHTL/CHTLState/../CHTLNode/ElementNode.h \
  /app/src/CHTL/CHTLState/../CHTLNode/StyleValue.h \
  /app/src/CHTL/CHTLState/../CHTLNode/TextNode.h \
  /app/src/CHTL/CHTLState/../CHTLNode/CommentNode.h \
- /app/src/CHTL/CHTLState/../CHTLNode/OriginNode.h \
- /app/src/CHTL/CHTLState/../Util/NodeCloner.h \
+ /app/src/Util/NodeCloner.h \
  /app/src/CHTL/CHTLState/../CHTLLoader/Loader.h \
+ /app/src/CHTL/CHTLState/../CHTLStrategy/ElementParsingStrategy.h \
+ /app/src/CHTL/CHTLState/../CHTLStrategy/IParsingStrategy.h \
+ /app/src/CHTL/CHTLState/../CHTLStrategy/ImportParsingStrategy.h \
  /usr/include/c++/13/stdexcept /usr/include/c++/13/utility \
  /usr/include/c++/13/bits/stl_relops.h /usr/include/c++/13/sstream \
  /usr/include/c++/13/istream /usr/include/c++/13/ios \
@@ -196,4 +200,5 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/c++/13/bits/ostream.tcc \
  /usr/include/c++/13/bits/istream.tcc \
  /usr/include/c++/13/bits/sstream.tcc \
- /app/src/CHTL/CHTLState/StyleBlockState.h
+ /app/src/CHTL/CHTLState/StyleBlockState.h /app/src/Util/Selector.h \
+ /app/src/CHTL/CHTLState/ConfigurationState.h

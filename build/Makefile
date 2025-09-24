@@ -357,6 +357,30 @@ src/CHTL/CHTLParser/Parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.s
 .PHONY : src/CHTL/CHTLParser/Parser.cpp.s
 
+src/CHTL/CHTLState/ConfigurationState.o: src/CHTL/CHTLState/ConfigurationState.cpp.o
+.PHONY : src/CHTL/CHTLState/ConfigurationState.o
+
+# target to build an object file
+src/CHTL/CHTLState/ConfigurationState.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o
+.PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.o
+
+src/CHTL/CHTLState/ConfigurationState.i: src/CHTL/CHTLState/ConfigurationState.cpp.i
+.PHONY : src/CHTL/CHTLState/ConfigurationState.i
+
+# target to preprocess a source file
+src/CHTL/CHTLState/ConfigurationState.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.i
+.PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.i
+
+src/CHTL/CHTLState/ConfigurationState.s: src/CHTL/CHTLState/ConfigurationState.cpp.s
+.PHONY : src/CHTL/CHTLState/ConfigurationState.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLState/ConfigurationState.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.s
+.PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.s
+
 src/CHTL/CHTLState/StatementState.o: src/CHTL/CHTLState/StatementState.cpp.o
 .PHONY : src/CHTL/CHTLState/StatementState.o
 
@@ -405,77 +429,125 @@ src/CHTL/CHTLState/StyleBlockState.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.s
 .PHONY : src/CHTL/CHTLState/StyleBlockState.cpp.s
 
-src/CHTL/Util/ASTUtil.o: src/CHTL/Util/ASTUtil.cpp.o
-.PHONY : src/CHTL/Util/ASTUtil.o
+src/CHTL/CHTLStrategy/ElementParsingStrategy.o: src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.o
+.PHONY : src/CHTL/CHTLStrategy/ElementParsingStrategy.o
 
 # target to build an object file
-src/CHTL/Util/ASTUtil.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o
-.PHONY : src/CHTL/Util/ASTUtil.cpp.o
+src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.o
+.PHONY : src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.o
 
-src/CHTL/Util/ASTUtil.i: src/CHTL/Util/ASTUtil.cpp.i
-.PHONY : src/CHTL/Util/ASTUtil.i
+src/CHTL/CHTLStrategy/ElementParsingStrategy.i: src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.i
+.PHONY : src/CHTL/CHTLStrategy/ElementParsingStrategy.i
 
 # target to preprocess a source file
-src/CHTL/Util/ASTUtil.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.i
-.PHONY : src/CHTL/Util/ASTUtil.cpp.i
+src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.i
+.PHONY : src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.i
 
-src/CHTL/Util/ASTUtil.s: src/CHTL/Util/ASTUtil.cpp.s
-.PHONY : src/CHTL/Util/ASTUtil.s
+src/CHTL/CHTLStrategy/ElementParsingStrategy.s: src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.s
+.PHONY : src/CHTL/CHTLStrategy/ElementParsingStrategy.s
 
 # target to generate assembly for a file
-src/CHTL/Util/ASTUtil.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.s
-.PHONY : src/CHTL/Util/ASTUtil.cpp.s
+src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.s
+.PHONY : src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp.s
 
-src/CHTL/Util/NodeCloner.o: src/CHTL/Util/NodeCloner.cpp.o
-.PHONY : src/CHTL/Util/NodeCloner.o
+src/CHTL/CHTLStrategy/ImportParsingStrategy.o: src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.o
+.PHONY : src/CHTL/CHTLStrategy/ImportParsingStrategy.o
 
 # target to build an object file
-src/CHTL/Util/NodeCloner.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.o
-.PHONY : src/CHTL/Util/NodeCloner.cpp.o
+src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.o
+.PHONY : src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.o
 
-src/CHTL/Util/NodeCloner.i: src/CHTL/Util/NodeCloner.cpp.i
-.PHONY : src/CHTL/Util/NodeCloner.i
+src/CHTL/CHTLStrategy/ImportParsingStrategy.i: src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.i
+.PHONY : src/CHTL/CHTLStrategy/ImportParsingStrategy.i
 
 # target to preprocess a source file
-src/CHTL/Util/NodeCloner.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.i
-.PHONY : src/CHTL/Util/NodeCloner.cpp.i
+src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.i
+.PHONY : src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.i
 
-src/CHTL/Util/NodeCloner.s: src/CHTL/Util/NodeCloner.cpp.s
-.PHONY : src/CHTL/Util/NodeCloner.s
+src/CHTL/CHTLStrategy/ImportParsingStrategy.s: src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.s
+.PHONY : src/CHTL/CHTLStrategy/ImportParsingStrategy.s
 
 # target to generate assembly for a file
-src/CHTL/Util/NodeCloner.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.s
-.PHONY : src/CHTL/Util/NodeCloner.cpp.s
+src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.s
+.PHONY : src/CHTL/CHTLStrategy/ImportParsingStrategy.cpp.s
 
-src/CHTL/Util/StyleUtil.o: src/CHTL/Util/StyleUtil.cpp.o
-.PHONY : src/CHTL/Util/StyleUtil.o
+src/Util/ASTUtil.o: src/Util/ASTUtil.cpp.o
+.PHONY : src/Util/ASTUtil.o
 
 # target to build an object file
-src/CHTL/Util/StyleUtil.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o
-.PHONY : src/CHTL/Util/StyleUtil.cpp.o
+src/Util/ASTUtil.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/ASTUtil.cpp.o
+.PHONY : src/Util/ASTUtil.cpp.o
 
-src/CHTL/Util/StyleUtil.i: src/CHTL/Util/StyleUtil.cpp.i
-.PHONY : src/CHTL/Util/StyleUtil.i
+src/Util/ASTUtil.i: src/Util/ASTUtil.cpp.i
+.PHONY : src/Util/ASTUtil.i
 
 # target to preprocess a source file
-src/CHTL/Util/StyleUtil.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.i
-.PHONY : src/CHTL/Util/StyleUtil.cpp.i
+src/Util/ASTUtil.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/ASTUtil.cpp.i
+.PHONY : src/Util/ASTUtil.cpp.i
 
-src/CHTL/Util/StyleUtil.s: src/CHTL/Util/StyleUtil.cpp.s
-.PHONY : src/CHTL/Util/StyleUtil.s
+src/Util/ASTUtil.s: src/Util/ASTUtil.cpp.s
+.PHONY : src/Util/ASTUtil.s
 
 # target to generate assembly for a file
-src/CHTL/Util/StyleUtil.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.s
-.PHONY : src/CHTL/Util/StyleUtil.cpp.s
+src/Util/ASTUtil.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/ASTUtil.cpp.s
+.PHONY : src/Util/ASTUtil.cpp.s
+
+src/Util/NodeCloner.o: src/Util/NodeCloner.cpp.o
+.PHONY : src/Util/NodeCloner.o
+
+# target to build an object file
+src/Util/NodeCloner.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/NodeCloner.cpp.o
+.PHONY : src/Util/NodeCloner.cpp.o
+
+src/Util/NodeCloner.i: src/Util/NodeCloner.cpp.i
+.PHONY : src/Util/NodeCloner.i
+
+# target to preprocess a source file
+src/Util/NodeCloner.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/NodeCloner.cpp.i
+.PHONY : src/Util/NodeCloner.cpp.i
+
+src/Util/NodeCloner.s: src/Util/NodeCloner.cpp.s
+.PHONY : src/Util/NodeCloner.s
+
+# target to generate assembly for a file
+src/Util/NodeCloner.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/NodeCloner.cpp.s
+.PHONY : src/Util/NodeCloner.cpp.s
+
+src/Util/StyleUtil.o: src/Util/StyleUtil.cpp.o
+.PHONY : src/Util/StyleUtil.o
+
+# target to build an object file
+src/Util/StyleUtil.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/StyleUtil.cpp.o
+.PHONY : src/Util/StyleUtil.cpp.o
+
+src/Util/StyleUtil.i: src/Util/StyleUtil.cpp.i
+.PHONY : src/Util/StyleUtil.i
+
+# target to preprocess a source file
+src/Util/StyleUtil.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/StyleUtil.cpp.i
+.PHONY : src/Util/StyleUtil.cpp.i
+
+src/Util/StyleUtil.s: src/Util/StyleUtil.cpp.s
+.PHONY : src/Util/StyleUtil.s
+
+# target to generate assembly for a file
+src/Util/StyleUtil.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/Util/StyleUtil.cpp.s
+.PHONY : src/Util/StyleUtil.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
@@ -561,21 +633,30 @@ help:
 	@echo "... src/CHTL/CHTLParser/Parser.o"
 	@echo "... src/CHTL/CHTLParser/Parser.i"
 	@echo "... src/CHTL/CHTLParser/Parser.s"
+	@echo "... src/CHTL/CHTLState/ConfigurationState.o"
+	@echo "... src/CHTL/CHTLState/ConfigurationState.i"
+	@echo "... src/CHTL/CHTLState/ConfigurationState.s"
 	@echo "... src/CHTL/CHTLState/StatementState.o"
 	@echo "... src/CHTL/CHTLState/StatementState.i"
 	@echo "... src/CHTL/CHTLState/StatementState.s"
 	@echo "... src/CHTL/CHTLState/StyleBlockState.o"
 	@echo "... src/CHTL/CHTLState/StyleBlockState.i"
 	@echo "... src/CHTL/CHTLState/StyleBlockState.s"
-	@echo "... src/CHTL/Util/ASTUtil.o"
-	@echo "... src/CHTL/Util/ASTUtil.i"
-	@echo "... src/CHTL/Util/ASTUtil.s"
-	@echo "... src/CHTL/Util/NodeCloner.o"
-	@echo "... src/CHTL/Util/NodeCloner.i"
-	@echo "... src/CHTL/Util/NodeCloner.s"
-	@echo "... src/CHTL/Util/StyleUtil.o"
-	@echo "... src/CHTL/Util/StyleUtil.i"
-	@echo "... src/CHTL/Util/StyleUtil.s"
+	@echo "... src/CHTL/CHTLStrategy/ElementParsingStrategy.o"
+	@echo "... src/CHTL/CHTLStrategy/ElementParsingStrategy.i"
+	@echo "... src/CHTL/CHTLStrategy/ElementParsingStrategy.s"
+	@echo "... src/CHTL/CHTLStrategy/ImportParsingStrategy.o"
+	@echo "... src/CHTL/CHTLStrategy/ImportParsingStrategy.i"
+	@echo "... src/CHTL/CHTLStrategy/ImportParsingStrategy.s"
+	@echo "... src/Util/ASTUtil.o"
+	@echo "... src/Util/ASTUtil.i"
+	@echo "... src/Util/ASTUtil.s"
+	@echo "... src/Util/NodeCloner.o"
+	@echo "... src/Util/NodeCloner.i"
+	@echo "... src/Util/NodeCloner.s"
+	@echo "... src/Util/StyleUtil.o"
+	@echo "... src/Util/StyleUtil.i"
+	@echo "... src/Util/StyleUtil.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
