@@ -1,0 +1,75 @@
+html
+{
+    head
+    {
+        title
+        {
+            "Local Style Block Test"
+        }
+    }
+    
+    body
+    {
+        div
+        {
+            // 测试局部样式块
+            style
+            {
+                .box
+                {
+                    width: 100px;
+                    height: 100px;
+                    background-color: red;
+                }
+                
+                &:hover
+                {
+                    background-color: blue;
+                }
+            }
+            
+            text
+            {
+                "Hello Local Style!"
+            }
+        }
+        
+        div
+        {
+            // 测试属性运算
+            style
+            {
+                .container
+                {
+                    width: 200px + 50px;
+                    height: 100px * 2;
+                    margin: 10px + 5px;
+                }
+            }
+            
+            text
+            {
+                "Property Operations"
+            }
+        }
+        
+        div
+        {
+            // 测试条件表达式
+            style
+            {
+                .conditional
+                {
+                    width: 100px;
+                    height: 100px;
+                    background-color: width > 50px ? "green" : "yellow";
+                }
+            }
+            
+            text
+            {
+                "Conditional Expressions"
+            }
+        }
+    }
+}
