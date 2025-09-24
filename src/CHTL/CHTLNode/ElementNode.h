@@ -2,6 +2,7 @@
 
 #include "BaseNode.h"
 #include "AttributeNode.h"
+#include "StyleBlockNode.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -12,8 +13,6 @@ namespace CHTL {
 /**
  * @class ElementNode
  * @brief Represents an element in the AST (e.g., div { ... }).
- *
- * An element has a tag name, a list of attributes, and a list of child nodes.
  */
 class ElementNode : public BaseNode {
 public:
@@ -28,6 +27,10 @@ public:
             ss << attr->toString(indent + 2) << "\n";
         }
 
+        if (style) {
+            ss << style->toString(indent + 2) << "\n";
+        }
+
         for (const auto& child : children) {
             ss << child->toString(indent + 2) << "\n";
         }
@@ -38,6 +41,7 @@ public:
 
     std::string tagName;
     std::vector<std::unique_ptr<AttributeNode>> attributes;
+    std::unique_ptr<StyleBlockNode> style; // A dedicated pointer for the style block
     std::vector<std::unique_ptr<BaseNode>> children;
 };
 

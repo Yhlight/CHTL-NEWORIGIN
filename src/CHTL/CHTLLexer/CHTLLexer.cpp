@@ -28,7 +28,6 @@ char CHTLLexer::advance() {
 }
 
 Token CHTLLexer::makeToken(TokenType type, const std::string& lexeme) const {
-    // A bit of a simplification, but good enough for now.
     return Token{type, lexeme, _line, _column - (int)lexeme.length()};
 }
 
@@ -58,54 +57,47 @@ void CHTLLexer::skipWhitespaceAndComments() {
 }
 
 Token CHTLLexer::makeIdentifier() {
-    while (isalnum(peek()) || peek() == '_') {
+    while (isalnum(peek()) || peek() == '_' || peek() == '-') {
         advance();
     }
     std::string lexeme = _source.substr(_start, _current - _start);
     if (lexeme == "text") return makeToken(TokenType::KEYWORD_TEXT, lexeme);
+    if (lexeme == "style") return makeToken(TokenType::KEYWORD_STYLE, lexeme);
     return makeToken(TokenType::IDENTIFIER, lexeme);
 }
 
 Token CHTLLexer::makeString(char quoteType) {
-    // Precondition: peek() is the opening quote.
-    advance(); // Consume the opening quote.
-    _start = _current; // The string's content starts here.
-
+    advance();
+    _start = _current;
     while (peek() != quoteType && !isAtEnd()) {
         advance();
     }
-
     if (isAtEnd()) {
         return makeToken(TokenType::UNKNOWN, "Unterminated string.");
     }
-
     std::string lexeme = _source.substr(_start, _current - _start);
-    advance(); // Consume the closing quote.
-
+    advance();
     return makeToken(TokenType::STRING, lexeme);
 }
 
 Token CHTLLexer::getNextToken() {
     skipWhitespaceAndComments();
     _start = _current;
-
     if (isAtEnd()) return makeToken(TokenType::END_OF_FILE, "EOF");
-
     char c = peek();
-
     if (isalpha(c) || c == '_') return makeIdentifier();
-    if (isdigit(c)) {
-        while (isdigit(peek())) advance();
+
+    // FIX: Improve number/unit literal tokenizing
+    if (isdigit(c) || (c == '.' && isdigit(peek()))) {
+        while (isdigit(peek()) || peek() == '.') advance();
+        // Also consume alphabetical units that might follow (e.g., px, em, rem, %)
+        while (isalpha(peek()) || peek() == '%') advance();
         return makeToken(TokenType::UNQUOTED_LITERAL, _source.substr(_start, _current - _start));
     }
 
-    // Handle strings separately before the general switch.
     if (c == '"' || c == '\'') {
         return makeString(c);
     }
-
-    // Handle single-character tokens.
-    // It's now safe to advance because we've handled all multi-char cases.
     advance();
     switch (c) {
         case '{': return makeToken(TokenType::LEFT_BRACE, "{");
@@ -114,7 +106,6 @@ Token CHTLLexer::getNextToken() {
         case ';': return makeToken(TokenType::SEMICOLON, ";");
         case ',': return makeToken(TokenType::COMMA, ",");
     }
-
     return makeToken(TokenType::UNKNOWN, std::string(1, c));
 }
 

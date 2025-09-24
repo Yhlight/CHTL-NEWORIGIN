@@ -1,8 +1,10 @@
 #include "ParseElementState.h"
 #include "ParseBaseState.h"
+#include "ParseStyleState.h"
 #include "CHTLContext/Context.h"
 #include "CHTLNode/AttributeNode.h"
 #include "CHTLNode/TextNode.h"
+#include "CHTLNode/StyleBlockNode.h"
 #include <iostream>
 #include <stdexcept>
 
@@ -46,7 +48,7 @@ void ParseElementState::handle(CHTLContext& context) {
                  throw std::runtime_error("Unexpected token after identifier in element: " + lookahead.lexeme);
             }
         } else if (currentToken.type == TokenType::KEYWORD_TEXT) {
-            // FIX: Handle text nodes
+            // Text Node Parsing
             context.consumeToken(); // Consume 'text'
             if (context.consumeToken().type != TokenType::COLON) {
                 throw std::runtime_error("Expected ':' after 'text' keyword.");
@@ -60,6 +62,19 @@ void ParseElementState::handle(CHTLContext& context) {
             }
             auto textNode = std::make_unique<TextNode>(valueToken.lexeme);
             context.getCurrentNode()->children.push_back(std::move(textNode));
+        } else if (currentToken.type == TokenType::KEYWORD_STYLE) {
+            // Style Block Parsing
+            context.consumeToken(); // Consume 'style'
+            if (context.consumeToken().type != TokenType::LEFT_BRACE) {
+                throw std::runtime_error("Expected '{' after 'style' keyword.");
+            }
+            auto styleNode = std::make_unique<StyleBlockNode>();
+            // Set the current style block on the context so the strategy can access it
+            context.setCurrentStyleBlock(styleNode.get());
+            context.getCurrentNode()->style = std::move(styleNode);
+
+            context.setState(std::make_unique<ParseStyleState>());
+            return;
         }
         else {
              throw std::runtime_error("Unexpected token in element: " + currentToken.lexeme);

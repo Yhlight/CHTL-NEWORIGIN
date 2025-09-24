@@ -16,8 +16,9 @@ enum class TokenType {
     UNQUOTED_LITERAL,
     STRING,
 
-    // Keywords (will be expanded later)
-    KEYWORD_TEXT, // 'text'
+    // Keywords
+    KEYWORD_TEXT,
+    KEYWORD_STYLE,
 
     // Comments
     COMMENT,

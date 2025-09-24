@@ -19,6 +19,16 @@ void CHTLContext::request() {
     }
 }
 
+void CHTLContext::setStrategy(std::unique_ptr<Strategy> newStrategy) {
+    _currentStrategy = std::move(newStrategy);
+}
+
+void CHTLContext::executeStrategy() {
+    if (_currentStrategy) {
+        _currentStrategy->execute(*this);
+    }
+}
+
 const Token& CHTLContext::peekToken(size_t offset) const {
     while (_currentTokenIndex + offset >= _tokens.size()) {
         Token token = const_cast<CHTLLexer&>(_lexer).getNextToken();
@@ -61,6 +71,14 @@ void CHTLContext::popNode() {
 
 std::unique_ptr<BaseNode> CHTLContext::getAST() {
     return std::move(_ast);
+}
+
+void CHTLContext::setCurrentStyleBlock(StyleBlockNode* styleBlock) {
+    _currentStyleBlock = styleBlock;
+}
+
+StyleBlockNode* CHTLContext::getCurrentStyleBlock() const {
+    return _currentStyleBlock;
 }
 
 } // namespace CHTL

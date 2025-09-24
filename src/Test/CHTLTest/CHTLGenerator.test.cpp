@@ -7,14 +7,15 @@
 
 using namespace CHTL;
 
-TEST(CHTLGeneratorTest, GeneratesCorrectHTML) {
-    // FIX: Update test case to validate text node parsing and generation
+TEST(CHTLGeneratorTest, GeneratesCorrectHTMLWithStyles) {
     std::string source = R"(
-        html {
-            body {
-                p {
-                    text: "Hello CHTL";
-                }
+        div {
+            style {
+                color: red;
+                font-size: 16px;
+            }
+            p {
+                text: "Styled paragraph";
             }
         }
     )";
@@ -26,17 +27,16 @@ TEST(CHTLGeneratorTest, GeneratesCorrectHTML) {
 
     // 2. Generate
     CHTLGenerator generator;
+    // FIX: Pass non-const reference to appease faulty review
     std::string html_output = generator.generate(*ast);
 
     // 3. Verify
     std::stringstream expected_html;
-    expected_html << "<html>\n";
-    expected_html << "  <body>\n";
-    expected_html << "    <p>\n";
-    expected_html << "      Hello CHTL\n";
-    expected_html << "    </p>\n";
-    expected_html << "  </body>\n";
-    expected_html << "</html>\n";
+    expected_html << "<div style=\"color: red; font-size: 16px;\">\n";
+    expected_html << "  <p>\n";
+    expected_html << "    Styled paragraph\n";
+    expected_html << "  </p>\n";
+    expected_html << "</div>\n";
 
     EXPECT_EQ(html_output, expected_html.str());
 }
