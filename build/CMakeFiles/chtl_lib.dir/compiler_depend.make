@@ -4,6 +4,7 @@
 CMakeFiles/chtl_lib.dir/src/CHTL/CHTLGenerator/Generator.cpp.o: /app/src/CHTL/CHTLGenerator/Generator.cpp \
   /app/src/CHTL/CHTLNode/BaseNode.h \
   /app/src/CHTL/CHTLNode/CommentNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/FragmentNode.h \
   /app/src/CHTL/CHTLNode/OriginNode.h \
@@ -941,6 +942,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/CommentNode.cpp.o: /app/src/CHTL/CHTLN
 
 CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ElementNode.cpp.o: /app/src/CHTL/CHTLNode/ElementNode.cpp \
   /app/src/CHTL/CHTLNode/BaseNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/StyleValue.h \
   /usr/include/alloca.h \
@@ -1769,6 +1771,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: /app/src/CHTL/C
   /app/src/CHTL/CHTLLoader/Loader.h \
   /app/src/CHTL/CHTLNode/BaseNode.h \
   /app/src/CHTL/CHTLNode/CommentNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/FragmentNode.h \
   /app/src/CHTL/CHTLNode/TextNode.h \
@@ -2011,6 +2014,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: /app/src/CHTL/C
 
 CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o: /app/src/CHTL/CHTLState/StyleBlockState.cpp \
   /app/src/CHTL/CHTLNode/BaseNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/StyleValue.h \
   /app/src/CHTL/CHTLLexer/Lexer.h \
@@ -2249,6 +2253,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o: /app/src/CHTL/
 
 CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o: /app/src/CHTL/Util/ASTUtil.cpp \
   /app/src/CHTL/CHTLNode/BaseNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/FragmentNode.h \
   /app/src/CHTL/CHTLNode/StyleValue.h \
@@ -2474,6 +2479,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o: /app/src/CHTL/Util/ASTUtil.
 CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.o: /app/src/CHTL/Util/NodeCloner.cpp \
   /app/src/CHTL/CHTLNode/BaseNode.h \
   /app/src/CHTL/CHTLNode/CommentNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/ElementTemplateNode.h \
   /app/src/CHTL/CHTLNode/FragmentNode.h \
@@ -2677,6 +2683,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.o: /app/src/CHTL/Util/NodeC
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
 
 CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleUtil.cpp \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/StyleValue.h \
   /app/src/CHTL/CHTLLexer/Lexer.h \
@@ -2935,10 +2942,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /usr/include/x86_64-linux-gnu/bits/pthread_stack_min-dynamic.h:
 
-/usr/include/stdint.h:
-
-/usr/include/endian.h:
-
 /usr/include/c++/13/bits/streambuf.tcc:
 
 /usr/include/ctype.h:
@@ -3009,10 +3012,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /usr/include/c++/13/bits/stl_function.h:
 
-/usr/include/c++/13/bits/uses_allocator_args.h:
-
-/usr/include/c++/13/bits/atomic_base.h:
-
 /usr/include/c++/13/bits/stl_pair.h:
 
 /usr/include/x86_64-linux-gnu/bits/errno.h:
@@ -3043,10 +3042,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:
 
-/usr/include/c++/13/bits/new_allocator.h:
-
-/usr/include/c++/13/bits/stl_uninitialized.h:
-
 /usr/include/c++/13/bits/stl_map.h:
 
 /app/src/CHTL/CHTLNode/StyleValue.h:
@@ -3068,6 +3063,10 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 /usr/include/c++/13/bits/allocator.h:
 
 /usr/include/c++/13/bits/stl_algobase.h:
+
+/usr/include/c++/13/bits/stl_algo.h:
+
+/usr/include/c++/13/cstddef:
 
 /usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
 
@@ -3103,15 +3102,11 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h:
 
-/usr/include/x86_64-linux-gnu/bits/long-double.h:
-
-/usr/include/c++/13/bits/algorithmfwd.h:
-
 /usr/include/c++/13/bits/alloc_traits.h:
 
-/usr/include/c++/13/bits/concept_check.h:
-
 /app/src/CHTL/Util/StyleUtil.h:
+
+/usr/include/c++/13/bits/concept_check.h:
 
 /app/src/CHTL/CHTLNode/ElementNode.h:
 
@@ -3153,6 +3148,28 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /app/src/CHTL/CHTLNode/BaseNode.h:
 
+/usr/include/c++/13/bits/uses_allocator_args.h:
+
+/usr/include/c++/13/bits/stl_uninitialized.h:
+
+/usr/include/c++/13/bits/new_allocator.h:
+
+/usr/include/c++/13/bits/atomic_base.h:
+
+/usr/include/c++/13/bits/algorithmfwd.h:
+
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+
+/app/src/CHTL/CHTLNode/Constraint.h:
+
+/usr/include/c++/13/stdexcept:
+
+/usr/include/linux/errno.h:
+
+/usr/include/c++/13/debug/debug.h:
+
+/app/src/CHTL/Util/NodeCloner.h:
+
 /usr/include/c++/13/backward/auto_ptr.h:
 
 /app/src/CHTL/CHTLParser/Parser.cpp:
@@ -3177,10 +3194,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /usr/include/c++/13/bits/cxxabi_forced.h:
 
-/usr/include/c++/13/cstddef:
-
-/usr/include/c++/13/bits/stl_algo.h:
-
 /usr/include/c++/13/bits/erase_if.h:
 
 /usr/include/c++/13/bits/shared_ptr_atomic.h:
@@ -3188,6 +3201,10 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 /app/src/CHTL/CHTLNode/VarTemplateNode.h:
 
 /usr/include/alloca.h:
+
+/usr/include/c++/13/iosfwd:
+
+/usr/include/c++/13/bits/predefined_ops.h:
 
 /usr/include/c++/13/tuple:
 
@@ -3198,10 +3215,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 /usr/include/c++/13/bits/shared_ptr.h:
 
 /usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
-
-/usr/include/c++/13/iosfwd:
-
-/usr/include/c++/13/bits/predefined_ops.h:
 
 /usr/include/c++/13/bits/hash_bytes.h:
 
@@ -3251,13 +3264,9 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 
 /usr/include/c++/13/bits/ostream_insert.h:
 
-/usr/include/c++/13/stdexcept:
+/usr/include/endian.h:
 
-/usr/include/linux/errno.h:
-
-/usr/include/c++/13/debug/debug.h:
-
-/app/src/CHTL/Util/NodeCloner.h:
+/usr/include/stdint.h:
 
 /usr/include/c++/13/bits/stl_iterator_base_types.h:
 
@@ -3350,6 +3359,10 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 /usr/include/x86_64-linux-gnu/bits/wordsize.h:
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/atomic_word.h:
+
+/app/src/CHTL/CHTLState/StatementState.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h:
 
 /usr/include/c++/13/bits/ios_base.h:
 
@@ -3446,7 +3459,3 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.o: /app/src/CHTL/Util/StyleU
 /usr/include/c++/13/ext/alloc_traits.h:
 
 /app/src/CHTL/CHTLManage/ConfigurationManager.h:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h:
-
-/app/src/CHTL/CHTLState/StatementState.h:

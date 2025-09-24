@@ -3,6 +3,7 @@
 
 CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
   /app/src/CHTL/CHTLNode/CommentNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/StyleValue.h \
   /app/src/CHTL/CHTLNode/TextNode.h \
@@ -426,17 +427,15 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 
 /usr/include/c++/13/bits/localefwd.h:
 
-/usr/include/c++/13/bits/move.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
-
-/app/src/CHTL/CHTLNode/OriginNode.h:
-
 /usr/include/x86_64-linux-gnu/bits/types.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
 
 /usr/include/c++/13/bits/cpp_type_traits.h:
+
+/usr/include/c++/13/ostream:
+
+/usr/include/c++/13/bits/streambuf_iterator.h:
 
 /usr/include/x86_64-linux-gnu/bits/time64.h:
 
@@ -446,14 +445,6 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 
 /usr/include/c++/13/bits/shared_ptr_base.h:
 
-/usr/include/c++/13/bits/stl_multimap.h:
-
-/usr/include/c++/13/bits/istream.tcc:
-
-/usr/include/c++/13/bits/exception_ptr.h:
-
-/usr/include/c++/13/cwchar:
-
 /usr/include/c++/13/bits/locale_facets.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
@@ -462,11 +453,19 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 
 /usr/include/c++/13/bits/atomic_lockfree_defines.h:
 
-/app/src/CHTL/CHTLManage/ConfigurationManager.h:
+/usr/include/c++/13/bits/stl_multimap.h:
 
-/usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h:
+/usr/include/c++/13/bits/istream.tcc:
 
-/app/tests/main.cpp:
+/usr/include/c++/13/bits/exception_ptr.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
+
+/app/src/CHTL/CHTLNode/OriginNode.h:
+
+/usr/include/c++/13/bits/move.h:
+
+/usr/include/c++/13/cwchar:
 
 /app/src/CHTL/CHTLNode/StyleTemplateNode.h:
 
@@ -502,17 +501,11 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 
 /usr/include/assert.h:
 
+/app/src/CHTL/CHTLNode/Constraint.h:
+
 /usr/include/c++/13/bits/fstream.tcc:
 
 /app/src/CHTL/CHTLNode/CommentNode.h:
-
-/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/c++/13/bits/stl_iterator.h:
-
-/app/src/CHTL/CHTLNode/StyleValue.h:
-
-/usr/include/c++/13/bits/functexcept.h:
 
 /usr/include/c++/13/bits/node_handle.h:
 
@@ -525,6 +518,20 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 /usr/include/c++/13/bits/concept_check.h:
 
 /usr/include/c++/13/bits/alloc_traits.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h:
+
+/app/tests/main.cpp:
+
+/app/src/CHTL/CHTLManage/ConfigurationManager.h:
+
+/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
+
+/app/src/CHTL/CHTLNode/StyleValue.h:
+
+/usr/include/c++/13/bits/functexcept.h:
+
+/usr/include/c++/13/bits/stl_iterator.h:
 
 /app/src/CHTL/CHTLNode/BaseNode.h:
 
@@ -553,6 +560,14 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 /usr/include/c++/13/backward/binders.h:
 
 /usr/include/c++/13/bits/stringfwd.h:
+
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+
+/usr/include/c++/13/bits/atomic_base.h:
+
+/usr/include/c++/13/bits/uses_allocator_args.h:
+
+/usr/include/c++/13/bits/new_allocator.h:
 
 /usr/include/c++/13/cwctype:
 
@@ -646,14 +661,6 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 
 /usr/include/c++/13/exception:
 
-/usr/include/x86_64-linux-gnu/bits/long-double.h:
-
-/usr/include/c++/13/bits/atomic_base.h:
-
-/usr/include/c++/13/bits/new_allocator.h:
-
-/usr/include/c++/13/bits/uses_allocator_args.h:
-
 /usr/include/c++/13/bits/stl_function.h:
 
 /usr/include/c++/13/bits/utility.h:
@@ -715,7 +722,3 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
 /usr/include/c++/13/ext/alloc_traits.h:
 
 /usr/include/c++/13/new:
-
-/usr/include/c++/13/bits/streambuf_iterator.h:
-
-/usr/include/c++/13/ostream:

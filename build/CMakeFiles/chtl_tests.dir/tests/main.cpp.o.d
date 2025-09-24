@@ -194,5 +194,6 @@ CMakeFiles/chtl_tests.dir/tests/main.cpp.o: /app/tests/main.cpp \
  /app/tests/../src/CHTL/CHTLGenerator/Generator.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/StyleValue.h \
+ /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/Constraint.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
  /app/tests/../src/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h

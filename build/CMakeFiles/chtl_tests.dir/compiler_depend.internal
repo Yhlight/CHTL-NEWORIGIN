@@ -4,6 +4,7 @@
 CMakeFiles/chtl_tests.dir/tests/main.cpp.o
  /app/tests/main.cpp
  /app/src/CHTL/CHTLNode/CommentNode.h
+ /app/src/CHTL/CHTLNode/Constraint.h
  /app/src/CHTL/CHTLNode/ElementNode.h
  /app/src/CHTL/CHTLNode/StyleValue.h
  /app/src/CHTL/CHTLNode/TextNode.h

@@ -32,6 +32,8 @@ void test_conditional_attribute();
 void test_delete_style_property();
 void test_var_template_usage();
 void test_var_template_specialization();
+void test_style_auto_add_class();
+void test_except_clause_extended();
 
 void test_unquoted_literals() {
     std::string source = R"(
@@ -296,9 +298,89 @@ int main() {
     run_test(test_delete_style_property, "Delete Style Property");
     run_test(test_var_template_usage, "Var Template Usage");
     run_test(test_var_template_specialization, "Var Template Specialization");
+    run_test(test_style_auto_add_class, "Style Auto Add Class");
+    run_test(test_except_clause_extended, "Extended Except Clause");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_except_clause_extended() {
+    // Test case 1: Forbid a specific custom element
+    std::string source1 = R"(
+        [Custom] @Element MyComponent { div{} }
+        body {
+            except [Custom] @Element MyComponent;
+            @Element MyComponent;
+        }
+    )";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    bool exception_thrown1 = false;
+    try {
+        parser1.parse();
+    } catch (const std::runtime_error& e) {
+        exception_thrown1 = true;
+        std::string msg = e.what();
+        assert(msg.find("is not allowed") != std::string::npos);
+    }
+    assert(exception_thrown1);
+
+    // Test case 2: Forbid all HTML tags
+    std::string source2 = R"(
+        body {
+            except @Html;
+            div { }
+        }
+    )";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    bool exception_thrown2 = false;
+    try {
+        parser2.parse();
+    } catch (const std::runtime_error& e) {
+        exception_thrown2 = true;
+        std::string msg = e.what();
+        assert(msg.find("is not allowed") != std::string::npos);
+    }
+    assert(exception_thrown2);
+}
+
+void test_style_auto_add_class() {
+    // Test case 1: Class should be added automatically
+    std::string source1 = R"(
+        div {
+            style {
+                .my-class { color: blue; }
+            }
+        }
+    )";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    auto nodes1 = parser1.parse();
+    Generator generator1;
+    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, false);
+    assert(result1.find("class=\"my-class\"") != std::string::npos);
+    assert(result1.find(".my-class") != std::string::npos);
+
+    // Test case 2: Class should NOT be added if disabled
+    std::string source2 = R"(
+        [Configuration] {
+            DISABLE_STYLE_AUTO_ADD_CLASS = true;
+        }
+        div {
+            style {
+                .my-class { color: blue; }
+            }
+        }
+    )";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    auto nodes2 = parser2.parse();
+    Generator generator2;
+    std::string result2 = generator2.generate(nodes2, parser2.globalStyleContent, false);
+    assert(result2.find("class=\"my-class\"") == std::string::npos);
+    assert(result2.find(".my-class") != std::string::npos); // The style rule should still be generated
 }
 
 void test_var_template_specialization() {

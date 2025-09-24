@@ -3,6 +3,7 @@
 
 CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
   /app/src/CHTL/CHTLNode/CommentNode.h \
+  /app/src/CHTL/CHTLNode/Constraint.h \
   /app/src/CHTL/CHTLNode/ElementNode.h \
   /app/src/CHTL/CHTLNode/StyleValue.h \
   /app/src/CHTL/CHTLNode/TextNode.h \
@@ -359,10 +360,6 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/string:
 
-/usr/include/c++/13/bits/node_handle.h:
-
-/usr/include/c++/13/ios:
-
 /usr/include/time.h:
 
 /usr/include/c++/13/bits/memoryfwd.h:
@@ -391,6 +388,14 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/asm-generic/errno-base.h:
 
+/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
+
+/usr/include/c++/13/streambuf:
+
+/usr/include/c++/13/bits/exception.h:
+
 /usr/include/c++/13/typeinfo:
 
 /usr/include/c++/13/bits/cxxabi_init_exception.h:
@@ -410,6 +415,14 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
 
 /usr/include/c++/13/bits/cpp_type_traits.h:
+
+/usr/include/x86_64-linux-gnu/bits/time64.h:
+
+/usr/include/c++/13/bits/basic_ios.h:
+
+/app/src/CHTL/CHTLLexer/Token.h:
+
+/usr/include/c++/13/bits/shared_ptr_base.h:
 
 /usr/include/c++/13/bits/stl_multimap.h:
 
@@ -431,14 +444,6 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/ptr_traits.h:
 
-/app/src/CHTL/CHTLLexer/Token.h:
-
-/usr/include/x86_64-linux-gnu/bits/time64.h:
-
-/usr/include/c++/13/bits/basic_ios.h:
-
-/usr/include/c++/13/bits/shared_ptr_base.h:
-
 /usr/include/c++/13/bits/locale_facets.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
@@ -447,17 +452,7 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/atomic_lockfree_defines.h:
 
-/app/src/CHTL/CHTLManage/ConfigurationManager.h:
-
 /app/src/CHTL/CHTLNode/StyleTemplateNode.h:
-
-/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/c++/13/bits/functexcept.h:
-
-/usr/include/c++/13/bits/stl_iterator.h:
-
-/app/src/CHTL/CHTLNode/StyleValue.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
 
@@ -479,6 +474,16 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 
 /usr/include/c++/13/bits/basic_string.tcc:
 
+/app/src/CHTL/CHTLNode/Constraint.h:
+
+/usr/include/x86_64-linux-gnu/bits/long-double.h:
+
+/usr/include/c++/13/bits/atomic_base.h:
+
+/usr/include/c++/13/bits/new_allocator.h:
+
+/usr/include/c++/13/bits/uses_allocator_args.h:
+
 /app/src/CHTL/CHTLNode/CommentNode.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
@@ -486,6 +491,10 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/c++/13/cstddef:
 
 /usr/include/c++/13/bits/cxxabi_forced.h:
+
+/usr/include/c++/13/bits/node_handle.h:
+
+/usr/include/c++/13/ios:
 
 /usr/include/c++/13/bits/concept_check.h:
 
@@ -500,6 +509,16 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/errno.h:
 
 /usr/include/c++/13/bits/functional_hash.h:
+
+/app/src/CHTL/CHTLManage/ConfigurationManager.h:
+
+/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
+
+/app/src/CHTL/CHTLNode/StyleValue.h:
+
+/usr/include/c++/13/bits/functexcept.h:
+
+/usr/include/c++/13/bits/stl_iterator.h:
 
 /app/src/CHTL/CHTLNode/BaseNode.h:
 
@@ -522,14 +541,6 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/c++/13/bits/ostream.tcc:
 
 /usr/include/c++/13/bits/ostream_insert.h:
-
-/usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
-
-/usr/include/c++/13/bits/exception.h:
-
-/usr/include/c++/13/streambuf:
 
 /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
 
@@ -612,14 +623,6 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
 /usr/include/wctype.h:
 
 /usr/include/c++/13/exception:
-
-/usr/include/x86_64-linux-gnu/bits/long-double.h:
-
-/usr/include/c++/13/bits/atomic_base.h:
-
-/usr/include/c++/13/bits/new_allocator.h:
-
-/usr/include/c++/13/bits/uses_allocator_args.h:
 
 /usr/include/c++/13/bits/stl_function.h:
 

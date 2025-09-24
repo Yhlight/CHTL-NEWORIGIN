@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include "StyleValue.h"
+#include "Constraint.h"
 
 // Represents an element node in the AST, e.g., html, body, div.
 class ElementNode : public BaseNode {
@@ -27,5 +28,5 @@ public:
     std::vector<std::unique_ptr<BaseNode>> children;
 
     // A list of constraints defining which child types are not allowed.
-    std::vector<std::string> constraints;
+    std::vector<Constraint> constraints;
 };
