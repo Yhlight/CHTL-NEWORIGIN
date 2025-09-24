@@ -168,4 +168,5 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/State.cpp.o: \
  /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/TemplateNode.h \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
- /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h
+ /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLState/../CHTLContext/Configuration.h

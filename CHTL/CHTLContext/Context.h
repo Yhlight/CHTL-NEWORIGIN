@@ -9,6 +9,7 @@
 #include "../CHTLNode/Node.h"
 #include "../CHTLNode/ElementNode.h"
 #include "NamespaceData.h"
+#include "Configuration.h"
 
 namespace CHTL {
 
@@ -37,6 +38,9 @@ public:
 
     // Global code blocks
     std::string globalCss;
+
+    // Compiler configuration
+    Configuration config;
 
 private:
     std::unique_ptr<State> currentState;

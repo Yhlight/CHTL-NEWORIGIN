@@ -11,7 +11,9 @@ void ParseTemplateStrategy::Execute(Context* context, Parser& parser) {
     if (parser.CurrentToken().type != TokenType::LEFT_BRACKET) return;
     parser.ConsumeToken();
 
-    if (parser.CurrentToken().type != TokenType::IDENTIFIER || parser.CurrentToken().lexeme != "Template") return;
+    std::string template_keyword = context->config.KEYWORD_TEMPLATE;
+    template_keyword = template_keyword.substr(1, template_keyword.length() - 2);
+    if (parser.CurrentToken().type != TokenType::IDENTIFIER || parser.CurrentToken().lexeme != template_keyword) return;
     parser.ConsumeToken();
 
     if (parser.CurrentToken().type != TokenType::RIGHT_BRACKET) return;

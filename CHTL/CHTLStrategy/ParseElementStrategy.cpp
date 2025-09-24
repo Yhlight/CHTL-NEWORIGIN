@@ -30,23 +30,41 @@ std::string ParseSingleValueComponent(Context* context, Parser& parser) {
         parser.ConsumeToken(); parser.ConsumeToken();
         std::string varName = parser.CurrentToken().lexeme;
         parser.ConsumeToken();
-        if (parser.CurrentToken().type == TokenType::RIGHT_PAREN) parser.ConsumeToken();
+        if (parser.CurrentToken().type != TokenType::RIGHT_PAREN) { return "ERROR"; }
+        parser.ConsumeToken();
 
-        auto ns_it = context->namespaces.find(context->currentNamespace);
-        if (ns_it != context->namespaces.end()) {
-            auto group_it = ns_it->second.varTemplates.find(varGroupName);
-            if (group_it != ns_it->second.varTemplates.end()) {
-                auto var_it = group_it->second.GetVar(varName);
-                if (var_it) return *var_it;
+        std::string ns_to_use = "";
+        bool specific_ns_used = false;
+        if (parser.CurrentToken().type == TokenType::IDENTIFIER && parser.CurrentToken().lexeme == context->config.KEYWORD_FROM) {
+            parser.ConsumeToken();
+            ns_to_use = parser.CurrentToken().lexeme;
+            parser.ConsumeToken();
+            specific_ns_used = true;
+        }
+
+        const TemplateVarGroup* foundGroup = nullptr;
+        if (specific_ns_used) {
+            auto ns_it = context->namespaces.find(ns_to_use);
+            if (ns_it != context->namespaces.end()) {
+                auto group_it = ns_it->second.varTemplates.find(varGroupName);
+                if (group_it != ns_it->second.varTemplates.end()) foundGroup = &group_it->second;
+            }
+        } else {
+            auto ns_it = context->namespaces.find(context->currentNamespace);
+            if (ns_it != context->namespaces.end()) {
+                auto group_it = ns_it->second.varTemplates.find(varGroupName);
+                if (group_it != ns_it->second.varTemplates.end()) foundGroup = &group_it->second;
+            }
+            if (!foundGroup && context->currentNamespace != GLOBAL_NAMESPACE) {
+                auto& global_ns = context->namespaces[GLOBAL_NAMESPACE];
+                auto group_it = global_ns.varTemplates.find(varGroupName);
+                if (group_it != global_ns.varTemplates.end()) foundGroup = &group_it->second;
             }
         }
-        if (context->currentNamespace != GLOBAL_NAMESPACE) {
-            auto& global_ns = context->namespaces[GLOBAL_NAMESPACE];
-            auto group_it = global_ns.varTemplates.find(varGroupName);
-            if (group_it != global_ns.varTemplates.end()) {
-                auto var_it = group_it->second.GetVar(varName);
-                if (var_it) return *var_it;
-            }
+
+        if (foundGroup) {
+            auto var_it = foundGroup->GetVar(varName);
+            if (var_it) return *var_it;
         }
         return "VAR_NOT_FOUND";
     }
@@ -113,26 +131,18 @@ std::string ParseConditionalValue(Context* context, Parser& parser, const std::m
 }
 
 std::string ParseValue(Context* context, Parser& parser, const std::map<std::string, std::string>& computedStyles) {
-    // Lookahead to decide what kind of expression this is.
-    int temp_idx = 0;
     bool isConditional = false;
-    bool isArithmetic = false;
+    int temp_idx = 0;
     while(true) {
         const Token& t = parser.PeekTokenAt(temp_idx);
         if (t.type == TokenType::SEMICOLON || t.type == TokenType::RIGHT_BRACE || t.type == TokenType::END_OF_FILE) break;
         if (t.type == TokenType::QUESTION) { isConditional = true; break; }
-        if (t.type == TokenType::PLUS || t.type == TokenType::MINUS || t.type == TokenType::STAR || t.type == TokenType::SLASH) {
-            isArithmetic = true;
-        }
         temp_idx++;
     }
-
     if (isConditional) {
         return ParseConditionalValue(context, parser, computedStyles);
-    } else if (isArithmetic) {
-        return ParseArithmeticValue(context, parser);
     } else {
-        return ParseSingleValueComponent(context, parser);
+        return ParseArithmeticValue(context, parser);
     }
 }
 
@@ -152,14 +162,13 @@ void ParseStyleBlock(Context* context, Parser& parser) {
     if (parser.CurrentToken().type != TokenType::LEFT_BRACE) return;
     parser.ConsumeToken();
     std::map<std::string, std::string> computedStyles;
-    std::stringstream styleString;
+
     while (parser.CurrentToken().type != TokenType::RIGHT_BRACE && !parser.IsAtEnd()) {
         if (parser.CurrentToken().type == TokenType::IDENTIFIER && parser.PeekNextToken().type == TokenType::COLON) {
             std::string prop = parser.CurrentToken().lexeme;
             parser.ConsumeToken(); parser.ConsumeToken();
             std::string value = ParseValue(context, parser, computedStyles);
             computedStyles[prop] = value;
-            styleString << prop << ": " << value << "; ";
             if (parser.CurrentToken().type == TokenType::SEMICOLON) parser.ConsumeToken();
         } else if (parser.CurrentToken().type == TokenType::AT) {
              parser.ConsumeToken();
@@ -167,33 +176,53 @@ void ParseStyleBlock(Context* context, Parser& parser) {
                  parser.ConsumeToken();
                  std::string templateName = parser.CurrentToken().lexeme;
                  parser.ConsumeToken();
-                 if (parser.CurrentToken().type == TokenType::SEMICOLON) parser.ConsumeToken();
+
+                 std::string ns_to_use = "";
+                 bool specific_ns_used = false;
+                 if (parser.CurrentToken().type == TokenType::IDENTIFIER && parser.CurrentToken().lexeme == context->config.KEYWORD_FROM) {
+                     parser.ConsumeToken();
+                     ns_to_use = parser.CurrentToken().lexeme;
+                     parser.ConsumeToken();
+                     specific_ns_used = true;
+                 }
 
                  const TemplateStyleGroup* foundTemplate = nullptr;
-                 auto ns_it = context->namespaces.find(context->currentNamespace);
-                 if (ns_it != context->namespaces.end()) {
-                    auto it = ns_it->second.styleTemplates.find(templateName);
-                    if (it != ns_it->second.styleTemplates.end()) foundTemplate = &it->second;
+                 if(specific_ns_used) {
+                    auto ns_it = context->namespaces.find(ns_to_use);
+                    if (ns_it != context->namespaces.end()) {
+                        auto it = ns_it->second.styleTemplates.find(templateName);
+                        if (it != ns_it->second.styleTemplates.end()) foundTemplate = &it->second;
+                    }
+                 } else {
+                    auto ns_it = context->namespaces.find(context->currentNamespace);
+                    if (ns_it != context->namespaces.end()) {
+                        auto it = ns_it->second.styleTemplates.find(templateName);
+                        if (it != ns_it->second.styleTemplates.end()) foundTemplate = &it->second;
+                    }
+                    if (!foundTemplate && context->currentNamespace != GLOBAL_NAMESPACE) {
+                        auto& global_ns = context->namespaces[GLOBAL_NAMESPACE];
+                        auto it = global_ns.styleTemplates.find(templateName);
+                        if (it != global_ns.styleTemplates.end()) foundTemplate = &it->second;
+                    }
                  }
-                if (!foundTemplate && context->currentNamespace != GLOBAL_NAMESPACE) {
-                    auto& global_ns = context->namespaces[GLOBAL_NAMESPACE];
-                    auto it = global_ns.styleTemplates.find(templateName);
-                    if (it != global_ns.styleTemplates.end()) foundTemplate = &it->second;
-                }
 
                  if (foundTemplate) {
-                     for (const auto& tmpl_prop : foundTemplate->GetProperties()) {
-                         styleString << tmpl_prop.name << ": " << tmpl_prop.value << "; ";
-                         computedStyles[tmpl_prop.name] = tmpl_prop.value;
-                     }
+                     for (const auto& prop : foundTemplate->GetProperties()) computedStyles[prop.name] = prop.value;
                  } else {
                     std::cerr << "Error: Style template '" << templateName << "' not found." << std::endl;
                  }
+                 if (parser.CurrentToken().type == TokenType::SEMICOLON) parser.ConsumeToken();
              }
         } else {
             parser.ConsumeToken();
         }
     }
+
+    std::stringstream styleString;
+    for (const auto& pair : computedStyles) {
+        styleString << pair.first << ": " << pair.second << "; ";
+    }
+
     if (parser.CurrentToken().type == TokenType::RIGHT_BRACE) parser.ConsumeToken();
     static_cast<ElementNode*>(context->GetCurrentParent())->attributes["style"] = styleString.str();
 }
@@ -237,23 +266,42 @@ void ParseElementStrategy::Execute(Context* context, Parser& parser) {
                  parser.ConsumeToken();
                  std::string templateName = parser.CurrentToken().lexeme;
                  parser.ConsumeToken();
-                 if (parser.CurrentToken().type == TokenType::SEMICOLON) parser.ConsumeToken();
-                 const TemplateElementGroup* foundTemplate = nullptr;
-                 auto ns_it = context->namespaces.find(context->currentNamespace);
-                 if (ns_it != context->namespaces.end()) {
-                    auto it = ns_it->second.elementTemplates.find(templateName);
-                    if (it != ns_it->second.elementTemplates.end()) foundTemplate = &it->second;
+
+                 std::string ns_to_use = "";
+                 bool specific_ns_used = false;
+                 if (parser.CurrentToken().type == TokenType::IDENTIFIER && parser.CurrentToken().lexeme == context->config.KEYWORD_FROM) {
+                     parser.ConsumeToken();
+                     ns_to_use = parser.CurrentToken().lexeme;
+                     parser.ConsumeToken();
+                     specific_ns_used = true;
                  }
-                if (!foundTemplate && context->currentNamespace != GLOBAL_NAMESPACE) {
-                    auto& global_ns = context->namespaces[GLOBAL_NAMESPACE];
-                    auto it = global_ns.elementTemplates.find(templateName);
-                    if (it != global_ns.elementTemplates.end()) foundTemplate = &it->second;
-                }
+
+                 const TemplateElementGroup* foundTemplate = nullptr;
+                 if(specific_ns_used) {
+                    auto ns_it = context->namespaces.find(ns_to_use);
+                    if (ns_it != context->namespaces.end()) {
+                        auto it = ns_it->second.elementTemplates.find(templateName);
+                        if (it != ns_it->second.elementTemplates.end()) foundTemplate = &it->second;
+                    }
+                 } else {
+                    auto ns_it = context->namespaces.find(context->currentNamespace);
+                    if (ns_it != context->namespaces.end()) {
+                        auto it = ns_it->second.elementTemplates.find(templateName);
+                        if (it != ns_it->second.elementTemplates.end()) foundTemplate = &it->second;
+                    }
+                    if (!foundTemplate && context->currentNamespace != GLOBAL_NAMESPACE) {
+                        auto& global_ns = context->namespaces[GLOBAL_NAMESPACE];
+                        auto it = global_ns.elementTemplates.find(templateName);
+                        if (it != global_ns.elementTemplates.end()) foundTemplate = &it->second;
+                    }
+                 }
+
                  if (foundTemplate) {
                      parser.InjectTokens(foundTemplate->GetTokens());
                  } else {
                     std::cerr << "Error: Element template '" << templateName << "' not found." << std::endl;
                  }
+                 if (parser.CurrentToken().type == TokenType::SEMICOLON) parser.ConsumeToken();
              }
         } else {
             parser.ConsumeToken();

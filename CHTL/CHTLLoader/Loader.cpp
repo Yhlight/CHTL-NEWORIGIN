@@ -28,6 +28,21 @@ void Loader::ImportFile(const std::string& filepath) {
     }
     loadedFiles.insert(filepath);
 
+    // Save the current namespace to restore it after the import
+    std::string originalNamespace = context.currentNamespace;
+
+    // Set the namespace for the new file. Default to filename if not specified.
+    // This is a simplified version of the spec's default namespace logic.
+    size_t last_slash = filepath.find_last_of("/\\");
+    size_t last_dot = filepath.find_last_of('.');
+    std::string default_ns = filepath.substr(last_slash == std::string::npos ? 0 : last_slash + 1,
+                                            (last_dot == std::string::npos ? std::string::npos : last_dot) - (last_slash == std::string::npos ? 0 : last_slash + 1));
+    context.currentNamespace = default_ns;
+    if (context.namespaces.find(default_ns) == context.namespaces.end()) {
+        context.namespaces[default_ns] = NamespaceData{default_ns};
+    }
+
+
     // Read the file
     auto sourceOpt = Util::ReadFile(filepath);
     if (!sourceOpt) {
@@ -49,6 +64,9 @@ void Loader::ImportFile(const std::string& filepath) {
     // Create a parser and parse the tokens into the shared context
     Parser parser(context, *this);
     parser.Parse(std::move(tokens));
+
+    // Restore the original namespace
+    context.currentNamespace = originalNamespace;
 }
 
 } // namespace CHTL

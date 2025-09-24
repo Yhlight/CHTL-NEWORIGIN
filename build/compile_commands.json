@@ -91,6 +91,18 @@
 },
 {
   "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp",
+  "file": "/app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp",
+  "file": "/app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
   "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o -c /app/CHTL/CHTLGenerator/AstPrinter.cpp",
   "file": "/app/CHTL/CHTLGenerator/AstPrinter.cpp",
   "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o"

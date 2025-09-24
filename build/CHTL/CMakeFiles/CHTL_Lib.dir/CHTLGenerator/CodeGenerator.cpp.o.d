@@ -194,4 +194,5 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o: \
  /app/CHTL/CHTLGenerator/../CHTLContext/../CHTLNode/TemplateNode.h \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
- /app/CHTL/CHTLGenerator/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h
+ /app/CHTL/CHTLGenerator/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLGenerator/../CHTLContext/Configuration.h

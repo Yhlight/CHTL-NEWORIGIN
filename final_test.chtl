@@ -1,0 +1,18 @@
+// Import the library of styles and variables.
+// The loader will place this in the 'final_styles' namespace by default.
+[Import] @Chtl from "final_styles.chtl"
+
+body {
+    # This button should get its styles from the imported namespace
+    button {
+        id: "login-btn";
+        text { "Log In" }
+        style {
+            // Use a template from the imported namespace via 'from'
+            @Style Button from final_styles;
+
+            // Use a variable from the imported namespace via 'from'
+            margin-left: Sizing(base-unit) from final_styles * 2; // 16px
+        }
+    }
+}

@@ -19,6 +19,8 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/app/CHTL/CHTLParser/Parser.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLParser/Parser.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLParser/Parser.cpp.o.d"
   "/app/CHTL/CHTLState/ParsingState.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o.d"
   "/app/CHTL/CHTLState/State.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/State.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/State.cpp.o.d"
+  "/app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o.d"
+  "/app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o.d"
   "/app/CHTL/CHTLStrategy/ParseElementStrategy.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseElementStrategy.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseElementStrategy.cpp.o.d"
   "/app/CHTL/CHTLStrategy/ParseImportStrategy.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseImportStrategy.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseImportStrategy.cpp.o.d"
   "/app/CHTL/CHTLStrategy/ParseNamespaceStrategy.cpp" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.o" "gcc" "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.o.d"

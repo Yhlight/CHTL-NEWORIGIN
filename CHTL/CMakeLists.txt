@@ -13,6 +13,8 @@ add_library(CHTL_Lib STATIC
     CHTLStrategy/ParseTemplateStrategy.cpp
     CHTLStrategy/ParseImportStrategy.cpp
     CHTLStrategy/ParseNamespaceStrategy.cpp
+    CHTLStrategy/ParseConfigurationStrategy.cpp
+    CHTLStrategy/ParseCustomStrategy.cpp
     CHTLGenerator/AstPrinter.cpp
     CHTLGenerator/CodeGenerator.cpp
 )

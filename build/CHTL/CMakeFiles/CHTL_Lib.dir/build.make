@@ -251,10 +251,38 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.s: cmake_fo
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.s"
 	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTLStrategy/ParseNamespaceStrategy.cpp -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.s
 
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/flags.make
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o: /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o"
+	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o -MF CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o.d -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp
+
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.i"
+	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp > CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.i
+
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.s"
+	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.s
+
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/flags.make
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o: /app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o"
+	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o -MF CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o.d -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp
+
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.i"
+	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp > CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.i
+
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.s"
+	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/CHTL/CHTLStrategy/ParseCustomStrategy.cpp -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.s
+
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/flags.make
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o: /app/CHTL/CHTLGenerator/AstPrinter.cpp
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o"
 	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o -MF CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o.d -o CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o -c /app/CHTL/CHTLGenerator/AstPrinter.cpp
 
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.i: cmake_force
@@ -268,7 +296,7 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.s: cmake_force
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/flags.make
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o: /app/CHTL/CHTLGenerator/CodeGenerator.cpp
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o: CHTL/CMakeFiles/CHTL_Lib.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o"
 	cd /app/build/CHTL && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o -MF CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o.d -o CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o -c /app/CHTL/CHTLGenerator/CodeGenerator.cpp
 
 CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.i: cmake_force
@@ -294,6 +322,8 @@ CHTL_Lib_OBJECTS = \
 "CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseTemplateStrategy.cpp.o" \
 "CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseImportStrategy.cpp.o" \
 "CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.o" \
+"CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o" \
+"CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o" \
 "CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o" \
 "CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o"
 
@@ -313,11 +343,13 @@ CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseElementStrate
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseTemplateStrategy.cpp.o
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseImportStrategy.cpp.o
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.o
+CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o
+CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/build.make
 CHTL/libCHTL_Lib.a: CHTL/CMakeFiles/CHTL_Lib.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Linking CXX static library libCHTL_Lib.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Linking CXX static library libCHTL_Lib.a"
 	cd /app/build/CHTL && $(CMAKE_COMMAND) -P CMakeFiles/CHTL_Lib.dir/cmake_clean_target.cmake
 	cd /app/build/CHTL && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/CHTL_Lib.dir/link.txt --verbose=$(VERBOSE)
 

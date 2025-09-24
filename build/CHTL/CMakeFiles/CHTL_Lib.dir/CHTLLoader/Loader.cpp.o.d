@@ -170,6 +170,7 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLLoader/Loader.cpp.o: \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
  /app/CHTL/CHTLLoader/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLLoader/../CHTLContext/Configuration.h \
  /app/CHTL/CHTLLoader/../CHTLNode/Node.h /usr/include/c++/13/set \
  /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
@@ -185,6 +186,8 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLLoader/Loader.cpp.o: \
  /app/CHTL/CHTLLoader/../CHTLState/../CHTLStrategy/ParseTemplateStrategy.h \
  /app/CHTL/CHTLLoader/../CHTLState/../CHTLStrategy/ParseImportStrategy.h \
  /app/CHTL/CHTLLoader/../CHTLState/../CHTLStrategy/ParseNamespaceStrategy.h \
+ /app/CHTL/CHTLLoader/../CHTLState/../CHTLStrategy/ParseConfigurationStrategy.h \
+ /app/CHTL/CHTLLoader/../CHTLState/../CHTLStrategy/ParseCustomStrategy.h \
  /app/CHTL/CHTLLoader/../../Scanner/UnifiedScanner.h \
  /app/CHTL/CHTLLoader/../../Util/FileSystem/File.h \
  /usr/include/c++/13/iostream /usr/include/c++/13/ostream \

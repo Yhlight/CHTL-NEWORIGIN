@@ -394,6 +394,54 @@ CHTLState/State.cpp.s:
 	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/State.cpp.s
 .PHONY : CHTLState/State.cpp.s
 
+CHTLStrategy/ParseConfigurationStrategy.o: CHTLStrategy/ParseConfigurationStrategy.cpp.o
+.PHONY : CHTLStrategy/ParseConfigurationStrategy.o
+
+# target to build an object file
+CHTLStrategy/ParseConfigurationStrategy.cpp.o:
+	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o
+.PHONY : CHTLStrategy/ParseConfigurationStrategy.cpp.o
+
+CHTLStrategy/ParseConfigurationStrategy.i: CHTLStrategy/ParseConfigurationStrategy.cpp.i
+.PHONY : CHTLStrategy/ParseConfigurationStrategy.i
+
+# target to preprocess a source file
+CHTLStrategy/ParseConfigurationStrategy.cpp.i:
+	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.i
+.PHONY : CHTLStrategy/ParseConfigurationStrategy.cpp.i
+
+CHTLStrategy/ParseConfigurationStrategy.s: CHTLStrategy/ParseConfigurationStrategy.cpp.s
+.PHONY : CHTLStrategy/ParseConfigurationStrategy.s
+
+# target to generate assembly for a file
+CHTLStrategy/ParseConfigurationStrategy.cpp.s:
+	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.s
+.PHONY : CHTLStrategy/ParseConfigurationStrategy.cpp.s
+
+CHTLStrategy/ParseCustomStrategy.o: CHTLStrategy/ParseCustomStrategy.cpp.o
+.PHONY : CHTLStrategy/ParseCustomStrategy.o
+
+# target to build an object file
+CHTLStrategy/ParseCustomStrategy.cpp.o:
+	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.o
+.PHONY : CHTLStrategy/ParseCustomStrategy.cpp.o
+
+CHTLStrategy/ParseCustomStrategy.i: CHTLStrategy/ParseCustomStrategy.cpp.i
+.PHONY : CHTLStrategy/ParseCustomStrategy.i
+
+# target to preprocess a source file
+CHTLStrategy/ParseCustomStrategy.cpp.i:
+	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.i
+.PHONY : CHTLStrategy/ParseCustomStrategy.cpp.i
+
+CHTLStrategy/ParseCustomStrategy.s: CHTLStrategy/ParseCustomStrategy.cpp.s
+.PHONY : CHTLStrategy/ParseCustomStrategy.s
+
+# target to generate assembly for a file
+CHTLStrategy/ParseCustomStrategy.cpp.s:
+	cd /app/build && $(MAKE) $(MAKESILENT) -f CHTL/CMakeFiles/CHTL_Lib.dir/build.make CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseCustomStrategy.cpp.s
+.PHONY : CHTLStrategy/ParseCustomStrategy.cpp.s
+
 CHTLStrategy/ParseElementStrategy.o: CHTLStrategy/ParseElementStrategy.cpp.o
 .PHONY : CHTLStrategy/ParseElementStrategy.o
 
@@ -532,6 +580,12 @@ help:
 	@echo "... CHTLState/State.o"
 	@echo "... CHTLState/State.i"
 	@echo "... CHTLState/State.s"
+	@echo "... CHTLStrategy/ParseConfigurationStrategy.o"
+	@echo "... CHTLStrategy/ParseConfigurationStrategy.i"
+	@echo "... CHTLStrategy/ParseConfigurationStrategy.s"
+	@echo "... CHTLStrategy/ParseCustomStrategy.o"
+	@echo "... CHTLStrategy/ParseCustomStrategy.i"
+	@echo "... CHTLStrategy/ParseCustomStrategy.s"
 	@echo "... CHTLStrategy/ParseElementStrategy.o"
 	@echo "... CHTLStrategy/ParseElementStrategy.i"
 	@echo "... CHTLStrategy/ParseElementStrategy.s"

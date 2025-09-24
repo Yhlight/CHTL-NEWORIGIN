@@ -173,6 +173,7 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLParser/Parser.cpp.o: \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
  /app/CHTL/CHTLParser/../CHTLLoader/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLParser/../CHTLLoader/../CHTLContext/Configuration.h \
  /app/CHTL/CHTLParser/../CHTLLoader/../CHTLNode/Node.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h \
@@ -183,4 +184,6 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLParser/Parser.cpp.o: \
  /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/Strategy.h \
  /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/ParseTemplateStrategy.h \
  /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/ParseImportStrategy.h \
- /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/ParseNamespaceStrategy.h
+ /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/ParseNamespaceStrategy.h \
+ /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/ParseConfigurationStrategy.h \
+ /app/CHTL/CHTLParser/../CHTLState/../CHTLStrategy/ParseCustomStrategy.h

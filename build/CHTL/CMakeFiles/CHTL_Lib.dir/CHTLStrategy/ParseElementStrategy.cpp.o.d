@@ -171,6 +171,7 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseElementStrategy.cpp.o: \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
  /app/CHTL/CHTLStrategy/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/Configuration.h \
  /app/CHTL/CHTLStrategy/../CHTLParser/Parser.h \
  /app/CHTL/CHTLStrategy/../CHTLParser/../CHTLLexer/Token.h \
  /app/CHTL/CHTLStrategy/../CHTLParser/../CHTLLoader/Loader.h \

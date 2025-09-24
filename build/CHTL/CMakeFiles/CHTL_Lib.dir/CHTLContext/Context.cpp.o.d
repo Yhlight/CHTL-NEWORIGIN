@@ -169,6 +169,7 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLContext/Context.cpp.o: \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
  /app/CHTL/CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLContext/Configuration.h \
  /app/CHTL/CHTLContext/../CHTLState/State.h \
  /app/CHTL/CHTLContext/../CHTLParser/Parser.h \
  /app/CHTL/CHTLContext/../CHTLParser/../CHTLLexer/Token.h \

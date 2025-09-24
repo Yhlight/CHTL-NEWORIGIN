@@ -187,6 +187,7 @@ CompilerDispatcher/CMakeFiles/chtl_compiler.dir/main.cpp.o: \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
  /app/CHTL/CHTLLoader/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLLoader/../CHTLContext/Configuration.h \
  /app/CHTL/CHTLLoader/../CHTLNode/Node.h /usr/include/c++/13/set \
  /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h /app/CHTL/CHTLNode/Node.h \

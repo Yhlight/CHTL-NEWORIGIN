@@ -71,6 +71,23 @@ private:
     std::vector<Token> tokens;
 };
 
+// Represents a [Custom] @Style ... definition
+class CustomStyleGroup {
+public:
+    explicit CustomStyleGroup(const std::string& name) : name(name) {}
+    CustomStyleGroup() = default;
+
+    std::string GetName() const { return name; }
+    const std::vector<StyleProperty>& GetProperties() const { return properties; }
+
+    void AddProperty(const StyleProperty& prop) { properties.push_back(prop); }
+
+private:
+    std::string name;
+    std::vector<StyleProperty> properties;
+};
+
+
 } // namespace CHTL
 
 #endif // CHTL_TEMPLATE_NODE_H

@@ -1,13 +1,9 @@
-CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o: \
- /app/CHTL/CHTLState/ParsingState.cpp /usr/include/stdc-predef.h \
- /app/CHTL/CHTLState/ParsingState.h /app/CHTL/CHTLState/State.h \
- /app/CHTL/CHTLState/../CHTLStrategy/ParseElementStrategy.h \
- /app/CHTL/CHTLState/../CHTLStrategy/Strategy.h \
- /app/CHTL/CHTLState/../CHTLStrategy/ParseTemplateStrategy.h \
- /app/CHTL/CHTLState/../CHTLStrategy/ParseImportStrategy.h \
- /app/CHTL/CHTLState/../CHTLStrategy/ParseNamespaceStrategy.h \
- /app/CHTL/CHTLState/../CHTLStrategy/ParseConfigurationStrategy.h \
- /app/CHTL/CHTLState/../CHTLStrategy/ParseCustomStrategy.h \
+CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseConfigurationStrategy.cpp.o: \
+ /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.cpp \
+ /usr/include/stdc-predef.h \
+ /app/CHTL/CHTLStrategy/ParseConfigurationStrategy.h \
+ /app/CHTL/CHTLStrategy/Strategy.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/Context.h \
  /usr/include/c++/13/memory /usr/include/c++/13/bits/memoryfwd.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -121,8 +117,7 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o: \
  /usr/include/c++/13/bits/atomic_lockfree_defines.h \
  /usr/include/c++/13/backward/auto_ptr.h \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
- /usr/include/c++/13/pstl/execution_defs.h \
- /app/CHTL/CHTLState/../CHTLContext/Context.h /usr/include/c++/13/vector \
+ /usr/include/c++/13/pstl/execution_defs.h /usr/include/c++/13/vector \
  /usr/include/c++/13/bits/stl_vector.h \
  /usr/include/c++/13/initializer_list \
  /usr/include/c++/13/bits/stl_bvector.h \
@@ -169,20 +164,20 @@ CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
  /usr/include/c++/13/bits/charconv.h \
  /usr/include/c++/13/bits/basic_string.tcc \
- /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/Node.h \
- /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/ElementNode.h \
- /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/Node.h \
- /app/CHTL/CHTLState/../CHTLContext/NamespaceData.h \
- /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/TemplateNode.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/../CHTLNode/Node.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/../CHTLNode/ElementNode.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/../CHTLNode/Node.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/NamespaceData.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/../CHTLNode/TemplateNode.h \
  /usr/include/c++/13/optional \
  /usr/include/c++/13/bits/enable_special_members.h \
- /app/CHTL/CHTLState/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
- /app/CHTL/CHTLState/../CHTLContext/Configuration.h \
- /app/CHTL/CHTLState/../CHTLParser/Parser.h \
- /app/CHTL/CHTLState/../CHTLParser/../CHTLLexer/Token.h \
- /app/CHTL/CHTLState/../CHTLParser/../CHTLLoader/Loader.h \
- /app/CHTL/CHTLState/../CHTLParser/../CHTLLoader/../CHTLContext/Context.h \
- /app/CHTL/CHTLState/../CHTLParser/../CHTLLoader/../CHTLNode/Node.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/../CHTLNode/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLStrategy/../CHTLContext/Configuration.h \
+ /app/CHTL/CHTLStrategy/../CHTLParser/Parser.h \
+ /app/CHTL/CHTLStrategy/../CHTLParser/../CHTLLexer/Token.h \
+ /app/CHTL/CHTLStrategy/../CHTLParser/../CHTLLoader/Loader.h \
+ /app/CHTL/CHTLStrategy/../CHTLParser/../CHTLLoader/../CHTLContext/Context.h \
+ /app/CHTL/CHTLStrategy/../CHTLParser/../CHTLLoader/../CHTLNode/Node.h \
  /usr/include/c++/13/set /usr/include/c++/13/bits/stl_set.h \
  /usr/include/c++/13/bits/stl_multiset.h /usr/include/c++/13/iostream \
  /usr/include/c++/13/ostream /usr/include/c++/13/ios \

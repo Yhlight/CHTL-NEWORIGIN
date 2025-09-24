@@ -11,6 +11,7 @@ namespace CHTL {
 struct NamespaceData {
     std::string name;
     std::map<std::string, TemplateStyleGroup> styleTemplates;
+    std::map<std::string, CustomStyleGroup> customStyleTemplates;
     std::map<std::string, TemplateVarGroup> varTemplates;
     std::map<std::string, TemplateElementGroup> elementTemplates;
 };
