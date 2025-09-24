@@ -4,6 +4,13 @@ cmake_minimum_required(VERSION 3.10)
 # Project Name - Enable both CXX (C++) and C languages
 project(CHTL_FINAL CXX C)
 
+# Set a default build type to Debug if none was specified by the user.
+# This enables debugging symbols and assertions, which helps catch bugs.
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build (Debug, Release, RelWithDebInfo, MinSizeRel)." FORCE)
+endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 # Set the C++ standard to C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

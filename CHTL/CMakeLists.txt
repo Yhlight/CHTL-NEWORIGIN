@@ -2,8 +2,9 @@
 add_library(CHTL STATIC
     CHTL.cpp # Dummy file, will be removed as real components are added
 
-    # Core Interfaces
+    # Core Interfaces & AST Nodes
     CHTLNode/BaseNode.cpp
+    CHTLNode/ElementNode.cpp
     CHTLState/StateMachine.cpp
 
     # Lexer
@@ -12,6 +13,7 @@ add_library(CHTL STATIC
     # Parser and States
     CHTLParser/Parser.cpp
     CHTLState/GlobalScopeState.cpp
+    CHTLState/ParsingElementState.cpp
 
     # Context
     CHTLContext/Context.cpp

@@ -16,7 +16,7 @@ public:
     // The visit methods for each concrete node type.
     // The implementation of these in a concrete visitor will define the operation.
     virtual void visit(BaseNode& node) = 0;
-    // virtual void visit(ElementNode& node) = 0;
+    virtual void visit(ElementNode& node) = 0;
     // virtual void visit(TextNode& node) = 0;
 };
 
