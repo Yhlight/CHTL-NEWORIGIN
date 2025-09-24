@@ -20,3 +20,8 @@ add_subdirectory(CHTL_JS)
 add_subdirectory(Util)
 add_subdirectory(Test)
 
+add_executable(chtl_cli examples/chtl_cli.cpp)
+target_include_directories(chtl_cli PRIVATE ${CMAKE_SOURCE_DIR}/CompilerDispatcher)
+target_link_libraries(chtl_cli PRIVATE dispatcher codemerger)
+target_compile_features(chtl_cli PRIVATE cxx_std_20)
+
