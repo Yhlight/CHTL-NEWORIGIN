@@ -11,17 +11,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # --- Define CHTL Library ---
 # This makes it easy to link all CHTL source files to multiple executables.
 
-# Find all source files for the library
-file(GLOB_RECURSE CHTL_SOURCES
-    "src/CHTL/*.cpp"
-    "src/CHTL/CHTLGenerator/*.cpp"
-    "src/CHTL/CHTLLexer/*.cpp"
-    "src/CHTL/CHTLLoader/*.cpp"
-    "src/CHTL/CHTLManage/*.cpp"
-    "src/CHTL/CHTLNode/*.cpp"
-    "src/CHTL/CHTLParser/*.cpp"
-    "src/CHTL/CHTLState/*.cpp"
-    "src/CHTL/Util/*.cpp"
+# Define the source files for the CHTL library explicitly
+set(CHTL_SOURCES
+    src/CHTL/CHTLGenerator/Generator.cpp
+    src/CHTL/CHTLLexer/Lexer.cpp
+    src/CHTL/CHTLLoader/Loader.cpp
+    src/CHTL/CHTLManage/TemplateManager.cpp
+    src/CHTL/CHTLNode/CommentNode.cpp
+    src/CHTL/CHTLNode/ElementNode.cpp
+    src/CHTL/CHTLNode/TextNode.cpp
+    src/CHTL/CHTLParser/Parser.cpp
+    src/CHTL/CHTLState/ConfigurationState.cpp
+    src/CHTL/CHTLState/StatementState.cpp
+    src/CHTL/CHTLState/StyleBlockState.cpp
+    src/CHTL/Util/ASTUtil.cpp
+    src/CHTL/Util/NodeCloner.cpp
+    src/CHTL/Util/StyleUtil.cpp
 )
 
 # Add a library for the CHTL compiler components

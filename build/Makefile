@@ -357,6 +357,30 @@ src/CHTL/CHTLParser/Parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.s
 .PHONY : src/CHTL/CHTLParser/Parser.cpp.s
 
+src/CHTL/CHTLState/ConfigurationState.o: src/CHTL/CHTLState/ConfigurationState.cpp.o
+.PHONY : src/CHTL/CHTLState/ConfigurationState.o
+
+# target to build an object file
+src/CHTL/CHTLState/ConfigurationState.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o
+.PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.o
+
+src/CHTL/CHTLState/ConfigurationState.i: src/CHTL/CHTLState/ConfigurationState.cpp.i
+.PHONY : src/CHTL/CHTLState/ConfigurationState.i
+
+# target to preprocess a source file
+src/CHTL/CHTLState/ConfigurationState.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.i
+.PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.i
+
+src/CHTL/CHTLState/ConfigurationState.s: src/CHTL/CHTLState/ConfigurationState.cpp.s
+.PHONY : src/CHTL/CHTLState/ConfigurationState.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLState/ConfigurationState.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.s
+.PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.s
+
 src/CHTL/CHTLState/StatementState.o: src/CHTL/CHTLState/StatementState.cpp.o
 .PHONY : src/CHTL/CHTLState/StatementState.o
 
@@ -561,6 +585,9 @@ help:
 	@echo "... src/CHTL/CHTLParser/Parser.o"
 	@echo "... src/CHTL/CHTLParser/Parser.i"
 	@echo "... src/CHTL/CHTLParser/Parser.s"
+	@echo "... src/CHTL/CHTLState/ConfigurationState.o"
+	@echo "... src/CHTL/CHTLState/ConfigurationState.i"
+	@echo "... src/CHTL/CHTLState/ConfigurationState.s"
 	@echo "... src/CHTL/CHTLState/StatementState.o"
 	@echo "... src/CHTL/CHTLState/StatementState.i"
 	@echo "... src/CHTL/CHTLState/StatementState.s"

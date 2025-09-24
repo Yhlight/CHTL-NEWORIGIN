@@ -15,6 +15,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/TextNode.cpp.o.d"
   "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.o"
   "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.o.d"
+  "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o"
+  "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o.d"
   "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o"
   "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o.d"
   "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o"

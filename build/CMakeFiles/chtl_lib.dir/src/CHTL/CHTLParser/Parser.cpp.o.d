@@ -168,6 +168,8 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.o: \
  /usr/include/c++/13/bits/erase_if.h \
  /app/src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/ElementTemplateNode.h \
  /app/src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
+ /app/src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
+ /app/src/CHTL/CHTLParser/../CHTLManage/ConfigurationManager.h \
  /app/src/CHTL/CHTLState/StatementState.h \
  /app/src/CHTL/CHTLState/ParserState.h \
  /app/src/CHTL/CHTLState/../CHTLNode/FragmentNode.h \

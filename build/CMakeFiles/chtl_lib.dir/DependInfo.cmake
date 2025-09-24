@@ -16,6 +16,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/app/src/CHTL/CHTLNode/ElementNode.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ElementNode.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ElementNode.cpp.o.d"
   "/app/src/CHTL/CHTLNode/TextNode.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/TextNode.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/TextNode.cpp.o.d"
   "/app/src/CHTL/CHTLParser/Parser.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.o.d"
+  "/app/src/CHTL/CHTLState/ConfigurationState.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.o.d"
   "/app/src/CHTL/CHTLState/StatementState.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o.d"
   "/app/src/CHTL/CHTLState/StyleBlockState.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o.d"
   "/app/src/CHTL/Util/ASTUtil.cpp" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o" "gcc" "CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o.d"

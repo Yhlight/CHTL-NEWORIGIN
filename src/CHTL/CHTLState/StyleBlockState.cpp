@@ -209,18 +209,16 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     }
 
     // Check if the expression is a property reference.
-    // This can start with a tag name (Identifier), class (Dot), or id (Hash).
-    if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash ||
-       (parser.currentToken.type == TokenType::Identifier && parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()))
-    {
-        // To distinguish "div" (a string literal) from "div.width" (a reference),
-        // we need to look ahead for the property-access dot. This is tricky.
-        // For now, let's assume if it starts with a potential selector and isn't a self-property,
-        // it's a reference. The selector parser itself has the lookahead to stop before the property dot.
-        // A better check might involve more lookahead, but let's try this.
-        // The check for `contextNode->inlineStyles` prevents mistaking a self-reference property
-        // (e.g. `height: width`) for a tag selector reference (`width.someProperty`).
+    if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
+        // Starts with a class or ID selector, must be a reference.
         return parseReferencedProperty(parser);
+    }
+    if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::Dot) {
+        // Starts with a tag selector, e.g., "div.width".
+        // We must also check that it's not a self-reference to a property with the same name.
+        if (parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()) {
+            return parseReferencedProperty(parser);
+        }
     }
 
     if (parser.currentToken.type == TokenType::Number) {
@@ -292,6 +290,10 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
         // This allows for values like `font-family: Times New Roman;`
         while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
+             // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
+             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
+                 break;
+             }
              ss << " " << parser.currentToken.value;
              parser.advanceTokens();
         }

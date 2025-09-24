@@ -183,6 +183,8 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
  /usr/include/c++/13/bits/erase_if.h \
  /app/src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/ElementTemplateNode.h \
  /app/src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
+ /app/src/CHTL/CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
+ /app/src/CHTL/CHTLParser/../CHTLManage/ConfigurationManager.h \
  /app/src/CHTL/CHTLGenerator/Generator.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/StyleValue.h \

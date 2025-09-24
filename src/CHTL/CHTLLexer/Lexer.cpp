@@ -92,19 +92,30 @@ Token Lexer::identifier() {
         return {TokenType::Replace, value, line, startCol};
     }
     if (value == "at") {
-        // Look ahead for "at top" or "at bottom"
-        size_t savedPos = position;
-        std::string nextWord;
-        skipWhitespace();
-        if (peek() == 't' || peek() == 'b') {
-             while (isalpha(peek())) {
-                nextWord += advance();
-            }
-        }
-        position = savedPos; // backtrack
+        size_t preWhitespacePos = position;
+        int preWhitespaceLine = line;
+        int preWhitespaceCol = column;
 
-        if (nextWord == "top") return {TokenType::AtTop, "at top", line, startCol};
-        if (nextWord == "bottom") return {TokenType::AtBottom, "at bottom", line, startCol};
+        skipWhitespace();
+
+        // Check for "top"
+        if (peek() == 't' && (position + 3) <= source.length() && source.substr(position, 3) == "top") {
+            // It matches, so consume "top" and return the multi-word token.
+            advance(); advance(); advance();
+            return {TokenType::AtTop, "at top", line, startCol};
+        }
+
+        // Check for "bottom"
+        if (peek() == 'b' && (position + 6) <= source.length() && source.substr(position, 6) == "bottom") {
+            // It matches, so consume "bottom" and return the multi-word token.
+            advance(); advance(); advance(); advance(); advance(); advance();
+            return {TokenType::AtBottom, "at bottom", line, startCol};
+        }
+
+        // No match, so backtrack to before the whitespace was skipped.
+        position = preWhitespacePos;
+        line = preWhitespaceLine;
+        column = preWhitespaceCol;
     }
     if (value == "Import") {
         return {TokenType::Import, value, line, startCol};

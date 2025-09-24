@@ -169,11 +169,12 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/c++/13/bits/erase_if.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/ElementTemplateNode.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/ConfigurationManager.h \
  /app/src/CHTL/CHTLState/../CHTLNode/ElementNode.h \
  /app/src/CHTL/CHTLState/../CHTLNode/StyleValue.h \
  /app/src/CHTL/CHTLState/../CHTLNode/TextNode.h \
  /app/src/CHTL/CHTLState/../CHTLNode/CommentNode.h \
- /app/src/CHTL/CHTLState/../CHTLNode/OriginNode.h \
  /app/src/CHTL/CHTLState/../Util/NodeCloner.h \
  /app/src/CHTL/CHTLState/../CHTLLoader/Loader.h \
  /usr/include/c++/13/stdexcept /usr/include/c++/13/utility \
@@ -196,4 +197,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/c++/13/bits/ostream.tcc \
  /usr/include/c++/13/bits/istream.tcc \
  /usr/include/c++/13/bits/sstream.tcc \
- /app/src/CHTL/CHTLState/StyleBlockState.h
+ /app/src/CHTL/CHTLState/StyleBlockState.h \
+ /app/src/CHTL/CHTLState/../Util/Selector.h \
+ /app/src/CHTL/CHTLState/ConfigurationState.h

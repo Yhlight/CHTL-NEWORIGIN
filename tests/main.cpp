@@ -214,6 +214,33 @@ void test_custom_element_insert() {
     assert(result.find("<span>") < result.find("<div>"));
 }
 
+void test_custom_element_insert_at_top_bottom() {
+    std::string source = R"(
+        [Custom] @Element Box {
+            div { text: "middle"; }
+        }
+        body {
+            @Element Box {
+                insert at top {
+                    header { text: "top"; }
+                }
+                insert at bottom {
+                    footer { text: "bottom"; }
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("<header>") != std::string::npos);
+    assert(result.find("<footer>") != std::string::npos);
+    assert(result.find("<header>") < result.find("<div>"));
+    assert(result.find("<div>") < result.find("<footer>"));
+}
+
 void test_import() {
     // Create a temporary file to import
     std::ofstream("imported_file.chtl") << "[Template] @Element MyElem { p { text: \"imported\"; } }";
@@ -241,10 +268,11 @@ int main() {
     run_test(test_referenced_property, "Referenced Property");
     run_test(test_conditional_expression_true, "Conditional Expression (True)");
     run_test(test_conditional_expression_false, "Conditional Expression (False)");
-    // run_test(test_custom_style_specialization, "Custom Style Specialization"); // Disabled due to unsolved bug
+    run_test(test_custom_style_specialization, "Custom Style Specialization"); // Disabled due to unsolved bug
     run_test(test_custom_element_delete, "Custom Element Deletion");
     // The test below is also disabled as it fails with the same bug as custom style specialization.
-    // run_test(test_custom_element_insert, "Custom Element Insertion");
+    run_test(test_custom_element_insert, "Custom Element Insertion");
+    run_test(test_custom_element_insert_at_top_bottom, "Custom Element Insertion At Top/Bottom");
     run_test(test_import, "Import Statement");
     run_test(test_unquoted_literals, "Unquoted Literals");
     run_test(test_calc_generation, "Calc() Generation");

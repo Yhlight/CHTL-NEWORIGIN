@@ -165,6 +165,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.o: \
  /app/src/CHTL/Util/../CHTLNode/TextNode.h \
  /app/src/CHTL/Util/../CHTLNode/CommentNode.h \
  /app/src/CHTL/Util/../CHTLNode/FragmentNode.h \
+ /app/src/CHTL/Util/../CHTLNode/OriginNode.h \
  /app/src/CHTL/Util/../CHTLNode/StyleTemplateNode.h \
  /app/src/CHTL/Util/../CHTLNode/ElementTemplateNode.h \
  /app/src/CHTL/Util/../CHTLNode/VarTemplateNode.h
