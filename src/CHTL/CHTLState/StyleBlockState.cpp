@@ -197,43 +197,93 @@ StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
     return it->second;
 }
 
+// Helper to parse a raw number token string into a StyleValue
+static StyleValue parseNumberToken(const std::string& s) {
+    if (s.empty()) {
+        throw std::runtime_error("Cannot parse an empty string into a StyleValue.");
+    }
+    size_t i = 0;
+    if (s[0] == '-') i = 1;
+    while (i < s.length() && (isdigit(s[i]) || s[i] == '.')) {
+        i++;
+    }
+    std::string num_part = s.substr(0, i);
+    std::string unit_part = s.substr(i);
+    if (num_part.empty()) {
+         throw std::runtime_error("No numeric part found in style value string: " + s);
+    }
+    try {
+        StyleValue result;
+        result.type = StyleValue::NUMERIC;
+        result.numeric_val = std::stod(num_part);
+        result.unit = unit_part;
+        return result;
+    } catch (const std::invalid_argument& ia) {
+        throw std::runtime_error("Invalid number format in style value string: " + s);
+    }
+}
+
+// Helper function to perform arithmetic operations on StyleValues
+static StyleValue applyOp(const StyleValue& left, const TokenType op, const StyleValue& right) {
+    if (left.type != StyleValue::NUMERIC || right.type != StyleValue::NUMERIC) {
+        throw std::runtime_error("Arithmetic operations can only be performed on numeric values.");
+    }
+
+    std::string resultUnit;
+    double leftValue = left.numeric_val;
+    double rightValue = right.numeric_val;
+
+    if (!left.unit.empty() && !right.unit.empty() && left.unit != right.unit) {
+        throw std::runtime_error("Mismatched units in style expression: '" + left.unit + "' and '" + right.unit + "'.");
+    }
+    resultUnit = !left.unit.empty() ? left.unit : right.unit;
+
+    StyleValue result;
+    result.type = StyleValue::NUMERIC;
+    result.unit = resultUnit;
+
+    switch (op) {
+        case TokenType::Plus: result.numeric_val = leftValue + rightValue; break;
+        case TokenType::Minus: result.numeric_val = leftValue - rightValue; break;
+        case TokenType::Asterisk: result.numeric_val = leftValue * rightValue; break;
+        case TokenType::Slash:
+            if (rightValue == 0) throw std::runtime_error("Division by zero in style expression.");
+            result.numeric_val = leftValue / rightValue;
+            break;
+        default: throw std::runtime_error("Unsupported operator in style expression.");
+    }
+    return result;
+}
+
+
 StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
+    // First, check for a self-referential property.
     if (parser.currentToken.type == TokenType::Identifier) {
-        // Could be a self-referential property or a string literal.
-        // Check for self-reference by looking up the identifier in the current node's styles.
         auto it = parser.contextNode->inlineStyles.find(parser.currentToken.value);
         if (it != parser.contextNode->inlineStyles.end()) {
+            // Found it. Return the stored value.
             parser.advanceTokens();
             return it->second;
         }
     }
 
-    // Check if the expression is a property reference.
+    // Check if the expression is a property reference to another element.
     if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
-        // Starts with a class or ID selector, must be a reference.
         return parseReferencedProperty(parser);
     }
     if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::Dot) {
-        // Starts with a tag selector, e.g., "div.width".
-        // We must also check that it's not a self-reference to a property with the same name.
-        if (parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()) {
-            return parseReferencedProperty(parser);
-        }
+        return parseReferencedProperty(parser);
     }
 
     if (parser.currentToken.type == TokenType::Number) {
-        std::string rawValue = parser.currentToken.value;
+        StyleValue result = parseNumberToken(parser.currentToken.value);
         parser.advanceTokens();
-        size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
-        double value = std::stod(rawValue.substr(0, unit_pos));
-        std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
-        return {StyleValue::NUMERIC, value, unit};
+        return result;
     }
-
     if (parser.currentToken.type == TokenType::OpenParen) {
-        parser.advanceTokens();
-        auto result = parseStyleExpression(parser); // Recursive call for precedence
-        parser.expectToken(TokenType::CloseParen);
+        parser.advanceTokens(); // Consume '('
+        StyleValue result = parseStyleExpression(parser);
+        parser.expectToken(TokenType::CloseParen); // Consume ')'
         return result;
     }
 
@@ -246,32 +296,13 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         std::string varName = parser.currentToken.value;
         parser.expectToken(TokenType::Identifier);
 
-        std::string specializedValue;
-        bool isSpecialized = false;
-        if (parser.currentToken.type == TokenType::Equals) {
-            parser.advanceTokens(); // consume '='
-
-            std::stringstream ss;
-            bool first = true;
-            while(parser.currentToken.type != TokenType::CloseParen && parser.currentToken.type != TokenType::EndOfFile) {
-                if (!first) ss << " ";
-                ss << parser.currentToken.value;
-                parser.advanceTokens();
-                first = false;
-            }
-
-            specializedValue = ss.str();
-            isSpecialized = true;
-            // Do not advance tokens here, the loop consumes up to the ')'
-        }
+        // NOTE: Specialization like `Var(name = "value")` is not re-implemented yet.
 
         parser.expectToken(TokenType::CloseParen);
 
         // Handle optional 'from <namespace>' clause
         std::string ns = parser.getCurrentNamespace();
-        if (parser.currentToken.type == TokenType::From) {
-            parser.advanceTokens(); // consume 'from'
-
+        if (parser.tryExpectKeyword(TokenType::From, "KEYWORD_FROM", "from")) {
             std::stringstream ns_builder;
             ns_builder << parser.currentToken.value;
             parser.expectToken(TokenType::Identifier);
@@ -284,97 +315,66 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
             ns = ns_builder.str();
         }
 
-        if (isSpecialized) {
-            return {StyleValue::STRING, 0.0, "", specializedValue};
-        }
-
-        // Handle non-specialized case
         VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(ns, templateName);
         if (!varTmpl) throw std::runtime_error("Variable template '" + templateName + "' not found in namespace '" + ns + "'.");
 
         auto it = varTmpl->variables.find(varName);
         if (it == varTmpl->variables.end()) throw std::runtime_error("Variable '" + varName + "' not found in template '" + templateName + "'.");
 
-        return {StyleValue::STRING, 0.0, "", it->second};
+        // The stored value is a string. We need to parse it as a new expression
+        // to handle cases like `width: MyVars(someWidth) * 2;`
+        // For now, we'll just return it as a string value. A more advanced implementation
+        // would involve creating a new mini-parser here.
+        StyleValue result;
+        result.type = StyleValue::STRING;
+        result.string_val = it->second;
+        return result;
     }
 
-    if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
-        std::stringstream ss;
-        ss << parser.currentToken.value;
-        parser.advanceTokens();
-
-        // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
-        // This allows for values like `font-family: Times New Roman;`
-        while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
-             // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
-             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
-                 break;
-             }
-             ss << " " << parser.currentToken.value;
-             parser.advanceTokens();
-        }
-
-        return {StyleValue::STRING, 0.0, "", ss.str()};
-    }
-
-    throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
+    // For now, any other token is treated as a simple string value.
+    StyleValue result;
+    result.type = StyleValue::STRING;
+    result.string_val = parser.currentToken.value;
+    parser.advanceTokens();
+    return result;
 }
 
 StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
-    StyleValue result = parsePrimaryExpr(parser);
+    StyleValue left = parsePrimaryExpr(parser);
+
     while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash) {
-        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of * or / must be numeric.");
         TokenType op = parser.currentToken.type;
         parser.advanceTokens();
-        StyleValue rhs = parsePrimaryExpr(parser);
-        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of * or / must be numeric.");
-
-        // For multiplication and division, one of the operands must be unitless.
-        if (!result.unit.empty() && !rhs.unit.empty()) {
-            throw std::runtime_error("Cannot multiply or divide two values with units.");
-        }
-
-        if (op == TokenType::Asterisk) {
-            result.numeric_val *= rhs.numeric_val;
-        } else {
-            if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero.");
-            result.numeric_val /= rhs.numeric_val;
-        }
-
-        // The result should adopt the unit of whichever operand had one.
-        if (result.unit.empty()) {
-            result.unit = rhs.unit;
-        }
+        StyleValue right = parsePrimaryExpr(parser);
+        left = applyOp(left, op, right);
     }
-    return result;
+
+    return left;
 }
 
 StyleValue StyleBlockState::parseAdditiveExpr(Parser& parser) {
-    StyleValue result = parseMultiplicativeExpr(parser);
+    StyleValue left = parseMultiplicativeExpr(parser);
+
     while (parser.currentToken.type == TokenType::Plus || parser.currentToken.type == TokenType::Minus) {
-        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of + or - must be numeric.");
-        TokenType op = parser.currentToken.type;
+        TokenType op_type = parser.currentToken.type;
         parser.advanceTokens();
-        StyleValue rhs = parseMultiplicativeExpr(parser);
-        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of + or - must be numeric.");
+        StyleValue right = parseMultiplicativeExpr(parser);
 
         // If units are different and both are non-empty, generate a calc() expression.
-        if (result.unit != rhs.unit && !result.unit.empty() && !rhs.unit.empty()) {
-            std::string lhs_str = styleValueToString(result);
-            std::string rhs_str = styleValueToString(rhs);
-            std::string op_str = (op == TokenType::Plus) ? " + " : " - ";
-            result = {StyleValue::STRING, 0.0, "", "calc(" + lhs_str + op_str + rhs_str + ")"};
+        if (left.type == StyleValue::NUMERIC && right.type == StyleValue::NUMERIC &&
+            !left.unit.empty() && !right.unit.empty() && left.unit != right.unit)
+        {
+            std::string lhs_str = styleValueToString(left);
+            std::string rhs_str = styleValueToString(right);
+            std::string op_str = (op_type == TokenType::Plus) ? " + " : " - ";
+            left = {StyleValue::STRING, 0.0, "", "calc(" + lhs_str + op_str + rhs_str + ")"};
         } else {
             // Otherwise, perform the calculation directly.
-            if (op == TokenType::Plus) result.numeric_val += rhs.numeric_val;
-            else result.numeric_val -= rhs.numeric_val;
-            // If the original value had no unit, adopt the unit of the RHS.
-            if (result.unit.empty()) {
-                result.unit = rhs.unit;
-            }
+            left = applyOp(left, op_type, right);
         }
     }
-    return result;
+
+    return left;
 }
 
 StyleValue StyleBlockState::parseBooleanRelationalExpr(Parser& parser) {
@@ -406,6 +406,8 @@ StyleValue StyleBlockState::parseBooleanRelationalExpr(Parser& parser) {
             else if (op == TokenType::NotEquals) bool_result.bool_val = lhs.string_val != rhs.string_val;
             else throw std::runtime_error("Invalid operator for string comparison.");
         } else {
+            // One side might be a self-reference that hasn't been evaluated yet.
+            // For now, we'll throw, but a more advanced implementation might handle this.
             throw std::runtime_error("Invalid types for comparison.");
         }
         return bool_result;
@@ -438,10 +440,12 @@ StyleValue StyleBlockState::parseBooleanOrExpr(Parser& parser) {
 }
 
 StyleValue StyleBlockState::parseConditionalExpr(Parser& parser) {
-    StyleValue condition = parseBooleanOrExpr(parser);
+    // A conditional expression can also be a simple value, so we start by parsing that.
+    // The relational expression parser is the entry point for something that could be a bool or a value.
+    StyleValue condition_or_value = parseBooleanOrExpr(parser);
 
     if (parser.currentToken.type == TokenType::QuestionMark) {
-        if (condition.type != StyleValue::BOOL) {
+        if (condition_or_value.type != StyleValue::BOOL) {
             throw std::runtime_error("Expression before '?' must evaluate to a boolean.");
         }
         parser.advanceTokens(); // consume '?'
@@ -451,45 +455,21 @@ StyleValue StyleBlockState::parseConditionalExpr(Parser& parser) {
         if (parser.currentToken.type == TokenType::Colon) {
             parser.advanceTokens(); // consume ':'
             StyleValue false_val = parseConditionalExpr(parser);
-            return condition.bool_val ? true_val : false_val;
+            return condition_or_value.bool_val ? true_val : false_val;
         }
 
-        return condition.bool_val ? true_val : StyleValue{StyleValue::EMPTY};
+        // Handle optional "else" case from CHTL.md
+        return condition_or_value.bool_val ? true_val : StyleValue{StyleValue::EMPTY};
     }
 
-    return condition; // Not a conditional, just return the value.
+    return condition_or_value; // Not a conditional, just return the parsed value.
 }
 
 StyleValue StyleBlockState::parseStyleExpression(Parser& parser) {
-    // A property value is a chain of conditional expressions, separated by commas.
+    // A property value can be a chain of conditional expressions, separated by commas.
     // The first one that evaluates to true wins.
-    StyleValue finalValue{StyleValue::EMPTY};
-    bool conditionMet = false;
-
-    while (true) {
-        StyleValue result = parseConditionalExpr(parser);
-
-        if (!conditionMet) {
-            if (result.type != StyleValue::EMPTY) {
-                finalValue = result;
-                // If the result was not a simple value, it must have been a successful conditional
-                if (result.type != StyleValue::NUMERIC && result.type != StyleValue::STRING) {
-                     conditionMet = true;
-                }
-            }
-        }
-
-        if (parser.currentToken.type == TokenType::Comma) {
-            parser.advanceTokens();
-            // If we've already found our value, we still need to parse the rest of the expression to consume the tokens.
-            if (conditionMet) {
-                parseStyleExpression(parser);
-            }
-        } else {
-            break; // End of chain
-        }
-    }
-    return finalValue;
+    // The entry point to the chain is parseConditionalExpr.
+    return parseConditionalExpr(parser);
 }
 
 void StyleBlockState::applyStyleTemplateRecursive(

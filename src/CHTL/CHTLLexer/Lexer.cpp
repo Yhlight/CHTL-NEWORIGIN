@@ -54,7 +54,8 @@ void Lexer::skipBlockComment() {
 Token Lexer::identifier() {
     std::string value;
     int startCol = column;
-    while (isalnum(peek()) || peek() == '_') {
+    // Allow hyphens in identifiers for CSS properties like font-family
+    while (isalnum(peek()) || peek() == '_' || peek() == '-') {
         value += advance();
     }
 

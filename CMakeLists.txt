@@ -13,32 +13,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Define the source files for the CHTL library explicitly
 set(CHTL_SOURCES
-    src/CHTL/CHTLGenerator/Generator.cpp
-    src/CHTL/CHTLLexer/Lexer.cpp
-    src/CHTL/CHTLLoader/Loader.cpp
-    src/CHTL/CHTLManage/TemplateManager.cpp
-    src/CHTL/CHTLNode/CommentNode.cpp
-    src/CHTL/CHTLNode/ElementNode.cpp
-    src/CHTL/CHTLNode/TextNode.cpp
-    src/CHTL/CHTLParser/Parser.cpp
-    src/CHTL/CHTLState/ConfigurationState.cpp
-    src/CHTL/CHTLState/StatementState.cpp
-    src/CHTL/CHTLState/StyleBlockState.cpp
-    src/CHTL/Util/ASTUtil.cpp
-    src/CHTL/Util/NodeCloner.cpp
-    src/CHTL/Util/StyleUtil.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLGenerator/Generator.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLLexer/Lexer.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLLoader/Loader.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLManage/TemplateManager.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLNode/CommentNode.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLNode/ElementNode.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLNode/TextNode.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLParser/Parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLState/ConfigurationState.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLState/StatementState.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/CHTLState/StyleBlockState.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/Util/ASTUtil.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/Util/NodeCloner.cpp
+    ${CMAKE_SOURCE_DIR}/src/CHTL/Util/StyleUtil.cpp
 )
 
 # Add a library for the CHTL compiler components
 add_library(chtl_lib STATIC ${CHTL_SOURCES})
 
 # Add the src directory to the include path for the library
-target_include_directories(chtl_lib PUBLIC src)
+target_include_directories(chtl_lib PUBLIC ${CMAKE_SOURCE_DIR}/src)
 
 
 # --- Main Executable ---
 # This would be the main compiler executable.
-add_executable(chtl_compiler src/main.cpp)
+add_executable(chtl_compiler ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(chtl_compiler PRIVATE chtl_lib)
 
 
@@ -47,7 +47,7 @@ target_link_libraries(chtl_compiler PRIVATE chtl_lib)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp)
+add_executable(chtl_tests ${CMAKE_SOURCE_DIR}/tests/main.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)

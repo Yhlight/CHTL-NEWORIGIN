@@ -1,0 +1,25 @@
+# CMake and build files
+/build/
+/CMakeCache.txt
+/CMakeFiles/
+/cmake_install.cmake
+/CTestTestfile.cmake
+/Makefile
+/compile_commands.json
+
+# Executables and libraries
+/chtl_compiler
+/chtl_tests
+/libchtl_lib.a
+*.out
+*.a
+*.so
+*.dylib
+
+# Object files
+*.o
+*.obj
+
+# OS-specific files
+.DS_Store
+Thumbs.db

@@ -265,9 +265,33 @@ void test_import() {
 }
 
 
+void test_style_arithmetic() {
+    std::string source = R"(
+        div {
+            style {
+                width: 100px + 50px * 2;
+                height: (100px - 50px) / 2;
+                margin: 10 + 5;
+                padding: 10.5 * 2;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+
+    assert(result.find("width: 200px;") != std::string::npos);
+    assert(result.find("height: 25px;") != std::string::npos);
+    assert(result.find("margin: 15;") != std::string::npos);
+    assert(result.find("padding: 21;") != std::string::npos);
+}
+
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
+    run_test(test_style_arithmetic, "Style Property Arithmetic");
     run_test(test_referenced_property, "Referenced Property");
     run_test(test_conditional_expression_true, "Conditional Expression (True)");
     run_test(test_conditional_expression_false, "Conditional Expression (False)");

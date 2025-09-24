@@ -33,11 +33,13 @@ html {
         div {
             text: "This box is specialized.";
 
-            // Use and specialize the CustomBox template
-            @Style CustomBox {
-                delete font-family; // Delete an inherited property
-                font-size: 18px;   // Overwrite an inherited property
-                color: "red";      // Complete the valueless property
+            // Use and specialize the CustomBox template inside a style block, as per the spec
+            style {
+                @Style CustomBox {
+                    delete font-family; // Delete an inherited property
+                    font-size: 18px;   // Overwrite an inherited property
+                    color: "red";      // Complete the valueless property
+                }
             }
         }
     }
