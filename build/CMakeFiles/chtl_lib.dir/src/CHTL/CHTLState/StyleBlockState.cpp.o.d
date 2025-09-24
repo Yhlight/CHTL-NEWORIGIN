@@ -124,7 +124,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o: \
  /usr/include/c++/13/bits/vector.tcc \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator_args.h \
- /app/src/CHTL/CHTLState/../CHTLNode/StyleValue.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/char_traits.h \
  /usr/include/c++/13/bits/localefwd.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h \
@@ -157,6 +156,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StyleBlockState.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
  /usr/include/c++/13/bits/charconv.h \
  /usr/include/c++/13/bits/basic_string.tcc \
+ /app/src/CHTL/CHTLState/../CHTLNode/StyleValue.h \
  /app/src/CHTL/CHTLState/../Util/Selector.h /usr/include/c++/13/map \
  /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/bits/node_handle.h \

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 // Enum to identify the type of an AST node.
 enum class NodeType {
@@ -30,4 +31,7 @@ public:
 
     // Returns the type of the node. This is useful for type-safe downcasting.
     virtual NodeType getType() const = 0;
+
+    // Optional: Tracks the name of the template this node originated from.
+    std::string sourceTemplateName;
 };

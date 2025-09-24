@@ -2,6 +2,7 @@
 
 #include "../CHTLParser/Parser.h"
 #include "../Util/StyleUtil.h"
+#include <algorithm>
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -444,7 +445,9 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
     // Create a fragment node to hold the cloned children.
     auto fragment = std::make_unique<FragmentNode>();
     for (const auto& child : tmpl->children) {
-        fragment->children.push_back(NodeCloner::clone(child.get()));
+        auto clonedNode = NodeCloner::clone(child.get());
+        clonedNode->sourceTemplateName = templateName;
+        fragment->children.push_back(std::move(clonedNode));
     }
 
     // Handle specialization block for custom templates
@@ -615,42 +618,61 @@ void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
     parser.expectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete");
 
     while (parser.currentToken.type != TokenType::Semicolon) {
-        if (parser.currentToken.type != TokenType::Identifier) {
-            throw std::runtime_error("Expected tag name after 'delete'.");
-        }
-        std::string tagName = parser.currentToken.value;
-        parser.advanceTokens();
-
-        int index = -1; // -1 means delete all matching tags
-        if (parser.currentToken.type == TokenType::OpenBracket) {
-            parser.advanceTokens();
-            if (parser.currentToken.type != TokenType::Number) {
-                throw std::runtime_error("Expected index number inside [].");
+        if (parser.currentToken.type == TokenType::At) {
+            parser.advanceTokens(); // consume '@'
+            if (parser.currentToken.value != "Element") {
+                throw std::runtime_error("Can only delete @Element templates in this context.");
             }
-            index = std::stoi(parser.currentToken.value);
+            parser.advanceTokens(); // consume 'Element'
+            std::string templateNameToDelete = parser.currentToken.value;
             parser.advanceTokens();
-            parser.expectToken(TokenType::CloseBracket);
-        }
 
-        auto& children = fragment.children;
-        int current_tag_index = 0;
-        for (auto it = children.begin(); it != children.end(); ) {
-            bool removed = false;
-            if ((*it)->getType() == NodeType::Element) {
-                auto* element = static_cast<ElementNode*>((*it).get());
-                if (element->tagName == tagName) {
-                    if (index == -1 || index == current_tag_index) {
-                        it = children.erase(it);
-                        removed = true;
-                        if (index != -1) break; // Stop after deleting one indexed element
+            // Erase-remove idiom to delete all nodes from the specified template
+            fragment.children.erase(
+                std::remove_if(fragment.children.begin(), fragment.children.end(),
+                               [&](const std::unique_ptr<BaseNode>& node) {
+                                   return node->sourceTemplateName == templateNameToDelete;
+                               }),
+                fragment.children.end());
+
+        } else if (parser.currentToken.type == TokenType::Identifier) {
+            std::string tagName = parser.currentToken.value;
+            parser.advanceTokens();
+
+            int index = -1; // -1 means delete all matching tags
+            if (parser.currentToken.type == TokenType::OpenBracket) {
+                parser.advanceTokens();
+                if (parser.currentToken.type != TokenType::Number) {
+                    throw std::runtime_error("Expected index number inside [].");
+                }
+                index = std::stoi(parser.currentToken.value);
+                parser.advanceTokens();
+                parser.expectToken(TokenType::CloseBracket);
+            }
+
+            auto& children = fragment.children;
+            int current_tag_index = 0;
+            for (auto it = children.begin(); it != children.end(); ) {
+                bool removed = false;
+                if ((*it)->getType() == NodeType::Element) {
+                    auto* element = static_cast<ElementNode*>((*it).get());
+                    if (element->tagName == tagName) {
+                        if (index == -1 || index == current_tag_index) {
+                            it = children.erase(it);
+                            removed = true;
+                            if (index != -1) break;
+                        }
+                        current_tag_index++;
                     }
-                    current_tag_index++;
+                }
+                if (!removed) {
+                    ++it;
                 }
             }
-            if (!removed) {
-                ++it;
-            }
+        } else {
+             throw std::runtime_error("Expected tag name or @Element after 'delete'.");
         }
+
 
         if (parser.currentToken.type == TokenType::Comma) {
             parser.advanceTokens();

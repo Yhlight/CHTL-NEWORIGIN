@@ -34,6 +34,10 @@ void test_var_template_usage();
 void test_var_template_specialization();
 void test_style_auto_add_class();
 void test_except_clause_extended();
+void test_ampersand_selector_order();
+void test_delete_element_inheritance();
+void test_calc_with_percentage();
+void test_implicit_style_template_inheritance();
 
 void test_unquoted_literals() {
     std::string source = R"(
@@ -300,9 +304,89 @@ int main() {
     run_test(test_var_template_specialization, "Var Template Specialization");
     run_test(test_style_auto_add_class, "Style Auto Add Class");
     run_test(test_except_clause_extended, "Extended Except Clause");
+    run_test(test_ampersand_selector_order, "Ampersand Selector Order");
+    run_test(test_delete_element_inheritance, "Delete Element Inheritance");
+    run_test(test_calc_with_percentage, "Calc With Percentage");
+    run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_calc_with_percentage() {
+    std::string source = R"(
+        div { style { width: 50% + 20px; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("width: calc(50% + 20px);") != std::string::npos);
+}
+
+void test_implicit_style_template_inheritance() {
+    std::string source = R"(
+        [Template] @Style Base { color: red; }
+        [Template] @Style Child {
+            @Style Base;
+            font-size: 16px;
+        }
+        div {
+            style {
+                @Style Child;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("color: red;") != std::string::npos);
+    assert(result.find("font-size: 16px;") != std::string::npos);
+}
+
+void test_delete_element_inheritance() {
+    std::string source = R"(
+        [Template] @Element ToBeDeleted {
+            p { text: "This should be deleted."; }
+        }
+        [Custom] @Element MyComponent {
+            @Element ToBeDeleted;
+            div { text: "This should remain."; }
+        }
+        body {
+            @Element MyComponent {
+                delete @Element ToBeDeleted;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("This should be deleted.") == std::string::npos);
+    assert(result.find("This should remain.") != std::string::npos);
+}
+
+void test_ampersand_selector_order() {
+    std::string source = R"(
+        div {
+            style {
+                &:hover { background-color: red; }
+                .my-class { color: blue; }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find(".my-class:hover") != std::string::npos);
+    assert(result.find("class=\"my-class\"") != std::string::npos);
 }
 
 void test_except_clause_extended() {
