@@ -1,6 +1,7 @@
 #include "StatementState.h"
 
 #include "../CHTLParser/Parser.h"
+#include "../Util/StyleUtil.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -159,7 +160,7 @@ std::unique_ptr<BaseNode> StatementState::parseComment(Parser& parser) {
     return comment;
 }
 
-// Parses an attribute 'key: value;', allowing unquoted multi-word literals.
+// Parses an attribute 'key: value;'. The value is parsed as a style expression.
 void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     std::string key = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
@@ -169,28 +170,17 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     }
     parser.advanceTokens(); // Consume ':' or '='
 
-    std::stringstream value;
-    bool firstToken = true;
-    // Consume tokens until the terminator
-    while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
-        // This check prevents consuming the brace of a parent element if a semicolon is missed.
-        if (parser.currentToken.type == TokenType::CloseBrace) {
-             throw std::runtime_error("Missing semicolon for attribute '" + key + "'.");
-        }
-        if (!firstToken) {
-            value << " ";
-        }
-        value << parser.currentToken.value;
-        parser.advanceTokens();
-        firstToken = false;
-    }
+    // Use the global expression parser
+    StyleValue value = parseStyleExpression(parser);
 
     parser.expectToken(TokenType::Semicolon);
 
     if (key == "text") {
-        element.children.push_back(std::make_unique<TextNode>(value.str()));
+        // For the special 'text' attribute, convert the value to a string and create a TextNode.
+        element.children.push_back(std::make_unique<TextNode>(styleValueToString(value)));
     } else {
-        element.attributes[key] = value.str();
+        // For all other attributes, store the parsed StyleValue.
+        element.attributes[key] = value;
     }
 }
 

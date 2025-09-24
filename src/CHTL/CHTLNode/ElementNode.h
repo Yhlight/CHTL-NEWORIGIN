@@ -18,7 +18,7 @@ public:
     std::string tagName;
 
     // A map to store the element's attributes, e.g., {"id", "main"}.
-    std::map<std::string, std::string> attributes;
+    std::map<std::string, StyleValue> attributes;
 
     // A map to store parsed inline style properties for easy lookup.
     std::map<std::string, StyleValue> inlineStyles;

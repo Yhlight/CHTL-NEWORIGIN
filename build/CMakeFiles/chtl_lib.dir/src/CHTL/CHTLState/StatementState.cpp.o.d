@@ -171,8 +171,9 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/ConfigurationManager.h \
+ /app/src/CHTL/CHTLState/../Util/StyleUtil.h \
+ /app/src/CHTL/CHTLState/../Util/../CHTLNode/StyleValue.h \
  /app/src/CHTL/CHTLState/../CHTLNode/ElementNode.h \
- /app/src/CHTL/CHTLState/../CHTLNode/StyleValue.h \
  /app/src/CHTL/CHTLState/../CHTLNode/TextNode.h \
  /app/src/CHTL/CHTLState/../CHTLNode/CommentNode.h \
  /app/src/CHTL/CHTLState/../Util/NodeCloner.h \

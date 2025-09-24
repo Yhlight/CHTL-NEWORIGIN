@@ -85,25 +85,31 @@ void Generator::generateElement(const ElementNode* node) {
 
     append(getIndent() + "<" + node->tagName);
 
-    // Combine attributes from the map and the inlineStyles map
-    auto finalAttributes = node->attributes;
+    // Process inline styles first
+    std::string styleString;
     if (!node->inlineStyles.empty()) {
-        std::string styleString;
         for (const auto& stylePair : node->inlineStyles) {
             styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
         }
-        // Prepend generated styles to any manually set style attribute
+    }
+
+    // Process attributes, converting them to strings. If a 'style' attribute
+    // already exists, prepend the inline styles to it.
+    auto finalAttributes = node->attributes;
+    if (!styleString.empty()) {
         if (finalAttributes.count("style")) {
-            finalAttributes["style"] = styleString + finalAttributes["style"];
+            // Prepend the inline styles to the existing style attribute's string value
+            finalAttributes["style"].string_val = styleString + finalAttributes["style"].string_val;
         } else {
-            finalAttributes["style"] = styleString;
+            // Create a new style attribute
+            finalAttributes["style"] = {StyleValue::STRING, 0.0, "", styleString};
         }
     }
 
     // Append attributes to the opening tag.
     if (!finalAttributes.empty()) {
         for (const auto& attr : finalAttributes) {
-            append(" " + attr.first + "=\"" + attr.second + "\"");
+            append(" " + attr.first + "=\"" + styleValueToString(attr.second) + "\"");
         }
     }
 

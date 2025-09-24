@@ -26,6 +26,12 @@ void run_test(void (*test_func)(), const std::string& test_name) {
 
 void test_namespace_template_access();
 void test_keyword_aliasing();
+void test_hyphenated_property();
+void test_attribute_expression();
+void test_conditional_attribute();
+void test_delete_style_property();
+void test_var_template_usage();
+void test_var_template_specialization();
 
 void test_unquoted_literals() {
     std::string source = R"(
@@ -271,9 +277,8 @@ int main() {
     run_test(test_referenced_property, "Referenced Property");
     run_test(test_conditional_expression_true, "Conditional Expression (True)");
     run_test(test_conditional_expression_false, "Conditional Expression (False)");
-    run_test(test_custom_style_specialization, "Custom Style Specialization"); // Disabled due to unsolved bug
+    run_test(test_custom_style_specialization, "Custom Style Specialization");
     run_test(test_custom_element_delete, "Custom Element Deletion");
-    // The test below is also disabled as it fails with the same bug as custom style specialization.
     run_test(test_custom_element_insert, "Custom Element Insertion");
     run_test(test_custom_element_insert_at_top_bottom, "Custom Element Insertion At Top/Bottom");
     run_test(test_import, "Import Statement");
@@ -285,9 +290,120 @@ int main() {
 
     run_test(test_namespace_template_access, "Namespace-qualified Template Access");
     run_test(test_keyword_aliasing, "Keyword Aliasing");
+    run_test(test_hyphenated_property, "Hyphenated CSS Property");
+    run_test(test_attribute_expression, "Attribute Expression");
+    run_test(test_conditional_attribute, "Conditional Attribute");
+    run_test(test_delete_style_property, "Delete Style Property");
+    run_test(test_var_template_usage, "Var Template Usage");
+    run_test(test_var_template_specialization, "Var Template Specialization");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_var_template_specialization() {
+    std::string source = R"(
+        [Template] @Var MyTheme {
+            primary-color: "blue";
+        }
+        div {
+            style {
+                color: MyTheme(primary-color = "green");
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("color: green;") != std::string::npos);
+}
+
+void test_var_template_usage() {
+    std::string source = R"(
+        [Template] @Var MyTheme {
+            primary-color: "blue";
+            secondary-color: "red";
+        }
+        div {
+            style {
+                color: MyTheme(primary-color);
+                border-color: MyTheme(secondary-color);
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("color: blue;") != std::string::npos);
+    assert(result.find("border-color: red;") != std::string::npos);
+}
+
+void test_delete_style_property() {
+    std::string source = R"(
+        [Template] @Style Base {
+            color: red;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        div {
+            style {
+                @Style Base {
+                    delete font-size, font-weight;
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("color: red;") != std::string::npos);
+    assert(result.find("font-size") == std::string::npos);
+    assert(result.find("font-weight") == std::string::npos);
+}
+
+void test_conditional_attribute() {
+    std::string source = R"(
+        div {
+            width: 100px;
+            height: width > 50px ? 200px : 50px;
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("height=\"200px\"") != std::string::npos);
+}
+
+void test_attribute_expression() {
+    std::string source = R"(
+        div { width: 100px * 2; }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("width=\"200px\"") != std::string::npos);
+}
+
+void test_hyphenated_property() {
+    std::string source = R"(
+        div { style { font-family: "Arial"; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("font-family: Arial;") != std::string::npos);
 }
 
 void test_namespace_template_access() {
