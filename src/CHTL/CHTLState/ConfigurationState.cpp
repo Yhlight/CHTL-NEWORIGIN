@@ -64,12 +64,27 @@ void ConfigurationState::parseNameBlock(Parser& parser) {
             parser.advanceTokens();
             parser.expectToken(TokenType::Equals);
 
-            // For now, we only handle simple string-to-string re-definitions.
-            // The spec shows group options like `CUSTOM_STYLE = [@Style, @style]`,
-            // which requires more complex value parsing. We'll start simple.
-            std::string value = parser.currentToken.value;
-            parser.configManager.keywordMap[key] = value;
-            parser.advanceTokens();
+            std::vector<std::string> aliases;
+            if (parser.currentToken.type == TokenType::OpenBracket) {
+                // Handle group alias: [alias1, alias2]
+                parser.advanceTokens(); // consume '['
+                while (parser.currentToken.type != TokenType::CloseBracket && parser.currentToken.type != TokenType::EndOfFile) {
+                    aliases.push_back(parser.currentToken.value);
+                    parser.advanceTokens();
+                    if (parser.currentToken.type == TokenType::Comma) {
+                        parser.advanceTokens(); // consume ','
+                    } else {
+                        break; // No comma, end of list
+                    }
+                }
+                parser.expectToken(TokenType::CloseBracket);
+            } else {
+                // Handle single alias
+                aliases.push_back(parser.currentToken.value);
+                parser.advanceTokens();
+            }
+
+            parser.configManager.keywordMap[key] = aliases;
             parser.expectToken(TokenType::Semicolon);
         } else {
             throw std::runtime_error("Unexpected token in [Name] block: " + parser.currentToken.value);

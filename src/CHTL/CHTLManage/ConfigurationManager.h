@@ -19,15 +19,24 @@ public:
     bool disableCustomOriginType = false;
 
     // --- Keyword Customization ---
-    // Maps the internal keyword name (e.g., "KEYWORD_DELETE") to the user-defined value (e.g., "remove").
-    std::map<std::string, std::string> keywordMap;
+    // Maps internal keyword names (e.g., "KEYWORD_DELETE") to a list of user-defined aliases.
+    std::map<std::string, std::vector<std::string>> keywordMap;
 
-    // Returns the user-defined keyword for a given internal keyword name.
-    // If not customized, it returns the default value.
-    std::string getKeyword(const std::string& internalName, const std::string& defaultValue) const {
+    // Gets the list of aliases for a keyword. Returns an empty vector if not defined.
+    const std::vector<std::string>& getKeywordAliases(const std::string& internalName) const {
+        static const std::vector<std::string> empty_vector;
         auto it = keywordMap.find(internalName);
         if (it != keywordMap.end()) {
             return it->second;
+        }
+        return empty_vector;
+    }
+
+    // Gets the primary keyword value (the first in the list) or a default.
+    std::string getKeyword(const std::string& internalName, const std::string& defaultValue) const {
+        auto it = keywordMap.find(internalName);
+        if (it != keywordMap.end() && !it->second.empty()) {
+            return it->second.front();
         }
         return defaultValue;
     }

@@ -25,6 +25,7 @@ void run_test(void (*test_func)(), const std::string& test_name) {
 // --- Test Cases ---
 
 void test_namespace_template_access();
+void test_keyword_aliasing();
 
 void test_unquoted_literals() {
     std::string source = R"(
@@ -283,6 +284,7 @@ int main() {
     run_test(test_delete_style_inheritance, "Delete Style Inheritance");
 
     run_test(test_namespace_template_access, "Namespace-qualified Template Access");
+    run_test(test_keyword_aliasing, "Keyword Aliasing");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -334,4 +336,37 @@ void test_namespace_template_access() {
     assert(result.find("border: 1px solid blue;") != std::string::npos);
     assert(result.find("color: blue;") != std::string::npos);
     assert(result.find("class=\"nested-box\"") != std::string::npos);
+}
+
+void test_keyword_aliasing() {
+    std::string source = R"(
+        [Configuration] {
+            [Name] {
+                KEYWORD_DELETE = "remove";
+                KEYWORD_CUSTOM = ["C", "Custom"];
+            }
+        }
+
+        [C] @Style Base {
+            color: white;
+            font-size: 16px;
+        }
+
+        div {
+            style {
+                @Style Base {
+                    remove font-size;
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+
+    // Assertions
+    assert(result.find("color: white;") != std::string::npos);
+    assert(result.find("font-size") == std::string::npos);
 }

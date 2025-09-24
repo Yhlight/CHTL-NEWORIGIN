@@ -29,18 +29,20 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         if (parser.peekToken.type == TokenType::Import) {
             parseImportStatement(parser);
             return nullptr;
-        } else if (parser.peekToken.type == TokenType::Custom || parser.peekToken.value == "Template") {
-            parseTemplateDefinition(parser);
-            return nullptr; // Template definitions don't produce a node in the main AST
         } else if (parser.peekToken.value == "Origin") {
             return parseOriginDefinition(parser);
         } else if (parser.peekToken.value == "Namespace") {
             parseNamespaceDefinition(parser);
             return nullptr; // Namespace definitions don't produce a node
-        } else if (parser.peekToken.type == TokenType::Configuration) {
+        } else if (parser.peekToken.value == "Configuration") {
             ConfigurationState configState;
             configState.handle(parser);
             return nullptr; // Configuration does not produce a node
+        } else {
+            // If it's none of the other bracketed keywords, it must be a template definition.
+            // Let parseTemplateDefinition handle it (and throw an error if it's invalid).
+            parseTemplateDefinition(parser);
+            return nullptr;
         }
     } else if (parser.currentToken.type == TokenType::Use) {
         parseUseDirective(parser);
@@ -196,11 +198,11 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
     // 1. Expect [Template] or [Custom]
     parser.expectToken(TokenType::OpenBracket);
     bool isCustom = false;
-    if (parser.currentToken.type == TokenType::Custom) {
+    // Use the keyword checking system to see if the next token is a 'Custom' alias
+    if (parser.tryExpectKeyword(TokenType::Custom, "KEYWORD_CUSTOM", "Custom")) {
         isCustom = true;
-        parser.advanceTokens();
-    } else if (parser.currentToken.value == "Template") {
-        parser.expectToken(TokenType::Identifier); // Consume "Template"
+    } else if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_TEMPLATE", "Template")) {
+        // This just consumes the 'Template' keyword, no special flag needed.
     } else {
         throw std::runtime_error("Expected 'Template' or 'Custom' keyword after '['.");
     }
