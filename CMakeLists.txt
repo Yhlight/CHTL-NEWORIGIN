@@ -34,6 +34,7 @@ if(CHTL_ENABLE_LTO)
 endif()
 
 add_subdirectory(Util)
+add_subdirectory(Core)
 add_subdirectory(Scanner)
 add_subdirectory(CHTL)
 add_subdirectory(CHTL_JS)
