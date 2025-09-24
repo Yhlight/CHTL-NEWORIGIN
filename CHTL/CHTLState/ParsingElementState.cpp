@@ -3,6 +3,7 @@
 #include "GlobalScopeState.h"
 #include "CHTLLexer/Token.h"
 #include "CHTLNode/ElementNode.h"
+#include "CHTLNode/TextNode.h"
 #include <utility>
 #include <iostream>
 
@@ -12,51 +13,84 @@ ParsingElementState::ParsingElementState(Parser* parser, std::shared_ptr<Element
     : parser(parser), currentNode(std::move(currentNode)) {}
 
 void ParsingElementState::onUpdate(StateMachine* sm) {
-    // A nested element is grammatically identical to a top-level one.
-    // The easiest way to handle this is to let the GlobalScopeState deal with it,
-    // as it already knows how to create elements and push them onto the stack.
+    // Rule 1: Nested element definition
     if (parser->check(TokenType::IDENTIFIER) && parser->peekNext().type == TokenType::LEFT_BRACE) {
-        sm->changeState(std::make_unique<GlobalScopeState>(parser));
+        std::string tagName = parser->advance().lexeme;
+        parser->advance(); // Consume '{'
+
+        auto elementNode = std::make_shared<ElementNode>(tagName);
+        currentNode->addChild(elementNode);
+        parser->nodeStack.push(elementNode);
+
+        sm->changeState(std::make_unique<ParsingElementState>(parser, elementNode));
         return;
     }
 
-    // Rule for attributes: IDENTIFIER : VALUE ;
-    if (parser->check(TokenType::IDENTIFIER) &&
+    // Rule 2: Nested text block
+    if (parser->check(TokenType::KEYWORD_TEXT) && parser->peekNext().type == TokenType::LEFT_BRACE) {
+        parser->advance();
+        parser->advance();
+
+        if (parser->check(TokenType::STRING_LITERAL) || parser->check(TokenType::IDENTIFIER)) {
+            Token contentToken = parser->advance();
+            std::string content = contentToken.lexeme;
+            if (contentToken.type == TokenType::STRING_LITERAL && content.length() >= 2) {
+                content = content.substr(1, content.length() - 2);
+            }
+            auto textNode = std::make_shared<TextNode>(content);
+            currentNode->addChild(textNode);
+
+            if (!parser->match({TokenType::RIGHT_BRACE})) {
+                std::cerr << "Syntax Error: Missing '}' after text block on line " << contentToken.line << std::endl;
+            }
+        }
+        return;
+    }
+
+    // Rule 3: Attribute or 'text' property. The key can be an identifier or a keyword like 'text'.
+    if ((parser->check(TokenType::IDENTIFIER) || parser->check(TokenType::KEYWORD_TEXT)) &&
         (parser->peekNext().type == TokenType::COLON || parser->peekNext().type == TokenType::EQUAL)) {
 
         Token key = parser->advance();
         parser->advance();
 
-        if (parser->check(TokenType::IDENTIFIER) ||
-            parser->check(TokenType::STRING_LITERAL) ||
-            parser->check(TokenType::NUMBER_LITERAL)) {
-
-            Token value = parser->advance();
-            currentNode->attributes[key.lexeme] = value.lexeme;
-
+        if (parser->check(TokenType::IDENTIFIER) || parser->check(TokenType::STRING_LITERAL) || parser->check(TokenType::NUMBER_LITERAL)) {
+            Token valueToken = parser->advance();
+            if (key.lexeme == "text") {
+                std::string content = valueToken.lexeme;
+                if (valueToken.type == TokenType::STRING_LITERAL && content.length() >= 2) {
+                    content = content.substr(1, content.length() - 2);
+                }
+                auto textNode = std::make_shared<TextNode>(content);
+                currentNode->addChild(textNode);
+            } else {
+                currentNode->attributes[key.lexeme] = valueToken.lexeme;
+            }
             if (!parser->match({TokenType::SEMICOLON})) {
-                std::cerr << "Syntax Error: Missing semicolon after attribute value on line " << value.line << std::endl;
+                std::cerr << "Syntax Error: Missing semicolon after attribute value on line " << valueToken.line << std::endl;
             }
             return;
         }
     }
 
-    // Rule for closing brace.
+    // Rule 4: Closing brace
     if (parser->match({TokenType::RIGHT_BRACE})) {
-        // We've finished parsing this element, so pop it from the stack
-        // to return context to the parent.
-        if (!parser->nodeStack.empty()) {
-            parser->nodeStack.pop();
-        }
+        parser->nodeStack.pop();
 
-        // After popping, the state for the parent element is now active.
-        // We can simply re-enter the GlobalScopeState, which will decide what to do next.
-        // This handles returning to the global scope or to an outer element's scope.
-        sm->changeState(std::make_unique<GlobalScopeState>(parser));
+        if (parser->nodeStack.empty()) {
+            sm->changeState(std::make_unique<GlobalScopeState>(parser));
+        } else {
+            auto parentNode = std::dynamic_pointer_cast<ElementNode>(parser->nodeStack.top());
+            if (parentNode && parentNode->tagName != "__ROOT__") {
+                sm->changeState(std::make_unique<ParsingElementState>(parser, parentNode));
+            } else {
+                sm->changeState(std::make_unique<GlobalScopeState>(parser));
+            }
+        }
         return;
     }
 
-    // If no rule matches, advance to prevent an infinite loop.
+    // If no rule matches, advance
     if (!parser->isAtEnd()) {
         parser->advance();
     }

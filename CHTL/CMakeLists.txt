@@ -5,6 +5,7 @@ add_library(CHTL STATIC
     # Core Interfaces & AST Nodes
     CHTLNode/BaseNode.cpp
     CHTLNode/ElementNode.cpp
+    CHTLNode/TextNode.cpp
     CHTLState/StateMachine.cpp
 
     # Lexer
