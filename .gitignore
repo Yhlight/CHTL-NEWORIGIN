@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+dist/
+out/
+cmake-build-*/
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+Testing/
+CTestTestfile.cmake
+_deps/
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
