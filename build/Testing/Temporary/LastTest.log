@@ -1,0 +1,36 @@
+Start testing: Sep 24 12:37 UTC
+----------------------------------------------------------
+1/1 Testing: RunCHTLTests
+1/1 Test: RunCHTLTests
+Command: "/app/build/chtl_tests"
+Directory: /app/build
+"RunCHTLTests" start time: Sep 24 12:37 UTC
+Output:
+----------------------------------------------------------
+Running CHTL tests...
+[PASS] Style Property Arithmetic
+[FAIL] Referenced Property - Unexpected token: '.' at line 3, column 48. Expected type 7
+[FAIL] Conditional Expression (True) - Unexpected token in style block: >
+[FAIL] Conditional Expression (False) - Unexpected token in style block: >
+[PASS] Custom Style Specialization
+[PASS] Custom Element Deletion
+[PASS] Custom Element Insertion
+[PASS] Custom Element Insertion At Top/Bottom
+[PASS] Import Statement
+[PASS] Unquoted Literals
+[FAIL] Calc() Generation - Mismatched units in style expression: '%' and 'px'.
+[PASS] Except Constraint
+[PASS] Named Origin and Import
+[PASS] Delete Style Inheritance
+[FAIL] Namespace-qualified Template Access - Unexpected token in style block: (
+[FAIL] Keyword Aliasing - Unexpected token: 'Configuration' at line 2, column 10. Expected type 48
+Tests finished.
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"RunCHTLTests" end time: Sep 24 12:37 UTC
+"RunCHTLTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 24 12:37 UTC
