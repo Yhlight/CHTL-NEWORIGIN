@@ -1,8 +1,8 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include "CompilerDispatcher/Dispatcher.h"
-#include "CodeMerger/CodeMerger.h"
+#include "Dispatcher.h"
+#include "CodeMerger.h"
 
 int main() {
     std::ostringstream ss;
