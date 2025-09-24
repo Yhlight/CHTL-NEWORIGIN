@@ -1,2 +1,3 @@
-RunCHTLTests 1 0.00682052
+RunCHTLTests 2 0.00399691
+RunNamespaceTests 1 0.00475863
 ---

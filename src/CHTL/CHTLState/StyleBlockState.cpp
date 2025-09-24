@@ -267,14 +267,30 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
 
         parser.expectToken(TokenType::CloseParen);
 
+        // Handle optional 'from <namespace>' clause
+        std::string ns = parser.getCurrentNamespace();
+        if (parser.currentToken.type == TokenType::From) {
+            parser.advanceTokens(); // consume 'from'
+
+            std::stringstream ns_builder;
+            ns_builder << parser.currentToken.value;
+            parser.expectToken(TokenType::Identifier);
+
+            while(parser.currentToken.type == TokenType::Dot) {
+                parser.advanceTokens(); // consume '.'
+                ns_builder << "." << parser.currentToken.value;
+                parser.expectToken(TokenType::Identifier);
+            }
+            ns = ns_builder.str();
+        }
+
         if (isSpecialized) {
             return {StyleValue::STRING, 0.0, "", specializedValue};
         }
 
         // Handle non-specialized case
-        std::string ns = parser.getCurrentNamespace();
         VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(ns, templateName);
-        if (!varTmpl) throw std::runtime_error("Variable template not found: " + templateName);
+        if (!varTmpl) throw std::runtime_error("Variable template '" + templateName + "' not found in namespace '" + ns + "'.");
 
         auto it = varTmpl->variables.find(varName);
         if (it == varTmpl->variables.end()) throw std::runtime_error("Variable '" + varName + "' not found in template '" + templateName + "'.");
@@ -528,9 +544,18 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
 
     std::string ns = parser.getCurrentNamespace();
     if (parser.currentToken.type == TokenType::From) {
-        parser.advanceTokens();
-        ns = parser.currentToken.value;
+        parser.advanceTokens(); // consume 'from'
+
+        std::stringstream ns_builder;
+        ns_builder << parser.currentToken.value;
         parser.expectToken(TokenType::Identifier);
+
+        while(parser.currentToken.type == TokenType::Dot) {
+            parser.advanceTokens(); // consume '.'
+            ns_builder << "." << parser.currentToken.value;
+            parser.expectToken(TokenType::Identifier);
+        }
+        ns = ns_builder.str();
     }
 
     StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(ns, templateName);

@@ -24,6 +24,8 @@ void run_test(void (*test_func)(), const std::string& test_name) {
 
 // --- Test Cases ---
 
+void test_namespace_template_access();
+
 void test_unquoted_literals() {
     std::string source = R"(
         div {
@@ -280,6 +282,56 @@ int main() {
     run_test(test_named_origin_and_import, "Named Origin and Import");
     run_test(test_delete_style_inheritance, "Delete Style Inheritance");
 
+    run_test(test_namespace_template_access, "Namespace-qualified Template Access");
+
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_namespace_template_access() {
+    std::string source = R"(
+        [Namespace] my_space {
+            [Template] @Element MyBox {
+                div { class: "box-in-space"; }
+            }
+
+            [Template] @Style MyStyle {
+                border: 1px solid blue;
+            }
+
+            [Template] @Var MyVars {
+                brandColor: "blue";
+            }
+
+            [Namespace] nested {
+                 [Template] @Element NestedBox {
+                    span { class: "nested-box"; }
+                 }
+            }
+        }
+
+        body {
+            @Element MyBox from my_space;
+
+            p {
+                style {
+                    @Style MyStyle from my_space;
+                    color: MyVars(brandColor) from my_space;
+                }
+            }
+
+            @Element NestedBox from my_space.nested;
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+
+    // Assertions
+    assert(result.find("class=\"box-in-space\"") != std::string::npos);
+    assert(result.find("border: 1px solid blue;") != std::string::npos);
+    assert(result.find("color: blue;") != std::string::npos);
+    assert(result.find("class=\"nested-box\"") != std::string::npos);
 }

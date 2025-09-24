@@ -332,8 +332,17 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
     std::string ns = parser.getCurrentNamespace();
     if (parser.currentToken.type == TokenType::From) {
         parser.advanceTokens(); // consume 'from'
-        ns = parser.currentToken.value;
+
+        std::stringstream ns_builder;
+        ns_builder << parser.currentToken.value;
         parser.expectToken(TokenType::Identifier);
+
+        while(parser.currentToken.type == TokenType::Dot) {
+            parser.advanceTokens(); // consume '.'
+            ns_builder << "." << parser.currentToken.value;
+            parser.expectToken(TokenType::Identifier);
+        }
+        ns = ns_builder.str();
     }
 
     // Get the template from the manager
