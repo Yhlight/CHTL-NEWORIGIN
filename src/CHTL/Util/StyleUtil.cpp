@@ -114,11 +114,20 @@ StyleValue parseReferencedProperty(Parser& parser) {
 StyleValue parsePrimaryExpr(Parser& parser) {
     if (parser.currentToken.type == TokenType::Identifier) {
         // Could be a self-referential property or a string literal.
-        // Check for self-reference by looking up the identifier in the current node's styles.
-        auto it = parser.contextNode->inlineStyles.find(parser.currentToken.value);
-        if (it != parser.contextNode->inlineStyles.end()) {
-            parser.advanceTokens();
-            return it->second;
+        // Check for self-reference by looking up the identifier in the current node's styles and attributes.
+        if (parser.contextNode) {
+            // Check inline styles first
+            auto it_style = parser.contextNode->inlineStyles.find(parser.currentToken.value);
+            if (it_style != parser.contextNode->inlineStyles.end()) {
+                parser.advanceTokens();
+                return it_style->second;
+            }
+            // Then check attributes
+            auto it_attr = parser.contextNode->attributes.find(parser.currentToken.value);
+            if (it_attr != parser.contextNode->attributes.end()) {
+                parser.advanceTokens();
+                return it_attr->second;
+            }
         }
     }
 
@@ -234,13 +243,33 @@ StyleValue parsePrimaryExpr(Parser& parser) {
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
 }
 
-StyleValue parseMultiplicativeExpr(Parser& parser) {
+#include <cmath> // For std::pow
+
+StyleValue parsePowerExpr(Parser& parser) {
     StyleValue result = parsePrimaryExpr(parser);
+    while (parser.currentToken.type == TokenType::Power) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of ** must be numeric.");
+        parser.advanceTokens();
+        StyleValue rhs = parsePrimaryExpr(parser);
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of ** must be numeric.");
+
+        // For power, the RHS must be unitless.
+        if (!rhs.unit.empty()) {
+            throw std::runtime_error("Exponent for the power operator (**) must be a unitless number.");
+        }
+
+        result.numeric_val = std::pow(result.numeric_val, rhs.numeric_val);
+    }
+    return result;
+}
+
+StyleValue parseMultiplicativeExpr(Parser& parser) {
+    StyleValue result = parsePowerExpr(parser);
     while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash) {
         if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of * or / must be numeric.");
         TokenType op = parser.currentToken.type;
         parser.advanceTokens();
-        StyleValue rhs = parsePrimaryExpr(parser);
+        StyleValue rhs = parsePowerExpr(parser);
         if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of * or / must be numeric.");
 
         // For multiplication and division, one of the operands must be unitless.

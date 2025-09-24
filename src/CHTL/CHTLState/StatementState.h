@@ -19,7 +19,6 @@ private:
     std::unique_ptr<BaseNode> parseElement(Parser& parser);
     std::unique_ptr<BaseNode> parseTextElement(Parser& parser);
     std::unique_ptr<BaseNode> parseComment(Parser& parser);
-    void parseTemplateDefinition(Parser& parser);
     void parseUseDirective(Parser& parser);
     std::unique_ptr<BaseNode> parseOriginDefinition(Parser& parser);
     void parseNamespaceDefinition(Parser& parser);

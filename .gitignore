@@ -1,0 +1,26 @@
+# Build artifacts & executables
+/build/*
+/app/build/*
+chtl_compiler
+chtl_tests
+*.a
+*.o
+*.so
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# Test-related files
+Testing/
+*.log
+*.js
+*.chtl
+*.cmod
+*.cjmod
+
+# IDE files
+.vscode/

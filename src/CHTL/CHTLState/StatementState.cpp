@@ -20,6 +20,7 @@ class StyleBlockState;
 class ConfigurationState;
 #include "StyleBlockState.h"
 #include "ConfigurationState.h"
+#include "TemplateState.h" // Include the new state
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -41,10 +42,9 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             configState.handle(parser);
             return nullptr; // Configuration does not produce a node
         } else {
-            // If it's none of the other bracketed keywords, it must be a template definition.
-            // Let parseTemplateDefinition handle it (and throw an error if it's invalid).
-            parseTemplateDefinition(parser);
-            return nullptr;
+            // Delegate template definitions to the new TemplateState
+            TemplateState templateState;
+            return templateState.handle(parser);
         }
     } else if (parser.currentToken.type == TokenType::Use) {
         parseUseDirective(parser);
@@ -281,132 +281,6 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
         // For all other attributes, store the parsed StyleValue.
         element.attributes[key] = value;
     }
-}
-
-void StatementState::parseTemplateDefinition(Parser& parser) {
-    // 1. Expect [Template] or [Custom]
-    parser.expectToken(TokenType::OpenBracket);
-    bool isCustom = false;
-    // Use the keyword checking system to see if the next token is a 'Custom' alias
-    if (parser.tryExpectKeyword(TokenType::Custom, "KEYWORD_CUSTOM", "Custom")) {
-        isCustom = true;
-    } else if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_TEMPLATE", "Template")) {
-        // This just consumes the 'Template' keyword, no special flag needed.
-    } else {
-        throw std::runtime_error("Expected 'Template' or 'Custom' keyword after '['.");
-    }
-    parser.expectToken(TokenType::CloseBracket);
-
-    // 2. Expect @Type
-    parser.expectToken(TokenType::At);
-    if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected template type (Style, Element, Var) after '@'.");
-    std::string templateType = parser.currentToken.value;
-    parser.advanceTokens();
-
-    // 3. Parse Template Name
-    std::string templateName = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-
-    parser.expectToken(TokenType::OpenBrace);
-
-    // Get the current namespace to register the template under.
-    std::string currentNs = parser.getCurrentNamespace();
-
-    // 4. Parse block and register with manager
-    if (templateType == "Style") {
-        auto styleNode = std::make_unique<StyleTemplateNode>();
-        styleNode->isCustom = isCustom;
-        while (parser.currentToken.type != TokenType::CloseBrace) {
-            if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
-                // ... (inheritance logic remains the same)
-                if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
-                parser.expectToken(TokenType::At);
-                if (parser.currentToken.value != "Style") throw std::runtime_error("Can only inherit from an @Style template.");
-                parser.advanceTokens();
-                std::string parentName = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-                parser.expectToken(TokenType::Semicolon);
-                // Instead of copying styles, just record the parent's name.
-                styleNode->parentNames.push_back(parentName);
-            } else {
-                std::string key = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-
-                // Correctly handle valueless properties for custom templates
-                if (isCustom && parser.currentToken.type != TokenType::Colon) {
-                    styleNode->valuelessProperties.push_back(key);
-                    if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
-                        parser.advanceTokens();
-                    }
-                    continue;
-                }
-
-                parser.expectToken(TokenType::Colon);
-                std::string value;
-                while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
-                    value += parser.currentToken.value + " ";
-                    parser.advanceTokens();
-                }
-                if (!value.empty()) value.pop_back();
-                styleNode->styles[key] = value;
-                if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
-            }
-        }
-        parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
-    } else if (templateType == "Element") {
-        auto elementNode = std::make_unique<ElementTemplateNode>();
-        elementNode->isCustom = isCustom; // Enable [Custom] for elements
-        while (parser.currentToken.type != TokenType::CloseBrace) {
-             if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
-                if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
-                parser.expectToken(TokenType::At);
-                if (parser.currentToken.value != "Element") throw std::runtime_error("Can only inherit from an @Element template.");
-                parser.advanceTokens();
-                std::string parentName = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-                parser.expectToken(TokenType::Semicolon);
-                ElementTemplateNode* parentTmpl = parser.templateManager.getElementTemplate(currentNs, parentName);
-                if (!parentTmpl) throw std::runtime_error("Parent element template not found: " + parentName);
-                for (const auto& child : parentTmpl->children) {
-                    elementNode->children.push_back(NodeCloner::clone(child.get()));
-                }
-            } else {
-                elementNode->children.push_back(handle(parser));
-            }
-        }
-        parser.templateManager.addElementTemplate(currentNs, templateName, std::move(elementNode));
-    } else if (templateType == "Var") {
-        auto varNode = std::make_unique<VarTemplateNode>();
-        varNode->isCustom = isCustom; // Enable [Custom] for vars
-        while (parser.currentToken.type != TokenType::CloseBrace) {
-            if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
-                if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
-                parser.expectToken(TokenType::At);
-                if (parser.currentToken.value != "Var") throw std::runtime_error("Can only inherit from a @Var template.");
-                parser.advanceTokens();
-                std::string parentName = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-                parser.expectToken(TokenType::Semicolon);
-                VarTemplateNode* parentTmpl = parser.templateManager.getVarTemplate(currentNs, parentName);
-                if (!parentTmpl) throw std::runtime_error("Parent var template not found: " + parentName);
-                for (const auto& pair : parentTmpl->variables) {
-                    varNode->variables[pair.first] = pair.second;
-                }
-            } else {
-                std::string key = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-                parser.expectToken(TokenType::Colon);
-                varNode->variables[key] = parser.currentToken.value;
-                parser.expectToken(TokenType::String);
-                parser.expectToken(TokenType::Semicolon);
-            }
-        }
-        parser.templateManager.addVarTemplate(currentNs, templateName, std::move(varNode));
-    } else {
-        throw std::runtime_error("Unknown template type: " + templateType);
-    }
-
-    parser.expectToken(TokenType::CloseBrace);
 }
 
 std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& parser) {

@@ -39,6 +39,30 @@ void test_delete_element_inheritance();
 void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
 
+void test_text_attribute() {
+    std::string source = R"(
+        div { text: "Hello from attribute!"; }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("Hello from attribute!") != std::string::npos);
+}
+
+void test_power_operator() {
+    std::string source = R"(
+        div { style { width: 2px ** 8; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("width: 256px;") != std::string::npos);
+}
+
 void test_unquoted_literals() {
     std::string source = R"(
         div {
@@ -308,6 +332,8 @@ int main() {
     run_test(test_delete_element_inheritance, "Delete Element Inheritance");
     run_test(test_calc_with_percentage, "Calc With Percentage");
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
+    run_test(test_power_operator, "Power Operator");
+    run_test(test_text_attribute, "Text Attribute");
 
     std::cout << "Tests finished." << std::endl;
     return 0;

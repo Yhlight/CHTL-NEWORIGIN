@@ -120,6 +120,9 @@ Token Lexer::identifier() {
     if (value == "Import") {
         return {TokenType::Import, value, line, startCol};
     }
+    if (value == "Configuration") {
+        return {TokenType::Configuration, value, line, startCol};
+    }
 
 
     return {TokenType::Identifier, value, line, startCol};
@@ -265,7 +268,15 @@ Token Lexer::getNextToken() {
         // Arithmetic and grouping operators
         if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }
         if (current == '-') { int startCol = column; advance(); return {TokenType::Minus, "-", line, startCol}; }
-        if (current == '*') { int startCol = column; advance(); return {TokenType::Asterisk, "*", line, startCol}; }
+        if (current == '*') {
+            int startCol = column;
+            advance();
+            if (peek() == '*') {
+                advance();
+                return {TokenType::Power, "**", line, startCol};
+            }
+            return {TokenType::Asterisk, "*", line, startCol};
+        }
         if (current == '/') { int startCol = column; advance(); return {TokenType::Slash, "/", line, startCol}; }
         if (current == '%') { int startCol = column; advance(); return {TokenType::Percent, "%", line, startCol}; }
         if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }

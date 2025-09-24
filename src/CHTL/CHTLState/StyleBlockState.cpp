@@ -66,7 +66,7 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         parser.advanceTokens();
         if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected identifier after '.' for class selector.");
         selectorName = parser.currentToken.value;
-        if (!parser.contextNode->attributes.count("class")) {
+        if (!parser.configManager.disableStyleAutoAddClass && !parser.contextNode->attributes.count("class")) {
             parser.contextNode->attributes["class"] = {StyleValue::STRING, 0.0, "", selectorName};
         }
     } else if (parser.currentToken.type == TokenType::Hash) {
@@ -619,8 +619,7 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     if (tmpl->isCustom && parser.currentToken.type == TokenType::OpenBrace) {
         parser.expectToken(TokenType::OpenBrace);
         while (parser.currentToken.type != TokenType::CloseBrace) {
-            if (parser.currentToken.type == TokenType::Delete) {
-                parser.advanceTokens(); // consume 'delete'
+            if (parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
 
                 while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
                     if (parser.currentToken.type == TokenType::At) {

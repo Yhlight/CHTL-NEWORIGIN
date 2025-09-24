@@ -12,3 +12,4 @@ std::string styleValueToString(const StyleValue& sv);
 // The main entry point for parsing a style value expression.
 // It requires the parser context to access the token stream and other state.
 StyleValue parseStyleExpression(Parser& parser);
+StyleValue parsePowerExpr(Parser& parser);
