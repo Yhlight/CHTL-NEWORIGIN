@@ -1,0 +1,43 @@
+# Build directories and artifacts
+build/
+dist/
+bin/
+out/
+Testing/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+CTestTestfile.cmake
+Makefile
+install_manifest.txt
+compile_commands.json
+
+# Libraries and objects
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# Generated
+*.generated.*
+*.tmp
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.suo
+*.VC.db
+*.DS_Store
+
+# Modules cache
+Module/**/info/*.json
+
