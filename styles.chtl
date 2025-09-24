@@ -1,0 +1,7 @@
+// This file defines a style template to be imported.
+
+[Template] @Style ImportedStyles
+{
+    font-family: sans-serif;
+    color: #333;
+}

@@ -1,0 +1,116 @@
+[
+{
+  "directory": "/app/build/ThirdParty",
+  "command": "/usr/bin/cc  -I/app/ThirdParty  -o CMakeFiles/ThirdParty_Lib.dir/miniz.c.o -c /app/ThirdParty/miniz.c",
+  "file": "/app/ThirdParty/miniz.c",
+  "output": "ThirdParty/CMakeFiles/ThirdParty_Lib.dir/miniz.c.o"
+},
+{
+  "directory": "/app/build/Util",
+  "command": "/usr/bin/c++  -I/app/Util -std=gnu++17 -o CMakeFiles/Util_Lib.dir/FileSystem/File.cpp.o -c /app/Util/FileSystem/File.cpp",
+  "file": "/app/Util/FileSystem/File.cpp",
+  "output": "Util/CMakeFiles/Util_Lib.dir/FileSystem/File.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLContext/Context.cpp.o -c /app/CHTL/CHTLContext/Context.cpp",
+  "file": "/app/CHTL/CHTLContext/Context.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLContext/Context.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLState/State.cpp.o -c /app/CHTL/CHTLState/State.cpp",
+  "file": "/app/CHTL/CHTLState/State.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/State.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o -c /app/CHTL/CHTLState/ParsingState.cpp",
+  "file": "/app/CHTL/CHTLState/ParsingState.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLState/ParsingState.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLLexer/Lexer.cpp.o -c /app/CHTL/CHTLLexer/Lexer.cpp",
+  "file": "/app/CHTL/CHTLLexer/Lexer.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLLexer/Lexer.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLNode/ElementNode.cpp.o -c /app/CHTL/CHTLNode/ElementNode.cpp",
+  "file": "/app/CHTL/CHTLNode/ElementNode.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLNode/ElementNode.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLNode/TextNode.cpp.o -c /app/CHTL/CHTLNode/TextNode.cpp",
+  "file": "/app/CHTL/CHTLNode/TextNode.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLNode/TextNode.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLNode/CommentNode.cpp.o -c /app/CHTL/CHTLNode/CommentNode.cpp",
+  "file": "/app/CHTL/CHTLNode/CommentNode.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLNode/CommentNode.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLParser/Parser.cpp.o -c /app/CHTL/CHTLParser/Parser.cpp",
+  "file": "/app/CHTL/CHTLParser/Parser.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLParser/Parser.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLLoader/Loader.cpp.o -c /app/CHTL/CHTLLoader/Loader.cpp",
+  "file": "/app/CHTL/CHTLLoader/Loader.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLLoader/Loader.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseElementStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseElementStrategy.cpp",
+  "file": "/app/CHTL/CHTLStrategy/ParseElementStrategy.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseElementStrategy.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseTemplateStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseTemplateStrategy.cpp",
+  "file": "/app/CHTL/CHTLStrategy/ParseTemplateStrategy.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseTemplateStrategy.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseImportStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseImportStrategy.cpp",
+  "file": "/app/CHTL/CHTLStrategy/ParseImportStrategy.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseImportStrategy.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.o -c /app/CHTL/CHTLStrategy/ParseNamespaceStrategy.cpp",
+  "file": "/app/CHTL/CHTLStrategy/ParseNamespaceStrategy.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLStrategy/ParseNamespaceStrategy.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o -c /app/CHTL/CHTLGenerator/AstPrinter.cpp",
+  "file": "/app/CHTL/CHTLGenerator/AstPrinter.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/AstPrinter.cpp.o"
+},
+{
+  "directory": "/app/build/CHTL",
+  "command": "/usr/bin/c++  -I/app/CHTL -std=gnu++17 -o CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o -c /app/CHTL/CHTLGenerator/CodeGenerator.cpp",
+  "file": "/app/CHTL/CHTLGenerator/CodeGenerator.cpp",
+  "output": "CHTL/CMakeFiles/CHTL_Lib.dir/CHTLGenerator/CodeGenerator.cpp.o"
+},
+{
+  "directory": "/app/build/Scanner",
+  "command": "/usr/bin/c++  -I/app/Scanner -std=gnu++17 -o CMakeFiles/Scanner_Lib.dir/UnifiedScanner.cpp.o -c /app/Scanner/UnifiedScanner.cpp",
+  "file": "/app/Scanner/UnifiedScanner.cpp",
+  "output": "Scanner/CMakeFiles/Scanner_Lib.dir/UnifiedScanner.cpp.o"
+},
+{
+  "directory": "/app/build/CompilerDispatcher",
+  "command": "/usr/bin/c++  -I/app/CHTL -I/app/Util -I/app/ThirdParty -I/app/Scanner -std=gnu++17 -o CMakeFiles/chtl_compiler.dir/main.cpp.o -c /app/CompilerDispatcher/main.cpp",
+  "file": "/app/CompilerDispatcher/main.cpp",
+  "output": "CompilerDispatcher/CMakeFiles/chtl_compiler.dir/main.cpp.o"
+}
+]

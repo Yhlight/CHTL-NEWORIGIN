@@ -1,0 +1,2 @@
+/usr/bin/ar qc libThirdParty_Lib.a CMakeFiles/ThirdParty_Lib.dir/miniz.c.o
+/usr/bin/ranlib libThirdParty_Lib.a
