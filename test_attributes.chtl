@@ -1,0 +1,10 @@
+// test_attributes.chtl
+html {
+    body {
+        div {
+            id: "main-content";
+            class: "container";
+            text: "Here is some text.";
+        }
+    }
+}

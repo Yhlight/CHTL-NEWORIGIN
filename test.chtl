@@ -1,0 +1,13 @@
+// This is a test of CHTL with comments.
+
+html {
+    /*
+        This is the body of the document.
+        It contains a single div.
+    */
+    body {
+        div {
+            text: "Hello, CHTL!"; // This text should be rendered.
+        }
+    }
+}

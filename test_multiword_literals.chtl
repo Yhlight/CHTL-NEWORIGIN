@@ -1,0 +1,14 @@
+// Test for multi-word unadorned literals
+html {
+    body {
+        div {
+            // Multi-word attribute
+            font-family: Times New Roman, serif;
+
+            // Multi-word text block
+            text {
+                Hello beautiful world
+            }
+        }
+    }
+}

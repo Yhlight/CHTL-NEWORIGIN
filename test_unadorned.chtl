@@ -1,0 +1,20 @@
+// Test for unadorned (unquoted) literals
+html {
+    body {
+        // Attribute with unadorned literal
+        div {
+            class: container;
+            id: "main-box"; // Mix of adorned and unadorned
+
+            // Text block with unadorned literal
+            text {
+                Hello
+            }
+        }
+
+        // Text property with unadorned literal
+        span {
+            text: World;
+        }
+    }
+}
