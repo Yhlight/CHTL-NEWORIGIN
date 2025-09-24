@@ -1,0 +1,13 @@
+# Ignore build artifacts and executables
+/lexer_test
+/parser_test
+/generator_test
+/generator_test_comments
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
