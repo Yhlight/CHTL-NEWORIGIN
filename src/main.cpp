@@ -2,6 +2,7 @@
 #include "CHTL/CHTLGenerator/CHTLGenerator.h"
 #include "Util/FileSystem/FileSystemUtil.h"
 #include <iostream>
+#include <string>
 
 int main(int argc, char* argv[]) {
     std::string source;
@@ -16,12 +17,11 @@ int main(int argc, char* argv[]) {
         std::cout << "No input file provided. Using default sample source." << std::endl;
         source = R"(
             html {
-                id: root;
                 head {}
                 body {
-                    class: "main-content";
-                    p {
-                        // text node parsing is not yet implemented
+                    style {
+                        color: blue;
+                        .nested { font-weight: bold; }
                     }
                 }
             }
@@ -45,8 +45,21 @@ int main(int argc, char* argv[]) {
     if (ast) {
         std::cout << "\n--- Generated HTML ---\n";
         CHTL::CHTLGenerator generator;
-        std::string html = generator.generate(*ast);
-        std::cout << html << std::endl;
+        std::string html_body = generator.generate(*ast);
+        std::string global_styles = generator.getGlobalStyles();
+
+        // The main function is now responsible for composition
+        if (!global_styles.empty()) {
+            std::string style_tag = "  <style>\n" + global_styles + "  </style>\n";
+            size_t head_pos = html_body.find("</head>");
+            if (head_pos != std::string::npos) {
+                html_body.insert(head_pos, style_tag);
+            } else {
+                // Prepend if no head tag
+                html_body = style_tag + html_body;
+            }
+        }
+        std::cout << html_body << std::endl;
     } else {
         std::cout << "Parsing resulted in an empty AST.\n";
     }

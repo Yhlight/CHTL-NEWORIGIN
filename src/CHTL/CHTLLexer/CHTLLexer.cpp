@@ -86,15 +86,11 @@ Token CHTLLexer::getNextToken() {
     if (isAtEnd()) return makeToken(TokenType::END_OF_FILE, "EOF");
     char c = peek();
     if (isalpha(c) || c == '_') return makeIdentifier();
-
-    // FIX: Improve number/unit literal tokenizing
     if (isdigit(c) || (c == '.' && isdigit(peek()))) {
         while (isdigit(peek()) || peek() == '.') advance();
-        // Also consume alphabetical units that might follow (e.g., px, em, rem, %)
         while (isalpha(peek()) || peek() == '%') advance();
         return makeToken(TokenType::UNQUOTED_LITERAL, _source.substr(_start, _current - _start));
     }
-
     if (c == '"' || c == '\'') {
         return makeString(c);
     }
@@ -105,6 +101,9 @@ Token CHTLLexer::getNextToken() {
         case ':': return makeToken(TokenType::COLON, ":");
         case ';': return makeToken(TokenType::SEMICOLON, ";");
         case ',': return makeToken(TokenType::COMMA, ",");
+        case '.': return makeToken(TokenType::DOT, ".");
+        case '#': return makeToken(TokenType::HASH, "#");
+        case '&': return makeToken(TokenType::AMPERSAND, "&");
     }
     return makeToken(TokenType::UNKNOWN, std::string(1, c));
 }

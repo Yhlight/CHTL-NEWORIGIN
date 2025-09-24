@@ -14,6 +14,7 @@ add_library(CHTL_Compiler STATIC
     CHTLNode/ElementNode.h
     CHTLNode/StylePropertyNode.h
     CHTLNode/StyleBlockNode.h
+    CHTLNode/SelectorBlockNode.h
     CHTLState/ParseBaseState.h
     CHTLState/ParseBaseState.cpp
     CHTLState/ParseElementState.h
@@ -22,6 +23,8 @@ add_library(CHTL_Compiler STATIC
     CHTLState/ParseStyleState.cpp
     CHTLStrategy/ParseSimplePropertyStrategy.h
     CHTLStrategy/ParseSimplePropertyStrategy.cpp
+    CHTLStrategy/ParseSelectorStrategy.h
+    CHTLStrategy/ParseSelectorStrategy.cpp
     CHTLParser/CHTLParser.h
     CHTLParser/CHTLParser.cpp
     CHTLGenerator/CHTLGenerator.h

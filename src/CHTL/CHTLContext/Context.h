@@ -6,28 +6,32 @@
 #include "CHTLNode/BaseNode.h"
 #include "CHTLNode/ElementNode.h"
 #include "CHTLNode/StyleBlockNode.h"
+
 #include <memory>
 #include <vector>
 
 namespace CHTL {
 
-/**
- * @class CHTLContext
- * @brief Manages the state and strategy of the parser.
- */
+// Define a common interface for nodes that can contain style properties
+class StyleContainerNode {
+public:
+    virtual ~StyleContainerNode() = default;
+    std::vector<std::unique_ptr<BaseNode>> rules;
+};
+
+// Update AST nodes to inherit from the new interface
+#include "CHTLNode/SelectorBlockNode.h"
+// We will need to modify StyleBlockNode and SelectorBlockNode to use this.
+// For now, let's just add the stack to the context.
+
 class CHTLContext {
 public:
     explicit CHTLContext(const std::string& source);
 
-    // State management
     void setState(std::unique_ptr<State> newState);
     void request();
-
-    // Strategy management
     void setStrategy(std::unique_ptr<Strategy> newStrategy);
     void executeStrategy();
-
-    // Token management
     Token consumeToken();
     const Token& peekToken(size_t offset = 0) const;
 
@@ -38,9 +42,11 @@ public:
     void popNode();
     std::unique_ptr<BaseNode> getAST();
 
-    // Style block management
-    void setCurrentStyleBlock(StyleBlockNode* styleBlock);
-    StyleBlockNode* getCurrentStyleBlock() const;
+    // Style block/container management
+    void pushStyleContainer(BaseNode* container);
+    void popStyleContainer();
+    BaseNode* getCurrentStyleContainer() const;
+
 
 private:
     std::unique_ptr<State> _currentState;
@@ -51,7 +57,7 @@ private:
 
     std::unique_ptr<BaseNode> _ast;
     std::vector<ElementNode*> _nodeStack;
-    StyleBlockNode* _currentStyleBlock = nullptr; // Pointer to the current style block
+    std::vector<BaseNode*> _styleContainerStack;
 };
 
 } // namespace CHTL

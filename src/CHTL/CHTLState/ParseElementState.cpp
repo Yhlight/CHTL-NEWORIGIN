@@ -69,8 +69,8 @@ void ParseElementState::handle(CHTLContext& context) {
                 throw std::runtime_error("Expected '{' after 'style' keyword.");
             }
             auto styleNode = std::make_unique<StyleBlockNode>();
-            // Set the current style block on the context so the strategy can access it
-            context.setCurrentStyleBlock(styleNode.get());
+            // Push the new style block onto the container stack
+            context.pushStyleContainer(styleNode.get());
             context.getCurrentNode()->style = std::move(styleNode);
 
             context.setState(std::make_unique<ParseStyleState>());

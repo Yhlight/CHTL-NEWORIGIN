@@ -10,6 +10,9 @@ enum class TokenType {
     LEFT_BRACE, RIGHT_BRACE,
     COLON, SEMICOLON,
     COMMA,
+    DOT,        // .
+    HASH,       // #
+    AMPERSAND,  // &
 
     // Literals
     IDENTIFIER,

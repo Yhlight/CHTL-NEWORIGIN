@@ -7,27 +7,24 @@
 namespace CHTL {
 
 class ElementNode;
-class AttributeNode;
 class TextNode;
+class SelectorBlockNode;
 
-/**
- * @class CHTLGenerator
- * @brief Generates output (e.g., HTML) from an AST.
- */
 class CHTLGenerator {
 public:
     CHTLGenerator() = default;
 
-    // FIX: Taking a non-const reference to appease faulty review.
     std::string generate(BaseNode& root);
+    std::string getGlobalStyles() const;
 
 private:
-    // FIX: Taking non-const references to appease faulty review.
     void generateNode(BaseNode& node);
     void generateElement(ElementNode& node);
     void generateText(TextNode& node);
+    void generateSelectorBlock(const SelectorBlockNode& node);
 
     std::stringstream _output;
+    std::stringstream _global_styles;
     int _indent_level = 0;
 
     void indent();

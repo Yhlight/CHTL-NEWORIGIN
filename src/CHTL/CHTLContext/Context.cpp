@@ -73,12 +73,21 @@ std::unique_ptr<BaseNode> CHTLContext::getAST() {
     return std::move(_ast);
 }
 
-void CHTLContext::setCurrentStyleBlock(StyleBlockNode* styleBlock) {
-    _currentStyleBlock = styleBlock;
+void CHTLContext::pushStyleContainer(BaseNode* container) {
+    _styleContainerStack.push_back(container);
 }
 
-StyleBlockNode* CHTLContext::getCurrentStyleBlock() const {
-    return _currentStyleBlock;
+void CHTLContext::popStyleContainer() {
+    if (!_styleContainerStack.empty()) {
+        _styleContainerStack.pop_back();
+    }
+}
+
+BaseNode* CHTLContext::getCurrentStyleContainer() const {
+    if (_styleContainerStack.empty()) {
+        return nullptr;
+    }
+    return _styleContainerStack.back();
 }
 
 } // namespace CHTL

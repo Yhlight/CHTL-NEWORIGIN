@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BaseNode.h"
-#include "StylePropertyNode.h"
 #include <vector>
 #include <memory>
 #include <sstream>
@@ -11,9 +10,6 @@ namespace CHTL {
 /**
  * @class StyleBlockNode
  * @brief Represents a style { ... } block within an element.
- *
- * It acts as a container for various style-related nodes, starting
- * with simple properties.
  */
 class StyleBlockNode : public BaseNode {
 public:
@@ -24,15 +20,16 @@ public:
         std::string indentation(indent, ' ');
         ss << indentation << "StyleBlock [\n";
 
-        for (const auto& prop : properties) {
-            ss << prop->toString(indent + 2) << "\n";
+        for (const auto& rule : rules) {
+            ss << rule->toString(indent + 2) << "\n";
         }
 
         ss << indentation << "]";
         return ss.str();
     }
 
-    std::vector<std::unique_ptr<StylePropertyNode>> properties;
+    // This can now hold StylePropertyNode, SelectorBlockNode, etc.
+    std::vector<std::unique_ptr<BaseNode>> rules;
 };
 
 } // namespace CHTL
