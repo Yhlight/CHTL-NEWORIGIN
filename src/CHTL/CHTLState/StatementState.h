@@ -38,4 +38,7 @@ private:
 
     // Helper for parsing an 'except' clause
     void parseExceptClause(Parser& parser, ElementNode& element);
+
+    // Helper for parsing a generator comment
+    std::unique_ptr<BaseNode> parseGeneratorComment(Parser& parser);
 };

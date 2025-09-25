@@ -42,7 +42,30 @@ void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
 void test_responsive_value();
+void test_generator_comment();
 
+
+void test_generator_comment() {
+    std::string source = R"(
+        // This is a standard line comment, should be ignored.
+        body {
+            # This is a generator comment, should be rendered.
+            p { text: "Hello"; }
+            /* This is a standard block comment, should be ignored. */
+            div { text: #not-a-comment; }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("<!-- This is a generator comment, should be rendered. -->") != std::string::npos);
+    assert(result.find("This is a standard line comment") == std::string::npos);
+    assert(result.find("This is a standard block comment") == std::string::npos);
+    assert(result.find("<div>") != std::string::npos);
+    assert(result.find("#not-a-comment") != std::string::npos);
+}
 
 void test_text_block_literals() {
     std::string source = R"(
@@ -366,6 +389,7 @@ int main() {
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
     run_test(test_enhanced_selector, "Enhanced Selector");
     run_test(test_responsive_value, "Responsive Value");
+    run_test(test_generator_comment, "Generator Comment");
     run_test(test_calc_generation, "Calc() Generation");
     run_test(test_except_constraint, "Except Constraint");
     run_test(test_named_origin_and_import, "Named Origin and Import");

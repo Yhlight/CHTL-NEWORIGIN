@@ -31,6 +31,7 @@ set(CHTL_SOURCES
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp
+    src/CHTL/CHTLScanner/UnifiedScanner.cpp
 )
 
 # Add a library for the CHTL compiler components
@@ -40,10 +41,18 @@ add_library(chtl_lib STATIC ${CHTL_SOURCES})
 target_include_directories(chtl_lib PUBLIC src)
 
 
+# --- CHTL JS Library ---
+set(CHTL_JS_SOURCES
+    src/CHTLJS/CHTLJSLexer/Lexer.cpp
+)
+add_library(chtl_js_lib STATIC ${CHTL_JS_SOURCES})
+target_include_directories(chtl_js_lib PUBLIC src)
+
+
 # --- Main Executable ---
 # This would be the main compiler executable.
 add_executable(chtl_compiler src/main.cpp)
-target_link_libraries(chtl_compiler PRIVATE chtl_lib)
+target_link_libraries(chtl_compiler PRIVATE chtl_lib chtl_js_lib)
 
 
 # --- Test Suite ---
@@ -54,7 +63,7 @@ enable_testing()
 add_executable(chtl_tests tests/main.cpp)
 
 # Link the test executable against the CHTL library
-target_link_libraries(chtl_tests PRIVATE chtl_lib)
+target_link_libraries(chtl_tests PRIVATE chtl_lib chtl_js_lib)
 
 # Add a test to CTest
 add_test(NAME RunCHTLTests COMMAND chtl_tests)

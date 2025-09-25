@@ -14,4 +14,5 @@ public:
 
     // The content of the comment.
     std::string text;
+    bool isGeneratorComment = false;
 };

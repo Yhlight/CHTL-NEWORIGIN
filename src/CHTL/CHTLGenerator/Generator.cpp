@@ -148,7 +148,10 @@ void Generator::generateText(const TextNode* node) {
 }
 
 void Generator::generateComment(const CommentNode* node) {
-    appendLine("<!-- " + node->text + " -->");
+    if (node->isGeneratorComment) {
+        // The lexer strips the leading space, so we add one back for formatting.
+        appendLine("<!-- " + node->text + " -->");
+    }
 }
 
 void Generator::generateScript(const ScriptNode* node) {

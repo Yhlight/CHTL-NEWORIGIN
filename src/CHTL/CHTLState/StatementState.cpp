@@ -158,7 +158,7 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         // Any other identifier is assumed to be an element tag.
         return parseElement(parser);
     } else if (parser.currentToken.type == TokenType::HashComment) {
-        return parseComment(parser);
+        return parseGeneratorComment(parser);
     }
 
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
@@ -293,8 +293,9 @@ std::unique_ptr<BaseNode> StatementState::parseTextElement(Parser& parser) {
 }
 
 // Parses a '# comment' line.
-std::unique_ptr<BaseNode> StatementState::parseComment(Parser& parser) {
+std::unique_ptr<BaseNode> StatementState::parseGeneratorComment(Parser& parser) {
     auto comment = std::make_unique<CommentNode>(parser.currentToken.value);
+    comment->isGeneratorComment = true;
     parser.expectToken(TokenType::HashComment);
     return comment;
 }
