@@ -26,6 +26,7 @@ void run_test(void (*test_func)(), const std::string& test_name) {
 
 // --- Test Cases ---
 
+void test_lexer_configuration_keyword();
 void test_namespace_template_access();
 void test_keyword_aliasing();
 void test_hyphenated_property();
@@ -61,6 +62,8 @@ void test_ignored_comments();
 void test_colon_equal_equivalence_in_info();
 void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
+void test_style_property_power_operator();
+void test_style_property_modulo_operator();
 
 
 void test_text_block_literals() {
@@ -373,6 +376,7 @@ void test_import() {
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
+    run_test(test_lexer_configuration_keyword, "Lexer Configuration Keyword");
     run_test(test_referenced_property, "Referenced Property");
     run_test(test_conditional_expression_true, "Conditional Expression (True)");
     run_test(test_conditional_expression_false, "Conditional Expression (False)");
@@ -421,6 +425,8 @@ int main() {
     run_test(test_colon_equal_equivalence_in_info, "Colon-Equal Equivalence in Info Block");
     run_test(test_colon_equal_equivalence_in_config, "Colon-Equal Equivalence in Config Block");
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
+    run_test(test_style_property_power_operator, "Style Property Power Operator");
+    run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1099,6 +1105,30 @@ void test_namespace_template_access() {
     assert(result.find("class=\"nested-box\"") != std::string::npos);
 }
 
+void test_lexer_configuration_keyword() {
+    std::string source = "[Configuration] { DEBUG_MODE = true; }";
+    Lexer lexer(source);
+    std::vector<Token> tokens;
+    Token token = lexer.getNextToken();
+    while (token.type != TokenType::EndOfFile) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    assert(tokens.size() == 9);
+    assert(tokens[0].type == TokenType::OpenBracket);
+    assert(tokens[1].type == TokenType::Configuration);
+    assert(tokens[2].type == TokenType::CloseBracket);
+    assert(tokens[3].type == TokenType::OpenBrace);
+    assert(tokens[4].type == TokenType::Identifier);
+    assert(tokens[4].value == "DEBUG_MODE");
+    assert(tokens[5].type == TokenType::Equals);
+    assert(tokens[6].type == TokenType::Identifier);
+    assert(tokens[6].value == "true");
+    assert(tokens[7].type == TokenType::Semicolon);
+    assert(tokens[8].type == TokenType::CloseBrace);
+}
+
 void test_keyword_aliasing() {
     std::string source = R"(
         [Configuration] {
@@ -1130,4 +1160,36 @@ void test_keyword_aliasing() {
     // Assertions
     assert(result.find("color: white;") != std::string::npos);
     assert(result.find("font-size") == std::string::npos);
+}
+
+void test_style_property_power_operator() {
+    std::string source = R"(
+        div {
+            style {
+                width: 10px ** 2;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("width: 100px;") != std::string::npos);
+}
+
+void test_style_property_modulo_operator() {
+    std::string source = R"(
+        div {
+            style {
+                width: 10px % 3;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("width: 1px;") != std::string::npos);
 }

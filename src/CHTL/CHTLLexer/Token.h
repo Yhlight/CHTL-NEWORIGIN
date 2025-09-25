@@ -30,6 +30,7 @@ enum class TokenType {
     Plus,        // +
     Minus,       // -
     Asterisk,    // *
+    DoubleAsterisk, // **
     Slash,       // /
     Percent,     // %
 

@@ -5,6 +5,7 @@
 #include "../CHTLNode/StyleValue.h" // Include the new StyleValue struct
 #include "../Util/StyleUtil.h" // Include the new StyleUtil
 #include "../Util/ASTUtil.h" // For findNodeBySelector
+#include <cmath>
 #include <stdexcept>
 #include <sstream>
 
@@ -396,30 +397,52 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
 }
 
-StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
+StyleValue StyleBlockState::parsePowerExpr(Parser& parser) {
     StyleValue result = parsePrimaryExpr(parser);
-    while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash) {
-        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of * or / must be numeric.");
-        TokenType op = parser.currentToken.type;
+    while (parser.currentToken.type == TokenType::DoubleAsterisk) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of ** must be numeric.");
         parser.advanceTokens();
         StyleValue rhs = parsePrimaryExpr(parser);
-        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of * or / must be numeric.");
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of ** must be numeric.");
 
-        // For multiplication and division, one of the operands must be unitless.
-        if (!result.unit.empty() && !rhs.unit.empty()) {
-            throw std::runtime_error("Cannot multiply or divide two values with units.");
+        // For power, the exponent must be unitless.
+        if (!rhs.unit.empty()) {
+            throw std::runtime_error("Exponent for ** operator cannot have a unit.");
         }
 
-        if (op == TokenType::Asterisk) {
-            result.numeric_val *= rhs.numeric_val;
-        } else {
-            if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero.");
-            result.numeric_val /= rhs.numeric_val;
-        }
+        result.numeric_val = pow(result.numeric_val, rhs.numeric_val);
+    }
+    return result;
+}
 
-        // The result should adopt the unit of whichever operand had one.
-        if (result.unit.empty()) {
-            result.unit = rhs.unit;
+StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
+    StyleValue result = parsePowerExpr(parser);
+    while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash || parser.currentToken.type == TokenType::Percent) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of *, /, or % must be numeric.");
+        TokenType op = parser.currentToken.type;
+        parser.advanceTokens();
+        StyleValue rhs = parsePowerExpr(parser);
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of *, /, or % must be numeric.");
+
+        if (op == TokenType::Percent) {
+            if (!result.unit.empty() && !rhs.unit.empty() && result.unit != rhs.unit) {
+                throw std::runtime_error("Cannot perform modulo on values with different units.");
+            }
+            if (rhs.numeric_val == 0) throw std::runtime_error("Modulo by zero.");
+            result.numeric_val = fmod(result.numeric_val, rhs.numeric_val);
+        } else { // Multiplication and Division
+            if (!result.unit.empty() && !rhs.unit.empty()) {
+                throw std::runtime_error("Cannot multiply or divide two values with units.");
+            }
+            if (op == TokenType::Asterisk) {
+                result.numeric_val *= rhs.numeric_val;
+            } else { // Slash
+                if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero.");
+                result.numeric_val /= rhs.numeric_val;
+            }
+            if (result.unit.empty()) {
+                result.unit = rhs.unit;
+            }
         }
     }
     return result;

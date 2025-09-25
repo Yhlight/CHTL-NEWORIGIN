@@ -28,6 +28,7 @@ public:
     StyleValue parseBooleanRelationalExpr(Parser& parser);
     StyleValue parseAdditiveExpr(Parser& parser);
     StyleValue parseMultiplicativeExpr(Parser& parser);
+    StyleValue parsePowerExpr(Parser& parser);
     StyleValue parsePrimaryExpr(Parser& parser);
     StyleValue parseReferencedProperty(Parser& parser);
     Selector parseSelector(Parser& parser);

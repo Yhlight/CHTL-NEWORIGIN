@@ -88,6 +88,7 @@ Token Lexer::identifier() {
         column = preWhitespaceCol;
     }
     if (value == "Import") return {TokenType::Import, value, line, startCol, startPos};
+    if (value == "Configuration") return {TokenType::Configuration, value, line, startCol, startPos};
     if (value == "Info") return {TokenType::Info, value, line, startCol, startPos};
 
     return {TokenType::Identifier, value, line, startCol, startPos};
@@ -209,7 +210,14 @@ Token Lexer::getNextToken() {
         if (current == '$') { advance(); return {TokenType::Dollar, "$", line, startCol, startPos}; }
         if (current == '+') { advance(); return {TokenType::Plus, "+", line, startCol, startPos}; }
         if (current == '-') { advance(); return {TokenType::Minus, "-", line, startCol, startPos}; }
-        if (current == '*') { advance(); return {TokenType::Asterisk, "*", line, startCol, startPos}; }
+        if (current == '*') {
+            advance();
+            if (peek() == '*') {
+                advance();
+                return {TokenType::DoubleAsterisk, "**", line, startCol, startPos};
+            }
+            return {TokenType::Asterisk, "*", line, startCol, startPos};
+        }
         if (current == '/') { advance(); return {TokenType::Slash, "/", line, startCol, startPos}; }
         if (current == '%') { advance(); return {TokenType::Percent, "%", line, startCol, startPos}; }
         if (current == '(') { advance(); return {TokenType::OpenParen, "(", line, startCol, startPos}; }
