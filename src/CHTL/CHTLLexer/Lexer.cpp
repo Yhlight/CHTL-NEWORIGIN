@@ -59,6 +59,7 @@ Token Lexer::identifier() {
         value += advance();
     }
 
+    if (value == "if") return {TokenType::If, value, line, startCol, startPos};
     if (value == "inherit") return {TokenType::Inherit, value, line, startCol, startPos};
     if (value == "Origin") return {TokenType::Origin, value, line, startCol, startPos};
     if (value == "use") return {TokenType::Use, value, line, startCol, startPos};

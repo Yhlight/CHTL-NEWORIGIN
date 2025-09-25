@@ -38,4 +38,7 @@ private:
 
     // Helper for parsing an 'except' clause
     void parseExceptClause(Parser& parser, ElementNode& element);
+
+    // Helper for parsing an 'if' conditional block
+    std::unique_ptr<BaseNode> parseConditionalBlock(Parser& parser);
 };

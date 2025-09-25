@@ -13,6 +13,7 @@
 #include "../CHTLNode/EnhancedSelectorNode.h"
 #include "../Util/NodeCloner.h"
 #include "../CHTLLoader/Loader.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include <stdexcept>
 #include <string>
 #include <utility> // For std::pair
@@ -73,6 +74,8 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     } else if (parser.currentToken.type == TokenType::Use) {
         parser.setState(std::make_unique<UseState>());
         return nullptr; // `use` directive does not produce a node
+    } else if (parser.currentToken.type == TokenType::If) {
+        return parseConditionalBlock(parser);
     } else if (parser.currentToken.type == TokenType::At) {
         // --- ADD CONSTRAINT CHECK FOR TEMPLATE USAGE ---
         if (parser.contextNode && !parser.contextNode->constraints.empty()) {
@@ -1001,4 +1004,48 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
     flushRawContent(parser.currentToken.start_pos);
     element.children.push_back(std::move(scriptNode));
     parser.expectToken(TokenType::CloseBrace);
+}
+
+std::unique_ptr<BaseNode> StatementState::parseConditionalBlock(Parser& parser) {
+    parser.expectToken(TokenType::If);
+    parser.expectToken(TokenType::OpenBrace);
+
+    auto conditionalNode = std::make_unique<ConditionalNode>();
+    bool conditionFound = false;
+
+    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "condition") {
+            parser.advanceTokens(); // consume 'condition'
+            parser.expectToken(TokenType::Colon);
+
+            // Use the style expression parser to evaluate the condition.
+            // This requires a context node, but 'if' isn't a real element.
+            // We can temporarily use a dummy node.
+            auto dummyNode = std::make_unique<ElementNode>("dummy");
+            parser.contextNode = dummyNode.get();
+            StyleBlockState tempStyleState;
+            conditionalNode->condition = tempStyleState.parseStyleExpression(parser);
+            parser.contextNode = nullptr; // Reset context
+
+            if (conditionalNode->condition.type != StyleValue::BOOL) {
+                throw std::runtime_error("The 'condition' property must evaluate to a boolean.");
+            }
+            parser.expectToken(TokenType::Semicolon);
+            conditionFound = true;
+        } else {
+            // Parse child nodes and add them to the conditional node.
+            // The generator will decide whether to render them.
+            auto childNode = handle(parser);
+            if (childNode) {
+                conditionalNode->children.push_back(std::move(childNode));
+            }
+        }
+    }
+
+    if (!conditionFound) {
+        throw std::runtime_error("An 'if' block must contain a 'condition' property.");
+    }
+
+    parser.expectToken(TokenType::CloseBrace);
+    return conditionalNode;
 }

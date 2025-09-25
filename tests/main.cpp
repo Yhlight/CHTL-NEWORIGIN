@@ -4,6 +4,7 @@
 #include <cassert>
 #include <fstream> // For std::ofstream
 #include <cstdio>  // For remove()
+#include <cctype>
 
 // Include all necessary CHTL headers
 #include "../src/CHTL/CHTLLexer/Lexer.h"
@@ -11,6 +12,12 @@
 #include "../src/CHTL/CHTLGenerator/Generator.h"
 #include "../src/Scanner/UnifiedScanner.h"
 #include "../src/Dispatcher/CompilerDispatcher.h"
+
+// Helper function to remove all whitespace from a string
+std::string strip(std::string s) {
+    s.erase(std::remove_if(s.begin(), s.end(), [](unsigned char c) { return std::isspace(c); }), s.end());
+    return s;
+}
 
 // A simple testing framework
 void run_test(void (*test_func)(), const std::string& test_name) {
@@ -61,6 +68,10 @@ void test_ignored_comments();
 void test_colon_equal_equivalence_in_info();
 void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
+void test_referenced_property_in_conditional();
+void test_valueless_custom_style_group();
+void test_indexed_element_specialization();
+void test_static_conditional_rendering();
 
 
 void test_text_block_literals() {
@@ -422,8 +433,125 @@ int main() {
     run_test(test_colon_equal_equivalence_in_config, "Colon-Equal Equivalence in Config Block");
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
 
+    run_test(test_referenced_property_in_conditional, "Referenced Property in Conditional Expression");
+    run_test(test_valueless_custom_style_group, "Valueless Custom Style Group");
+    run_test(test_indexed_element_specialization, "Indexed Element Specialization");
+    run_test(test_static_conditional_rendering, "Static Conditional Rendering");
+
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_static_conditional_rendering() {
+    std::string source = R"(
+        div {
+            id: "container";
+            width: 100px;
+        }
+        body {
+            if {
+                condition: #container.width > 50px;
+                p { text: "Visible"; }
+            }
+            if {
+                condition: #container.width < 50px;
+                span { text: "Hidden"; }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("Visible") != std::string::npos);
+    assert(result.find("Hidden") == std::string::npos);
+}
+
+void test_indexed_element_specialization() {
+    std::string source = R"(
+        [Custom] @Element MyList {
+            li { text: "Item 1"; }
+            li { text: "Item 2"; }
+            li { text: "Item 3"; }
+        }
+
+        body {
+            @Element MyList {
+                li[1] {
+                    style {
+                        color: red;
+                    }
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    // The result should contain three <li> elements.
+    // The second <li> should have a style attribute.
+    // The first and third should not.
+    std::string stripped_result = strip(result);
+    assert(stripped_result.find("<li>Item1</li>") != std::string::npos);
+    assert(stripped_result.find("<listyle=\"color:red;\">Item2</li>") != std::string::npos);
+    assert(stripped_result.find("<li>Item3</li>") != std::string::npos);
+}
+
+void test_valueless_custom_style_group() {
+    std::string source = R"(
+        [Custom] @Style TextFormat {
+            color;
+            font-size;
+        }
+
+        p {
+            style {
+                @Style TextFormat {
+                    color: blue;
+                    font-size: 20px;
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("color: blue;") != std::string::npos);
+    assert(result.find("font-size: 20px;") != std::string::npos);
+}
+
+void test_referenced_property_in_conditional() {
+    std::string source = R"(
+        div {
+            class: "box";
+            style {
+                width: 100px;
+                height: 200px;
+            }
+        }
+        p {
+            style {
+                font-size: .box.width > 50px ? 16px : 12px;
+                line-height: .box.width > 150px ? 1.8 : 1.5;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("font-size: 16px;") != std::string::npos);
+    assert(result.find("line-height: 1.5;") != std::string::npos);
 }
 
 void test_info_block_parsing() {

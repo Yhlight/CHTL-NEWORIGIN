@@ -63,6 +63,7 @@ enum class TokenType {
     LessThanEquals,    // <=
 
     // Keywords
+    If,           // if
     Origin,       // Origin
     Use,          // use
     Namespace,    // Namespace

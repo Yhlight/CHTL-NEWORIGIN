@@ -238,11 +238,18 @@ StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
         // TODO: Create a utility to serialize the selector struct to a string for better error messages
         throw std::runtime_error("Could not find element for property reference.");
     }
-    auto it = referencedNode->inlineStyles.find(propertyName);
-    if (it == referencedNode->inlineStyles.end()) {
-        throw std::runtime_error("Property '" + propertyName + "' not found on referenced element.");
+    // Check inline styles first, then attributes.
+    auto style_it = referencedNode->inlineStyles.find(propertyName);
+    if (style_it != referencedNode->inlineStyles.end()) {
+        return style_it->second;
     }
-    return it->second;
+
+    auto attr_it = referencedNode->attributes.find(propertyName);
+    if (attr_it != referencedNode->attributes.end()) {
+        return attr_it->second;
+    }
+
+    throw std::runtime_error("Property '" + propertyName + "' not found on referenced element.");
 }
 
 StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {

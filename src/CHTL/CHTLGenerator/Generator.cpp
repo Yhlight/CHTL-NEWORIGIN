@@ -5,6 +5,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/RawScriptNode.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include <stdexcept>
 #include <algorithm>
 #include <set>
@@ -74,6 +75,16 @@ void Generator::generateNode(const BaseNode* node) {
             break;
         case NodeType::Script:
             generateScript(static_cast<const ScriptNode*>(node));
+            break;
+        case NodeType::Conditional:
+            {
+                const auto* condNode = static_cast<const ConditionalNode*>(node);
+                if (condNode->condition.bool_val) {
+                    for (const auto& child : condNode->children) {
+                        generateNode(child.get());
+                    }
+                }
+            }
             break;
         default:
             break;
