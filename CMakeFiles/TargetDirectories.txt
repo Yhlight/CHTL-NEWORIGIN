@@ -1,6 +1,0 @@
-/app/CMakeFiles/chtl_lib.dir
-/app/CMakeFiles/chtl_compiler.dir
-/app/CMakeFiles/chtl_tests.dir
-/app/CMakeFiles/test.dir
-/app/CMakeFiles/edit_cache.dir
-/app/CMakeFiles/rebuild_cache.dir
