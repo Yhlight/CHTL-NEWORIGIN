@@ -88,6 +88,7 @@ Token Lexer::identifier() {
         column = preWhitespaceCol;
     }
     if (value == "Import") return {TokenType::Import, value, line, startCol, startPos};
+    if (value == "Info") return {TokenType::Info, value, line, startCol, startPos};
 
     return {TokenType::Identifier, value, line, startCol, startPos};
 }

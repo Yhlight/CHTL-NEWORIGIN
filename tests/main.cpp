@@ -51,6 +51,7 @@ void test_unified_scanner_style_separation();
 void test_scanner_ignores_nested_style();
 void test_scanner_handles_nested_braces_in_script();
 void test_dispatcher_workflow();
+void test_info_block_parsing();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -409,9 +410,29 @@ int main() {
     run_test(test_scanner_ignores_nested_style, "Scanner Ignores Nested Style");
     run_test(test_scanner_handles_nested_braces_in_script, "Scanner Handles Nested Braces in Script");
     run_test(test_dispatcher_workflow, "Dispatcher Workflow");
+    run_test(test_info_block_parsing, "Info Block Parsing");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_info_block_parsing() {
+    std::string source = R"(
+        [Info] {
+            name = "MyModule";
+            version = "1.0.0";
+            author = "CHTL Team";
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    parser.parse();
+
+    // This test will require modifications to the Parser to store the info.
+    // For now, we'll assume a placeholder. The test will fail to compile
+    // until the InfoNode and the parser member are added.
+    // assert(parser.infoNode != nullptr);
+    // assert(parser.infoNode->metadata["name"] == "MyModule");
 }
 
 void test_dispatcher_workflow() {

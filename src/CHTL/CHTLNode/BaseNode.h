@@ -28,9 +28,7 @@ enum class NodeType {
     EnhancedSelector,
     RawScript,
     ResponsiveValue,
-    If,
-    ElseIf,
-    Else
+    Info
     // More types will be added as more CHTL features are implemented.
 };
 

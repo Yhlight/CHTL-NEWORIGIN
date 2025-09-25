@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include "../CHTLNode/InfoNode.h"
+
 // Forward declarations to avoid circular dependencies
 class ParserState;
 class ElementNode;
@@ -69,6 +71,9 @@ public:
     // A pointer to the list of root nodes parsed so far.
     // This allows states to perform lookups on the current AST.
     const std::vector<std::unique_ptr<BaseNode>>* parsedNodes = nullptr;
+
+    // A pointer to the parsed info node, if one exists.
+    std::unique_ptr<InfoNode> infoNode = nullptr;
     // --- End public interface for states ---
 
 public:

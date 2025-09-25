@@ -25,6 +25,7 @@ class UseState;
 #include "StyleBlockState.h"
 #include "ConfigurationState.h"
 #include "UseState.h"
+#include "InfoState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -39,6 +40,19 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         const auto& config = parser.configManager;
         const std::string& nextValue = parser.peekToken.value;
 
+        if (config.isKeyword(nextValue, "KEYWORD_INFO", "Info")) {
+            parser.setState(std::make_unique<InfoState>());
+            return nullptr;
+        }
+        if (config.isKeyword(nextValue, "KEYWORD_INFO", "Info")) {
+            parser.expectToken(TokenType::OpenBracket);
+            parser.setState(std::make_unique<InfoState>());
+            return nullptr;
+        }
+        if (config.isKeyword(nextValue, "KEYWORD_INFO", "Info")) {
+            parser.setState(std::make_unique<InfoState>());
+            return nullptr;
+        }
         if (config.isKeyword(nextValue, "KEYWORD_IMPORT", "Import")) {
             parseImportStatement(parser);
             return nullptr;
