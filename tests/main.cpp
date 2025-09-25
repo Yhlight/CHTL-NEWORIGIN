@@ -61,7 +61,35 @@ void test_ignored_comments();
 void test_colon_equal_equivalence_in_info();
 void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
+void test_same_unit_arithmetic();
+void test_referenced_property_with_arithmetic();
 
+
+void test_referenced_property_with_arithmetic() {
+    std::string source = R"(
+        div { id: "box1"; style { width: 100px; } }
+        div { id: "box2"; style { width: #box1.width + 50px; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("width: 150px;") != std::string::npos);
+}
+
+void test_same_unit_arithmetic() {
+    std::string source = R"(
+        div { style { width: 100px + 20px; height: 5in - 2in; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("width: 120px;") != std::string::npos);
+    assert(result.find("height: 3in;") != std::string::npos);
+}
 
 void test_text_block_literals() {
     std::string source = R"(
@@ -421,6 +449,8 @@ int main() {
     run_test(test_colon_equal_equivalence_in_info, "Colon-Equal Equivalence in Info Block");
     run_test(test_colon_equal_equivalence_in_config, "Colon-Equal Equivalence in Config Block");
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
+    run_test(test_same_unit_arithmetic, "Same Unit Arithmetic");
+    run_test(test_referenced_property_with_arithmetic, "Referenced Property with Arithmetic");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
