@@ -848,15 +848,22 @@ void StatementState::parseNamespaceDefinition(Parser& parser) {
 void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::OpenBracket);
     parser.expectToken(TokenType::Import);
+    parser.expectToken(TokenType::CloseBracket);
 
-    // This is where we'd parse the optional [Custom], [Template] part
-    // For now, we'll skip this and assume a simple @Type syntax for all imports.
-    if (parser.currentToken.type == TokenType::CloseBracket) {
-         parser.advanceTokens(); // Consume ']'
-    } else {
-        // In a full implementation, parse [Custom] etc. here
-        parser.advanceTokens();
-        parser.advanceTokens();
+    bool isCustom = false;
+    bool isTemplate = false;
+    if (parser.currentToken.type == TokenType::OpenBracket) {
+        if (parser.peekToken.value == "Custom") {
+            isCustom = true;
+            parser.advanceTokens(); // [
+            parser.advanceTokens(); // Custom
+            parser.expectToken(TokenType::CloseBracket);
+        } else if (parser.peekToken.value == "Template") {
+            isTemplate = true;
+            parser.advanceTokens(); // [
+            parser.advanceTokens(); // Template
+            parser.expectToken(TokenType::CloseBracket);
+        }
     }
 
     parser.expectToken(TokenType::At);
@@ -887,7 +894,37 @@ void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::Semicolon);
 
     // --- Import Logic ---
-    if (importType == "Chtl") {
+    if (!itemName.empty()) { // This is a precise import
+        try {
+            std::string fileContent = Loader::loadFile(path);
+            Lexer importLexer(fileContent);
+            Parser importParser(importLexer);
+            importParser.parse();
+
+            std::string finalName = alias.empty() ? itemName : alias;
+
+            if (importType == "Element") {
+                ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
+                if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + path);
+                auto cloned_node = NodeCloner::clone(nodeToImport);
+                parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
+            } else if (importType == "Style") {
+                StyleTemplateNode* nodeToImport = importParser.templateManager.getStyleTemplate("_global", itemName);
+                if (!nodeToImport) throw std::runtime_error("Style template '" + itemName + "' not found in " + path);
+                auto cloned_node = NodeCloner::clone(nodeToImport);
+                parser.templateManager.addStyleTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<StyleTemplateNode>(static_cast<StyleTemplateNode*>(cloned_node.release())));
+            } else if (importType == "Var") {
+                VarTemplateNode* nodeToImport = importParser.templateManager.getVarTemplate("_global", itemName);
+                if (!nodeToImport) throw std::runtime_error("Var template '" + itemName + "' not found in " + path);
+                auto cloned_node = NodeCloner::clone(nodeToImport);
+                parser.templateManager.addVarTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<VarTemplateNode>(static_cast<VarTemplateNode*>(cloned_node.release())));
+            } else {
+                throw std::runtime_error("Precise import is only supported for @Element, @Style, and @Var.");
+            }
+        } catch (const std::runtime_error& e) {
+            throw std::runtime_error("Failed to import '" + itemName + "' from file '" + path + "': " + e.what());
+        }
+    } else if (importType == "Chtl") {
         // This is now a full file import
         try {
             std::string fileContent = Loader::loadFile(path);
@@ -907,28 +944,6 @@ void StatementState::parseImportStatement(Parser& parser) {
         } catch (const std::runtime_error& e) {
             throw std::runtime_error("Failed to import file '" + path + "' as origin block '" + alias + "': " + e.what());
         }
-    } else if (importType == "Element" || importType == "Var" || importType == "Style") { // Precise imports
-         if (itemName.empty()) throw std::runtime_error("Precise import requires an item name before 'from'.");
-         try {
-            std::string fileContent = Loader::loadFile(path);
-            Lexer importLexer(fileContent);
-            Parser importParser(importLexer);
-            importParser.parse();
-
-            std::string finalName = alias.empty() ? itemName : alias;
-
-            if (importType == "Element") {
-                ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
-                if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + path);
-                auto cloned_node = NodeCloner::clone(nodeToImport);
-                parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
-            }
-            // Add similar logic for Style and Var templates here...
-
-         } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import '" + itemName + "' from file '" + path + "': " + e.what());
-        }
-
     } else {
         throw std::runtime_error("Unsupported import type: @" + importType);
     }

@@ -40,6 +40,10 @@ void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
 void test_use_html5_directive();
 void test_named_configuration();
+void test_precise_style_import();
+void test_precise_var_import();
+void test_precise_style_import_with_alias();
+void test_precise_import_not_found();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -389,9 +393,89 @@ int main() {
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
     run_test(test_use_html5_directive, "Use HTML5 Directive");
     run_test(test_named_configuration, "Named Configuration");
+    run_test(test_precise_style_import, "Precise Style Import");
+    run_test(test_precise_var_import, "Precise Var Import");
+    run_test(test_precise_style_import_with_alias, "Precise Style Import with Alias");
+    run_test(test_precise_import_not_found, "Precise Import Not Found");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_precise_import_not_found() {
+    std::ofstream("styles.chtl") << "[Template] @Style MyStyle { color: blue; }";
+    std::string source = R"(
+        [Import] @Style NonExistentStyle from "styles.chtl";
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    bool exception_thrown = false;
+    try {
+        parser.parse();
+    } catch (const std::runtime_error& e) {
+        exception_thrown = true;
+        std::string msg = e.what();
+        assert(msg.find("not found in") != std::string::npos);
+    }
+    assert(exception_thrown);
+    remove("styles.chtl");
+}
+
+void test_precise_style_import_with_alias() {
+    std::ofstream("styles.chtl") << "[Template] @Style MyStyle { color: green; }";
+    std::string source = R"(
+        [Import] @Style MyStyle from "styles.chtl" as MyAlias;
+        div {
+            style {
+                @Style MyAlias;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("color: green;") != std::string::npos);
+    remove("styles.chtl");
+}
+
+void test_precise_style_import() {
+    std::ofstream("styles.chtl") << "[Template] @Style MyStyle { color: blue; }";
+    std::string source = R"(
+        [Import] @Style MyStyle from "styles.chtl";
+        div {
+            style {
+                @Style MyStyle;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("color: blue;") != std::string::npos);
+    remove("styles.chtl");
+}
+
+void test_precise_var_import() {
+    std::ofstream("vars.chtl") << "[Template] @Var MyVars { primaryColor: \"red\"; }";
+    std::string source = R"(
+        [Import] @Var MyVars from "vars.chtl";
+        div {
+            style {
+                color: MyVars(primaryColor);
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("color: red;") != std::string::npos);
+    remove("vars.chtl");
 }
 
 void test_use_html5_directive() {
