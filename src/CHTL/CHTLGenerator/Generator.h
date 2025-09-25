@@ -4,9 +4,11 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../Bridge/SharedContext.h"
 #include <string>
 #include <vector>
 #include <memory>
+#include <sstream>
 
 // The Generator class traverses an Abstract Syntax Tree (AST) and
 // produces the final output string (e.g., HTML).
@@ -15,19 +17,21 @@ public:
     Generator();
 
     // The main entry point for the generation process.
-    // Takes the AST, global CSS, and a flag for the doctype.
-    std::string generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, bool outputDoctype);
+    std::string generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, const SharedContext& context, bool outputDoctype);
 
 private:
     std::string result;
     int indentLevel;
     std::string globalCssToInject;
 
+#include "../CHTLNode/ScriptNode.h"
     // Visitor-style methods to generate output for each node type.
     void generateNode(const BaseNode* node);
-    void generateElement(const ElementNode* node);
+    void generateElement(ElementNode* node); // Needs to be non-const to add id
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
+    void generateScript(const ScriptNode* node);
+    void generateRuntimeScript(const SharedContext& context);
 
     // Helper methods for managing indentation and building the result string.
     void append(const std::string& str);

@@ -56,7 +56,7 @@ html {
 
         // 3. Generation Stage
         Generator generator;
-        std::string htmlOutput = generator.generate(ast, parser.globalStyleContent, parser.outputHtml5Doctype);
+        std::string htmlOutput = generator.generate(ast, parser.globalStyleContent, parser.sharedContext, parser.outputHtml5Doctype);
 
         // 4. Output Results
         std::cout << "--- CHTL Source ---" << std::endl;

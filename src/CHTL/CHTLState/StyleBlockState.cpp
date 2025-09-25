@@ -51,9 +51,22 @@ void StyleBlockState::parseInlineProperty(Parser& parser) {
     parser.expectToken(TokenType::Colon);
 
     StyleValue value = parseStyleExpression(parser);
-    // If a conditional evaluates to false with no 'else', it returns an EMPTY value.
-    // In this case, we don't add the property at all.
-    if (value.type != StyleValue::EMPTY) {
+    if (value.type == StyleValue::RESPONSIVE) {
+        if (parser.contextNode->attributes.find("id") == parser.contextNode->attributes.end()) {
+            parser.contextNode->attributes["id"] = {StyleValue::STRING, 0, "", "chtl-id-" + std::to_string(parser.elementIdCounter++)};
+        }
+        std::string elementId = parser.contextNode->attributes["id"].string_val;
+
+        ResponsiveBinding binding;
+        binding.elementId = elementId;
+        binding.property = "style." + key;
+        binding.unit = value.unit;
+
+        parser.sharedContext.responsiveBindings[value.responsive_var_name].push_back(binding);
+
+    } else if (value.type != StyleValue::EMPTY) {
+        // If a conditional evaluates to false with no 'else', it returns an EMPTY value.
+        // In this case, we don't add the property at all.
         parser.contextNode->inlineStyles[key] = value;
     }
 
@@ -269,6 +282,28 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         double value = std::stod(rawValue.substr(0, unit_pos));
         std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
         return {StyleValue::NUMERIC, value, unit};
+    }
+
+    if (parser.currentToken.type == TokenType::Dollar) {
+        parser.advanceTokens(); // consume '$'
+        if (parser.currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected identifier after '$' for responsive value.");
+        }
+        std::string varName = parser.currentToken.value;
+        parser.advanceTokens();
+        parser.expectToken(TokenType::Dollar); // consume closing '$'
+
+        StyleValue sv;
+        sv.type = StyleValue::RESPONSIVE;
+        sv.responsive_var_name = varName;
+
+        // Check for an optional unit identifier immediately following the responsive value
+        if (parser.currentToken.type == TokenType::Identifier) {
+            sv.unit = parser.currentToken.value;
+            parser.advanceTokens();
+        }
+
+        return sv;
     }
 
     if (parser.currentToken.type == TokenType::OpenParen) {

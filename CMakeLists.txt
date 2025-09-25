@@ -19,6 +19,10 @@ set(CHTL_SOURCES
     src/CHTL/CHTLManage/TemplateManager.cpp
     src/CHTL/CHTLNode/CommentNode.cpp
     src/CHTL/CHTLNode/ElementNode.cpp
+    src/CHTL/CHTLNode/EnhancedSelectorNode.cpp
+    src/CHTL/CHTLNode/RawScriptNode.cpp
+    src/CHTL/CHTLNode/ResponsiveValueNode.cpp
+    src/CHTL/CHTLNode/ScriptNode.cpp
     src/CHTL/CHTLNode/TextNode.cpp
     src/CHTL/CHTLParser/Parser.cpp
     src/CHTL/CHTLState/ConfigurationState.cpp

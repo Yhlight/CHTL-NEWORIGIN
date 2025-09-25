@@ -4,6 +4,7 @@
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLManage/TemplateManager.h"
 #include "../CHTLManage/ConfigurationManager.h" // Add config manager
+#include "../Bridge/SharedContext.h"
 #include <memory>
 #include <vector>
 
@@ -50,6 +51,10 @@ public:
 
     // The manager for storing and retrieving configuration settings.
     ConfigurationManager configManager;
+
+    // The "Salt Bridge" context for inter-compiler data sharing.
+    SharedContext sharedContext;
+    int elementIdCounter = 0;
 
     bool outputHtml5Doctype = false;
 

@@ -38,11 +38,15 @@ void test_ampersand_selector_order();
 void test_delete_element_inheritance();
 void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
+void test_unquoted_literal_support();
+void test_text_block_literals();
+void test_enhanced_selector();
+void test_responsive_value();
 
-void test_unquoted_literals() {
+
+void test_text_block_literals() {
     std::string source = R"(
         div {
-            class: card red_text;
             text { This is unquoted }
         }
     )";
@@ -50,9 +54,79 @@ void test_unquoted_literals() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
-    assert(result.find("class=\"card red_text\"") != std::string::npos);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("This is unquoted") != std::string::npos);
+}
+
+void test_unquoted_literal_support() {
+    std::string source = R"(
+        div {
+            text: This is an unquoted attribute value;
+            style {
+                font-family: Times New Roman;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("This is an unquoted attribute value") != std::string::npos);
+    assert(result.find("font-family: Times New Roman;") != std::string::npos);
+}
+
+void test_enhanced_selector() {
+    std::string source = R"(
+        div {
+            id: "my-div";
+            script {
+                const myDiv = {{#my-div}};
+                myDiv.innerText = "Hello CHTL JS";
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    // The generator will now preserve whitespace from the source.
+    std::string expected_script = "const myDiv = document.querySelector('#my-div');\n                myDiv.innerText = \"Hello CHTL JS\";";
+    assert(result.find(expected_script) != std::string::npos);
+}
+
+void test_responsive_value() {
+    std::string source = R"(
+        div {
+            class: $myClass$;
+            style {
+                width: $myWidth$px;
+            }
+            script {
+                myClass = "responsive-box";
+                myWidth = 250;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    // Check for the generated element with its unique ID
+    assert(result.find("<div id=\"chtl-id-0\"") != std::string::npos);
+    // Check for the runtime script setup
+    assert(result.find("const __chtl = {") != std::string::npos);
+    // Check for variable registration in the runtime script
+    assert(result.find("__chtl.registerBinding('myClass', 'chtl-id-0', 'class', '');") != std::string::npos);
+    assert(result.find("__chtl.registerBinding('myWidth', 'chtl-id-0', 'style.width', 'px');") != std::string::npos);
+    // Check for the proxy creation
+    assert(result.find("Object.defineProperty(window, 'myClass'") != std::string::npos);
+    // Check that the user's script is still present
+    assert(result.find("myClass = \"responsive-box\";") != std::string::npos);
 }
 
 void test_calc_generation() {
@@ -63,7 +137,7 @@ void test_calc_generation() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width: calc(100% - 20px);") != std::string::npos);
 }
 
@@ -104,7 +178,7 @@ void test_named_origin_and_import() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("<div>Hello</div>") != std::string::npos);
     assert(result.find("console.log('imported');") != std::string::npos);
     remove("imported_script.js");
@@ -127,7 +201,7 @@ void test_delete_style_inheritance() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("color: red;") == std::string::npos); // Parent style should be deleted
     assert(result.find("font_weight: bold;") != std::string::npos); // Child style should remain
     assert(result.find("font_size: 20px;") != std::string::npos); // Specialized style should remain
@@ -142,7 +216,7 @@ void test_referenced_property() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     std::string expected_substr = "height: 100px;";
     assert(result.find(expected_substr) != std::string::npos);
 }
@@ -155,7 +229,7 @@ void test_conditional_expression_true() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     std::string expected_substr = "color: red;";
     assert(result.find(expected_substr) != std::string::npos);
 }
@@ -168,7 +242,7 @@ void test_conditional_expression_false() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     std::string expected_substr = "color: blue;";
     assert(result.find(expected_substr) != std::string::npos);
 }
@@ -182,7 +256,7 @@ void test_custom_style_specialization() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("color: green;") != std::string::npos);
     assert(result.find("border:") == std::string::npos);
 }
@@ -203,7 +277,7 @@ void test_custom_element_delete() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("<span>") == std::string::npos);
     assert(result.find("<div>") != std::string::npos);
 }
@@ -225,7 +299,7 @@ void test_custom_element_insert() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("<span>") < result.find("<div>"));
 }
 
@@ -249,7 +323,7 @@ void test_custom_element_insert_at_top_bottom() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("<header>") != std::string::npos);
     assert(result.find("<footer>") != std::string::npos);
     assert(result.find("<header>") < result.find("<div>"));
@@ -270,7 +344,7 @@ void test_import() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("<p>") != std::string::npos);
     assert(result.find("imported") != std::string::npos);
     remove("imported_file.chtl");
@@ -288,7 +362,10 @@ int main() {
     run_test(test_custom_element_insert, "Custom Element Insertion");
     run_test(test_custom_element_insert_at_top_bottom, "Custom Element Insertion At Top/Bottom");
     run_test(test_import, "Import Statement");
-    run_test(test_unquoted_literals, "Unquoted Literals");
+    run_test(test_text_block_literals, "Text Block Literals");
+    run_test(test_unquoted_literal_support, "Unquoted Literal Support");
+    run_test(test_enhanced_selector, "Enhanced Selector");
+    run_test(test_responsive_value, "Responsive Value");
     run_test(test_calc_generation, "Calc() Generation");
     run_test(test_except_constraint, "Except Constraint");
     run_test(test_named_origin_and_import, "Named Origin and Import");
@@ -321,7 +398,7 @@ void test_calc_with_percentage() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width: calc(50% + 20px);") != std::string::npos);
 }
 
@@ -342,7 +419,7 @@ void test_implicit_style_template_inheritance() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("color: red;") != std::string::npos);
     assert(result.find("font-size: 16px;") != std::string::npos);
 }
@@ -366,7 +443,7 @@ void test_delete_element_inheritance() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("This should be deleted.") == std::string::npos);
     assert(result.find("This should remain.") != std::string::npos);
 }
@@ -389,7 +466,7 @@ void test_ampersand_selector_order() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find(".my-class:hover") != std::string::npos);
     assert(result.find("class=\"my-class\"") != std::string::npos);
 }
@@ -459,7 +536,7 @@ void test_style_auto_add_class() {
     Parser parser1(lexer1);
     auto nodes1 = parser1.parse();
     Generator generator1;
-    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, false);
+    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, parser1.sharedContext, false);
     assert(result1.find("class=\"my-class\"") != std::string::npos);
     assert(result1.find(".my-class") != std::string::npos); // Check selector exists
     assert(result1.find("color: blue;") != std::string::npos); // Check rule exists
@@ -484,7 +561,7 @@ void test_style_auto_add_class() {
     Parser parser2(lexer2);
     auto nodes2 = parser2.parse();
     Generator generator2;
-    std::string result2 = generator2.generate(nodes2, parser2.globalStyleContent, false);
+    std::string result2 = generator2.generate(nodes2, parser2.globalStyleContent, parser2.sharedContext, false);
     assert(result2.find("class=\"my-class\"") == std::string::npos);
     assert(result2.find(".my-class") != std::string::npos); // The style rule should still be generated
 }
@@ -504,7 +581,7 @@ void test_var_template_specialization() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("color: green;") != std::string::npos);
 }
 
@@ -525,7 +602,7 @@ void test_var_template_usage() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("color: blue;") != std::string::npos);
     assert(result.find("border-color: red;") != std::string::npos);
 }
@@ -549,7 +626,7 @@ void test_delete_style_property() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("color: red;") != std::string::npos);
     assert(result.find("font-size") == std::string::npos);
     assert(result.find("font-weight") == std::string::npos);
@@ -566,7 +643,7 @@ void test_conditional_attribute() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("height=\"200px\"") != std::string::npos);
 }
 
@@ -578,7 +655,7 @@ void test_attribute_expression() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width=\"200px\"") != std::string::npos);
 }
 
@@ -590,7 +667,7 @@ void test_hyphenated_property() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("font-family: Arial;") != std::string::npos);
 }
 
@@ -633,7 +710,7 @@ void test_namespace_template_access() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
 
     // Assertions
     assert(result.find("class=\"box-in-space\"") != std::string::npos);
@@ -668,7 +745,7 @@ void test_keyword_aliasing() {
     Parser parser(lexer);
     auto nodes = parser.parse();
     Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
 
     // Assertions
     assert(result.find("color: white;") != std::string::npos);

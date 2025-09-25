@@ -8,6 +8,9 @@
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
+#include "../CHTLNode/ScriptNode.h"
+#include "../CHTLNode/RawScriptNode.h"
+#include "../CHTLNode/EnhancedSelectorNode.h"
 #include "../Util/NodeCloner.h"
 #include "../CHTLLoader/Loader.h"
 #include <stdexcept>
@@ -23,6 +26,9 @@ class ConfigurationState;
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
+
+// Forward declarations for helpers
+void parseScriptBlock(Parser& parser, ElementNode& element);
 
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
@@ -248,6 +254,8 @@ void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
         if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style" && parser.peekToken.type == TokenType::OpenBrace) {
             StyleBlockState styleState;
             styleState.handle(parser); // This will parse the entire style block.
+        } else if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "script" && parser.peekToken.type == TokenType::OpenBrace) {
+            parseScriptBlock(parser, element);
         } else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
             parseExceptClause(parser, element);
         }
@@ -307,7 +315,19 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
 
     parser.expectToken(TokenType::Semicolon);
 
-    if (key == "text") {
+    if (value.type == StyleValue::RESPONSIVE) {
+        if (element.attributes.find("id") == element.attributes.end()) {
+            element.attributes["id"] = {StyleValue::STRING, 0, "", "chtl-id-" + std::to_string(parser.elementIdCounter++)};
+        }
+        std::string elementId = element.attributes["id"].string_val;
+
+        ResponsiveBinding binding;
+        binding.elementId = elementId;
+        binding.property = key;
+        binding.unit = value.unit;
+
+        parser.sharedContext.responsiveBindings[value.responsive_var_name].push_back(binding);
+    } else if (key == "text") {
         // For the special 'text' attribute, convert the value to a string and create a TextNode.
         element.children.push_back(std::make_unique<TextNode>(styleValueToString(value)));
     } else {
@@ -921,4 +941,47 @@ void StatementState::parseImportStatement(Parser& parser) {
     } else {
         throw std::runtime_error("Unsupported import type: @" + importType);
     }
+}
+
+void parseScriptBlock(Parser& parser, ElementNode& element) {
+    parser.expectToken(TokenType::Identifier); // consume 'script'
+    parser.expectToken(TokenType::OpenBrace);
+
+    auto scriptNode = std::make_unique<ScriptNode>("");
+    size_t rawContentStartPos = parser.currentToken.start_pos;
+
+    auto flushRawContent = [&](size_t endPos) {
+        if (endPos > rawContentStartPos) {
+            std::string content = parser.lexer.getSource().substr(rawContentStartPos, endPos - rawContentStartPos);
+            if (!content.empty() && content.find_first_not_of(" \t\n\r") != std::string::npos) {
+                scriptNode->children.push_back(std::make_unique<RawScriptNode>(content));
+            }
+        }
+    };
+
+    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
+            flushRawContent(parser.currentToken.start_pos);
+            parser.advanceTokens(); // Consume '{{'
+            std::stringstream selectorContent;
+            while (parser.currentToken.type != TokenType::CloseDoubleBrace && parser.currentToken.type != TokenType::EndOfFile) {
+                selectorContent << parser.currentToken.value;
+                parser.advanceTokens();
+            }
+            scriptNode->children.push_back(std::make_unique<EnhancedSelectorNode>(selectorContent.str()));
+            parser.expectToken(TokenType::CloseDoubleBrace);
+            rawContentStartPos = parser.currentToken.start_pos;
+        } else if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.type == TokenType::Origin) {
+            flushRawContent(parser.currentToken.start_pos);
+            StatementState originParser;
+            scriptNode->children.push_back(originParser.handle(parser));
+            rawContentStartPos = parser.currentToken.start_pos;
+        } else {
+            parser.advanceTokens();
+        }
+    }
+
+    flushRawContent(parser.currentToken.start_pos);
+    element.children.push_back(std::move(scriptNode));
+    parser.expectToken(TokenType::CloseBrace);
 }

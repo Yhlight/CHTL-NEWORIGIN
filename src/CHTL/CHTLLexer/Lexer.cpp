@@ -54,75 +54,42 @@ void Lexer::skipBlockComment() {
 Token Lexer::identifier() {
     std::string value;
     int startCol = column;
+    size_t startPos = position;
     while (isalnum(peek()) || peek() == '_' || peek() == '-') {
         value += advance();
     }
 
-    if (value == "inherit") {
-        return {TokenType::Inherit, value, line, startCol};
-    }
-    if (value == "Origin") {
-        return {TokenType::Origin, value, line, startCol};
-    }
-    if (value == "use") {
-        return {TokenType::Use, value, line, startCol};
-    }
-    if (value == "Namespace") {
-        return {TokenType::Namespace, value, line, startCol};
-    }
-    if (value == "from") {
-        return {TokenType::From, value, line, startCol};
-    }
-    if (value == "Custom") {
-        return {TokenType::Custom, value, line, startCol};
-    }
-    if (value == "delete") {
-        return {TokenType::Delete, value, line, startCol};
-    }
-    if (value == "insert") {
-        return {TokenType::Insert, value, line, startCol};
-    }
-    if (value == "after") {
-        return {TokenType::After, value, line, startCol};
-    }
-    if (value == "before") {
-        return {TokenType::Before, value, line, startCol};
-    }
-    if (value == "replace") {
-        return {TokenType::Replace, value, line, startCol};
-    }
+    if (value == "inherit") return {TokenType::Inherit, value, line, startCol, startPos};
+    if (value == "Origin") return {TokenType::Origin, value, line, startCol, startPos};
+    if (value == "use") return {TokenType::Use, value, line, startCol, startPos};
+    if (value == "Namespace") return {TokenType::Namespace, value, line, startCol, startPos};
+    if (value == "from") return {TokenType::From, value, line, startCol, startPos};
+    if (value == "Custom") return {TokenType::Custom, value, line, startCol, startPos};
+    if (value == "delete") return {TokenType::Delete, value, line, startCol, startPos};
+    if (value == "insert") return {TokenType::Insert, value, line, startCol, startPos};
+    if (value == "after") return {TokenType::After, value, line, startCol, startPos};
+    if (value == "before") return {TokenType::Before, value, line, startCol, startPos};
+    if (value == "replace") return {TokenType::Replace, value, line, startCol, startPos};
     if (value == "at") {
         size_t preWhitespacePos = position;
         int preWhitespaceLine = line;
         int preWhitespaceCol = column;
-
         skipWhitespace();
-
-        // Check for "top"
         if (peek() == 't' && (position + 3) <= source.length() && source.substr(position, 3) == "top") {
-            // It matches, so consume "top" and return the multi-word token.
             advance(); advance(); advance();
-            return {TokenType::AtTop, "at top", line, startCol};
+            return {TokenType::AtTop, "at top", line, startCol, startPos};
         }
-
-        // Check for "bottom"
         if (peek() == 'b' && (position + 6) <= source.length() && source.substr(position, 6) == "bottom") {
-            // It matches, so consume "bottom" and return the multi-word token.
             advance(); advance(); advance(); advance(); advance(); advance();
-            return {TokenType::AtBottom, "at bottom", line, startCol};
+            return {TokenType::AtBottom, "at bottom", line, startCol, startPos};
         }
-
-        // No match, so backtrack to before the whitespace was skipped.
         position = preWhitespacePos;
         line = preWhitespaceLine;
         column = preWhitespaceCol;
     }
-    if (value == "Import") {
-        return {TokenType::Import, value, line, startCol};
-    }
+    if (value == "Import") return {TokenType::Import, value, line, startCol, startPos};
 
-
-    return {TokenType::Identifier, value, line, startCol};
+    return {TokenType::Identifier, value, line, startCol, startPos};
 }
 
 const std::string& Lexer::getSource() const {
@@ -134,182 +101,154 @@ size_t Lexer::getPosition() const {
 }
 
 void Lexer::setPosition(size_t newPosition) {
-    // This is a simple implementation. It doesn't update line/column counts,
-    // as it's only intended to be used after a raw string scan where the
-    // main parser will then resume tokenizing by calling getNextToken().
-    // The first call to advance() will fix the line/column.
     position = newPosition;
 }
 
 Token Lexer::stringLiteral(char quoteType) {
     std::string value;
     int startCol = column;
+    size_t startPos = position;
     advance(); // consume opening quote
     while (peek() != quoteType && peek() != '\0') {
-        // CHTL spec doesn't mention escape characters, so we treat them literally for now.
         value += advance();
     }
     if (peek() == quoteType) {
         advance(); // consume closing quote
     } else {
-        // Unterminated string literal.
-        return {TokenType::Unexpected, value, line, startCol};
+        return {TokenType::Unexpected, value, line, startCol, startPos};
     }
-    return {TokenType::String, value, line, startCol};
+    return {TokenType::String, value, line, startCol, startPos};
 }
-
 
 Token Lexer::number() {
     std::string value;
     int startCol = column;
-
-    // Integer part
+    size_t startPos = position;
     while (isdigit(peek())) {
         value += advance();
     }
-
-    // Decimal part
     if (peek() == '.') {
         value += advance();
         while (isdigit(peek())) {
             value += advance();
         }
     }
-
-    // Unit part (e.g., px, em, %)
     while (isalpha(peek()) || peek() == '%') {
         value += advance();
     }
-
-    return {TokenType::Number, value, line, startCol};
+    return {TokenType::Number, value, line, startCol, startPos};
 }
 
 Token Lexer::getNextToken() {
     while (position < source.length()) {
         char current = peek();
+        size_t startPos = position;
+        int startCol = column;
 
         if (isspace(current)) {
             skipWhitespace();
             continue;
         }
 
-        // Comments to be ignored by the parser
         if (current == '/' && (position + 1 < source.length())) {
             if (source[position + 1] == '/') {
-                advance(); advance(); // Consume '//'
+                advance(); advance();
                 skipLineComment();
                 continue;
             }
             if (source[position + 1] == '*') {
-                advance(); advance(); // Consume '/*'
+                advance(); advance();
                 skipBlockComment();
                 continue;
             }
         }
 
-        if (isdigit(current)) {
-            return number();
-        }
-
-        if (isalpha(current) || current == '_') {
-            return identifier();
-        }
-
-        if (current == '"' || current == '\'') {
-            return stringLiteral(current);
-        }
+        if (isdigit(current)) return number();
+        if (isalpha(current) || current == '_') return identifier();
+        if (current == '"' || current == '\'') return stringLiteral(current);
 
         if (current == '{') {
-            int startCol = column; advance();
-            return {TokenType::OpenBrace, "{", line, startCol};
+            advance();
+            if (peek() == '{') {
+                advance();
+                return {TokenType::OpenDoubleBrace, "{{", line, startCol, startPos};
+            }
+            return {TokenType::OpenBrace, "{", line, startCol, startPos};
         }
 
         if (current == '}') {
-            int startCol = column; advance();
-            return {TokenType::CloseBrace, "}", line, startCol};
+            advance();
+            if (peek() == '}') {
+                advance();
+                return {TokenType::CloseDoubleBrace, "}}", line, startCol, startPos};
+            }
+            return {TokenType::CloseBrace, "}", line, startCol, startPos};
         }
 
-        if (current == ':') {
-            int startCol = column; advance();
-            return {TokenType::Colon, ":", line, startCol};
-        }
-
-        if (current == ';') {
-            int startCol = column; advance();
-            return {TokenType::Semicolon, ";", line, startCol};
-        }
-
-        if (current == '[') { int startCol = column; advance(); return {TokenType::OpenBracket, "[", line, startCol}; }
-        if (current == ']') { int startCol = column; advance(); return {TokenType::CloseBracket, "]", line, startCol}; }
-        if (current == '@') { int startCol = column; advance(); return {TokenType::At, "@", line, startCol}; }
+        if (current == ':') { advance(); return {TokenType::Colon, ":", line, startCol, startPos}; }
+        if (current == ';') { advance(); return {TokenType::Semicolon, ";", line, startCol, startPos}; }
+        if (current == '[') { advance(); return {TokenType::OpenBracket, "[", line, startCol, startPos}; }
+        if (current == ']') { advance(); return {TokenType::CloseBracket, "]", line, startCol, startPos}; }
+        if (current == '@') { advance(); return {TokenType::At, "@", line, startCol, startPos}; }
 
         if (current == '#') {
-            // If # is followed by a space, it's a comment. Otherwise, it's a selector Hash.
             if ((position + 1 < source.length()) && isspace(source[position + 1])) {
-                int startCol = column;
-                advance(); // consume '#'
-                advance(); // consume ' '
+                advance(); advance();
                 std::string value;
                 while (peek() != '\n' && peek() != '\0') {
                     value += advance();
                 }
-                return {TokenType::HashComment, value, line, startCol};
+                return {TokenType::HashComment, value, line, startCol, startPos};
             } else {
-                int startCol = column; advance(); return {TokenType::Hash, "#", line, startCol};
+                advance(); return {TokenType::Hash, "#", line, startCol, startPos};
             }
         }
 
-        // CSS Selector tokens
-        if (current == '.') { int startCol = column; advance(); return {TokenType::Dot, ".", line, startCol}; }
+        if (current == '.') { advance(); return {TokenType::Dot, ".", line, startCol, startPos}; }
+        if (current == '$') { advance(); return {TokenType::Dollar, "$", line, startCol, startPos}; }
+        if (current == '+') { advance(); return {TokenType::Plus, "+", line, startCol, startPos}; }
+        if (current == '-') { advance(); return {TokenType::Minus, "-", line, startCol, startPos}; }
+        if (current == '*') { advance(); return {TokenType::Asterisk, "*", line, startCol, startPos}; }
+        if (current == '/') { advance(); return {TokenType::Slash, "/", line, startCol, startPos}; }
+        if (current == '%') { advance(); return {TokenType::Percent, "%", line, startCol, startPos}; }
+        if (current == '(') { advance(); return {TokenType::OpenParen, "(", line, startCol, startPos}; }
+        if (current == ')') { advance(); return {TokenType::CloseParen, ")", line, startCol, startPos}; }
+        if (current == ',') { advance(); return {TokenType::Comma, ",", line, startCol, startPos}; }
+        if (current == '?') { advance(); return {TokenType::QuestionMark, "?", line, startCol, startPos}; }
 
-        // Arithmetic and grouping operators
-        if (current == '+') { int startCol = column; advance(); return {TokenType::Plus, "+", line, startCol}; }
-        if (current == '-') { int startCol = column; advance(); return {TokenType::Minus, "-", line, startCol}; }
-        if (current == '*') { int startCol = column; advance(); return {TokenType::Asterisk, "*", line, startCol}; }
-        if (current == '/') { int startCol = column; advance(); return {TokenType::Slash, "/", line, startCol}; }
-        if (current == '%') { int startCol = column; advance(); return {TokenType::Percent, "%", line, startCol}; }
-        if (current == '(') { int startCol = column; advance(); return {TokenType::OpenParen, "(", line, startCol}; }
-        if (current == ')') { int startCol = column; advance(); return {TokenType::CloseParen, ")", line, startCol}; }
-        if (current == ',') { int startCol = column; advance(); return {TokenType::Comma, ",", line, startCol}; }
-
-        // Conditional and logical operators
-        if (current == '?') { int startCol = column; advance(); return {TokenType::QuestionMark, "?", line, startCol}; }
         if (current == '>') {
-            int startCol = column; advance();
-            if (peek() == '=') { advance(); return {TokenType::GreaterThanEquals, ">=", line, startCol}; }
-            return {TokenType::GreaterThan, ">", line, startCol};
+            advance();
+            if (peek() == '=') { advance(); return {TokenType::GreaterThanEquals, ">=", line, startCol, startPos}; }
+            return {TokenType::GreaterThan, ">", line, startCol, startPos};
         }
         if (current == '<') {
-            int startCol = column; advance();
-            if (peek() == '=') { advance(); return {TokenType::LessThanEquals, "<=", line, startCol}; }
-            return {TokenType::LessThan, "<", line, startCol};
+            advance();
+            if (peek() == '=') { advance(); return {TokenType::LessThanEquals, "<=", line, startCol, startPos}; }
+            return {TokenType::LessThan, "<", line, startCol, startPos};
         }
         if (current == '=') {
-            int startCol = column; advance();
-            if (peek() == '=') { advance(); return {TokenType::EqualsEquals, "==", line, startCol}; }
-            return {TokenType::Equals, "=", line, startCol}; // Already exists but good to have it here for context
+            advance();
+            if (peek() == '=') { advance(); return {TokenType::EqualsEquals, "==", line, startCol, startPos}; }
+            return {TokenType::Equals, "=", line, startCol, startPos};
         }
         if (current == '!') {
-            int startCol = column; advance();
-            if (peek() == '=') { advance(); return {TokenType::NotEquals, "!=", line, startCol}; }
-            return {TokenType::Unexpected, "!", line, startCol}; // '!' by itself is not a valid token
+            advance();
+            if (peek() == '=') { advance(); return {TokenType::NotEquals, "!=", line, startCol, startPos}; }
+            return {TokenType::Unexpected, "!", line, startCol, startPos};
         }
         if (current == '&') {
-            int startCol = column; advance();
-            if (peek() == '&') { advance(); return {TokenType::LogicalAnd, "&&", line, startCol}; }
-            return {TokenType::Ampersand, "&", line, startCol}; // Already exists but good to have it here for context
+            advance();
+            if (peek() == '&') { advance(); return {TokenType::LogicalAnd, "&&", line, startCol, startPos}; }
+            return {TokenType::Ampersand, "&", line, startCol, startPos};
         }
         if (current == '|') {
-            int startCol = column; advance();
-            if (peek() == '|') { advance(); return {TokenType::LogicalOr, "||", line, startCol}; }
-            return {TokenType::Unexpected, "|", line, startCol}; // '|' by itself is not a valid token
+            advance();
+            if (peek() == '|') { advance(); return {TokenType::LogicalOr, "||", line, startCol, startPos}; }
+            return {TokenType::Unexpected, "|", line, startCol, startPos};
         }
 
-
-        // If we reach here, the character is not part of any recognized token.
-        int startCol = column;
-        return {TokenType::Unexpected, std::string(1, advance()), line, startCol};
+        return {TokenType::Unexpected, std::string(1, advance()), line, startCol, startPos};
     }
 
-    return {TokenType::EndOfFile, "", line, column};
+    return {TokenType::EndOfFile, "", line, column, position};
 }

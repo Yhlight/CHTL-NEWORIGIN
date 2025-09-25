@@ -19,7 +19,15 @@ enum class NodeType {
     Fragment,
 
     // Raw Content
-    Origin
+    Origin,
+
+    // Behavior Blocks
+    Script,
+
+    // CHTL JS Specific
+    EnhancedSelector,
+    RawScript,
+    ResponsiveValue
     // More types will be added as more CHTL features are implemented.
 };
 

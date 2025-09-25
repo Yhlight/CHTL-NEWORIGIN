@@ -16,6 +16,9 @@ enum class TokenType {
     // Punctuation
     OpenBrace,  // {
     CloseBrace, // }
+    OpenDoubleBrace, // {{
+    CloseDoubleBrace, // }}
+    Dollar,     // $
     Colon,      // :
     Equals,     // =
     Semicolon,  // ;
@@ -83,4 +86,5 @@ struct Token {
     std::string value;
     int line = 1;
     int column = 1;
+    size_t start_pos = 0; // The starting position of the token in the source string
 };
