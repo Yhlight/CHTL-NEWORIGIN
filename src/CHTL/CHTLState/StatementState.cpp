@@ -11,6 +11,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/RawScriptNode.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
+#include "../CHTLNode/AmpersandSelectorNode.h"
 #include "../Util/NodeCloner.h"
 #include "../CHTLLoader/Loader.h"
 #include <stdexcept>
@@ -23,6 +24,7 @@ class StyleBlockState;
 class ConfigurationState;
 #include "StyleBlockState.h"
 #include "ConfigurationState.h"
+#include "GlobalStyleBlockState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -152,13 +154,17 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             }
         }
 
+        if (parser.currentToken.value == "style" && !parser.contextNode) {
+            GlobalStyleBlockState globalStyleState;
+            return globalStyleState.handle(parser);
+        }
         if (parser.currentToken.value == "text") {
             return parseTextElement(parser);
         }
         // Any other identifier is assumed to be an element tag.
         return parseElement(parser);
     } else if (parser.currentToken.type == TokenType::HashComment) {
-        return parseGeneratorComment(parser);
+        return parseComment(parser);
     }
 
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
@@ -293,9 +299,8 @@ std::unique_ptr<BaseNode> StatementState::parseTextElement(Parser& parser) {
 }
 
 // Parses a '# comment' line.
-std::unique_ptr<BaseNode> StatementState::parseGeneratorComment(Parser& parser) {
+std::unique_ptr<BaseNode> StatementState::parseComment(Parser& parser) {
     auto comment = std::make_unique<CommentNode>(parser.currentToken.value);
-    comment->isGeneratorComment = true;
     parser.expectToken(TokenType::HashComment);
     return comment;
 }
@@ -964,12 +969,17 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
         if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
             flushRawContent(parser.currentToken.start_pos);
             parser.advanceTokens(); // Consume '{{'
-            std::stringstream selectorContent;
-            while (parser.currentToken.type != TokenType::CloseDoubleBrace && parser.currentToken.type != TokenType::EndOfFile) {
-                selectorContent << parser.currentToken.value;
-                parser.advanceTokens();
+            if (parser.currentToken.type == TokenType::Ampersand) {
+                parser.advanceTokens(); // Consume '&'
+                scriptNode->children.push_back(std::make_unique<AmpersandSelectorNode>());
+            } else {
+                std::stringstream selectorContent;
+                while (parser.currentToken.type != TokenType::CloseDoubleBrace && parser.currentToken.type != TokenType::EndOfFile) {
+                    selectorContent << parser.currentToken.value;
+                    parser.advanceTokens();
+                }
+                scriptNode->children.push_back(std::make_unique<EnhancedSelectorNode>(selectorContent.str()));
             }
-            scriptNode->children.push_back(std::make_unique<EnhancedSelectorNode>(selectorContent.str()));
             parser.expectToken(TokenType::CloseDoubleBrace);
             rawContentStartPos = parser.currentToken.start_pos;
         } else if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.type == TokenType::Origin) {

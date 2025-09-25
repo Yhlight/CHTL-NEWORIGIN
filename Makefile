@@ -140,19 +140,6 @@ chtl_lib/fast:
 .PHONY : chtl_lib/fast
 
 #=============================================================================
-# Target rules for targets named chtl_js_lib
-
-# Build rule for target.
-chtl_js_lib: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 chtl_js_lib
-.PHONY : chtl_js_lib
-
-# fast build rule for target.
-chtl_js_lib/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_js_lib.dir/build.make CMakeFiles/chtl_js_lib.dir/build
-.PHONY : chtl_js_lib/fast
-
-#=============================================================================
 # Target rules for targets named chtl_compiler
 
 # Build rule for target.
@@ -273,6 +260,30 @@ src/CHTL/CHTLManage/TemplateManager.s: src/CHTL/CHTLManage/TemplateManager.cpp.s
 src/CHTL/CHTLManage/TemplateManager.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLManage/TemplateManager.cpp.s
 .PHONY : src/CHTL/CHTLManage/TemplateManager.cpp.s
+
+src/CHTL/CHTLNode/AmpersandSelectorNode.o: src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/AmpersandSelectorNode.o
+
+# target to build an object file
+src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.o
+
+src/CHTL/CHTLNode/AmpersandSelectorNode.i: src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/AmpersandSelectorNode.i
+
+# target to preprocess a source file
+src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.i
+
+src/CHTL/CHTLNode/AmpersandSelectorNode.s: src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/AmpersandSelectorNode.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/AmpersandSelectorNode.cpp.s
 
 src/CHTL/CHTLNode/CommentNode.o: src/CHTL/CHTLNode/CommentNode.cpp.o
 .PHONY : src/CHTL/CHTLNode/CommentNode.o
@@ -466,30 +477,6 @@ src/CHTL/CHTLParser/Parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLParser/Parser.cpp.s
 .PHONY : src/CHTL/CHTLParser/Parser.cpp.s
 
-src/CHTL/CHTLScanner/UnifiedScanner.o: src/CHTL/CHTLScanner/UnifiedScanner.cpp.o
-.PHONY : src/CHTL/CHTLScanner/UnifiedScanner.o
-
-# target to build an object file
-src/CHTL/CHTLScanner/UnifiedScanner.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLScanner/UnifiedScanner.cpp.o
-.PHONY : src/CHTL/CHTLScanner/UnifiedScanner.cpp.o
-
-src/CHTL/CHTLScanner/UnifiedScanner.i: src/CHTL/CHTLScanner/UnifiedScanner.cpp.i
-.PHONY : src/CHTL/CHTLScanner/UnifiedScanner.i
-
-# target to preprocess a source file
-src/CHTL/CHTLScanner/UnifiedScanner.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLScanner/UnifiedScanner.cpp.i
-.PHONY : src/CHTL/CHTLScanner/UnifiedScanner.cpp.i
-
-src/CHTL/CHTLScanner/UnifiedScanner.s: src/CHTL/CHTLScanner/UnifiedScanner.cpp.s
-.PHONY : src/CHTL/CHTLScanner/UnifiedScanner.s
-
-# target to generate assembly for a file
-src/CHTL/CHTLScanner/UnifiedScanner.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLScanner/UnifiedScanner.cpp.s
-.PHONY : src/CHTL/CHTLScanner/UnifiedScanner.cpp.s
-
 src/CHTL/CHTLState/ConfigurationState.o: src/CHTL/CHTLState/ConfigurationState.cpp.o
 .PHONY : src/CHTL/CHTLState/ConfigurationState.o
 
@@ -513,6 +500,30 @@ src/CHTL/CHTLState/ConfigurationState.s: src/CHTL/CHTLState/ConfigurationState.c
 src/CHTL/CHTLState/ConfigurationState.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/ConfigurationState.cpp.s
 .PHONY : src/CHTL/CHTLState/ConfigurationState.cpp.s
+
+src/CHTL/CHTLState/GlobalStyleBlockState.o: src/CHTL/CHTLState/GlobalStyleBlockState.cpp.o
+.PHONY : src/CHTL/CHTLState/GlobalStyleBlockState.o
+
+# target to build an object file
+src/CHTL/CHTLState/GlobalStyleBlockState.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/GlobalStyleBlockState.cpp.o
+.PHONY : src/CHTL/CHTLState/GlobalStyleBlockState.cpp.o
+
+src/CHTL/CHTLState/GlobalStyleBlockState.i: src/CHTL/CHTLState/GlobalStyleBlockState.cpp.i
+.PHONY : src/CHTL/CHTLState/GlobalStyleBlockState.i
+
+# target to preprocess a source file
+src/CHTL/CHTLState/GlobalStyleBlockState.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/GlobalStyleBlockState.cpp.i
+.PHONY : src/CHTL/CHTLState/GlobalStyleBlockState.cpp.i
+
+src/CHTL/CHTLState/GlobalStyleBlockState.s: src/CHTL/CHTLState/GlobalStyleBlockState.cpp.s
+.PHONY : src/CHTL/CHTLState/GlobalStyleBlockState.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLState/GlobalStyleBlockState.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/GlobalStyleBlockState.cpp.s
+.PHONY : src/CHTL/CHTLState/GlobalStyleBlockState.cpp.s
 
 src/CHTL/CHTLState/StatementState.o: src/CHTL/CHTLState/StatementState.cpp.o
 .PHONY : src/CHTL/CHTLState/StatementState.o
@@ -610,6 +621,30 @@ src/CHTL/Util/NodeCloner.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.s
 .PHONY : src/CHTL/Util/NodeCloner.cpp.s
 
+src/CHTL/Util/StyleParsingUtil.o: src/CHTL/Util/StyleParsingUtil.cpp.o
+.PHONY : src/CHTL/Util/StyleParsingUtil.o
+
+# target to build an object file
+src/CHTL/Util/StyleParsingUtil.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleParsingUtil.cpp.o
+.PHONY : src/CHTL/Util/StyleParsingUtil.cpp.o
+
+src/CHTL/Util/StyleParsingUtil.i: src/CHTL/Util/StyleParsingUtil.cpp.i
+.PHONY : src/CHTL/Util/StyleParsingUtil.i
+
+# target to preprocess a source file
+src/CHTL/Util/StyleParsingUtil.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleParsingUtil.cpp.i
+.PHONY : src/CHTL/Util/StyleParsingUtil.cpp.i
+
+src/CHTL/Util/StyleParsingUtil.s: src/CHTL/Util/StyleParsingUtil.cpp.s
+.PHONY : src/CHTL/Util/StyleParsingUtil.s
+
+# target to generate assembly for a file
+src/CHTL/Util/StyleParsingUtil.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleParsingUtil.cpp.s
+.PHONY : src/CHTL/Util/StyleParsingUtil.cpp.s
+
 src/CHTL/Util/StyleUtil.o: src/CHTL/Util/StyleUtil.cpp.o
 .PHONY : src/CHTL/Util/StyleUtil.o
 
@@ -633,30 +668,6 @@ src/CHTL/Util/StyleUtil.s: src/CHTL/Util/StyleUtil.cpp.s
 src/CHTL/Util/StyleUtil.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleUtil.cpp.s
 .PHONY : src/CHTL/Util/StyleUtil.cpp.s
-
-src/CHTLJS/CHTLJSLexer/Lexer.o: src/CHTLJS/CHTLJSLexer/Lexer.cpp.o
-.PHONY : src/CHTLJS/CHTLJSLexer/Lexer.o
-
-# target to build an object file
-src/CHTLJS/CHTLJSLexer/Lexer.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_js_lib.dir/build.make CMakeFiles/chtl_js_lib.dir/src/CHTLJS/CHTLJSLexer/Lexer.cpp.o
-.PHONY : src/CHTLJS/CHTLJSLexer/Lexer.cpp.o
-
-src/CHTLJS/CHTLJSLexer/Lexer.i: src/CHTLJS/CHTLJSLexer/Lexer.cpp.i
-.PHONY : src/CHTLJS/CHTLJSLexer/Lexer.i
-
-# target to preprocess a source file
-src/CHTLJS/CHTLJSLexer/Lexer.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_js_lib.dir/build.make CMakeFiles/chtl_js_lib.dir/src/CHTLJS/CHTLJSLexer/Lexer.cpp.i
-.PHONY : src/CHTLJS/CHTLJSLexer/Lexer.cpp.i
-
-src/CHTLJS/CHTLJSLexer/Lexer.s: src/CHTLJS/CHTLJSLexer/Lexer.cpp.s
-.PHONY : src/CHTLJS/CHTLJSLexer/Lexer.s
-
-# target to generate assembly for a file
-src/CHTLJS/CHTLJSLexer/Lexer.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_js_lib.dir/build.make CMakeFiles/chtl_js_lib.dir/src/CHTLJS/CHTLJSLexer/Lexer.cpp.s
-.PHONY : src/CHTLJS/CHTLJSLexer/Lexer.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
@@ -716,7 +727,6 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test"
 	@echo "... chtl_compiler"
-	@echo "... chtl_js_lib"
 	@echo "... chtl_lib"
 	@echo "... chtl_tests"
 	@echo "... src/CHTL/CHTLGenerator/Generator.o"
@@ -731,6 +741,9 @@ help:
 	@echo "... src/CHTL/CHTLManage/TemplateManager.o"
 	@echo "... src/CHTL/CHTLManage/TemplateManager.i"
 	@echo "... src/CHTL/CHTLManage/TemplateManager.s"
+	@echo "... src/CHTL/CHTLNode/AmpersandSelectorNode.o"
+	@echo "... src/CHTL/CHTLNode/AmpersandSelectorNode.i"
+	@echo "... src/CHTL/CHTLNode/AmpersandSelectorNode.s"
 	@echo "... src/CHTL/CHTLNode/CommentNode.o"
 	@echo "... src/CHTL/CHTLNode/CommentNode.i"
 	@echo "... src/CHTL/CHTLNode/CommentNode.s"
@@ -755,12 +768,12 @@ help:
 	@echo "... src/CHTL/CHTLParser/Parser.o"
 	@echo "... src/CHTL/CHTLParser/Parser.i"
 	@echo "... src/CHTL/CHTLParser/Parser.s"
-	@echo "... src/CHTL/CHTLScanner/UnifiedScanner.o"
-	@echo "... src/CHTL/CHTLScanner/UnifiedScanner.i"
-	@echo "... src/CHTL/CHTLScanner/UnifiedScanner.s"
 	@echo "... src/CHTL/CHTLState/ConfigurationState.o"
 	@echo "... src/CHTL/CHTLState/ConfigurationState.i"
 	@echo "... src/CHTL/CHTLState/ConfigurationState.s"
+	@echo "... src/CHTL/CHTLState/GlobalStyleBlockState.o"
+	@echo "... src/CHTL/CHTLState/GlobalStyleBlockState.i"
+	@echo "... src/CHTL/CHTLState/GlobalStyleBlockState.s"
 	@echo "... src/CHTL/CHTLState/StatementState.o"
 	@echo "... src/CHTL/CHTLState/StatementState.i"
 	@echo "... src/CHTL/CHTLState/StatementState.s"
@@ -773,12 +786,12 @@ help:
 	@echo "... src/CHTL/Util/NodeCloner.o"
 	@echo "... src/CHTL/Util/NodeCloner.i"
 	@echo "... src/CHTL/Util/NodeCloner.s"
+	@echo "... src/CHTL/Util/StyleParsingUtil.o"
+	@echo "... src/CHTL/Util/StyleParsingUtil.i"
+	@echo "... src/CHTL/Util/StyleParsingUtil.s"
 	@echo "... src/CHTL/Util/StyleUtil.o"
 	@echo "... src/CHTL/Util/StyleUtil.i"
 	@echo "... src/CHTL/Util/StyleUtil.s"
-	@echo "... src/CHTLJS/CHTLJSLexer/Lexer.o"
-	@echo "... src/CHTLJS/CHTLJSLexer/Lexer.i"
-	@echo "... src/CHTLJS/CHTLJSLexer/Lexer.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

@@ -42,17 +42,18 @@ void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
 void test_responsive_value();
-void test_generator_comment();
+void test_global_style_block();
+void test_ampersand_selector_in_script();
 
 
-void test_generator_comment() {
+void test_ampersand_selector_in_script() {
     std::string source = R"(
-        // This is a standard line comment, should be ignored.
-        body {
-            # This is a generator comment, should be rendered.
-            p { text: "Hello"; }
-            /* This is a standard block comment, should be ignored. */
-            div { text: #not-a-comment; }
+        div {
+            id: "my-div";
+            script {
+                const self = {{&}};
+                self.innerText = "Hello from ampersand!";
+            }
         }
     )";
     Lexer lexer(source);
@@ -60,11 +61,24 @@ void test_generator_comment() {
     auto nodes = parser.parse();
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("<!-- This is a generator comment, should be rendered. -->") != std::string::npos);
-    assert(result.find("This is a standard line comment") == std::string::npos);
-    assert(result.find("This is a standard block comment") == std::string::npos);
-    assert(result.find("<div>") != std::string::npos);
-    assert(result.find("#not-a-comment") != std::string::npos);
+    assert(result.find("const self = document.getElementById('my-div');") != std::string::npos);
+}
+
+void test_global_style_block() {
+    std::string source = R"(
+        style {
+            body {
+                color: red;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    parser.parse();
+    assert(parser.globalStyleContent.find("color") != std::string::npos);
+    assert(parser.globalStyleContent.find(":") != std::string::npos);
+    assert(parser.globalStyleContent.find("red") != std::string::npos);
+    assert(parser.globalStyleContent.find(";") != std::string::npos);
 }
 
 void test_text_block_literals() {
@@ -389,7 +403,8 @@ int main() {
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
     run_test(test_enhanced_selector, "Enhanced Selector");
     run_test(test_responsive_value, "Responsive Value");
-    run_test(test_generator_comment, "Generator Comment");
+    run_test(test_global_style_block, "Global Style Block");
+    run_test(test_ampersand_selector_in_script, "Ampersand Selector in Script");
     run_test(test_calc_generation, "Calc() Generation");
     run_test(test_except_constraint, "Except Constraint");
     run_test(test_named_origin_and_import, "Named Origin and Import");

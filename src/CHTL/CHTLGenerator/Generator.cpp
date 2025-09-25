@@ -72,9 +72,7 @@ void Generator::generateNode(const BaseNode* node) {
         case NodeType::Origin:
             append(static_cast<const OriginNode*>(node)->content);
             break;
-        case NodeType::Script:
-            generateScript(static_cast<const ScriptNode*>(node));
-            break;
+        // Script nodes are handled within generateElement to pass the parent context
         default:
             break;
     }
@@ -127,7 +125,11 @@ void Generator::generateElement(ElementNode* node) {
         append("\n");
         indent();
         for (const auto& child : node->children) {
-            generateNode(child.get());
+            if (child->getType() == NodeType::Script) {
+                generateScript(static_cast<const ScriptNode*>(child.get()), node);
+            } else {
+                generateNode(child.get());
+            }
         }
         if (node->tagName == "head" && !globalCssToInject.empty()) {
             appendLine("<style>");
@@ -148,13 +150,10 @@ void Generator::generateText(const TextNode* node) {
 }
 
 void Generator::generateComment(const CommentNode* node) {
-    if (node->isGeneratorComment) {
-        // The lexer strips the leading space, so we add one back for formatting.
-        appendLine("<!-- " + node->text + " -->");
-    }
+    appendLine("<!-- " + node->text + " -->");
 }
 
-void Generator::generateScript(const ScriptNode* node) {
+void Generator::generateScript(const ScriptNode* node, const ElementNode* parent) {
     append(getIndent() + "<script>");
     std::string scriptContent;
     for (const auto& child : node->children) {
@@ -164,6 +163,14 @@ void Generator::generateScript(const ScriptNode* node) {
                 break;
             case NodeType::EnhancedSelector:
                 scriptContent += "document.querySelector('" + static_cast<const EnhancedSelectorNode*>(child.get())->selector + "')";
+                break;
+            case NodeType::AmpersandSelector:
+                if (parent && parent->attributes.count("id")) {
+                    scriptContent += "document.getElementById('" + parent->attributes.at("id").string_val + "')";
+                } else {
+                    // Fallback or error
+                    scriptContent += "null";
+                }
                 break;
             case NodeType::Origin:
                  scriptContent += static_cast<const OriginNode*>(child.get())->content;

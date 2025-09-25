@@ -36,7 +36,6 @@ private:
     void parseStyleTemplateUsage(Parser& parser);
     void parseClassOrIdSelector(Parser& parser);
     void parseAmpersandSelector(Parser& parser);
-    std::string parseCssRuleBlock(Parser& parser);
     void parseInlineProperty(Parser& parser);
 
     // --- Helper for template style resolution ---

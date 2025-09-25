@@ -5,6 +5,7 @@
 #include "../CHTLNode/StyleValue.h" // Include the new StyleValue struct
 #include "../Util/StyleUtil.h" // Include the new StyleUtil
 #include "../Util/ASTUtil.h" // For findNodeBySelector
+#include "../Util/StyleParsingUtil.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -150,25 +151,6 @@ void StyleBlockState::parseAmpersandSelector(Parser& parser) {
     }
 }
 
-// Helper to parse the body of a CSS rule block '{...}'.
-std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
-    parser.expectToken(TokenType::OpenBrace);
-    std::string cssRules;
-    while(parser.currentToken.type != TokenType::CloseBrace) {
-        if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected property name inside selector block.");
-        std::string key = parser.currentToken.value;
-        parser.advanceTokens();
-        parser.expectToken(TokenType::Colon);
-        StyleValue sv = parseStyleExpression(parser);
-        // Use the new utility function
-        std::string value = styleValueToString(sv);
-        cssRules += "  " + key + ": " + value + ";\n";
-        if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
-    }
-    parser.expectToken(TokenType::CloseBrace);
-    return cssRules;
-}
-
 // --- Start of Expression Parsing Implementation ---
 
 Selector StyleBlockState::parseSelector(Parser& parser) {
@@ -220,53 +202,29 @@ Selector StyleBlockState::parseSelector(Parser& parser) {
 }
 
 StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
-    size_t startPos = parser.currentToken.start_pos;
-
-    // 1. Attempt to parse a selector
+    // 1. Use the new selector parser
     Selector selector = parseSelector(parser);
 
-    // 2. If the next token is not a dot, it's not a property reference.
-    // In this case, we treat the consumed text as a literal string.
-    if (parser.currentToken.type != TokenType::Dot) {
-        size_t endPos = parser.currentToken.start_pos;
-        std::string literalValue = parser.lexer.getSource().substr(startPos, endPos - startPos);
-        // Trim trailing whitespace from the captured literal
-        size_t last = literalValue.find_last_not_of(" \t\n\r");
-        if (std::string::npos != last) {
-            literalValue.erase(last + 1);
-        }
-        return {StyleValue::STRING, 0.0, "", literalValue};
-    }
-
-    // 3. It is a reference, so proceed.
-    parser.advanceTokens(); // Consume '.'
-    if (parser.currentToken.type != TokenType::Identifier) {
-        throw std::runtime_error("Expected property name after '.'.");
-    }
+    // 2. The selector parser stops right before the property's dot.
+    parser.expectToken(TokenType::Dot);
     std::string propertyName = parser.currentToken.value;
-    parser.advanceTokens(); // Consume property name
+    parser.expectToken(TokenType::Identifier);
 
-    // 4. Find the node.
+    // 3. Find the node using the new findNodeBySelector (which we'll update next)
     if (!parser.parsedNodes) {
         throw std::runtime_error("Parser context does not have access to parsed nodes for lookup.");
     }
+    // Note: This will fail to compile until we update ASTUtil.h/cpp
     const ElementNode* referencedNode = findNodeBySelector(*parser.parsedNodes, selector);
     if (!referencedNode) {
         // TODO: Create a utility to serialize the selector struct to a string for better error messages
         throw std::runtime_error("Could not find element for property reference.");
     }
-
-    // 5. Look for property in inline styles first, then attributes.
-    auto style_it = referencedNode->inlineStyles.find(propertyName);
-    if (style_it != referencedNode->inlineStyles.end()) {
-        return style_it->second;
+    auto it = referencedNode->inlineStyles.find(propertyName);
+    if (it == referencedNode->inlineStyles.end()) {
+        throw std::runtime_error("Property '" + propertyName + "' not found on referenced element.");
     }
-    auto attr_it = referencedNode->attributes.find(propertyName);
-    if (attr_it != referencedNode->attributes.end()) {
-        return attr_it->second;
-    }
-
-    throw std::runtime_error("Property '" + propertyName + "' not found on referenced element.");
+    return it->second;
 }
 
 StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
@@ -294,8 +252,7 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::Dot) {
         // Starts with a tag selector, e.g., "div.width".
         // We must also check that it's not a self-reference to a property with the same name.
-        if (parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end() &&
-            parser.contextNode->attributes.find(parser.currentToken.value) == parser.contextNode->attributes.end()) {
+        if (parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()) {
             return parseReferencedProperty(parser);
         }
     }

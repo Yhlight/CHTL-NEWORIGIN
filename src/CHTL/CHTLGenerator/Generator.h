@@ -30,7 +30,7 @@ private:
     void generateElement(ElementNode* node); // Needs to be non-const to add id
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
-    void generateScript(const ScriptNode* node);
+    void generateScript(const ScriptNode* node, const ElementNode* parent);
     void generateRuntimeScript(const SharedContext& context);
 
     // Helper methods for managing indentation and building the result string.
