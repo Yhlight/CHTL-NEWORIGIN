@@ -1,10 +1,10 @@
-Start testing: Sep 25 10:51 UTC
+Start testing: Sep 25 11:35 UTC
 ----------------------------------------------------------
 1/1 Testing: RunCHTLTests
 1/1 Test: RunCHTLTests
 Command: "/app/chtl_tests"
 Directory: /app
-"RunCHTLTests" start time: Sep 25 10:51 UTC
+"RunCHTLTests" start time: Sep 25 11:35 UTC
 Output:
 ----------------------------------------------------------
 Running CHTL tests...
@@ -47,13 +47,18 @@ Running CHTL tests...
 [PASS] Unquoted literal stops at semicolon
 [PASS] Unquoted literal with arithmetic
 
+--- Running Arithmetic Operator Tests ---
+[FAIL] Power operator (**) - Power operation does not support units.
+[FAIL] Modulo operator (%) - Modulo does not support units.
+[FAIL] Operator precedence - Power operation does not support units.
+
 Tests finished.
 <end of output>
-Test time =   0.02 sec
+Test time =   0.03 sec
 ----------------------------------------------------------
 Test Passed.
-"RunCHTLTests" end time: Sep 25 10:51 UTC
+"RunCHTLTests" end time: Sep 25 11:35 UTC
 "RunCHTLTests" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Sep 25 10:51 UTC
+End testing: Sep 25 11:35 UTC

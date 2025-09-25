@@ -358,6 +358,9 @@ void test_unquoted_in_style_block();
 void test_unquoted_with_numbers_and_hyphens();
 void test_unquoted_stops_at_semicolon();
 void test_unquoted_with_arithmetic();
+void test_power_operator();
+void test_modulo_operator();
+void test_operator_precedence();
 
 
 int main() {
@@ -403,6 +406,12 @@ int main() {
     run_test(test_unquoted_with_numbers_and_hyphens, "Unquoted literal with numbers and hyphens");
     run_test(test_unquoted_stops_at_semicolon, "Unquoted literal stops at semicolon");
     run_test(test_unquoted_with_arithmetic, "Unquoted literal with arithmetic");
+
+    // --- New Arithmetic Operator Tests ---
+    std::cout << "\n--- Running Arithmetic Operator Tests ---\n";
+    run_test(test_power_operator, "Power operator (**)");
+    run_test(test_modulo_operator, "Modulo operator (%)");
+    run_test(test_operator_precedence, "Operator precedence");
 
 
     std::cout << "\nTests finished." << std::endl;

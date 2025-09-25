@@ -109,3 +109,55 @@ void test_unquoted_with_arithmetic() {
     assert(result.find("padding: 15px;") != std::string::npos);
     assert(result.find("margin: 10px;") != std::string::npos);
 }
+
+// Test for the power operator (**)
+void test_power_operator() {
+    std::string source = R"(
+        div {
+            style {
+                width: 2**8px;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("width: 256px;") != std::string::npos);
+}
+
+// Test for the modulo operator (%)
+void test_modulo_operator() {
+    std::string source = R"(
+        div {
+            style {
+                width: 10 % 3px;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("width: 1px;") != std::string::npos);
+}
+
+// Test for operator precedence
+void test_operator_precedence() {
+    std::string source = R"(
+        div {
+            style {
+                width: 2 + 3 * 2 ** 3px;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    // 2 + 3 * 8 = 2 + 24 = 26
+    assert(result.find("width: 26px;") != std::string::npos);
+}

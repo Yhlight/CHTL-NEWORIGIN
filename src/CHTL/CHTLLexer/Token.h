@@ -32,6 +32,7 @@ enum class TokenType {
     Asterisk,    // *
     Slash,       // /
     Percent,     // %
+    Power,       // **
 
     // Parentheses
     OpenParen,   // (

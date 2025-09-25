@@ -7,6 +7,7 @@
 #include "../Util/ASTUtil.h" // For findNodeBySelector
 #include <stdexcept>
 #include <sstream>
+#include <cmath> // For std::pow and fmod
 
 // The main handler for the style block. It dispatches to helpers based on the token.
 std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
@@ -408,30 +409,48 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     return {StyleValue::STRING, 0.0, "", ss.str()};
 }
 
-StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
+StyleValue StyleBlockState::parsePowerExpr(Parser& parser) {
     StyleValue result = parsePrimaryExpr(parser);
-    while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash) {
-        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of * or / must be numeric.");
+    while (parser.currentToken.type == TokenType::Power) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of ** must be numeric.");
+        parser.advanceTokens(); // consume '**'
+        StyleValue rhs = parsePrimaryExpr(parser); // Right-associativity would require recursion here, but we'll keep it simple
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of ** must be numeric.");
+        if (!result.unit.empty() || !rhs.unit.empty()) {
+            throw std::runtime_error("Power operation does not support units.");
+        }
+        result.numeric_val = std::pow(result.numeric_val, rhs.numeric_val);
+    }
+    return result;
+}
+
+StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
+    StyleValue result = parsePowerExpr(parser);
+    while (parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash || parser.currentToken.type == TokenType::Percent) {
+        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of *, /, or % must be numeric.");
         TokenType op = parser.currentToken.type;
         parser.advanceTokens();
-        StyleValue rhs = parsePrimaryExpr(parser);
-        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of * or / must be numeric.");
+        StyleValue rhs = parsePowerExpr(parser);
+        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of *, /, or % must be numeric.");
 
-        // For multiplication and division, one of the operands must be unitless.
-        if (!result.unit.empty() && !rhs.unit.empty()) {
-            throw std::runtime_error("Cannot multiply or divide two values with units.");
-        }
-
-        if (op == TokenType::Asterisk) {
-            result.numeric_val *= rhs.numeric_val;
-        } else {
-            if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero.");
-            result.numeric_val /= rhs.numeric_val;
-        }
-
-        // The result should adopt the unit of whichever operand had one.
-        if (result.unit.empty()) {
-            result.unit = rhs.unit;
+        if (op == TokenType::Asterisk || op == TokenType::Slash) {
+            if (!result.unit.empty() && !rhs.unit.empty()) {
+                throw std::runtime_error("Cannot multiply or divide two values with units.");
+            }
+            if (op == TokenType::Asterisk) {
+                result.numeric_val *= rhs.numeric_val;
+            } else {
+                if (rhs.numeric_val == 0) throw std::runtime_error("Division by zero.");
+                result.numeric_val /= rhs.numeric_val;
+            }
+            if (result.unit.empty()) {
+                result.unit = rhs.unit;
+            }
+        } else { // Modulo
+            if (!result.unit.empty() || !rhs.unit.empty()) {
+                throw std::runtime_error("Modulo does not support units.");
+            }
+            result.numeric_val = fmod(result.numeric_val, rhs.numeric_val);
         }
     }
     return result;

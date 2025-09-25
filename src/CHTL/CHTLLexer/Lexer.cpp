@@ -208,7 +208,14 @@ Token Lexer::getNextToken() {
         if (current == '$') { advance(); return {TokenType::Dollar, "$", line, startCol, startPos}; }
         if (current == '+') { advance(); return {TokenType::Plus, "+", line, startCol, startPos}; }
         if (current == '-') { advance(); return {TokenType::Minus, "-", line, startCol, startPos}; }
-        if (current == '*') { advance(); return {TokenType::Asterisk, "*", line, startCol, startPos}; }
+        if (current == '*') {
+            advance();
+            if (peek() == '*') {
+                advance();
+                return {TokenType::Power, "**", line, startCol, startPos};
+            }
+            return {TokenType::Asterisk, "*", line, startCol, startPos};
+        }
         if (current == '/') { advance(); return {TokenType::Slash, "/", line, startCol, startPos}; }
         if (current == '%') { advance(); return {TokenType::Percent, "%", line, startCol, startPos}; }
         if (current == '(') { advance(); return {TokenType::OpenParen, "(", line, startCol, startPos}; }
