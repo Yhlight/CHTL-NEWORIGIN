@@ -77,7 +77,10 @@ enum class TokenType {
     AtBottom,     // at bottom
     Import,       // [Import]
     Configuration, // [Configuration]
-    Except        // except
+    Except,        // except
+    If,            // if
+    ElseIf,        // else if
+    Else          // else
 };
 
 // Represents a single token extracted from the source code.

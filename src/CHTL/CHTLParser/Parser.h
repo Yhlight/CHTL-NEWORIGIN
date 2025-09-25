@@ -71,6 +71,6 @@ public:
     const std::vector<std::unique_ptr<BaseNode>>* parsedNodes = nullptr;
     // --- End public interface for states ---
 
-private:
+public:
     std::unique_ptr<ParserState> currentState;
 };

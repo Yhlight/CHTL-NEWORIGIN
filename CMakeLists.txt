@@ -20,6 +20,9 @@ set(CHTL_SOURCES
     src/CHTL/CHTLNode/CommentNode.cpp
     src/CHTL/CHTLNode/ElementNode.cpp
     src/CHTL/CHTLNode/EnhancedSelectorNode.cpp
+    src/CHTL/CHTLNode/IfNode.cpp
+    src/CHTL/CHTLNode/ElseIfNode.cpp
+    src/CHTL/CHTLNode/ElseNode.cpp
     src/CHTL/CHTLNode/RawScriptNode.cpp
     src/CHTL/CHTLNode/ResponsiveValueNode.cpp
     src/CHTL/CHTLNode/ScriptNode.cpp
@@ -29,6 +32,7 @@ set(CHTL_SOURCES
     src/CHTL/CHTLState/StatementState.cpp
     src/CHTL/CHTLState/StyleBlockState.cpp
     src/CHTL/CHTLState/UseState.cpp
+    src/CHTL/CHTLState/IfState.cpp
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp

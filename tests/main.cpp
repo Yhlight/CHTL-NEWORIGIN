@@ -44,6 +44,8 @@ void test_precise_style_import();
 void test_precise_var_import();
 void test_precise_style_import_with_alias();
 void test_precise_import_not_found();
+void test_static_conditional_rendering();
+void test_else_if_else_rendering();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -397,9 +399,52 @@ int main() {
     run_test(test_precise_var_import, "Precise Var Import");
     run_test(test_precise_style_import_with_alias, "Precise Style Import with Alias");
     run_test(test_precise_import_not_found, "Precise Import Not Found");
+    run_test(test_static_conditional_rendering, "Static Conditional Rendering");
+    run_test(test_else_if_else_rendering, "Else If and Else Rendering");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_else_if_else_rendering() {
+    std::string source = R"(
+        div {
+            width: 100px;
+            if {
+                condition: width < 50px;
+                height: 100px;
+            } else if {
+                condition: width == 100px;
+                height: 200px;
+            } else {
+                height: 300px;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("height=\"200px\"") != std::string::npos);
+}
+
+void test_static_conditional_rendering() {
+    std::string source = R"(
+        div {
+            width: 100px;
+            if {
+                condition: width > 50px;
+                height: 200px;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("height=\"200px\"") != std::string::npos);
 }
 
 void test_precise_import_not_found() {

@@ -88,6 +88,21 @@ Token Lexer::identifier() {
         column = preWhitespaceCol;
     }
     if (value == "Import") return {TokenType::Import, value, line, startCol, startPos};
+    if (value == "if") return {TokenType::If, value, line, startCol, startPos};
+    if (value == "else") {
+        size_t preWhitespacePos = position;
+        int preWhitespaceLine = line;
+        int preWhitespaceCol = column;
+        skipWhitespace();
+        if (peek() == 'i' && (position + 1) < source.length() && source[position + 1] == 'f') {
+            advance(); advance();
+            return {TokenType::ElseIf, "else if", line, startCol, startPos};
+        }
+        position = preWhitespacePos;
+        line = preWhitespaceLine;
+        column = preWhitespaceCol;
+        return {TokenType::Else, "else", line, startCol, startPos};
+    }
 
     return {TokenType::Identifier, value, line, startCol, startPos};
 }

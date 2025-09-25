@@ -25,6 +25,8 @@ class UseState;
 #include "StyleBlockState.h"
 #include "ConfigurationState.h"
 #include "UseState.h"
+#include "IfState.h"
+#include "../CHTLNode/IfNode.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -258,7 +260,17 @@ void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
             styleState.handle(parser); // This will parse the entire style block.
         } else if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "script" && parser.peekToken.type == TokenType::OpenBrace) {
             parseScriptBlock(parser, element);
-        } else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
+        } else if (parser.currentToken.type == TokenType::If) {
+            parser.setState(std::make_unique<IfState>());
+            // The main loop in Parser::parse will call the new state's handle.
+            // We need to get the result back to attach it to the element.
+            // This is a bit of a hack, but it works for now.
+            auto ifNode = parser.currentState->handle(parser);
+            if (ifNode) {
+                element.children.push_back(std::move(ifNode));
+            }
+        }
+        else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
             parseExceptClause(parser, element);
         }
         else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {

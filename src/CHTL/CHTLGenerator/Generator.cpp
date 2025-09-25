@@ -3,6 +3,7 @@
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/ScriptNode.h"
+#include "../CHTLNode/IfNode.h"
 #include "../CHTLNode/RawScriptNode.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
 #include <stdexcept>
@@ -83,6 +84,36 @@ void Generator::generateNode(const BaseNode* node) {
 void Generator::generateElement(ElementNode* node) {
     const std::vector<std::string> selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
     bool isSelfClosing = std::find(selfClosingTags.begin(), selfClosingTags.end(), node->tagName) != selfClosingTags.end();
+
+    // Process conditional nodes first to modify the parent's attributes and styles
+    for (const auto& child : node->children) {
+        if (child->getType() == NodeType::If) {
+            auto* ifNode = static_cast<const IfNode*>(child.get());
+            bool conditionMet = false;
+            if (ifNode->condition.type == StyleValue::BOOL && ifNode->condition.bool_val) {
+                for (const auto& prop : ifNode->properties) {
+                    node->attributes[prop.first] = prop.second;
+                }
+                conditionMet = true;
+            } else {
+                for (const auto& elseIfNode : ifNode->elseIfNodes) {
+                    if (elseIfNode->condition.type == StyleValue::BOOL && elseIfNode->condition.bool_val) {
+                        for (const auto& prop : elseIfNode->properties) {
+                            node->attributes[prop.first] = prop.second;
+                        }
+                        conditionMet = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!conditionMet && ifNode->elseNode) {
+                for (const auto& prop : ifNode->elseNode->properties) {
+                    node->attributes[prop.first] = prop.second;
+                }
+            }
+        }
+    }
 
     append(getIndent() + "<" + node->tagName);
 
