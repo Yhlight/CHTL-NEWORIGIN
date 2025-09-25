@@ -5,6 +5,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/IfNode.h"
 #include "../CHTLNode/RawScriptNode.h"
+#include "../Util/ConditionEvaluator.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
 #include <stdexcept>
 #include <algorithm>
@@ -90,14 +91,14 @@ void Generator::generateElement(ElementNode* node) {
         if (child->getType() == NodeType::If) {
             auto* ifNode = static_cast<const IfNode*>(child.get());
             bool conditionMet = false;
-            if (ifNode->condition.type == StyleValue::BOOL && ifNode->condition.bool_val) {
+            if (ConditionEvaluator::evaluate(ifNode->condition, node)) {
                 for (const auto& prop : ifNode->properties) {
                     node->attributes[prop.first] = prop.second;
                 }
                 conditionMet = true;
             } else {
                 for (const auto& elseIfNode : ifNode->elseIfNodes) {
-                    if (elseIfNode->condition.type == StyleValue::BOOL && elseIfNode->condition.bool_val) {
+                    if (ConditionEvaluator::evaluate(elseIfNode->condition, node)) {
                         for (const auto& prop : elseIfNode->properties) {
                             node->attributes[prop.first] = prop.second;
                         }

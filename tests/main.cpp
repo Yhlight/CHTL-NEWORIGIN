@@ -9,6 +9,7 @@
 #include "../src/CHTL/CHTLLexer/Lexer.h"
 #include "../src/CHTL/CHTLParser/Parser.h"
 #include "../src/CHTL/CHTLGenerator/Generator.h"
+#include "../src/Scanner/UnifiedScanner.h"
 
 // A simple testing framework
 void run_test(void (*test_func)(), const std::string& test_name) {
@@ -46,6 +47,7 @@ void test_precise_style_import_with_alias();
 void test_precise_import_not_found();
 void test_static_conditional_rendering();
 void test_else_if_else_rendering();
+void test_unified_scanner_script_separation();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -401,9 +403,29 @@ int main() {
     run_test(test_precise_import_not_found, "Precise Import Not Found");
     run_test(test_static_conditional_rendering, "Static Conditional Rendering");
     run_test(test_else_if_else_rendering, "Else If and Else Rendering");
+    run_test(test_unified_scanner_script_separation, "Unified Scanner Script Separation");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_unified_scanner_script_separation() {
+    std::string source = R"(
+        div {
+            p { text: "Hello"; }
+            script {
+                console.log("World");
+            }
+            span { text: "!"; }
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 3);
+    assert(fragments[0].type == FragmentType::CHTL);
+    assert(fragments[1].type == FragmentType::JS);
+    assert(fragments[2].type == FragmentType::CHTL);
+    assert(fragments[1].content.find("console.log(\"World\");") != std::string::npos);
 }
 
 void test_else_if_else_rendering() {

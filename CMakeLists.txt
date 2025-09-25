@@ -33,7 +33,9 @@ set(CHTL_SOURCES
     src/CHTL/CHTLState/StyleBlockState.cpp
     src/CHTL/CHTLState/UseState.cpp
     src/CHTL/CHTLState/IfState.cpp
+    src/Scanner/UnifiedScanner.cpp
     src/CHTL/Util/ASTUtil.cpp
+    src/CHTL/Util/ConditionEvaluator.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp
 )
