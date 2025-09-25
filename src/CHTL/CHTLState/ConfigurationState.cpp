@@ -3,6 +3,13 @@
 #include "../CHTLParser/Parser.h"
 #include <stdexcept>
 
+ConfigurationState::ConfigurationState() {
+    configSetters["DEBUG_MODE"] = std::make_unique<DebugModeSetter>();
+    configSetters["INDEX_INITIAL_COUNT"] = std::make_unique<IndexInitialCountSetter>();
+    configSetters["DISABLE_STYLE_AUTO_ADD_CLASS"] = std::make_unique<DisableStyleAutoAddClassSetter>();
+    configSetters["DISABLE_STYLE_AUTO_ADD_ID"] = std::make_unique<DisableStyleAutoAddIdSetter>();
+}
+
 std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
     // StatementState now consumes the entire `[Configuration]` decorator.
     std::string configName = "_default";
@@ -42,14 +49,11 @@ std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
             parser.advanceTokens(); // Consume ':' or '='
             std::string value = parser.currentToken.value;
 
-            if (key == "DEBUG_MODE") {
-                currentConfig->debugMode = (value == "true");
-            } else if (key == "INDEX_INITIAL_COUNT") {
-                currentConfig->indexInitialCount = std::stoi(value);
-            } else if (key == "DISABLE_STYLE_AUTO_ADD_CLASS") {
-                currentConfig->disableStyleAutoAddClass = (value == "true");
-            } else if (key == "DISABLE_STYLE_AUTO_ADD_ID") {
-                currentConfig->disableStyleAutoAddId = (value == "true");
+            auto it = configSetters.find(key);
+            if (it != configSetters.end()) {
+                it->second->set(*currentConfig, value);
+            } else {
+                // Optionally, handle unknown configuration keys, e.g., by logging a warning.
             }
 
             parser.advanceTokens();

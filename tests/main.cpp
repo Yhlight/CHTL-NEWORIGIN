@@ -41,7 +41,8 @@ void test_delete_element_inheritance();
 void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
 void test_use_html5_directive();
-void test_named_configuration();
+void test_use_named_configuration();
+void test_local_effect_of_named_configuration();
 void test_precise_style_import();
 void test_precise_var_import();
 void test_precise_style_import_with_alias();
@@ -405,7 +406,8 @@ int main() {
     run_test(test_calc_with_percentage, "Calc With Percentage");
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
     run_test(test_use_html5_directive, "Use HTML5 Directive");
-    run_test(test_named_configuration, "Named Configuration");
+    run_test(test_use_named_configuration, "Use Named Configuration");
+    run_test(test_local_effect_of_named_configuration, "Local Effect of Named Configuration");
     run_test(test_precise_style_import, "Precise Style Import");
     run_test(test_precise_var_import, "Precise Var Import");
     run_test(test_precise_style_import_with_alias, "Precise Style Import with Alias");
@@ -624,7 +626,29 @@ void test_use_html5_directive() {
     assert(result.rfind("<!DOCTYPE html>", 0) == 0);
 }
 
-void test_named_configuration() {
+void test_use_named_configuration() {
+    std::string source = R"(
+        [Configuration] @Config MyTestConfig {
+            [Name] {
+                KEYWORD_TEXT = "para";
+            }
+        }
+
+        use @Config MyTestConfig;
+
+        div {
+            para: "This is a paragraph.";
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("This is a paragraph.") != std::string::npos);
+}
+
+void test_local_effect_of_named_configuration() {
     std::string source = R"(
         [Configuration] @Config MyConfig {
             [Name] {
