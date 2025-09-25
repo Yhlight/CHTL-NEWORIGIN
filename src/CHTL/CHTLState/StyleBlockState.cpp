@@ -374,26 +374,38 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         return {StyleValue::STRING, 0.0, "", it->second};
     }
 
-    if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
-        std::stringstream ss;
-        ss << parser.currentToken.value;
-        parser.advanceTokens();
+    // Fallback to a greedy consumer for unquoted literals. This is the default case.
+    std::stringstream ss;
+    while(true) {
+        TokenType type = parser.currentToken.type;
+        bool isStopToken =
+            type == TokenType::Semicolon || type == TokenType::CloseBrace ||
+            type == TokenType::OpenBrace || type == TokenType::Comma ||
+            type == TokenType::QuestionMark || type == TokenType::Colon || // Stop for conditionals
+            type == TokenType::LogicalAnd || type == TokenType::LogicalOr ||
+            type == TokenType::EqualsEquals || type == TokenType::NotEquals ||
+            type == TokenType::GreaterThan || type == TokenType::LessThan ||
+            type == TokenType::GreaterThanEquals || type == TokenType::LessThanEquals ||
+            type == TokenType::Plus || type == TokenType::Minus ||
+            type == TokenType::Asterisk || type == TokenType::Slash ||
+            type == TokenType::OpenParen || type == TokenType::EndOfFile;
 
-        // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
-        // This allows for values like `font-family: Times New Roman;`
-        while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
-             // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
-             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
-                 break;
-             }
-             ss << " " << parser.currentToken.value;
-             parser.advanceTokens();
+        if (isStopToken) {
+            break;
         }
 
-        return {StyleValue::STRING, 0.0, "", ss.str()};
+        if (!ss.str().empty()) {
+            ss << " ";
+        }
+        ss << parser.currentToken.value;
+        parser.advanceTokens();
     }
 
-    throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
+    if (ss.str().empty()) {
+        throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
+    }
+
+    return {StyleValue::STRING, 0.0, "", ss.str()};
 }
 
 StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {

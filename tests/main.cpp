@@ -351,6 +351,15 @@ void test_import() {
 }
 
 
+// Declarations for tests in unquoted_literals.cpp
+void test_unquoted_in_text_block();
+void test_unquoted_in_attribute();
+void test_unquoted_in_style_block();
+void test_unquoted_with_numbers_and_hyphens();
+void test_unquoted_stops_at_semicolon();
+void test_unquoted_with_arithmetic();
+
+
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
@@ -386,7 +395,17 @@ int main() {
     run_test(test_calc_with_percentage, "Calc With Percentage");
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
 
-    std::cout << "Tests finished." << std::endl;
+    // --- New Unquoted Literal Tests ---
+    std::cout << "\n--- Running Unquoted Literal Tests ---\n";
+    run_test(test_unquoted_in_text_block, "Unquoted literal in text block");
+    run_test(test_unquoted_in_attribute, "Unquoted literal in attribute");
+    run_test(test_unquoted_in_style_block, "Unquoted literal in style block");
+    run_test(test_unquoted_with_numbers_and_hyphens, "Unquoted literal with numbers and hyphens");
+    run_test(test_unquoted_stops_at_semicolon, "Unquoted literal stops at semicolon");
+    run_test(test_unquoted_with_arithmetic, "Unquoted literal with arithmetic");
+
+
+    std::cout << "\nTests finished." << std::endl;
     return 0;
 }
 

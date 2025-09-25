@@ -51,7 +51,7 @@ target_link_libraries(chtl_compiler PRIVATE chtl_lib)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp)
+add_executable(chtl_tests tests/main.cpp tests/unquoted_literals.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)

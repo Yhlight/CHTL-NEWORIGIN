@@ -278,18 +278,41 @@ std::unique_ptr<BaseNode> StatementState::parseTextElement(Parser& parser) {
     parser.expectToken(TokenType::OpenBrace);
 
     std::stringstream textContent;
-    bool firstToken = true;
-    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-        if (!firstToken) {
-            textContent << " ";
+    size_t startPos = parser.currentToken.start_pos;
+
+    // Find the end of the text block content
+    int braceLevel = 1;
+    size_t endPos = startPos;
+    while(parser.currentToken.type != TokenType::EndOfFile) {
+        if (parser.currentToken.type == TokenType::OpenBrace) {
+            // This case should not be hit if the block is well-formed,
+            // but is here for safety.
+            braceLevel++;
+        } else if (parser.currentToken.type == TokenType::CloseBrace) {
+            braceLevel--;
+            if (braceLevel == 0) {
+                endPos = parser.currentToken.start_pos;
+                break;
+            }
         }
-        textContent << parser.currentToken.value;
         parser.advanceTokens();
-        firstToken = false;
     }
 
+    if (braceLevel != 0) {
+        throw std::runtime_error("Unmatched braces in text block.");
+    }
+
+    // Extract the raw string content and create the node
+    std::string rawContent = parser.lexer.getSource().substr(startPos, endPos - startPos);
+
+    // Trim leading/trailing whitespace from the raw content
+    rawContent.erase(0, rawContent.find_first_not_of(" \t\n\r"));
+    rawContent.erase(rawContent.find_last_not_of(" \t\n\r") + 1);
+
+    // The lexer is now at the closing brace, so we just need to consume it.
     parser.expectToken(TokenType::CloseBrace);
-    return std::make_unique<TextNode>(textContent.str());
+
+    return std::make_unique<TextNode>(rawContent);
 }
 
 // Parses a '# comment' line.
