@@ -4,42 +4,25 @@
 #include <memory>
 #include <stdexcept>
 
-#include "CHTL/CHTLLexer/Lexer.h"
-#include "CHTL/CHTLParser/Parser.h"
-#include "CHTL/CHTLGenerator/Generator.h"
-#include "CHTL/CHTLNode/BaseNode.h"
+#include "Dispatcher/CompilerDispatcher.h"
 
 // This main function serves as the entry point for the CHTL compiler.
-// It demonstrates the workflow: Lexer -> Parser -> Generator.
+// It demonstrates the new workflow: CompilerDispatcher -> Final Output.
 int main() {
-    // A CHTL source string to test the [Custom] @Style feature,
-    // including specialization with property completion and deletion.
     std::string chtlSource = R"(
-[Template] @Style BaseStyle {
-    font-family: "Arial";
-    font-size: 16px;
-    padding: 10px;
-}
-
-[Custom] @Style CustomBox {
-    inherit @Style BaseStyle;
-    border: 1px solid black;
-    color; // Valueless property to be completed upon use
+style {
+    body {
+        font-family: "Arial", sans-serif;
+    }
 }
 
 html {
     head { }
     body {
         div {
-            text: "This box is specialized.";
-
-            // Use and specialize the CustomBox template
+            text: "Hello, CHTL!";
             style {
-                @Style CustomBox {
-                    delete font-family; // Delete an inherited property
-                    font-size: 18px;   // Overwrite an inherited property
-                    color: "red";      // Complete the valueless property
-                }
+                color: blue;
             }
         }
     }
@@ -47,18 +30,11 @@ html {
 )";
 
     try {
-        // 1. Lexing Stage
-        Lexer lexer(chtlSource);
+        // 1. Dispatching Stage
+        CompilerDispatcher dispatcher;
+        std::string htmlOutput = dispatcher.compile(chtlSource);
 
-        // 2. Parsing Stage
-        Parser parser(lexer);
-        std::vector<std::unique_ptr<BaseNode>> ast = parser.parse();
-
-        // 3. Generation Stage
-        Generator generator;
-        std::string htmlOutput = generator.generate(ast, parser.globalStyleContent, parser.sharedContext, parser.outputHtml5Doctype);
-
-        // 4. Output Results
+        // 2. Output Results
         std::cout << "--- CHTL Source ---" << std::endl;
         std::cout << chtlSource << std::endl;
         std::cout << "--- Generated HTML ---" << std::endl;

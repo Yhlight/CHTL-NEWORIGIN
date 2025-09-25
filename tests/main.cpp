@@ -10,6 +10,7 @@
 #include "../src/CHTL/CHTLParser/Parser.h"
 #include "../src/CHTL/CHTLGenerator/Generator.h"
 #include "../src/Scanner/UnifiedScanner.h"
+#include "../src/Dispatcher/CompilerDispatcher.h"
 
 // A simple testing framework
 void run_test(void (*test_func)(), const std::string& test_name) {
@@ -45,12 +46,11 @@ void test_precise_style_import();
 void test_precise_var_import();
 void test_precise_style_import_with_alias();
 void test_precise_import_not_found();
-void test_static_conditional_rendering();
-void test_else_if_else_rendering();
 void test_unified_scanner_script_separation();
 void test_unified_scanner_style_separation();
 void test_scanner_ignores_nested_style();
 void test_scanner_handles_nested_braces_in_script();
+void test_dispatcher_workflow();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -404,15 +404,34 @@ int main() {
     run_test(test_precise_var_import, "Precise Var Import");
     run_test(test_precise_style_import_with_alias, "Precise Style Import with Alias");
     run_test(test_precise_import_not_found, "Precise Import Not Found");
-    run_test(test_static_conditional_rendering, "Static Conditional Rendering");
-    run_test(test_else_if_else_rendering, "Else If and Else Rendering");
     run_test(test_unified_scanner_script_separation, "Unified Scanner Script Separation");
     run_test(test_unified_scanner_style_separation, "Unified Scanner Style Separation");
     run_test(test_scanner_ignores_nested_style, "Scanner Ignores Nested Style");
     run_test(test_scanner_handles_nested_braces_in_script, "Scanner Handles Nested Braces in Script");
+    run_test(test_dispatcher_workflow, "Dispatcher Workflow");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_dispatcher_workflow() {
+    std::string source = R"(
+        style {
+            body { color: red; }
+        }
+        html {
+            head {}
+            body {
+                div {
+                    text: "Hello";
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+    assert(result.find("body { color: red; }") != std::string::npos);
+    assert(result.find("<div>") != std::string::npos);
 }
 
 void test_scanner_handles_nested_braces_in_script() {
@@ -480,47 +499,6 @@ void test_unified_scanner_script_separation() {
     assert(fragments[1].type == FragmentType::JS);
     assert(fragments[2].type == FragmentType::CHTL);
     assert(fragments[1].content.find("console.log(\"World\");") != std::string::npos);
-}
-
-void test_else_if_else_rendering() {
-    std::string source = R"(
-        div {
-            width: 100px;
-            if {
-                condition: width < 50px;
-                height: 100px;
-            } else if {
-                condition: width == 100px;
-                height: 200px;
-            } else {
-                height: 300px;
-            }
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("height=\"200px\"") != std::string::npos);
-}
-
-void test_static_conditional_rendering() {
-    std::string source = R"(
-        div {
-            width: 100px;
-            if {
-                condition: width > 50px;
-                height: 200px;
-            }
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("height=\"200px\"") != std::string::npos);
 }
 
 void test_precise_import_not_found() {
