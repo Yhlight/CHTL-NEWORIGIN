@@ -373,10 +373,15 @@ void test_delete_element_inheritance() {
 
 void test_ampersand_selector_order() {
     std::string source = R"(
-        div {
-            style {
-                &:hover { background-color: red; }
-                .my-class { color: blue; }
+        html {
+            head {}
+            body {
+                div {
+                    style {
+                        &:hover { background-color: red; }
+                        .my-class { color: blue; }
+                    }
+                }
             }
         }
     )";
@@ -393,9 +398,12 @@ void test_except_clause_extended() {
     // Test case 1: Forbid a specific custom element
     std::string source1 = R"(
         [Custom] @Element MyComponent { div{} }
-        body {
-            except [Custom] @Element MyComponent;
-            @Element MyComponent;
+        html {
+            head {}
+            body {
+                except [Custom] @Element MyComponent;
+                @Element MyComponent;
+            }
         }
     )";
     Lexer lexer1(source1);
@@ -412,9 +420,12 @@ void test_except_clause_extended() {
 
     // Test case 2: Forbid all HTML tags
     std::string source2 = R"(
-        body {
-            except @Html;
-            div { }
+        html {
+            head {}
+            body {
+                except @Html;
+                div { }
+            }
         }
     )";
     Lexer lexer2(source2);
@@ -433,9 +444,14 @@ void test_except_clause_extended() {
 void test_style_auto_add_class() {
     // Test case 1: Class should be added automatically
     std::string source1 = R"(
-        div {
-            style {
-                .my-class { color: blue; }
+        html {
+            head {}
+            body {
+                div {
+                    style {
+                        .my-class { color: blue; }
+                    }
+                }
             }
         }
     )";
@@ -445,16 +461,22 @@ void test_style_auto_add_class() {
     Generator generator1;
     std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, false);
     assert(result1.find("class=\"my-class\"") != std::string::npos);
-    assert(result1.find(".my-class") != std::string::npos);
+    assert(result1.find(".my-class") != std::string::npos); // Check selector exists
+    assert(result1.find("color: blue;") != std::string::npos); // Check rule exists
 
     // Test case 2: Class should NOT be added if disabled
     std::string source2 = R"(
         [Configuration] {
             DISABLE_STYLE_AUTO_ADD_CLASS = true;
         }
-        div {
-            style {
-                .my-class { color: blue; }
+        html {
+            head {}
+            body {
+                div {
+                    style {
+                        .my-class { color: blue; }
+                    }
+                }
             }
         }
     )";

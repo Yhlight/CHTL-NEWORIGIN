@@ -27,29 +27,61 @@ class ElementNode;
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     if (parser.currentToken.type == TokenType::OpenBracket) {
-        // Peek ahead to see what's inside the brackets
-        if (parser.peekToken.type == TokenType::Import) {
+        // Use the config manager to check the keyword inside the brackets
+        const auto& config = parser.configManager;
+        const std::string& nextValue = parser.peekToken.value;
+
+        if (config.isKeyword(nextValue, "KEYWORD_IMPORT", "Import")) {
             parseImportStatement(parser);
             return nullptr;
-        } else if (parser.peekToken.value == "Origin") {
+        }
+        if (config.isKeyword(nextValue, "KEYWORD_ORIGIN", "Origin")) {
             return parseOriginDefinition(parser);
-        } else if (parser.peekToken.value == "Namespace") {
+        }
+        if (config.isKeyword(nextValue, "KEYWORD_NAMESPACE", "Namespace")) {
             parseNamespaceDefinition(parser);
-            return nullptr; // Namespace definitions don't produce a node
-        } else if (parser.peekToken.value == "Configuration") {
-            ConfigurationState configState;
-            configState.handle(parser);
-            return nullptr; // Configuration does not produce a node
-        } else {
-            // If it's none of the other bracketed keywords, it must be a template definition.
-            // Let parseTemplateDefinition handle it (and throw an error if it's invalid).
-            parseTemplateDefinition(parser);
             return nullptr;
         }
+        if (config.isKeyword(nextValue, "KEYWORD_CONFIGURATION", "Configuration")) {
+            // The ConfigurationState expects the opening tokens to be consumed
+            parser.advanceTokens(); // Consume '['
+            parser.advanceTokens(); // Consume 'Configuration' (or alias)
+            ConfigurationState configState;
+            configState.handle(parser);
+            return nullptr;
+        }
+        // Default to template/custom definition if no other keyword matches
+        parseTemplateDefinition(parser);
+        return nullptr;
+
     } else if (parser.currentToken.type == TokenType::Use) {
         parseUseDirective(parser);
         return nullptr; // `use` directive does not produce a node
     } else if (parser.currentToken.type == TokenType::At) {
+        // --- ADD CONSTRAINT CHECK FOR TEMPLATE USAGE ---
+        if (parser.contextNode && !parser.contextNode->constraints.empty()) {
+            if (parser.peekToken.value == "Element") {
+                const std::string& templateName = parser.peekToken2.value;
+                // Note: This simplified lookup assumes the template is in the current namespace.
+                // A full implementation might need to search namespaces.
+                ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(parser.getCurrentNamespace(), templateName);
+                if (tmpl) {
+                    ConstraintType usageType = tmpl->isCustom ? ConstraintType::CustomElement : ConstraintType::TemplateElement;
+                    for (const auto& constraint : parser.contextNode->constraints) {
+                        bool isForbidden = false;
+                        if (!constraint.identifier.empty() && constraint.identifier == templateName && constraint.type == usageType) {
+                            isForbidden = true;
+                        } else if (constraint.identifier.empty()) {
+                            if (constraint.type == ConstraintType::Custom && tmpl->isCustom) isForbidden = true;
+                            if (constraint.type == ConstraintType::Template && !tmpl->isCustom) isForbidden = true;
+                        }
+                        if (isForbidden) {
+                            throw std::runtime_error("Usage of '" + templateName + "' is not allowed inside <" + parser.contextNode->tagName + "> due to an 'except' constraint.");
+                        }
+                    }
+                }
+            }
+        }
         return parseElementTemplateUsage(parser);
     } else if (parser.currentToken.type == TokenType::Identifier) {
         // Check for constraints before parsing the element
@@ -269,8 +301,9 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     }
     parser.advanceTokens(); // Consume ':' or '='
 
-    // Use the global expression parser
-    StyleValue value = parseStyleExpression(parser);
+    // Use the expression parser from StyleBlockState to ensure consistent parsing.
+    StyleBlockState tempStyleState;
+    StyleValue value = tempStyleState.parseStyleExpression(parser);
 
     parser.expectToken(TokenType::Semicolon);
 
@@ -368,10 +401,27 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 ElementTemplateNode* parentTmpl = parser.templateManager.getElementTemplate(currentNs, parentName);
                 if (!parentTmpl) throw std::runtime_error("Parent element template not found: " + parentName);
                 for (const auto& child : parentTmpl->children) {
-                    elementNode->children.push_back(NodeCloner::clone(child.get()));
+                    auto clonedNode = NodeCloner::clone(child.get());
+                    // If the child node is from a template, preserve that name.
+                    // Otherwise, set the name to the parent we are inheriting from.
+                    if (clonedNode->sourceTemplateName.empty()) {
+                        clonedNode->sourceTemplateName = parentName;
+                    }
+                    elementNode->children.push_back(std::move(clonedNode));
                 }
             } else {
-                elementNode->children.push_back(handle(parser));
+                auto childNode = handle(parser);
+                if (childNode) {
+                    // If a template usage returns a fragment, flatten it into the current template.
+                    if (childNode->getType() == NodeType::Fragment) {
+                        auto* fragment = static_cast<FragmentNode*>(childNode.get());
+                        for (auto& grandChild : fragment->children) {
+                            elementNode->children.push_back(std::move(grandChild));
+                        }
+                    } else {
+                        elementNode->children.push_back(std::move(childNode));
+                    }
+                }
             }
         }
         parser.templateManager.addElementTemplate(currentNs, templateName, std::move(elementNode));
@@ -446,7 +496,10 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
     auto fragment = std::make_unique<FragmentNode>();
     for (const auto& child : tmpl->children) {
         auto clonedNode = NodeCloner::clone(child.get());
-        clonedNode->sourceTemplateName = templateName;
+        // Do not overwrite a source name that was set during inheritance.
+        if (clonedNode->sourceTemplateName.empty()) {
+            clonedNode->sourceTemplateName = templateName;
+        }
         fragment->children.push_back(std::move(clonedNode));
     }
 

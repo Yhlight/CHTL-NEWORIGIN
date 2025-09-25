@@ -20,6 +20,7 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
         case NodeType::Element: {
             const auto* source = static_cast<const ElementNode*>(node);
             auto cloned = std::make_unique<ElementNode>(source->tagName);
+            cloned->sourceTemplateName = source->sourceTemplateName;
             cloned->attributes = source->attributes;
             for (const auto& child : source->children) {
                 cloned->children.push_back(clone(child.get()));
@@ -28,19 +29,26 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
         }
         case NodeType::Origin: {
             const auto* source = static_cast<const OriginNode*>(node);
-            return std::make_unique<OriginNode>(source->type, source->content, source->name);
+            auto cloned = std::make_unique<OriginNode>(source->type, source->content, source->name);
+            cloned->sourceTemplateName = source->sourceTemplateName;
+            return cloned;
         }
         case NodeType::Text: {
             const auto* source = static_cast<const TextNode*>(node);
-            return std::make_unique<TextNode>(source->text);
+            auto cloned = std::make_unique<TextNode>(source->text);
+            cloned->sourceTemplateName = source->sourceTemplateName;
+            return cloned;
         }
         case NodeType::Comment: {
             const auto* source = static_cast<const CommentNode*>(node);
-            return std::make_unique<CommentNode>(source->text);
+            auto cloned = std::make_unique<CommentNode>(source->text);
+            cloned->sourceTemplateName = source->sourceTemplateName;
+            return cloned;
         }
         case NodeType::Fragment: {
             const auto* source = static_cast<const FragmentNode*>(node);
             auto cloned = std::make_unique<FragmentNode>();
+            cloned->sourceTemplateName = source->sourceTemplateName;
             for (const auto& child : source->children) {
                 cloned->children.push_back(clone(child.get()));
             }

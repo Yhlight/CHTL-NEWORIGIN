@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <algorithm> // For std::find
 
 // This class holds all the settings defined in a [Configuration] block.
 // An instance of this manager will be held by the main Parser.
@@ -39,5 +40,17 @@ public:
             return it->second.front();
         }
         return defaultValue;
+    }
+
+    // Checks if a given token value matches a keyword or its aliases.
+    bool isKeyword(const std::string& value, const std::string& internalName, const std::string& defaultValue) const {
+        auto it = keywordMap.find(internalName);
+        if (it != keywordMap.end() && !it->second.empty()) {
+            // Aliases are defined, check against them
+            const auto& aliases = it->second;
+            return std::find(aliases.begin(), aliases.end(), value) != aliases.end();
+        }
+        // No aliases defined, use the default value
+        return value == defaultValue;
     }
 };

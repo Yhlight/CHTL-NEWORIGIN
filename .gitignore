@@ -1,0 +1,29 @@
+# CMake build files
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# Compiled binaries and libraries
+*.exe
+*.out
+*.so
+*.a
+*.lib
+*.dll
+chtl_compiler
+chtl_tests
+
+# Test artifacts
+Testing/
+*.log
+
+# Editor-specific files
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db

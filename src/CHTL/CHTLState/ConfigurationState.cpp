@@ -3,8 +3,8 @@
 #include <stdexcept>
 
 std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
-    parser.expectToken(TokenType::OpenBracket);
-    parser.expectToken(TokenType::Configuration);
+    // The dispatcher in StatementState has already consumed `[` and the keyword.
+    // We just need to consume the closing bracket.
     parser.expectToken(TokenType::CloseBracket);
 
     // Optional: handle named configuration blocks, e.g., [Configuration] @MyConfig

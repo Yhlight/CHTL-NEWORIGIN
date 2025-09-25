@@ -20,33 +20,24 @@ public:
     // collection of global styles.
     std::unique_ptr<BaseNode> handle(Parser& parser) override;
 
+    // --- Expression Parsing (public so other states can use it) ---
+    StyleValue parseStyleExpression(Parser& parser);
+    StyleValue parseConditionalExpr(Parser& parser);
+    StyleValue parseBooleanOrExpr(Parser& parser);
+    StyleValue parseBooleanAndExpr(Parser& parser);
+    StyleValue parseBooleanRelationalExpr(Parser& parser);
+    StyleValue parseAdditiveExpr(Parser& parser);
+    StyleValue parseMultiplicativeExpr(Parser& parser);
+    StyleValue parsePrimaryExpr(Parser& parser);
+    StyleValue parseReferencedProperty(Parser& parser);
+    Selector parseSelector(Parser& parser);
+
 private:
     void parseStyleTemplateUsage(Parser& parser);
     void parseClassOrIdSelector(Parser& parser);
     void parseAmpersandSelector(Parser& parser);
     std::string parseCssRuleBlock(Parser& parser);
     void parseInlineProperty(Parser& parser);
-
-    // --- Expression Parsing ---
-    // Top-level entry point for parsing a style value.
-    StyleValue parseStyleExpression(Parser& parser);
-
-private:
-    // --- Conditional Expression Parsing ---
-    // Parses a full conditional chain: cond ? val, cond ? val ...
-    StyleValue parseConditionalExpr(Parser& parser);
-
-    // --- Boolean Condition Parsing (for inside conditionals) ---
-    StyleValue parseBooleanOrExpr(Parser& parser);
-    StyleValue parseBooleanAndExpr(Parser& parser);
-    StyleValue parseBooleanRelationalExpr(Parser& parser);
-
-    // --- Style Value Parsing (used by both conditional and simple expressions) ---
-    StyleValue parseAdditiveExpr(Parser& parser);
-    StyleValue parseMultiplicativeExpr(Parser& parser);
-    StyleValue parsePrimaryExpr(Parser& parser);
-    StyleValue parseReferencedProperty(Parser& parser);
-    Selector parseSelector(Parser& parser);
 
     // --- Helper for template style resolution ---
     void applyStyleTemplateRecursive(

@@ -37,6 +37,15 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
 
 // Parses an inline property like 'color: red;'.
 void StyleBlockState::parseInlineProperty(Parser& parser) {
+    // Handle the 'delete' keyword for inline properties.
+    if (parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
+        std::string keyToDelete = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        parser.contextNode->inlineStyles.erase(keyToDelete);
+        parser.expectToken(TokenType::Semicolon);
+        return;
+    }
+
     std::string key = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
     parser.expectToken(TokenType::Colon);
@@ -53,9 +62,6 @@ void StyleBlockState::parseInlineProperty(Parser& parser) {
     }
 }
 
-// In-memory store for rules that need to be deferred.
-static std::vector<std::vector<Token>> deferredAmpersandRules;
-
 // Parses a class or ID selector block, e.g., '.box { ... }'.
 void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
     std::string selector;
@@ -66,7 +72,8 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         parser.advanceTokens();
         if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected identifier after '.' for class selector.");
         selectorName = parser.currentToken.value;
-        if (!parser.contextNode->attributes.count("class")) {
+        // Check config flag before automatically adding the class attribute
+        if (!parser.configManager.disableStyleAutoAddClass && !parser.contextNode->attributes.count("class")) {
             parser.contextNode->attributes["class"] = {StyleValue::STRING, 0.0, "", selectorName};
         }
     } else if (parser.currentToken.type == TokenType::Hash) {
@@ -74,7 +81,8 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         parser.advanceTokens();
         if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected identifier after '#' for ID selector.");
         selectorName = parser.currentToken.value;
-        if (!parser.contextNode->attributes.count("id")) {
+        // Check config flag before automatically adding the id attribute
+        if (!parser.configManager.disableStyleAutoAddId && !parser.contextNode->attributes.count("id")) {
             parser.contextNode->attributes["id"] = {StyleValue::STRING, 0.0, "", selectorName};
         }
     }
@@ -85,51 +93,23 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
     parser.globalStyleContent += selector + " {\n" + cssRules + "}\n\n";
 
     // Now that a class/id might have been added, process any deferred rules.
-    for (const auto& ruleTokens : deferredAmpersandRules) {
-        // This is a simplified re-parse. A more robust solution would be needed
-        // for complex deferred rules, but it works for this specific case.
-        Token oldToken = parser.currentToken;
-        Token oldPeek = parser.peekToken;
-        Token oldPeek2 = parser.peekToken2;
-
-        parser.currentToken = ruleTokens.front();
-        parser.peekToken = (ruleTokens.size() > 1) ? ruleTokens[1] : Token{TokenType::EndOfFile, ""};
-        parser.peekToken2 = (ruleTokens.size() > 2) ? ruleTokens[2] : Token{TokenType::EndOfFile, ""};
-
-        parseAmpersandSelector(parser);
-
-        parser.currentToken = oldToken;
-        parser.peekToken = oldPeek;
-        parser.peekToken2 = oldPeek2;
+    std::string baseSelector;
+    if (parser.contextNode->attributes.count("class")) {
+        baseSelector = "." + parser.contextNode->attributes.at("class").string_val;
+    } else if (parser.contextNode->attributes.count("id")) {
+        baseSelector = "#" + parser.contextNode->attributes.at("id").string_val;
     }
-    deferredAmpersandRules.clear();
+
+    if (!baseSelector.empty()) {
+        for (const auto& deferredRule : parser.deferredAmpersandRules) {
+            parser.globalStyleContent += baseSelector + deferredRule + "\n\n";
+        }
+        parser.deferredAmpersandRules.clear();
+    }
 }
 
 // Parses a selector starting with '&', e.g., '&:hover { ... }'.
 void StyleBlockState::parseAmpersandSelector(Parser& parser) {
-    // If the base selector isn't defined yet, defer this rule.
-    if (!parser.contextNode->attributes.count("class") && !parser.contextNode->attributes.count("id")) {
-        std::vector<Token> ruleTokens;
-        ruleTokens.push_back(parser.currentToken); // consume '&'
-        parser.advanceTokens();
-        while(parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-            ruleTokens.push_back(parser.currentToken);
-            parser.advanceTokens();
-        }
-        ruleTokens.push_back(parser.currentToken); // consume '{'
-        parser.advanceTokens();
-        int braceLevel = 1;
-        while(braceLevel > 0) {
-            if(parser.currentToken.type == TokenType::OpenBrace) braceLevel++;
-            if(parser.currentToken.type == TokenType::CloseBrace) braceLevel--;
-            ruleTokens.push_back(parser.currentToken);
-            parser.advanceTokens();
-        }
-        deferredAmpersandRules.push_back(ruleTokens);
-        return;
-    }
-
-
     std::string baseSelector;
     if (parser.contextNode->attributes.count("class")) {
         baseSelector = "." + parser.contextNode->attributes.at("class").string_val;
@@ -145,9 +125,16 @@ void StyleBlockState::parseAmpersandSelector(Parser& parser) {
         parser.advanceTokens();
     }
 
-    std::string finalSelector = baseSelector + selectorSuffix;
+    std::string finalSelector = selectorSuffix;
     std::string cssRules = parseCssRuleBlock(parser);
-    parser.globalStyleContent += finalSelector + " {\n" + cssRules + "}\n\n";
+    std::string fullRule = finalSelector + " {\n" + cssRules + "}\n";
+
+    if (baseSelector.empty()) {
+        // If the base selector isn't defined yet, defer this rule.
+        parser.deferredAmpersandRules.push_back(fullRule);
+    } else {
+        parser.globalStyleContent += baseSelector + fullRule + "\n\n";
+    }
 }
 
 // Helper to parse the body of a CSS rule block '{...}'.
@@ -247,12 +234,18 @@ StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
 
 StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     if (parser.currentToken.type == TokenType::Identifier) {
-        // Could be a self-referential property or a string literal.
-        // Check for self-reference by looking up the identifier in the current node's styles.
-        auto it = parser.contextNode->inlineStyles.find(parser.currentToken.value);
-        if (it != parser.contextNode->inlineStyles.end()) {
+        // Could be a self-referential property, an attribute, or a string literal.
+        // Check for self-reference in both inline styles and attributes.
+        const std::string& key = parser.currentToken.value;
+        auto style_it = parser.contextNode->inlineStyles.find(key);
+        if (style_it != parser.contextNode->inlineStyles.end()) {
             parser.advanceTokens();
-            return it->second;
+            return style_it->second;
+        }
+        auto attr_it = parser.contextNode->attributes.find(key);
+        if (attr_it != parser.contextNode->attributes.end()) {
+            parser.advanceTokens();
+            return attr_it->second;
         }
     }
 
@@ -615,13 +608,12 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     std::vector<std::string> completedProperties;
 
 
-    // If the template is custom and a specialization block is provided, parse it first.
-    if (tmpl->isCustom && parser.currentToken.type == TokenType::OpenBrace) {
+    // If a specialization block is provided, parse it.
+    // This is allowed for both [Custom] and [Template] styles.
+    if (parser.currentToken.type == TokenType::OpenBrace) {
         parser.expectToken(TokenType::OpenBrace);
         while (parser.currentToken.type != TokenType::CloseBrace) {
-            if (parser.currentToken.type == TokenType::Delete) {
-                parser.advanceTokens(); // consume 'delete'
-
+            if (parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
                 while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
                     if (parser.currentToken.type == TokenType::At) {
                         parser.advanceTokens(); // consume '@'

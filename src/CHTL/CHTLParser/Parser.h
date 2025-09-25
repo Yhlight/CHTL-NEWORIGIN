@@ -57,6 +57,10 @@ public:
     std::vector<std::string> namespaceStack;
     std::string getCurrentNamespace() const;
 
+    // A list of ampersand rules that are deferred because their base selector
+    // (class or id) has not been defined yet.
+    std::vector<std::string> deferredAmpersandRules;
+
     // A pointer to the list of root nodes parsed so far.
     // This allows states to perform lookups on the current AST.
     const std::vector<std::unique_ptr<BaseNode>>* parsedNodes = nullptr;
