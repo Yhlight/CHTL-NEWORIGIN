@@ -38,6 +38,9 @@ void test_ampersand_selector_order();
 void test_delete_element_inheritance();
 void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
+void test_ampersand_as_context();
+void test_custom_element_insert_replace();
+void test_delete_style_in_element_specialization();
 
 void test_unquoted_literals() {
     std::string source = R"(
@@ -308,9 +311,82 @@ int main() {
     run_test(test_delete_element_inheritance, "Delete Element Inheritance");
     run_test(test_calc_with_percentage, "Calc With Percentage");
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
+    run_test(test_ampersand_as_context, "Ampersand as Context");
+    run_test(test_custom_element_insert_replace, "Custom Element Insert Replace");
+    run_test(test_delete_style_in_element_specialization, "Delete Style in Element Specialization");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_delete_style_in_element_specialization() {
+    std::string source = R"(
+        [Custom] @Element Box {
+            div {
+                style {
+                    color: red;
+                    font-size: 16px;
+                }
+            }
+        }
+        body {
+            @Element Box {
+                div[0] {
+                    style {
+                        delete font-size;
+                    }
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("color: red;") != std::string::npos);
+    assert(result.find("font-size") == std::string::npos);
+}
+
+void test_custom_element_insert_replace() {
+    std::string source = R"(
+        [Custom] @Element Box {
+            p { text: "This will be replaced."; }
+        }
+        body {
+            @Element Box {
+                insert replace p[0] {
+                    div { text: "This is the replacement."; }
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find("This will be replaced.") == std::string::npos);
+    assert(result.find("This is the replacement.") != std::string::npos);
+}
+
+void test_ampersand_as_context() {
+    std::string source = R"(
+        div {
+            class: "box";
+            style {
+                &.active {
+                    border: 1px solid green;
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, false);
+    assert(result.find(".box.active") != std::string::npos);
 }
 
 void test_calc_with_percentage() {

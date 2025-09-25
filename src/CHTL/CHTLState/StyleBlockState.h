@@ -20,12 +20,14 @@ public:
     // collection of global styles.
     std::unique_ptr<BaseNode> handle(Parser& parser) override;
 
+public:
+    void parseInlineProperty(Parser& parser);
+
 private:
     void parseStyleTemplateUsage(Parser& parser);
     void parseClassOrIdSelector(Parser& parser);
     void parseAmpersandSelector(Parser& parser);
     std::string parseCssRuleBlock(Parser& parser);
-    void parseInlineProperty(Parser& parser);
 
     // --- Expression Parsing ---
     // Top-level entry point for parsing a style value.

@@ -140,6 +140,10 @@ void StyleBlockState::parseAmpersandSelector(Parser& parser) {
     parser.advanceTokens(); // consume '&'
 
     std::string selectorSuffix;
+    // If the next token is a dot or hash, it's a chained selector, so don't add a space.
+    if (parser.currentToken.type != TokenType::Dot && parser.currentToken.type != TokenType::Hash) {
+         selectorSuffix += " ";
+    }
     while(parser.currentToken.type != TokenType::OpenBrace && parser.currentToken.type != TokenType::EndOfFile) {
         selectorSuffix += parser.currentToken.value;
         parser.advanceTokens();

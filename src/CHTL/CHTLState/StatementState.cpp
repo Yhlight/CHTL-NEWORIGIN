@@ -602,11 +602,31 @@ void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragme
     parser.expectToken(TokenType::OpenBrace);
     while(parser.currentToken.type != TokenType::CloseBrace) {
         if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style") {
-            // Use the StyleBlockState to parse the style block, but with the targetNode as context.
-            parser.contextNode = targetNode;
-            StyleBlockState styleState;
-            styleState.handle(parser);
-            parser.contextNode = nullptr; // Reset context
+            parser.advanceTokens(); // consume 'style'
+            parser.expectToken(TokenType::OpenBrace);
+            while(parser.currentToken.type != TokenType::CloseBrace) {
+                if (parser.currentToken.type == TokenType::Delete) {
+                    parser.advanceTokens(); // consume 'delete'
+                    while(parser.currentToken.type != TokenType::Semicolon) {
+                        targetNode->inlineStyles.erase(parser.currentToken.value);
+                        parser.advanceTokens();
+                        if (parser.currentToken.type == TokenType::Comma) {
+                            parser.advanceTokens();
+                        } else {
+                            break;
+                        }
+                    }
+                    parser.expectToken(TokenType::Semicolon);
+                } else {
+                    // This is a normal style property, use the StyleBlockState logic
+                    // We need to temporarily set the context and call the inline property parser
+                    parser.contextNode = targetNode;
+                    StyleBlockState styleState;
+                    styleState.parseInlineProperty(parser);
+                    parser.contextNode = nullptr;
+                }
+            }
+            parser.expectToken(TokenType::CloseBrace);
         } else {
             throw std::runtime_error("Only 'style' blocks are allowed inside an element specialization.");
         }
