@@ -1,0 +1,59 @@
+Start testing: Sep 25 10:51 UTC
+----------------------------------------------------------
+1/1 Testing: RunCHTLTests
+1/1 Test: RunCHTLTests
+Command: "/app/chtl_tests"
+Directory: /app
+"RunCHTLTests" start time: Sep 25 10:51 UTC
+Output:
+----------------------------------------------------------
+Running CHTL tests...
+[PASS] Referenced Property
+[PASS] Conditional Expression (True)
+[PASS] Conditional Expression (False)
+[PASS] Custom Style Specialization
+[PASS] Custom Element Deletion
+[PASS] Custom Element Insertion
+[PASS] Custom Element Insertion At Top/Bottom
+[PASS] Import Statement
+[PASS] Text Block Literals
+[PASS] Unquoted Literal Support
+[PASS] Enhanced Selector
+[PASS] Responsive Value
+[PASS] Calc() Generation
+[PASS] Except Constraint
+[PASS] Named Origin and Import
+[PASS] Delete Style Inheritance
+[PASS] Namespace-qualified Template Access
+[PASS] Keyword Aliasing
+[PASS] Hyphenated CSS Property
+[PASS] Attribute Expression
+[PASS] Conditional Attribute
+[PASS] Delete Style Property
+[PASS] Var Template Usage
+[PASS] Var Template Specialization
+[PASS] Style Auto Add Class
+[PASS] Extended Except Clause
+[PASS] Ampersand Selector Order
+[PASS] Delete Element Inheritance
+[PASS] Calc With Percentage
+[PASS] Implicit Style Template Inheritance
+
+--- Running Unquoted Literal Tests ---
+[PASS] Unquoted literal in text block
+[PASS] Unquoted literal in attribute
+[PASS] Unquoted literal in style block
+[FAIL] Unquoted literal with numbers and hyphens - Unexpected token: 'black' at line 4, column 35. Expected type 10
+[PASS] Unquoted literal stops at semicolon
+[PASS] Unquoted literal with arithmetic
+
+Tests finished.
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"RunCHTLTests" end time: Sep 25 10:51 UTC
+"RunCHTLTests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 25 10:51 UTC
