@@ -13,7 +13,10 @@ std::unique_ptr<BaseNode> InfoState::handle(Parser& parser) {
         if (parser.currentToken.type == TokenType::Identifier) {
             std::string key = parser.currentToken.value;
             parser.advanceTokens();
-            parser.expectToken(TokenType::Equals);
+            if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                throw std::runtime_error("Expected ':' or '=' after info key '" + key + "'.");
+            }
+            parser.advanceTokens(); // Consume ':' or '='
             if (parser.currentToken.type != TokenType::String) {
                 throw std::runtime_error("Expected a string literal for the value of the info property.");
             }

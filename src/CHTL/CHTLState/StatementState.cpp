@@ -41,15 +41,9 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         const std::string& nextValue = parser.peekToken.value;
 
         if (config.isKeyword(nextValue, "KEYWORD_INFO", "Info")) {
-            parser.setState(std::make_unique<InfoState>());
-            return nullptr;
-        }
-        if (config.isKeyword(nextValue, "KEYWORD_INFO", "Info")) {
-            parser.expectToken(TokenType::OpenBracket);
-            parser.setState(std::make_unique<InfoState>());
-            return nullptr;
-        }
-        if (config.isKeyword(nextValue, "KEYWORD_INFO", "Info")) {
+            parser.advanceTokens(); // Consume '['
+            parser.advanceTokens(); // Consume 'Info'
+            parser.expectToken(TokenType::CloseBracket);
             parser.setState(std::make_unique<InfoState>());
             return nullptr;
         }
@@ -481,7 +475,10 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
             } else {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
-                parser.expectToken(TokenType::Colon);
+                if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                    throw std::runtime_error("Expected ':' or '=' after var template key '" + key + "'.");
+                }
+                parser.advanceTokens(); // Consume ':' or '='
                 varNode->variables[key] = parser.currentToken.value;
                 parser.expectToken(TokenType::String);
                 parser.expectToken(TokenType::Semicolon);

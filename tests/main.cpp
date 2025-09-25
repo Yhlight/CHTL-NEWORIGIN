@@ -56,6 +56,11 @@ void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
 void test_responsive_value();
+void test_literal_types();
+void test_ignored_comments();
+void test_colon_equal_equivalence_in_info();
+void test_colon_equal_equivalence_in_config();
+void test_colon_equal_equivalence_in_var_template();
 
 
 void test_text_block_literals() {
@@ -411,6 +416,11 @@ int main() {
     run_test(test_scanner_handles_nested_braces_in_script, "Scanner Handles Nested Braces in Script");
     run_test(test_dispatcher_workflow, "Dispatcher Workflow");
     run_test(test_info_block_parsing, "Info Block Parsing");
+    run_test(test_literal_types, "Literal Types");
+    run_test(test_ignored_comments, "Ignored Comments");
+    run_test(test_colon_equal_equivalence_in_info, "Colon-Equal Equivalence in Info Block");
+    run_test(test_colon_equal_equivalence_in_config, "Colon-Equal Equivalence in Config Block");
+    run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -428,11 +438,10 @@ void test_info_block_parsing() {
     Parser parser(lexer);
     parser.parse();
 
-    // This test will require modifications to the Parser to store the info.
-    // For now, we'll assume a placeholder. The test will fail to compile
-    // until the InfoNode and the parser member are added.
-    // assert(parser.infoNode != nullptr);
-    // assert(parser.infoNode->metadata["name"] == "MyModule");
+    assert(parser.infoNode != nullptr);
+    assert(parser.infoNode->metadata["name"] == "MyModule");
+    assert(parser.infoNode->metadata["version"] == "1.0.0");
+    assert(parser.infoNode->metadata["author"] == "CHTL Team");
 }
 
 void test_dispatcher_workflow() {
@@ -913,6 +922,121 @@ void test_attribute_expression() {
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width=\"200px\"") != std::string::npos);
+}
+
+void test_literal_types() {
+    std::string source = R"(
+        div {
+            text: 'single-quoted attribute';
+        }
+        p {
+            text: "double-quoted attribute";
+        }
+        span {
+            text { 'single-quoted block' }
+        }
+        i {
+            text { "double-quoted block" }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("single-quoted attribute") != std::string::npos);
+    assert(result.find("double-quoted attribute") != std::string::npos);
+    assert(result.find("single-quoted block") != std::string::npos);
+    assert(result.find("double-quoted block") != std::string::npos);
+}
+
+void test_colon_equal_equivalence_in_config() {
+    std::string source = R"(
+        [Configuration] {
+            DEBUG_MODE: true;
+
+            [Name] {
+                KEYWORD_DELETE: "remove";
+            }
+        }
+
+        [Template] @Style Base {
+            color: red;
+            font-size: 16px;
+        }
+        div {
+            style {
+                @Style Base {
+                    remove font-size;
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(parser.configManager.getActiveConfig()->debugMode == true);
+    assert(result.find("font-size") == std::string::npos);
+    assert(result.find("color: red;") != std::string::npos);
+}
+
+void test_colon_equal_equivalence_in_var_template() {
+    std::string source = R"(
+        [Template] @Var MyTheme {
+            primary-color = "blue";
+        }
+        div {
+            style {
+                color: MyTheme(primary-color);
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("color: blue;") != std::string::npos);
+}
+
+void test_colon_equal_equivalence_in_info() {
+    std::string source = R"(
+        [Info] {
+            name: "MyModuleWithColon";
+            version: "1.0.0";
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    parser.parse();
+
+    assert(parser.infoNode != nullptr);
+    assert(parser.infoNode->metadata["name"] == "MyModuleWithColon");
+    assert(parser.infoNode->metadata["version"] == "1.0.0");
+}
+
+void test_ignored_comments() {
+    std::string source = R"(
+        // This is a single-line comment.
+        div {
+            /* This is a
+               multi-line comment. */
+            text: "Hello"; // This should be parsed.
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("This is a single-line comment.") == std::string::npos);
+    assert(result.find("This is a\n               multi-line comment.") == std::string::npos);
+    assert(result.find("Hello") != std::string::npos);
 }
 
 void test_hyphenated_property() {

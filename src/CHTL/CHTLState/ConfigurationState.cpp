@@ -36,7 +36,10 @@ std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
         } else if (parser.currentToken.type == TokenType::Identifier) {
             std::string key = parser.currentToken.value;
             parser.advanceTokens();
-            parser.expectToken(TokenType::Equals);
+            if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                throw std::runtime_error("Expected ':' or '=' after config key '" + key + "'.");
+            }
+            parser.advanceTokens(); // Consume ':' or '='
             std::string value = parser.currentToken.value;
 
             if (key == "DEBUG_MODE") {
@@ -76,7 +79,10 @@ void ConfigurationState::parseNameBlock(Parser& parser, ConfigSet& configSet) {
         if (parser.currentToken.type == TokenType::Identifier) {
             std::string key = parser.currentToken.value;
             parser.advanceTokens();
-            parser.expectToken(TokenType::Equals);
+            if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                throw std::runtime_error("Expected ':' or '=' after [Name] key '" + key + "'.");
+            }
+            parser.advanceTokens(); // Consume ':' or '='
 
             std::vector<std::string> aliases;
             if (parser.currentToken.type == TokenType::OpenBracket) {

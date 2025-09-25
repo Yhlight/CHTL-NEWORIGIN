@@ -15,3 +15,10 @@
 
 # User-specific files
 .vscode/
+
+# CMake generated directory
+/CMakeFiles/
+
+# Test-generated files
+*.chtl
+*.js
