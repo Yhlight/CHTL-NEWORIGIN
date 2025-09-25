@@ -309,6 +309,102 @@ src/CHTL/CHTLNode/ElementNode.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ElementNode.cpp.s
 .PHONY : src/CHTL/CHTLNode/ElementNode.cpp.s
 
+src/CHTL/CHTLNode/EnhancedSelectorNode.o: src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/EnhancedSelectorNode.o
+
+# target to build an object file
+src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.o
+
+src/CHTL/CHTLNode/EnhancedSelectorNode.i: src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/EnhancedSelectorNode.i
+
+# target to preprocess a source file
+src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.i
+
+src/CHTL/CHTLNode/EnhancedSelectorNode.s: src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/EnhancedSelectorNode.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/EnhancedSelectorNode.cpp.s
+
+src/CHTL/CHTLNode/RawScriptNode.o: src/CHTL/CHTLNode/RawScriptNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/RawScriptNode.o
+
+# target to build an object file
+src/CHTL/CHTLNode/RawScriptNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/RawScriptNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/RawScriptNode.cpp.o
+
+src/CHTL/CHTLNode/RawScriptNode.i: src/CHTL/CHTLNode/RawScriptNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/RawScriptNode.i
+
+# target to preprocess a source file
+src/CHTL/CHTLNode/RawScriptNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/RawScriptNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/RawScriptNode.cpp.i
+
+src/CHTL/CHTLNode/RawScriptNode.s: src/CHTL/CHTLNode/RawScriptNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/RawScriptNode.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLNode/RawScriptNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/RawScriptNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/RawScriptNode.cpp.s
+
+src/CHTL/CHTLNode/ResponsiveValueNode.o: src/CHTL/CHTLNode/ResponsiveValueNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/ResponsiveValueNode.o
+
+# target to build an object file
+src/CHTL/CHTLNode/ResponsiveValueNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ResponsiveValueNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/ResponsiveValueNode.cpp.o
+
+src/CHTL/CHTLNode/ResponsiveValueNode.i: src/CHTL/CHTLNode/ResponsiveValueNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/ResponsiveValueNode.i
+
+# target to preprocess a source file
+src/CHTL/CHTLNode/ResponsiveValueNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ResponsiveValueNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/ResponsiveValueNode.cpp.i
+
+src/CHTL/CHTLNode/ResponsiveValueNode.s: src/CHTL/CHTLNode/ResponsiveValueNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/ResponsiveValueNode.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLNode/ResponsiveValueNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ResponsiveValueNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/ResponsiveValueNode.cpp.s
+
+src/CHTL/CHTLNode/ScriptNode.o: src/CHTL/CHTLNode/ScriptNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/ScriptNode.o
+
+# target to build an object file
+src/CHTL/CHTLNode/ScriptNode.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ScriptNode.cpp.o
+.PHONY : src/CHTL/CHTLNode/ScriptNode.cpp.o
+
+src/CHTL/CHTLNode/ScriptNode.i: src/CHTL/CHTLNode/ScriptNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/ScriptNode.i
+
+# target to preprocess a source file
+src/CHTL/CHTLNode/ScriptNode.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ScriptNode.cpp.i
+.PHONY : src/CHTL/CHTLNode/ScriptNode.cpp.i
+
+src/CHTL/CHTLNode/ScriptNode.s: src/CHTL/CHTLNode/ScriptNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/ScriptNode.s
+
+# target to generate assembly for a file
+src/CHTL/CHTLNode/ScriptNode.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ScriptNode.cpp.s
+.PHONY : src/CHTL/CHTLNode/ScriptNode.cpp.s
+
 src/CHTL/CHTLNode/TextNode.o: src/CHTL/CHTLNode/TextNode.cpp.o
 .PHONY : src/CHTL/CHTLNode/TextNode.o
 
@@ -579,6 +675,18 @@ help:
 	@echo "... src/CHTL/CHTLNode/ElementNode.o"
 	@echo "... src/CHTL/CHTLNode/ElementNode.i"
 	@echo "... src/CHTL/CHTLNode/ElementNode.s"
+	@echo "... src/CHTL/CHTLNode/EnhancedSelectorNode.o"
+	@echo "... src/CHTL/CHTLNode/EnhancedSelectorNode.i"
+	@echo "... src/CHTL/CHTLNode/EnhancedSelectorNode.s"
+	@echo "... src/CHTL/CHTLNode/RawScriptNode.o"
+	@echo "... src/CHTL/CHTLNode/RawScriptNode.i"
+	@echo "... src/CHTL/CHTLNode/RawScriptNode.s"
+	@echo "... src/CHTL/CHTLNode/ResponsiveValueNode.o"
+	@echo "... src/CHTL/CHTLNode/ResponsiveValueNode.i"
+	@echo "... src/CHTL/CHTLNode/ResponsiveValueNode.s"
+	@echo "... src/CHTL/CHTLNode/ScriptNode.o"
+	@echo "... src/CHTL/CHTLNode/ScriptNode.i"
+	@echo "... src/CHTL/CHTLNode/ScriptNode.s"
 	@echo "... src/CHTL/CHTLNode/TextNode.o"
 	@echo "... src/CHTL/CHTLNode/TextNode.i"
 	@echo "... src/CHTL/CHTLNode/TextNode.s"

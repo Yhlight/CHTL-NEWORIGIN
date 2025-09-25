@@ -38,6 +38,7 @@ void test_ampersand_selector_order();
 void test_delete_element_inheritance();
 void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
+void test_use_html5_directive();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -385,9 +386,27 @@ int main() {
     run_test(test_delete_element_inheritance, "Delete Element Inheritance");
     run_test(test_calc_with_percentage, "Calc With Percentage");
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
+    run_test(test_use_html5_directive, "Use HTML5 Directive");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_use_html5_directive() {
+    std::string source = R"(
+        use html5;
+        html {
+            body {
+                text: "Hello";
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, parser.outputHtml5Doctype);
+    assert(result.rfind("<!DOCTYPE html>", 0) == 0);
 }
 
 void test_calc_with_percentage() {

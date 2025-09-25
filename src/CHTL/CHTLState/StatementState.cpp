@@ -21,8 +21,10 @@
 // Forward declare to resolve circular dependency with StyleBlockState.h
 class StyleBlockState;
 class ConfigurationState;
+class UseState;
 #include "StyleBlockState.h"
 #include "ConfigurationState.h"
+#include "UseState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -61,8 +63,8 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         return nullptr;
 
     } else if (parser.currentToken.type == TokenType::Use) {
-        parseUseDirective(parser);
-        return nullptr; // `use` directive does not produce a node
+        parser.setState(std::make_unique<UseState>());
+        return nullptr; // The main loop will now call the new state's handle
     } else if (parser.currentToken.type == TokenType::At) {
         // --- ADD CONSTRAINT CHECK FOR TEMPLATE USAGE ---
         if (parser.contextNode && !parser.contextNode->constraints.empty()) {
@@ -754,17 +756,6 @@ void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
         }
     }
     parser.expectToken(TokenType::Semicolon);
-}
-
-void StatementState::parseUseDirective(Parser& parser) {
-    parser.expectToken(TokenType::Use);
-    if (parser.currentToken.value == "html5") {
-        parser.outputHtml5Doctype = true;
-        parser.expectToken(TokenType::Identifier);
-        parser.expectToken(TokenType::Semicolon);
-    } else {
-        throw std::runtime_error("Unsupported 'use' directive: " + parser.currentToken.value);
-    }
 }
 
 std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) {

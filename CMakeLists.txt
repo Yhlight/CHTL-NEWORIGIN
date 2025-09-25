@@ -28,6 +28,7 @@ set(CHTL_SOURCES
     src/CHTL/CHTLState/ConfigurationState.cpp
     src/CHTL/CHTLState/StatementState.cpp
     src/CHTL/CHTLState/StyleBlockState.cpp
+    src/CHTL/CHTLState/UseState.cpp
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp
