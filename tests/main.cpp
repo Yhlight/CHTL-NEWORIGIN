@@ -39,6 +39,7 @@ void test_delete_element_inheritance();
 void test_calc_with_percentage();
 void test_implicit_style_template_inheritance();
 void test_use_html5_directive();
+void test_named_configuration();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -387,6 +388,7 @@ int main() {
     run_test(test_calc_with_percentage, "Calc With Percentage");
     run_test(test_implicit_style_template_inheritance, "Implicit Style Template Inheritance");
     run_test(test_use_html5_directive, "Use HTML5 Directive");
+    run_test(test_named_configuration, "Named Configuration");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -407,6 +409,37 @@ void test_use_html5_directive() {
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, parser.outputHtml5Doctype);
     assert(result.rfind("<!DOCTYPE html>", 0) == 0);
+}
+
+void test_named_configuration() {
+    std::string source = R"(
+        [Configuration] @Config MyConfig {
+            [Name] {
+                KEYWORD_DELETE = "remove";
+            }
+        }
+
+        use @Config MyConfig;
+
+        [Template] @Style Base {
+            color: red;
+            font-size: 16px;
+        }
+        div {
+            style {
+                @Style Base {
+                    remove font-size;
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, parser.outputHtml5Doctype);
+    assert(result.find("font-size") == std::string::npos);
+    assert(result.find("color: red;") != std::string::npos);
 }
 
 void test_calc_with_percentage() {

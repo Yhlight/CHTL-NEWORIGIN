@@ -86,7 +86,7 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected identifier after '.' for class selector.");
         selectorName = parser.currentToken.value;
         // Check config flag before automatically adding the class attribute
-        if (!parser.configManager.disableStyleAutoAddClass && !parser.contextNode->attributes.count("class")) {
+        if (!parser.configManager.getActiveConfig()->disableStyleAutoAddClass && !parser.contextNode->attributes.count("class")) {
             parser.contextNode->attributes["class"] = {StyleValue::STRING, 0.0, "", selectorName};
         }
     } else if (parser.currentToken.type == TokenType::Hash) {
@@ -95,7 +95,7 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected identifier after '#' for ID selector.");
         selectorName = parser.currentToken.value;
         // Check config flag before automatically adding the id attribute
-        if (!parser.configManager.disableStyleAutoAddId && !parser.contextNode->attributes.count("id")) {
+        if (!parser.configManager.getActiveConfig()->disableStyleAutoAddId && !parser.contextNode->attributes.count("id")) {
             parser.contextNode->attributes["id"] = {StyleValue::STRING, 0.0, "", selectorName};
         }
     }

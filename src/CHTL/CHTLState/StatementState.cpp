@@ -54,8 +54,8 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             // The ConfigurationState expects the opening tokens to be consumed
             parser.advanceTokens(); // Consume '['
             parser.advanceTokens(); // Consume 'Configuration' (or alias)
-            ConfigurationState configState;
-            configState.handle(parser);
+            parser.expectToken(TokenType::CloseBracket);
+            parser.setState(std::make_unique<ConfigurationState>());
             return nullptr;
         }
         // Default to template/custom definition if no other keyword matches
@@ -64,7 +64,7 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
 
     } else if (parser.currentToken.type == TokenType::Use) {
         parser.setState(std::make_unique<UseState>());
-        return nullptr; // The main loop will now call the new state's handle
+        return nullptr; // `use` directive does not produce a node
     } else if (parser.currentToken.type == TokenType::At) {
         // --- ADD CONSTRAINT CHECK FOR TEMPLATE USAGE ---
         if (parser.contextNode && !parser.contextNode->constraints.empty()) {

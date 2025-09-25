@@ -1,58 +1,72 @@
 #include "ConfigurationState.h"
+#include "StatementState.h" // For transitioning back
 #include "../CHTLParser/Parser.h"
 #include <stdexcept>
 
 std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
-    // The dispatcher in StatementState has already consumed `[` and the keyword.
-    // We just need to consume the closing bracket.
-    parser.expectToken(TokenType::CloseBracket);
+    // StatementState now consumes the entire `[Configuration]` decorator.
+    std::string configName = "_default";
+    bool isNewConfig = false;
 
-    // Optional: handle named configuration blocks, e.g., [Configuration] @MyConfig
-    // For now, we only parse unnamed, active configs.
+    // Check for a named configuration: @Config <name>
     if (parser.currentToken.type == TokenType::At) {
-        // For now, just consume the name and ignore it.
-        parser.advanceTokens(); // consume @
-        parser.advanceTokens(); // consume name
+        parser.advanceTokens(); // Consume '@'
+        if (parser.currentToken.value != "Config") {
+            throw std::runtime_error("Expected 'Config' after '@' for named configuration.");
+        }
+        parser.advanceTokens(); // Consume 'Config'
+        configName = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        isNewConfig = true;
     }
+
+    // Get the configuration set we'll be modifying.
+    auto configSet = std::make_unique<ConfigSet>();
+    if (!isNewConfig) {
+        // If we are modifying the default config, start with a copy of the existing one.
+        *configSet = *parser.configManager.getActiveConfig();
+    }
+    ConfigSet* currentConfig = configSet.get();
 
     parser.expectToken(TokenType::OpenBrace);
 
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
         if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.value == "Name") {
-            parseNameBlock(parser);
+            parseNameBlock(parser, *currentConfig);
         } else if (parser.currentToken.type == TokenType::Identifier) {
-            // Handle simple key-value pairs
             std::string key = parser.currentToken.value;
             parser.advanceTokens();
             parser.expectToken(TokenType::Equals);
-
             std::string value = parser.currentToken.value;
-            // For now, we assume simple boolean or integer values.
-            // A more robust implementation would parse different value types.
+
             if (key == "DEBUG_MODE") {
-                parser.configManager.debugMode = (value == "true");
+                currentConfig->debugMode = (value == "true");
             } else if (key == "INDEX_INITIAL_COUNT") {
-                parser.configManager.indexInitialCount = std::stoi(value);
+                currentConfig->indexInitialCount = std::stoi(value);
             } else if (key == "DISABLE_STYLE_AUTO_ADD_CLASS") {
-                parser.configManager.disableStyleAutoAddClass = (value == "true");
+                currentConfig->disableStyleAutoAddClass = (value == "true");
             } else if (key == "DISABLE_STYLE_AUTO_ADD_ID") {
-                parser.configManager.disableStyleAutoAddId = (value == "true");
+                currentConfig->disableStyleAutoAddId = (value == "true");
             }
-            // Add other config flags here...
 
             parser.advanceTokens();
             parser.expectToken(TokenType::Semicolon);
-
         } else {
             throw std::runtime_error("Unexpected token in [Configuration] block: " + parser.currentToken.value);
         }
     }
 
     parser.expectToken(TokenType::CloseBrace);
-    return nullptr; // This state does not produce an AST node.
+
+    // Add the new or updated configuration to the manager.
+    parser.configManager.addConfig(configName, std::move(configSet));
+
+    // After parsing, we should be back in the general statement context.
+    parser.setState(std::make_unique<StatementState>());
+    return nullptr;
 }
 
-void ConfigurationState::parseNameBlock(Parser& parser) {
+void ConfigurationState::parseNameBlock(Parser& parser, ConfigSet& configSet) {
     parser.expectToken(TokenType::OpenBracket);
     parser.expectToken(TokenType::Identifier); // consume "Name"
     parser.expectToken(TokenType::CloseBracket);
@@ -66,25 +80,23 @@ void ConfigurationState::parseNameBlock(Parser& parser) {
 
             std::vector<std::string> aliases;
             if (parser.currentToken.type == TokenType::OpenBracket) {
-                // Handle group alias: [alias1, alias2]
                 parser.advanceTokens(); // consume '['
                 while (parser.currentToken.type != TokenType::CloseBracket && parser.currentToken.type != TokenType::EndOfFile) {
                     aliases.push_back(parser.currentToken.value);
                     parser.advanceTokens();
                     if (parser.currentToken.type == TokenType::Comma) {
-                        parser.advanceTokens(); // consume ','
+                        parser.advanceTokens();
                     } else {
-                        break; // No comma, end of list
+                        break;
                     }
                 }
                 parser.expectToken(TokenType::CloseBracket);
             } else {
-                // Handle single alias
                 aliases.push_back(parser.currentToken.value);
                 parser.advanceTokens();
             }
 
-            parser.configManager.keywordMap[key] = aliases;
+            configSet.keywordMap[key] = aliases;
             parser.expectToken(TokenType::Semicolon);
         } else {
             throw std::runtime_error("Unexpected token in [Name] block: " + parser.currentToken.value);
