@@ -48,6 +48,9 @@ void test_precise_import_not_found();
 void test_static_conditional_rendering();
 void test_else_if_else_rendering();
 void test_unified_scanner_script_separation();
+void test_unified_scanner_style_separation();
+void test_scanner_ignores_nested_style();
+void test_scanner_handles_nested_braces_in_script();
 void test_unquoted_literal_support();
 void test_text_block_literals();
 void test_enhanced_selector();
@@ -404,9 +407,60 @@ int main() {
     run_test(test_static_conditional_rendering, "Static Conditional Rendering");
     run_test(test_else_if_else_rendering, "Else If and Else Rendering");
     run_test(test_unified_scanner_script_separation, "Unified Scanner Script Separation");
+    run_test(test_unified_scanner_style_separation, "Unified Scanner Style Separation");
+    run_test(test_scanner_ignores_nested_style, "Scanner Ignores Nested Style");
+    run_test(test_scanner_handles_nested_braces_in_script, "Scanner Handles Nested Braces in Script");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_scanner_handles_nested_braces_in_script() {
+    std::string source = R"(
+        script {
+            if (true) {
+                console.log("nested");
+            }
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 1);
+    assert(fragments[0].type == FragmentType::JS);
+    assert(fragments[0].content.find("console.log(\"nested\");") != std::string::npos);
+}
+
+void test_scanner_ignores_nested_style() {
+    std::string source = R"(
+        div {
+            style {
+                color: red;
+            }
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 1);
+    assert(fragments[0].type == FragmentType::CHTL);
+}
+
+void test_unified_scanner_style_separation() {
+    std::string source = R"(
+        style {
+            body {
+                background-color: #f0f0f0;
+            }
+        }
+        div {
+            text: "Hello";
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 2);
+    assert(fragments[0].type == FragmentType::CSS);
+    assert(fragments[1].type == FragmentType::CHTL);
+    assert(fragments[0].content.find("background-color") != std::string::npos);
 }
 
 void test_unified_scanner_script_separation() {
