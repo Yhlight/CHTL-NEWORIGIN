@@ -1,0 +1,22 @@
+# Build artifacts
+/build/
+/app/build/
+CMakeCache.txt
+CTestTestfile.cmake
+Makefile
+cmake_install.cmake
+*.a
+*.so
+*.dylib
+chtl_compiler
+chtl_tests
+
+# Third-party libraries
+/third-party/
+
+# IDE-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
