@@ -69,7 +69,7 @@ Token Lexer::GetNextToken() {
                     size_t start = current;
                     while (Peek() != '\n' && current < source.length()) Advance();
                     return {TokenType::COMMENT, source.substr(start, current - start)};
-                } else { // It's a HASH for a color
+                } else { // It's a HASH for a color or ID selector
                     return {TokenType::HASH, "#"};
                 }
             case '{': return {TokenType::LEFT_BRACE, "{"};
@@ -81,7 +81,11 @@ Token Lexer::GetNextToken() {
             case '@': return {TokenType::AT, "@"};
             case ':': return {TokenType::COLON, ":"};
             case ';': return {TokenType::SEMICOLON, ";"};
-            case '"': return MakeString();
+            case '=': return {TokenType::EQUALS, "="};
+            case '.': return {TokenType::DOT, "."};
+            case '&': return {TokenType::AMPERSAND, "&"};
+            case '"': return MakeString('"');
+            case '\'': return MakeString('\'');
             case '+': return {TokenType::PLUS, "+"};
             case '-': return {TokenType::MINUS, "-"};
             case '*': return {TokenType::STAR, "*"};
@@ -114,11 +118,21 @@ Token Lexer::MakeIdentifier() {
     return {TokenType::IDENTIFIER, source.substr(start, current - start)};
 }
 
-Token Lexer::MakeString() {
+Token Lexer::MakeString(char quote_type) {
     size_t start = current;
-    while (Peek() != '"' && current < source.length()) Advance();
-    if (current >= source.length()) return {TokenType::UNKNOWN, source.substr(start - 1, current - (start - 1))};
+    while (Peek() != quote_type && current < source.length()) {
+        // Add escape character handling here in the future
+        Advance();
+    }
+
+    if (current >= source.length()) {
+        // Unterminated string
+        return {TokenType::UNKNOWN, source.substr(start - 1, current - (start - 1))};
+    }
+
+    // Consume the closing quote
     Advance();
+
     return {TokenType::STRING, source.substr(start, current - start - 1)};
 }
 
@@ -132,6 +146,9 @@ std::string TokenTypeToString(TokenType type) {
         case TokenType::RIGHT_PAREN: return "RIGHT_PAREN";
         case TokenType::AT: return "AT";
         case TokenType::HASH: return "HASH";
+        case TokenType::DOT: return "DOT";
+        case TokenType::AMPERSAND: return "AMPERSAND";
+        case TokenType::EQUALS: return "EQUALS";
         case TokenType::COLON: return "COLON";
         case TokenType::SEMICOLON: return "SEMICOLON";
         case TokenType::IDENTIFIER: return "IDENTIFIER";

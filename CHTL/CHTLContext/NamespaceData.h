@@ -14,6 +14,7 @@ struct NamespaceData {
     std::map<std::string, CustomStyleGroup> customStyleTemplates;
     std::map<std::string, TemplateVarGroup> varTemplates;
     std::map<std::string, TemplateElementGroup> elementTemplates;
+    std::vector<std::string> globalCssRules;
 };
 
 } // namespace CHTL

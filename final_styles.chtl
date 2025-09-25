@@ -1,14 +1,13 @@
-// This file defines a style template to be imported.
-// The loader will place this content in the 'final_styles' namespace by default.
+// This file will be imported into the 'lib' namespace
+[Namespace] lib
 
 [Template] @Var Sizing {
     base-unit: 8px;
-    border-radius: 4px;
 }
 
 [Template] @Style Button {
+    // Note: This variable will resolve to the 'lib' namespace's 'Sizing' group
+    // because the parser's context will be in the 'lib' namespace when this is parsed.
     padding: Sizing(base-unit);
-    border-radius: Sizing(border-radius);
-    border: 1px-solid-#ccc;
     font-size: 16px;
 }

@@ -20,7 +20,7 @@ private:
     void SkipSingleLineComment();
     void SkipMultiLineComment();
     Token MakeIdentifier();
-    Token MakeString();
+    Token MakeString(char quote_type);
 
     const std::string& source;
     size_t current = 0;

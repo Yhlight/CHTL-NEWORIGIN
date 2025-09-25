@@ -1,0 +1,13 @@
+[Namespace] lib
+[Template] @Var Sizing {
+    base-unit: 8px;
+}
+
+[Namespace] page
+body {
+    p {
+        style {
+            margin: Sizing(base-unit) from lib;
+        }
+    }
+}

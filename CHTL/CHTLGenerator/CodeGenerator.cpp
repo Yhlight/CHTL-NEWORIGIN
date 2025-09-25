@@ -14,9 +14,17 @@ std::string CodeGenerator::Generate(Node* root, Context& context) {
     }
 
     // Then, prepend the global CSS block
-    if (!context.globalCss.empty()) {
+    std::stringstream all_css;
+    all_css << context.globalCss;
+    for(const auto& pair : context.namespaces) {
+        for(const auto& rule : pair.second.globalCssRules) {
+            all_css << rule << "\n";
+        }
+    }
+
+    if (!all_css.str().empty()) {
         std::stringstream finalOutput;
-        finalOutput << "<style>" << context.globalCss << "</style>\n";
+        finalOutput << "<style>\n" << all_css.str() << "</style>\n";
         finalOutput << output.str();
         return finalOutput.str();
     }

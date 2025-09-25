@@ -13,6 +13,9 @@ enum class TokenType {
     LEFT_PAREN, RIGHT_PAREN,
     AT,
     HASH,
+    DOT,
+    AMPERSAND,
+    EQUALS,
     COLON, SEMICOLON,
 
     // Literals
