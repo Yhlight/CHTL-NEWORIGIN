@@ -188,5 +188,6 @@ CMakeFiles/chtl_compiler.dir/src/main.cpp.o: /app/src/main.cpp \
  /app/src/CHTL/CHTLGenerator/Generator.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/ElementNode.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/StyleValue.h \
+ /app/src/CHTL/CHTLGenerator/../CHTLNode/Constraint.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/TextNode.h \
  /app/src/CHTL/CHTLGenerator/../CHTLNode/CommentNode.h

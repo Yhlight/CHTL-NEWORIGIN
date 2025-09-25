@@ -12,33 +12,40 @@
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the workflow: Lexer -> Parser -> Generator.
 int main() {
-    // A CHTL source string to test the [Custom] @Style feature,
-    // including specialization with property completion and deletion.
+    // A CHTL source string to test the new conditional styling feature.
     std::string chtlSource = R"(
-[Template] @Style BaseStyle {
-    font-family: "Arial";
-    font-size: 16px;
-    padding: 10px;
-}
-
-[Custom] @Style CustomBox {
-    inherit @Style BaseStyle;
-    border: 1px solid black;
-    color; // Valueless property to be completed upon use
-}
-
 html {
     head { }
     body {
         div {
-            text: "This box is specialized.";
+            // Define some base attributes and styles to be used in the conditions.
+            width: 100px;
+            height: 200px;
+            border: 1px solid black;
 
-            // Use and specialize the CustomBox template
-            style {
-                @Style CustomBox {
-                    delete font-family; // Delete an inherited property
-                    font-size: 18px;   // Overwrite an inherited property
-                    color: "red";      // Complete the valueless property
+            // Conditional styling chain
+            if {
+                condition: width > 50px,
+                background-color: "green"; // This should be applied
+                border-color: "darkgreen";
+            }
+            else if {
+                condition: height > 250px,
+                background-color: "blue"; // This should NOT be applied
+            }
+            else {
+                background-color: "red"; // This should NOT be applied
+            }
+
+            // Another element to test a different condition
+            span {
+                width: 40px;
+                if {
+                    condition: width > 50px,
+                    display: "block"; // Should NOT be applied
+                }
+                else {
+                    display: "inline-block"; // Should be applied
                 }
             }
         }

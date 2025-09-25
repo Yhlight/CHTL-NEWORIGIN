@@ -124,10 +124,6 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/c++/13/bits/vector.tcc \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator_args.h \
- /app/src/CHTL/CHTLState/../CHTLNode/FragmentNode.h \
- /app/src/CHTL/CHTLState/../CHTLParser/Parser.h \
- /app/src/CHTL/CHTLState/../CHTLParser/../CHTLLexer/Lexer.h \
- /app/src/CHTL/CHTLState/../CHTLParser/../CHTLLexer/Token.h \
  /usr/include/c++/13/string /usr/include/c++/13/bits/char_traits.h \
  /usr/include/c++/13/bits/localefwd.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h \
@@ -160,6 +156,10 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
  /usr/include/c++/13/bits/charconv.h \
  /usr/include/c++/13/bits/basic_string.tcc \
+ /app/src/CHTL/CHTLState/../CHTLNode/FragmentNode.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/Parser.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/../CHTLLexer/Lexer.h \
+ /app/src/CHTL/CHTLState/../CHTLParser/../CHTLLexer/Token.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/TemplateManager.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/StyleTemplateNode.h \
  /usr/include/c++/13/map /usr/include/c++/13/bits/stl_tree.h \
@@ -171,8 +171,17 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/VarTemplateNode.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/../CHTLNode/OriginNode.h \
  /app/src/CHTL/CHTLState/../CHTLParser/../CHTLManage/ConfigurationManager.h \
- /app/src/CHTL/CHTLState/../CHTLNode/ElementNode.h \
- /app/src/CHTL/CHTLState/../CHTLNode/StyleValue.h \
+ /app/src/CHTL/CHTLState/../Util/StyleUtil.h \
+ /app/src/CHTL/CHTLState/../Util/../CHTLNode/StyleValue.h \
+ /app/src/CHTL/CHTLState/../Util/ExpressionEvaluator.h \
+ /app/src/CHTL/CHTLState/../Util/../CHTLNode/ElementNode.h \
+ /app/src/CHTL/CHTLState/../Util/../CHTLNode/Constraint.h \
+ /app/src/CHTL/CHTLState/../Util/Selector.h /usr/include/c++/13/algorithm \
+ /usr/include/c++/13/bits/stl_algo.h \
+ /usr/include/c++/13/bits/algorithmfwd.h \
+ /usr/include/c++/13/bits/stl_heap.h \
+ /usr/include/c++/13/bits/uniform_int_dist.h \
+ /usr/include/c++/13/pstl/glue_algorithm_defs.h \
  /app/src/CHTL/CHTLState/../CHTLNode/TextNode.h \
  /app/src/CHTL/CHTLState/../CHTLNode/CommentNode.h \
  /app/src/CHTL/CHTLState/../Util/NodeCloner.h \
@@ -198,5 +207,4 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLState/StatementState.cpp.o: \
  /usr/include/c++/13/bits/istream.tcc \
  /usr/include/c++/13/bits/sstream.tcc \
  /app/src/CHTL/CHTLState/StyleBlockState.h \
- /app/src/CHTL/CHTLState/../Util/Selector.h \
  /app/src/CHTL/CHTLState/ConfigurationState.h

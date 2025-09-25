@@ -453,6 +453,30 @@ src/CHTL/Util/ASTUtil.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.s
 .PHONY : src/CHTL/Util/ASTUtil.cpp.s
 
+src/CHTL/Util/ExpressionEvaluator.o: src/CHTL/Util/ExpressionEvaluator.cpp.o
+.PHONY : src/CHTL/Util/ExpressionEvaluator.o
+
+# target to build an object file
+src/CHTL/Util/ExpressionEvaluator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ExpressionEvaluator.cpp.o
+.PHONY : src/CHTL/Util/ExpressionEvaluator.cpp.o
+
+src/CHTL/Util/ExpressionEvaluator.i: src/CHTL/Util/ExpressionEvaluator.cpp.i
+.PHONY : src/CHTL/Util/ExpressionEvaluator.i
+
+# target to preprocess a source file
+src/CHTL/Util/ExpressionEvaluator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ExpressionEvaluator.cpp.i
+.PHONY : src/CHTL/Util/ExpressionEvaluator.cpp.i
+
+src/CHTL/Util/ExpressionEvaluator.s: src/CHTL/Util/ExpressionEvaluator.cpp.s
+.PHONY : src/CHTL/Util/ExpressionEvaluator.s
+
+# target to generate assembly for a file
+src/CHTL/Util/ExpressionEvaluator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/ExpressionEvaluator.cpp.s
+.PHONY : src/CHTL/Util/ExpressionEvaluator.cpp.s
+
 src/CHTL/Util/NodeCloner.o: src/CHTL/Util/NodeCloner.cpp.o
 .PHONY : src/CHTL/Util/NodeCloner.o
 
@@ -597,6 +621,9 @@ help:
 	@echo "... src/CHTL/Util/ASTUtil.o"
 	@echo "... src/CHTL/Util/ASTUtil.i"
 	@echo "... src/CHTL/Util/ASTUtil.s"
+	@echo "... src/CHTL/Util/ExpressionEvaluator.o"
+	@echo "... src/CHTL/Util/ExpressionEvaluator.i"
+	@echo "... src/CHTL/Util/ExpressionEvaluator.s"
 	@echo "... src/CHTL/Util/NodeCloner.o"
 	@echo "... src/CHTL/Util/NodeCloner.i"
 	@echo "... src/CHTL/Util/NodeCloner.s"

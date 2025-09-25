@@ -85,25 +85,42 @@ void Generator::generateElement(const ElementNode* node) {
 
     append(getIndent() + "<" + node->tagName);
 
-    // Process inline styles first
-    std::string styleString;
-    if (!node->inlineStyles.empty()) {
-        for (const auto& stylePair : node->inlineStyles) {
-            styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
+    // Process attributes, converting them to strings.
+    auto finalAttributes = node->attributes;
+
+    // Evaluate conditional styles and merge them into the attributes map.
+    for (const auto& conditionalBlock : node->conditionalStyles) {
+        if (conditionalBlock.condition.type != StyleValue::BOOL) {
+            throw std::runtime_error("Conditional style block has a non-boolean condition at generation time.");
+        }
+        if (conditionalBlock.condition.bool_val) {
+            for (const auto& stylePair : conditionalBlock.styles) {
+                finalAttributes[stylePair.first] = stylePair.second;
+            }
+            break;
         }
     }
 
-    // Process attributes, converting them to strings. If a 'style' attribute
-    // already exists, prepend the inline styles to it.
-    auto finalAttributes = node->attributes;
-    if (!styleString.empty()) {
-        if (finalAttributes.count("style")) {
-            // Prepend the inline styles to the existing style attribute's string value
-            finalAttributes["style"].string_val = styleString + finalAttributes["style"].string_val;
-        } else {
-            // Create a new style attribute
-            finalAttributes["style"] = {StyleValue::STRING, 0.0, "", styleString};
+    // Consolidate all style-related properties into a single style string.
+    std::string styleString;
+    std::vector<std::string> keysToRemove;
+    for (auto const& [key, val] : finalAttributes) {
+        // A simple heuristic: if a value is numeric or it's not a standard, non-style attribute,
+        // treat it as a style. This is imperfect but works for this case.
+        if (val.type == StyleValue::NUMERIC || (key != "id" && key != "class" && key != "href" && key != "src")) {
+            styleString += key + ": " + styleValueToString(val) + "; ";
+            keysToRemove.push_back(key);
         }
+    }
+
+    // Remove the style properties from the attributes map so they aren't rendered twice.
+    for (const auto& key : keysToRemove) {
+        finalAttributes.erase(key);
+    }
+
+    // Add the consolidated style string as a single 'style' attribute.
+    if (!styleString.empty()) {
+        finalAttributes["style"] = {StyleValue::STRING, 0.0, "", styleString};
     }
 
     // Append attributes to the opening tag.

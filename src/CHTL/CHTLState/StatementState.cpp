@@ -2,6 +2,7 @@
 
 #include "../CHTLParser/Parser.h"
 #include "../Util/StyleUtil.h"
+#include "../Util/ExpressionEvaluator.h"
 #include <algorithm>
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
@@ -218,6 +219,8 @@ void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
             styleState.handle(parser); // This will parse the entire style block.
         } else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
             parseExceptClause(parser, element);
+        } else if (parser.currentToken.type == TokenType::If) {
+            parseConditionalStyleChain(parser, element);
         }
         else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
             parseAttribute(parser, element);
@@ -269,8 +272,9 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
     }
     parser.advanceTokens(); // Consume ':' or '='
 
-    // Use the global expression parser
-    StyleValue value = parseStyleExpression(parser);
+    // Use the new centralized expression evaluator
+    ExpressionEvaluator evaluator(parser, &element);
+    StyleValue value = evaluator.evaluate();
 
     parser.expectToken(TokenType::Semicolon);
 
@@ -867,5 +871,75 @@ void StatementState::parseImportStatement(Parser& parser) {
 
     } else {
         throw std::runtime_error("Unsupported import type: @" + importType);
+    }
+}
+
+void StatementState::parseConditionalStyleChain(Parser& parser, ElementNode& element) {
+    bool first_block = true;
+    while (parser.currentToken.type == TokenType::If || parser.currentToken.type == TokenType::Else) {
+        if (first_block && parser.currentToken.type != TokenType::If) {
+            throw std::runtime_error("Conditional style chain must start with 'if'.");
+        }
+        if (!first_block && parser.currentToken.type == TokenType::If) {
+            // An 'if' after an 'if' or 'else' is a new chain, not part of the current one.
+            break;
+        }
+
+        ConditionalStyleBlock block;
+        bool isElseIf = (parser.currentToken.type == TokenType::Else && parser.currentToken.value == "else if");
+        bool isElse = (parser.currentToken.type == TokenType::Else && parser.currentToken.value == "else");
+
+        parser.advanceTokens(); // consume 'if' or 'else'
+
+        parser.expectToken(TokenType::OpenBrace);
+
+        // Parse condition for 'if' and 'else if'
+        if (!isElse) {
+            if (parser.currentToken.type != TokenType::Condition) {
+                throw std::runtime_error("Expected 'condition' keyword inside '" + std::string(isElseIf ? "else if" : "if") + "' block.");
+            }
+            parser.advanceTokens(); // consume 'condition'
+            parser.expectToken(TokenType::Colon);
+
+            // Use the new specific boolean evaluator for the condition
+            ExpressionEvaluator conditionEvaluator(parser, &element);
+            block.condition = conditionEvaluator.evaluateBoolean();
+
+            // The condition MUST be followed by a comma.
+            if (parser.currentToken.type != TokenType::Comma) {
+                throw std::runtime_error("Expected ',' after condition expression.");
+            }
+            parser.advanceTokens(); // Consume the comma
+        } else {
+             // For a pure 'else' block, the condition is implicitly true.
+             block.condition = {StyleValue::BOOL, 0.0, "", "", true};
+        }
+
+
+        // Parse the style properties inside the block
+        while(parser.currentToken.type != TokenType::CloseBrace) {
+            if (parser.currentToken.type != TokenType::Identifier) {
+                throw std::runtime_error("Expected style property identifier inside conditional block.");
+            }
+            std::string key = parser.currentToken.value;
+            parser.advanceTokens();
+            parser.expectToken(TokenType::Colon);
+
+            ExpressionEvaluator styleEvaluator(parser, &element);
+            block.styles[key] = styleEvaluator.evaluate();
+
+            if (parser.currentToken.type == TokenType::Semicolon) {
+                parser.advanceTokens();
+            }
+        }
+        parser.expectToken(TokenType::CloseBrace);
+
+        element.conditionalStyles.push_back(std::move(block));
+        first_block = false;
+
+        // If the next token is not 'else', the chain is broken.
+        if (parser.currentToken.type != TokenType::Else) {
+            break;
+        }
     }
 }

@@ -38,4 +38,7 @@ private:
 
     // Helper for parsing an 'except' clause
     void parseExceptClause(Parser& parser, ElementNode& element);
+
+    // Helper for parsing an 'if { condition... } else if ...' chain
+    void parseConditionalStyleChain(Parser& parser, ElementNode& element);
 };

@@ -122,8 +122,7 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o: \
  /usr/include/c++/13/bits/vector.tcc \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator_args.h \
- /app/src/CHTL/Util/../CHTLNode/ElementNode.h /usr/include/c++/13/string \
- /usr/include/c++/13/bits/char_traits.h \
+ /usr/include/c++/13/string /usr/include/c++/13/bits/char_traits.h \
  /usr/include/c++/13/bits/localefwd.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++locale.h \
  /usr/include/c++/13/clocale /usr/include/locale.h \
@@ -154,13 +153,15 @@ CMakeFiles/chtl_lib.dir/src/CHTL/Util/ASTUtil.cpp.o: \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
  /usr/include/c++/13/bits/charconv.h \
- /usr/include/c++/13/bits/basic_string.tcc /usr/include/c++/13/map \
+ /usr/include/c++/13/bits/basic_string.tcc \
+ /app/src/CHTL/Util/../CHTLNode/ElementNode.h /usr/include/c++/13/map \
  /usr/include/c++/13/bits/stl_tree.h \
  /usr/include/c++/13/bits/node_handle.h \
  /usr/include/c++/13/bits/stl_map.h \
  /usr/include/c++/13/bits/stl_multimap.h \
  /usr/include/c++/13/bits/erase_if.h \
  /app/src/CHTL/Util/../CHTLNode/StyleValue.h \
+ /app/src/CHTL/Util/../CHTLNode/Constraint.h \
  /app/src/CHTL/Util/Selector.h \
  /app/src/CHTL/Util/../CHTLNode/FragmentNode.h \
  /usr/include/c++/13/iostream /usr/include/c++/13/ostream \

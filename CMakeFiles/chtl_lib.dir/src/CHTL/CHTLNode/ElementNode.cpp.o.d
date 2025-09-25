@@ -158,4 +158,5 @@ CMakeFiles/chtl_lib.dir/src/CHTL/CHTLNode/ElementNode.cpp.o: \
  /usr/include/c++/13/bits/node_handle.h \
  /usr/include/c++/13/bits/stl_map.h \
  /usr/include/c++/13/bits/stl_multimap.h \
- /usr/include/c++/13/bits/erase_if.h /app/src/CHTL/CHTLNode/StyleValue.h
+ /usr/include/c++/13/bits/erase_if.h /app/src/CHTL/CHTLNode/StyleValue.h \
+ /app/src/CHTL/CHTLNode/Constraint.h

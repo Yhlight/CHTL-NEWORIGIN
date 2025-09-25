@@ -120,6 +120,28 @@ Token Lexer::identifier() {
     if (value == "Import") {
         return {TokenType::Import, value, line, startCol};
     }
+    if (value == "if") {
+        return {TokenType::If, value, line, startCol};
+    }
+    // Check for "else if" combination
+    if (value == "else") {
+        size_t preWhitespacePos = position;
+        int preWhitespaceLine = line;
+        int preWhitespaceCol = column;
+        skipWhitespace();
+        if (peek() == 'i' && (position + 2) <= source.length() && source.substr(position, 2) == "if") {
+            advance(); advance(); // consume "if"
+            return {TokenType::Else, "else if", line, startCol}; // Return a special value for "else if"
+        }
+        // No "if" found, so it's just a plain "else"
+        position = preWhitespacePos;
+        line = preWhitespaceLine;
+        column = preWhitespaceCol;
+        return {TokenType::Else, value, line, startCol};
+    }
+    if (value == "condition") {
+        return {TokenType::Condition, value, line, startCol};
+    }
 
 
     return {TokenType::Identifier, value, line, startCol};
