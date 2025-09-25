@@ -5,9 +5,30 @@
 #include "../CHTLNode/StyleValue.h" // Include the new StyleValue struct
 #include "../Util/StyleUtil.h" // Include the new StyleUtil
 #include "../Util/ASTUtil.h" // For findNodeBySelector
-#include "../Util/StyleParsingUtil.h"
 #include <stdexcept>
 #include <sstream>
+
+// This is a helper function that is not part of the class.
+// It is used by both StyleBlockState and GlobalStyleBlockState.
+std::string parseCssRuleBlock(Parser& parser) {
+    parser.expectToken(TokenType::OpenBrace);
+    std::string cssRules;
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected property name inside selector block.");
+        std::string key = parser.currentToken.value;
+        parser.advanceTokens();
+        parser.expectToken(TokenType::Colon);
+
+        StyleBlockState tempState;
+        StyleValue sv = tempState.parseStyleExpression(parser);
+
+        std::string value = styleValueToString(sv);
+        cssRules += "  " + key + ": " + value + ";\n";
+        if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
+    }
+    parser.expectToken(TokenType::CloseBrace);
+    return cssRules;
+}
 
 // The main handler for the style block. It dispatches to helpers based on the token.
 std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
@@ -149,6 +170,25 @@ void StyleBlockState::parseAmpersandSelector(Parser& parser) {
     } else {
         parser.globalStyleContent += baseSelector + fullRule + "\n\n";
     }
+}
+
+// Helper to parse the body of a CSS rule block '{...}'.
+std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
+    parser.expectToken(TokenType::OpenBrace);
+    std::string cssRules;
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected property name inside selector block.");
+        std::string key = parser.currentToken.value;
+        parser.advanceTokens();
+        parser.expectToken(TokenType::Colon);
+        StyleValue sv = parseStyleExpression(parser);
+        // Use the new utility function
+        std::string value = styleValueToString(sv);
+        cssRules += "  " + key + ": " + value + ";\n";
+        if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
+    }
+    parser.expectToken(TokenType::CloseBrace);
+    return cssRules;
 }
 
 // --- Start of Expression Parsing Implementation ---

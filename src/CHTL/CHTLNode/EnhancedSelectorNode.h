@@ -7,6 +7,7 @@
 class EnhancedSelectorNode : public BaseNode {
 public:
     std::string selector;
+    bool isSimpleIdentifier = false;
 
     explicit EnhancedSelectorNode(std::string selector);
 

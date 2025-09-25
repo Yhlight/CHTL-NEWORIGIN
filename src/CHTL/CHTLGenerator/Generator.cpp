@@ -161,9 +161,15 @@ void Generator::generateScript(const ScriptNode* node, const ElementNode* parent
             case NodeType::RawScript:
                 scriptContent += static_cast<const RawScriptNode*>(child.get())->content;
                 break;
-            case NodeType::EnhancedSelector:
-                scriptContent += "document.querySelector('" + static_cast<const EnhancedSelectorNode*>(child.get())->selector + "')";
+            case NodeType::EnhancedSelector: {
+                auto* esNode = static_cast<const EnhancedSelectorNode*>(child.get());
+                if (esNode->isSimpleIdentifier) {
+                    scriptContent += "document.querySelector('" + esNode->selector + ", ." + esNode->selector + ", #" + esNode->selector + "')";
+                } else {
+                    scriptContent += "document.querySelector('" + esNode->selector + "')";
+                }
                 break;
+            }
             case NodeType::AmpersandSelector:
                 if (parent && parent->attributes.count("id")) {
                     scriptContent += "document.getElementById('" + parent->attributes.at("id").string_val + "')";

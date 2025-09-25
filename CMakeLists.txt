@@ -33,7 +33,6 @@ set(CHTL_SOURCES
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp
-    src/CHTL/Util/StyleParsingUtil.cpp
 )
 
 # Add a library for the CHTL compiler components

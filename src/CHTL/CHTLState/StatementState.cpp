@@ -974,11 +974,14 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
                 scriptNode->children.push_back(std::make_unique<AmpersandSelectorNode>());
             } else {
                 std::stringstream selectorContent;
+                bool isSimpleIdentifier = parser.peekToken.type == TokenType::CloseDoubleBrace;
                 while (parser.currentToken.type != TokenType::CloseDoubleBrace && parser.currentToken.type != TokenType::EndOfFile) {
                     selectorContent << parser.currentToken.value;
                     parser.advanceTokens();
                 }
-                scriptNode->children.push_back(std::make_unique<EnhancedSelectorNode>(selectorContent.str()));
+                auto selectorNode = std::make_unique<EnhancedSelectorNode>(selectorContent.str());
+                selectorNode->isSimpleIdentifier = isSimpleIdentifier;
+                scriptNode->children.push_back(std::move(selectorNode));
             }
             parser.expectToken(TokenType::CloseDoubleBrace);
             rawContentStartPos = parser.currentToken.start_pos;

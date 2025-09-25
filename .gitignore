@@ -1,29 +1,25 @@
-# CMake build files
-build/
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-CTestTestfile.cmake
-Makefile
-
-# Compiled binaries and libraries
-*.exe
-*.out
-*.so
-*.a
-*.lib
-*.dll
+# Build artifacts
 chtl_compiler
 chtl_tests
-
-# Test artifacts
+libchtl_lib.a
+libchtl_js_lib.a
+Makefile
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
 Testing/
-*.log
+CMakeFiles/
+build/
+*.o
+*.a
+*.so
+*.exe
+*.out
 
-# Editor-specific files
+# IDE files
 .vscode/
 .idea/
 
-# OS-specific files
-.DS_Store
-Thumbs.db
+# Other
+*~
+*.swp

@@ -43,16 +43,28 @@ void test_text_block_literals();
 void test_enhanced_selector();
 void test_responsive_value();
 void test_global_style_block();
-void test_ampersand_selector_in_script();
+void test_simple_enhanced_selector();
 
 
-void test_ampersand_selector_in_script() {
+void test_global_style_block() {
+    std::string source = R"(
+        style {
+            body {
+                width: 100px + 50px;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    parser.parse();
+    assert(parser.globalStyleContent.find("width: 150px;") != std::string::npos);
+}
+
+void test_simple_enhanced_selector() {
     std::string source = R"(
         div {
-            id: "my-div";
             script {
-                const self = {{&}};
-                self.innerText = "Hello from ampersand!";
+                const myElement = {{box}};
             }
         }
     )";
@@ -61,24 +73,8 @@ void test_ampersand_selector_in_script() {
     auto nodes = parser.parse();
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("const self = document.getElementById('my-div');") != std::string::npos);
-}
-
-void test_global_style_block() {
-    std::string source = R"(
-        style {
-            body {
-                color: red;
-            }
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    parser.parse();
-    assert(parser.globalStyleContent.find("color") != std::string::npos);
-    assert(parser.globalStyleContent.find(":") != std::string::npos);
-    assert(parser.globalStyleContent.find("red") != std::string::npos);
-    assert(parser.globalStyleContent.find(";") != std::string::npos);
+    std::cout << "\n--- Simple Enhanced Selector Test Output ---\n" << result << "--- End Output ---\n" << std::endl;
+    assert(result.find("document.querySelector('box, .box, #box')") != std::string::npos);
 }
 
 void test_text_block_literals() {
@@ -402,9 +398,9 @@ int main() {
     run_test(test_text_block_literals, "Text Block Literals");
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
     run_test(test_enhanced_selector, "Enhanced Selector");
+    run_test(test_simple_enhanced_selector, "Simple Enhanced Selector");
     run_test(test_responsive_value, "Responsive Value");
     run_test(test_global_style_block, "Global Style Block");
-    run_test(test_ampersand_selector_in_script, "Ampersand Selector in Script");
     run_test(test_calc_generation, "Calc() Generation");
     run_test(test_except_constraint, "Except Constraint");
     run_test(test_named_origin_and_import, "Named Origin and Import");

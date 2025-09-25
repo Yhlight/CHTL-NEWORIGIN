@@ -621,30 +621,6 @@ src/CHTL/Util/NodeCloner.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/NodeCloner.cpp.s
 .PHONY : src/CHTL/Util/NodeCloner.cpp.s
 
-src/CHTL/Util/StyleParsingUtil.o: src/CHTL/Util/StyleParsingUtil.cpp.o
-.PHONY : src/CHTL/Util/StyleParsingUtil.o
-
-# target to build an object file
-src/CHTL/Util/StyleParsingUtil.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleParsingUtil.cpp.o
-.PHONY : src/CHTL/Util/StyleParsingUtil.cpp.o
-
-src/CHTL/Util/StyleParsingUtil.i: src/CHTL/Util/StyleParsingUtil.cpp.i
-.PHONY : src/CHTL/Util/StyleParsingUtil.i
-
-# target to preprocess a source file
-src/CHTL/Util/StyleParsingUtil.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleParsingUtil.cpp.i
-.PHONY : src/CHTL/Util/StyleParsingUtil.cpp.i
-
-src/CHTL/Util/StyleParsingUtil.s: src/CHTL/Util/StyleParsingUtil.cpp.s
-.PHONY : src/CHTL/Util/StyleParsingUtil.s
-
-# target to generate assembly for a file
-src/CHTL/Util/StyleParsingUtil.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/chtl_lib.dir/build.make CMakeFiles/chtl_lib.dir/src/CHTL/Util/StyleParsingUtil.cpp.s
-.PHONY : src/CHTL/Util/StyleParsingUtil.cpp.s
-
 src/CHTL/Util/StyleUtil.o: src/CHTL/Util/StyleUtil.cpp.o
 .PHONY : src/CHTL/Util/StyleUtil.o
 
@@ -786,9 +762,6 @@ help:
 	@echo "... src/CHTL/Util/NodeCloner.o"
 	@echo "... src/CHTL/Util/NodeCloner.i"
 	@echo "... src/CHTL/Util/NodeCloner.s"
-	@echo "... src/CHTL/Util/StyleParsingUtil.o"
-	@echo "... src/CHTL/Util/StyleParsingUtil.i"
-	@echo "... src/CHTL/Util/StyleParsingUtil.s"
 	@echo "... src/CHTL/Util/StyleUtil.o"
 	@echo "... src/CHTL/Util/StyleUtil.i"
 	@echo "... src/CHTL/Util/StyleUtil.s"
