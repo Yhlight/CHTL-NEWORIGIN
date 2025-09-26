@@ -76,6 +76,7 @@ void test_compiler_dispatcher_full_workflow();
 void test_chtl_js_lexer_and_parser();
 void test_chtl_js_listen_block();
 void test_chtl_js_event_binding_operator();
+void test_chtl_js_delegate_block();
 
 
 void test_text_block_literals() {
@@ -482,6 +483,7 @@ int main() {
     run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
     run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
+    run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1457,4 +1459,29 @@ void test_chtl_js_event_binding_operator() {
     std::string expected_js2_2 = "document.querySelector('#my-area').addEventListener('mouseout', (e) => { e.target.classList.toggle(\"hover\"); });";
     assert(result2.find(expected_js2_1) != std::string::npos);
     assert(result2.find(expected_js2_2) != std::string::npos);
+}
+
+void test_chtl_js_delegate_block() {
+    std::string source = R"(
+        div {
+            id: "parent-container";
+            script {
+                {{#parent-container}} -> Delegate {
+                    target: {{.child-button}},
+                    click: (event) => { console.log("Delegated click happened!"); }
+                }
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check that the generated JS contains the key parts of the delegation logic
+    assert(result.find("const parent_for_delegation_") != std::string::npos);
+    assert(result.find(".addEventListener('click', (event) => {") != std::string::npos);
+    assert(result.find("let target = event.target;") != std::string::npos);
+    assert(result.find("while (target && target !== parent_for_delegation_") != std::string::npos);
+    assert(result.find("if (target.matches('.child-button'))") != std::string::npos);
+    assert(result.find("((event) => { console.log(\"Delegated click happened!\"); }).call(target, event);") != std::string::npos);
 }

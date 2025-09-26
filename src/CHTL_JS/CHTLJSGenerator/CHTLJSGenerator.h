@@ -2,6 +2,7 @@
 
 #include "../CHTLJSNode/CHTLJSNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
+#include "../CHTLJSNode/DelegateNode.h"
 #include <string>
 #include <vector>
 #include <memory>

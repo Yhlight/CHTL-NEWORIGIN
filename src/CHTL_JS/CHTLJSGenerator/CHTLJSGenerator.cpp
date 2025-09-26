@@ -3,6 +3,7 @@
 #include "../CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
+#include "../CHTLJSNode/DelegateNode.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -19,7 +20,7 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
             for (const auto& pair : listenNode->event_handlers) {
                 final_code << last_expression << ".addEventListener('" << pair.first << "', " << pair.second << ");\n";
             }
-            last_expression.clear(); // The expression has been consumed.
+            last_expression.clear();
         } else if (node->getType() == CHTLJSNodeType::EventBinding) {
             if (last_expression.empty()) {
                 throw std::runtime_error("Event binding operator must be preceded by an enhanced selector.");
@@ -28,21 +29,44 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
             for (const auto& event_name : bindingNode->event_names) {
                 final_code << last_expression << ".addEventListener('" << event_name << "', " << bindingNode->handler_code << ");\n";
             }
-            // For now, assume the expression is consumed. Chaining can be a future enhancement.
             last_expression.clear();
-        } else {
-            // If there was a pending expression, it means it wasn't used by a function call.
-            // So, append it to the output as a standalone statement.
+        } else if (node->getType() == CHTLJSNodeType::Delegate) {
+            if (last_expression.empty()) {
+                throw std::runtime_error("Delegate block must be preceded by an enhanced selector.");
+            }
+            const auto* delegateNode = static_cast<const DelegateNode*>(node.get());
+            std::string parent_element_var = "parent_for_delegation_" + std::to_string(reinterpret_cast<uintptr_t>(delegateNode));
+            final_code << "const " << parent_element_var << " = " << last_expression << ";\n";
+
+            for (const auto& pair : delegateNode->event_handlers) {
+                final_code << parent_element_var << ".addEventListener('" << pair.first << "', (event) => {\n";
+                final_code << "  let target = event.target;\n";
+                final_code << "  while (target && target !== " << parent_element_var << ") {\n";
+
+                std::string condition;
+                for(size_t i = 0; i < delegateNode->target_selectors.size(); ++i) {
+                    if (i > 0) condition += " || ";
+                    condition += "target.matches('" + delegateNode->target_selectors[i] + "')";
+                }
+
+                final_code << "    if (" << condition << ") {\n";
+                final_code << "      (" << pair.second << ").call(target, event);\n";
+                final_code << "      break;\n";
+                final_code << "    }\n";
+                final_code << "    target = target.parentNode;\n";
+                final_code << "  }\n";
+                final_code << "});\n";
+            }
+            last_expression.clear();
+        }
+        else {
             if (!last_expression.empty()) {
                 final_code << last_expression << ";\n";
                 last_expression.clear();
             }
 
-            // Generate the code for the current node.
             std::string current_code = generateNode(node.get());
 
-            // If it's a selector, it's an expression that might be used by the next node.
-            // Otherwise, it's a statement that should be appended immediately.
             if (node->getType() == CHTLJSNodeType::EnhancedSelector) {
                 last_expression = current_code;
             } else {
@@ -51,7 +75,6 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
         }
     }
 
-    // Append any leftover expression.
     if (!last_expression.empty()) {
         final_code << last_expression << ";\n";
     }
@@ -71,7 +94,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
         }
         case CHTLJSNodeType::Listen:
         case CHTLJSNodeType::EventBinding:
-            // This is handled in the main generate loop, so we return an empty string here.
+        case CHTLJSNodeType::Delegate:
             return "";
         default:
             return "";

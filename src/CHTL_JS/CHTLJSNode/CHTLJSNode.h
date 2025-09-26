@@ -14,6 +14,8 @@ enum class CHTLJSNodeType {
     Listen,
     // Represents an event binding expression, e.g., &-> click: ...
     EventBinding,
+    // Represents a Delegate block for event delegation.
+    Delegate,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.

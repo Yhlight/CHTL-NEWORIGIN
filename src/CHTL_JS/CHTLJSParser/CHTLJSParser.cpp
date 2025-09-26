@@ -3,6 +3,7 @@
 #include "../CHTLJSNode/RawJavaScriptNode.h"
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
+#include "../CHTLJSNode/DelegateNode.h"
 #include <stdexcept>
 
 CHTLJSParser::CHTLJSParser(std::vector<CHTLJSToken> tokens) : tokens(std::move(tokens)) {}
@@ -43,8 +44,9 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 advance(); // Consume '->'
                 if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Listen") {
                     nodes.push_back(parseListenBlock());
+                } else if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Delegate") {
+                    nodes.push_back(parseDelegateBlock());
                 } else {
-                    // Handle other arrow-based function calls in the future
                     nodes.push_back(std::make_unique<RawJavaScriptNode>("->"));
                 }
                 break;
@@ -58,7 +60,6 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 advance();
                 break;
             default:
-                // For now, we'll treat other tokens as raw JS to be safe.
                 nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));
                 advance();
                 break;
@@ -130,4 +131,48 @@ std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {
 
     advance(); // Consume '}'
     return listenNode;
+}
+
+std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
+    advance(); // Consume 'Delegate'
+    if (currentToken().type != CHTLJSTokenType::OpenBrace) {
+        throw std::runtime_error("Expected '{' after 'Delegate'.");
+    }
+    advance(); // Consume '{'
+
+    auto delegateNode = std::make_unique<DelegateNode>();
+
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        advance();
+
+        if (currentToken().type != CHTLJSTokenType::Colon) {
+            throw std::runtime_error("Expected ':' after property name in Delegate block.");
+        }
+        advance();
+
+        if (key == "target") {
+            if (currentToken().type != CHTLJSTokenType::OpenDoubleBrace) {
+                throw std::runtime_error("Delegate target must be an enhanced selector.");
+            }
+            advance(); // consume {{
+            delegateNode->target_selectors.push_back(currentToken().value);
+            advance(); // consume selector
+            if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) {
+                throw std::runtime_error("Unclosed enhanced selector in delegate target.");
+            }
+            advance(); // consume }}
+        } else {
+            // It's an event handler
+            delegateNode->event_handlers[key] = currentToken().value;
+            advance();
+        }
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            advance();
+        }
+    }
+
+    advance(); // Consume '}'
+    return delegateNode;
 }
