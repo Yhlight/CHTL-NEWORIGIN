@@ -12,6 +12,13 @@
 
 // The Generator class traverses an Abstract Syntax Tree (AST) and
 // produces the final output string (e.g., HTML).
+
+enum class GenerationContext {
+    HTML,
+    CSS,
+    JS
+};
+
 class Generator {
 public:
     Generator();
@@ -26,10 +33,10 @@ private:
 
 #include "../CHTLNode/ScriptNode.h"
     // Visitor-style methods to generate output for each node type.
-    void generateNode(const BaseNode* node);
+    void generateNode(const BaseNode* node, GenerationContext context = GenerationContext::HTML);
     void generateElement(ElementNode* node); // Needs to be non-const to add id
     void generateText(const TextNode* node);
-    void generateComment(const CommentNode* node);
+    void generateComment(const CommentNode* node, GenerationContext context);
     void generateScript(const ScriptNode* node);
     void generateRuntimeScript(const SharedContext& context);
 

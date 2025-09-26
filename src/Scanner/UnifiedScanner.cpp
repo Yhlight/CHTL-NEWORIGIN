@@ -69,9 +69,9 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
             continue;
         }
 
-        // Check if the block is top-level (for style) or any level (for script)
+        // Check if the block is top-level. The scanner should only separate global blocks.
         int brace_level_before = calculate_brace_level_up_to(source, next_pos);
-        if (!is_script && brace_level_before != 0) { // style block must be top-level
+        if (brace_level_before != 0) {
              search_pos = next_pos + 1;
              continue;
         }
@@ -100,11 +100,25 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
             continue;
         }
 
-        // Add the block's content
-        fragments.push_back({
-            is_script ? FragmentType::JS : FragmentType::CSS,
-            source.substr(block_content_start, end_brace_pos - block_content_start - 1)
-        });
+        std::string blockContent = source.substr(block_content_start, end_brace_pos - block_content_start - 1);
+        bool hasChtlFeatures = !is_script && (blockContent.find("# ") != std::string::npos);
+
+        if (hasChtlFeatures) {
+            // This style block contains CHTL features. Treat the whole block as CHTL.
+            // We need to merge it with the previous CHTL fragment if possible.
+            std::string fullBlock = source.substr(next_pos, end_brace_pos - next_pos);
+            if (!fragments.empty() && fragments.back().type == FragmentType::CHTL) {
+                fragments.back().content += fullBlock;
+            } else {
+                fragments.push_back({FragmentType::CHTL, fullBlock});
+            }
+        } else {
+            // Original behavior: treat as a pure CSS or JS block.
+            fragments.push_back({
+                is_script ? FragmentType::JS : FragmentType::CSS,
+                blockContent
+            });
+        }
 
         last_pos = end_brace_pos;
         search_pos = last_pos;

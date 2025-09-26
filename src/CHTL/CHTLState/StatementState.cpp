@@ -30,9 +30,6 @@ class UseState;
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
 
-// Forward declarations for helpers
-void parseScriptBlock(Parser& parser, ElementNode& element);
-
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     if (parser.currentToken.type == TokenType::OpenBracket) {
@@ -282,24 +279,30 @@ void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
     parser.contextNode = nullptr;
 }
 
-// Parses a 'text { ... }' block, allowing unquoted literals.
+// Parses a 'text { ... }' block, preserving raw content.
 std::unique_ptr<BaseNode> StatementState::parseTextElement(Parser& parser) {
     parser.expectToken(TokenType::Identifier); // consume 'text'
     parser.expectToken(TokenType::OpenBrace);
 
-    std::stringstream textContent;
-    bool firstToken = true;
-    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-        if (!firstToken) {
-            textContent << " ";
+    size_t startPos = parser.currentToken.start_pos;
+    size_t endPos = startPos;
+    int braceLevel = 1;
+
+    while (braceLevel > 0 && parser.currentToken.type != TokenType::EndOfFile) {
+        if (parser.peekToken.type == TokenType::OpenBrace) {
+            braceLevel++;
+        } else if (parser.peekToken.type == TokenType::CloseBrace) {
+            braceLevel--;
         }
-        textContent << parser.currentToken.value;
         parser.advanceTokens();
-        firstToken = false;
     }
+    endPos = parser.currentToken.start_pos;
+
+    // Extract the raw content, preserving all whitespace.
+    std::string rawContent = parser.lexer.getSource().substr(startPos, endPos - startPos);
 
     parser.expectToken(TokenType::CloseBrace);
-    return std::make_unique<TextNode>(textContent.str());
+    return std::make_unique<TextNode>(rawContent);
 }
 
 // Parses a '# comment' line.
@@ -786,7 +789,8 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
         // --- Definition: [Origin] @Type name { ... } ---
         parser.advanceTokens(); // Consume '{'
 
-        std::stringstream rawContent;
+        size_t contentStartPos = parser.currentToken.start_pos;
+        size_t contentEndPos = contentStartPos;
         int braceLevel = 1;
 
         while (true) {
@@ -798,17 +802,19 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
             } else if (parser.currentToken.type == TokenType::CloseBrace) {
                 braceLevel--;
                 if (braceLevel == 0) {
-                    break; // Found the end, do not include the closing brace in content.
+                    contentEndPos = parser.currentToken.start_pos;
+                    break;
                 }
             }
-            rawContent << parser.currentToken.value;
             parser.advanceTokens();
         }
+
+        std::string rawContent = parser.lexer.getSource().substr(contentStartPos, contentEndPos - contentStartPos);
 
         // Consume the final '}'
         parser.expectToken(TokenType::CloseBrace);
 
-        auto originNode = std::make_unique<OriginNode>(type, rawContent.str(), name);
+        auto originNode = std::make_unique<OriginNode>(type, rawContent, name);
 
         // Store a clone in the manager for later use
         auto cloneForManager = NodeCloner::clone(originNode.get());
@@ -960,7 +966,7 @@ void StatementState::parseImportStatement(Parser& parser) {
     }
 }
 
-void parseScriptBlock(Parser& parser, ElementNode& element) {
+void StatementState::parseScriptBlock(Parser& parser, ElementNode& element) {
     parser.expectToken(TokenType::Identifier); // consume 'script'
     parser.expectToken(TokenType::OpenBrace);
 
@@ -970,14 +976,17 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
     auto flushRawContent = [&](size_t endPos) {
         if (endPos > rawContentStartPos) {
             std::string content = parser.lexer.getSource().substr(rawContentStartPos, endPos - rawContentStartPos);
-            if (!content.empty() && content.find_first_not_of(" \t\n\r") != std::string::npos) {
-                scriptNode->children.push_back(std::make_unique<RawScriptNode>(content));
-            }
+            // Preserve all content, including whitespace, as it can be significant in scripts.
+            scriptNode->children.push_back(std::make_unique<RawScriptNode>(content));
         }
     };
 
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-        if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
+        if (parser.currentToken.type == TokenType::HashComment) {
+            flushRawContent(parser.currentToken.start_pos);
+            scriptNode->children.push_back(parseComment(parser));
+            rawContentStartPos = parser.currentToken.start_pos;
+        } else if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
             flushRawContent(parser.currentToken.start_pos);
             parser.advanceTokens(); // Consume '{{'
             std::stringstream selectorContent;
@@ -990,8 +999,7 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
             rawContentStartPos = parser.currentToken.start_pos;
         } else if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.type == TokenType::Origin) {
             flushRawContent(parser.currentToken.start_pos);
-            StatementState originParser;
-            scriptNode->children.push_back(originParser.handle(parser));
+            scriptNode->children.push_back(handle(parser));
             rawContentStartPos = parser.currentToken.start_pos;
         } else {
             parser.advanceTokens();

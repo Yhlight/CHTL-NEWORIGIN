@@ -61,12 +61,19 @@ void test_ignored_comments();
 void test_colon_equal_equivalence_in_info();
 void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
+void test_contextual_hash_comments();
+void test_referenced_property_auto_inference();
+void test_custom_element_replace();
+void test_custom_origin_type();
 
 
 void test_text_block_literals() {
     std::string source = R"(
         div {
-            text { This is unquoted }
+            text {
+                This is unquoted text
+                with newlines and   multiple spaces.
+            }
         }
     )";
     Lexer lexer(source);
@@ -74,7 +81,9 @@ void test_text_block_literals() {
     auto nodes = parser.parse();
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("This is unquoted") != std::string::npos);
+    // The generator will add its own indentation, so we trim the result for a stable comparison.
+    std::string expected_text = "This is unquoted text\n                with newlines and   multiple spaces.";
+    assert(result.find(expected_text) != std::string::npos);
 }
 
 void test_unquoted_literal_support() {
@@ -421,9 +430,34 @@ int main() {
     run_test(test_colon_equal_equivalence_in_info, "Colon-Equal Equivalence in Info Block");
     run_test(test_colon_equal_equivalence_in_config, "Colon-Equal Equivalence in Config Block");
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
+    run_test(test_contextual_hash_comments, "Contextual Hash Comments");
+    run_test(test_referenced_property_auto_inference, "Referenced Property Auto-Inference");
+    run_test(test_custom_element_replace, "Custom Element Replace");
+    run_test(test_custom_origin_type, "Custom Origin Type");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
+}
+
+void test_contextual_hash_comments() {
+    std::string source = R"(
+        # html comment
+        style {
+            # css comment
+        }
+        div {
+            script {
+                # js comment
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // This test will fail because the generator unconditionally creates HTML comments.
+    assert(result.find("<!-- html comment -->") != std::string::npos);
+    assert(result.find("/* css comment */") != std::string::npos);
+    assert(result.find("// js comment") != std::string::npos);
 }
 
 void test_info_block_parsing() {
@@ -524,11 +558,11 @@ void test_unified_scanner_script_separation() {
     )";
     UnifiedScanner scanner;
     auto fragments = scanner.scan(source);
-    assert(fragments.size() == 3);
+    // With the corrected scanner logic, nested scripts are NOT separated.
+    // The entire block should be treated as one CHTL fragment.
+    assert(fragments.size() == 1);
     assert(fragments[0].type == FragmentType::CHTL);
-    assert(fragments[1].type == FragmentType::JS);
-    assert(fragments[2].type == FragmentType::CHTL);
-    assert(fragments[1].content.find("console.log(\"World\");") != std::string::npos);
+    assert(fragments[0].content.find("console.log(\"World\");") != std::string::npos);
 }
 
 void test_precise_import_not_found() {
@@ -653,6 +687,60 @@ void test_named_configuration() {
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, parser.outputHtml5Doctype);
     assert(result.find("font-size") == std::string::npos);
     assert(result.find("color: red;") != std::string::npos);
+}
+
+void test_referenced_property_auto_inference() {
+    std::string source = R"(
+        div { id: "box"; style { width: 150px; } }
+        p { style { font-size: box.width; } }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    std::string expected_substr = "font-size: 150px;";
+    assert(result.find(expected_substr) != std::string::npos);
+}
+
+void test_custom_element_replace() {
+    std::string source = R"(
+        [Custom] @Element Box {
+            span { text: "to be replaced"; }
+        }
+        body {
+            @Element Box {
+                insert replace span[0] {
+                    div { text: "was replaced"; }
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("to be replaced") == std::string::npos);
+    assert(result.find("was replaced") != std::string::npos);
+}
+
+void test_custom_origin_type() {
+    std::string source = R"(
+        [Origin] @Vue my_vue_component {
+            <div id="app">{{ message }}</div>
+        }
+
+        body {
+            [Origin] @Vue my_vue_component;
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("<div id=\"app\">{{ message }}</div>") != std::string::npos);
 }
 
 void test_calc_with_percentage() {

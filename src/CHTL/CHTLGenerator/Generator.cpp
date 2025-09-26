@@ -5,6 +5,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/RawScriptNode.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
+#include "../CHTLNode/RawScriptNode.h"
 #include <stdexcept>
 #include <algorithm>
 #include <set>
@@ -43,7 +44,7 @@ std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& ro
     }
 
     for (const auto& root : roots) {
-        generateNode(root.get());
+        generateNode(root.get(), GenerationContext::HTML);
     }
 
     generateRuntimeScript(context);
@@ -51,7 +52,7 @@ std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& ro
     return result;
 }
 
-void Generator::generateNode(const BaseNode* node) {
+void Generator::generateNode(const BaseNode* node, GenerationContext context) {
     if (!node) return;
 
     switch (node->getType()) {
@@ -62,11 +63,11 @@ void Generator::generateNode(const BaseNode* node) {
             generateText(static_cast<const TextNode*>(node));
             break;
         case NodeType::Comment:
-            generateComment(static_cast<const CommentNode*>(node));
+            generateComment(static_cast<const CommentNode*>(node), context);
             break;
         case NodeType::Fragment:
             for (const auto& child : static_cast<const FragmentNode*>(node)->children) {
-                generateNode(child.get());
+                generateNode(child.get(), context);
             }
             break;
         case NodeType::Origin:
@@ -74,6 +75,12 @@ void Generator::generateNode(const BaseNode* node) {
             break;
         case NodeType::Script:
             generateScript(static_cast<const ScriptNode*>(node));
+            break;
+        case NodeType::RawScript:
+            append(static_cast<const RawScriptNode*>(node)->content);
+            break;
+        case NodeType::EnhancedSelector:
+            append("document.querySelector('" + static_cast<const EnhancedSelectorNode*>(node)->selector + "')");
             break;
         default:
             break;
@@ -126,8 +133,16 @@ void Generator::generateElement(ElementNode* node) {
     if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
         append("\n");
         indent();
+
+        GenerationContext childContext = GenerationContext::HTML;
+        if (node->tagName == "style") {
+            childContext = GenerationContext::CSS;
+        } else if (node->tagName == "script") {
+            childContext = GenerationContext::JS;
+        }
+
         for (const auto& child : node->children) {
-            generateNode(child.get());
+            generateNode(child.get(), childContext);
         }
         if (node->tagName == "head" && !globalCssToInject.empty()) {
             appendLine("<style>");
@@ -147,29 +162,29 @@ void Generator::generateText(const TextNode* node) {
     appendLine(node->text);
 }
 
-void Generator::generateComment(const CommentNode* node) {
-    appendLine("<!-- " + node->text + " -->");
+void Generator::generateComment(const CommentNode* node, GenerationContext context) {
+    switch (context) {
+        case GenerationContext::CSS:
+            appendLine("/* " + node->text + " */");
+            break;
+        case GenerationContext::JS:
+            appendLine("// " + node->text);
+            break;
+        case GenerationContext::HTML:
+        default:
+            appendLine("<!-- " + node->text + " -->");
+            break;
+    }
 }
 
 void Generator::generateScript(const ScriptNode* node) {
     append(getIndent() + "<script>");
-    std::string scriptContent;
+    // The children of a script node are a mix of raw script content and
+    // other special nodes. The raw script nodes preserve the original
+    // formatting (newlines, indentation), so we don't add extra.
     for (const auto& child : node->children) {
-        switch(child->getType()) {
-            case NodeType::RawScript:
-                scriptContent += static_cast<const RawScriptNode*>(child.get())->content;
-                break;
-            case NodeType::EnhancedSelector:
-                scriptContent += "document.querySelector('" + static_cast<const EnhancedSelectorNode*>(child.get())->selector + "')";
-                break;
-            case NodeType::Origin:
-                 scriptContent += static_cast<const OriginNode*>(child.get())->content;
-                 break;
-            default:
-                break;
-        }
+        generateNode(child.get(), GenerationContext::JS);
     }
-    append(scriptContent);
     append("</script>\n");
 }
 
