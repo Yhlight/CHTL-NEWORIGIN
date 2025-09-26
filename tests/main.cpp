@@ -4,6 +4,8 @@
 #include <cassert>
 #include <fstream> // For std::ofstream
 #include <cstdio>  // For remove()
+#include <filesystem>
+#include <cstdlib> // For system()
 
 // Include all necessary CHTL headers
 #include "../src/CHTL/CHTLLexer/Lexer.h"
@@ -65,6 +67,7 @@ void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
 void test_conditional_rendering();
+void test_cmod_import();
 
 
 void test_text_block_literals() {
@@ -466,6 +469,7 @@ int main() {
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
     run_test(test_conditional_rendering, "Conditional Rendering");
+    run_test(test_cmod_import, "CMOD Module Import");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1261,4 +1265,51 @@ void test_conditional_rendering() {
     assert(result4.find("Hidden 1") == std::string::npos);
     assert(result4.find("Hidden 2") == std::string::npos);
     assert(result4.find("Visible") != std::string::npos);
+}
+
+void test_cmod_import() {
+    namespace fs = std::filesystem;
+    const std::string module_name = "test_module";
+    const std::string cmod_file = module_name + ".cmod";
+    fs::path module_path(module_name);
+
+    // 1. Create directory structure
+    fs::create_directory(module_path);
+    fs::create_directory(module_path / "src");
+    fs::create_directory(module_path / "info");
+
+    // 2. Create module files
+    std::ofstream info_file(module_path / "info" / (module_name + ".chtl"));
+    info_file << "[Info] { name: \"Test Module\"; }";
+    info_file.close();
+
+    std::ofstream src_file(module_path / "src" / "main.chtl");
+    src_file << "[Template] @Element MyCmodComponent { p { text: \"Hello from CMOD\"; } }";
+    src_file.close();
+
+    // 3. Package the module using the cmod_packer
+    // Note: This assumes the test runner and cmod_packer are in the same directory
+    std::string command = "./cmod_packer " + module_name + " " + cmod_file;
+    int result = system(command.c_str());
+    assert(result == 0);
+
+    // 4. Test importing the CMOD
+    std::string source = R"(
+        [Import] @Chtl from ")" + cmod_file + R"(";
+        body {
+            @Element MyCmodComponent;
+        }
+    )";
+
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string html_output = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(html_output.find("Hello from CMOD") != std::string::npos);
+
+    // 5. Cleanup
+    fs::remove(cmod_file);
+    fs::remove_all(module_path);
 }

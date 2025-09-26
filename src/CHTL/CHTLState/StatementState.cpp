@@ -16,6 +16,7 @@
 #include "../CHTLLoader/Loader.h"
 #include <stdexcept>
 #include <string>
+#include <filesystem>
 #include <utility> // For std::pair
 #include <sstream>
 
@@ -1010,13 +1011,26 @@ void StatementState::parseImportStatement(Parser& parser) {
             throw std::runtime_error("Failed to import '" + itemName + "' from file '" + path + "': " + e.what());
         }
     } else if (importType == "Chtl") {
-        // This is now a full file import
         try {
-            std::string fileContent = Loader::loadFile(path);
-            Lexer importLexer(fileContent);
-            Parser importParser(importLexer);
-            importParser.parse();
-            parser.templateManager.merge(importParser.templateManager);
+            if (path.size() > 5 && path.substr(path.size() - 5) == ".cmod") {
+                auto cmod_contents = Loader::loadCmod(path);
+                for (const auto& pair : cmod_contents) {
+                    const std::string& filename = pair.first;
+                    const std::string& content = pair.second;
+                    if (filename.rfind("src/", 0) == 0 && filename.size() > 5 && filename.substr(filename.size() - 5) == ".chtl") {
+                        Lexer importLexer(content);
+                        Parser importParser(importLexer);
+                        importParser.parse();
+                        parser.templateManager.merge(importParser.templateManager);
+                    }
+                }
+            } else {
+                std::string fileContent = Loader::loadFile(path);
+                Lexer importLexer(fileContent);
+                Parser importParser(importLexer);
+                importParser.parse();
+                parser.templateManager.merge(importParser.templateManager);
+            }
         } catch (const std::runtime_error& e) {
             throw std::runtime_error("Failed to import file '" + path + "': " + e.what());
         }

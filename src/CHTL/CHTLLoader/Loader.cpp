@@ -12,3 +12,21 @@ std::string Loader::loadFile(const std::string& path) {
     buffer << file.rdbuf();
     return buffer.str();
 }
+
+std::map<std::string, std::string> Loader::loadCmod(const std::string& path) {
+    libzippp::ZipArchive zf(path);
+    if (!zf.open(libzippp::ZipArchive::ReadOnly)) {
+        throw std::runtime_error("Failed to open CMOD archive: " + path);
+    }
+
+    std::map<std::string, std::string> fileContents;
+    auto entries = zf.getEntries();
+    for (const auto& entry : entries) {
+        if (!entry.isDirectory()) {
+            fileContents[entry.getName()] = entry.readAsText();
+        }
+    }
+
+    zf.close();
+    return fileContents;
+}

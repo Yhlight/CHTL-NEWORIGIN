@@ -8,6 +8,10 @@ project(CHTL_Compiler CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# --- Dependencies ---
+add_subdirectory(third-party/libzippp)
+
+
 # --- Define CHTL Library ---
 # This makes it easy to link all CHTL source files to multiple executables.
 
@@ -41,14 +45,29 @@ set(CHTL_SOURCES
 # Add a library for the CHTL compiler components
 add_library(chtl_lib STATIC ${CHTL_SOURCES})
 
-# Add the src directory to the include path for the library
+# Add include directories for chtl_lib
 target_include_directories(chtl_lib PUBLIC src)
+target_include_directories(chtl_lib PUBLIC third-party/libzippp/src)
+
+# Link chtl_lib against its dependencies
+target_link_libraries(chtl_lib PUBLIC libzippp)
 
 
 # --- Main Executable ---
 # This would be the main compiler executable.
 add_executable(chtl_compiler src/main.cpp)
 target_link_libraries(chtl_compiler PRIVATE chtl_lib)
+
+
+# --- CMOD Packer Utility ---
+# Add the cmod_packer executable
+add_executable(cmod_packer src/cmod_packer/main.cpp)
+
+# Link the packer against libzippp
+target_link_libraries(cmod_packer PRIVATE libzippp)
+
+# Ensure the packer can find the libzippp headers
+target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 
 
 # --- Test Suite ---
