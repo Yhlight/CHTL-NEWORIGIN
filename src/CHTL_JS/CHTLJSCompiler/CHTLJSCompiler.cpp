@@ -11,18 +11,22 @@ std::string CHTLJSCompiler::compile(const std::string& chtl_js_source) {
     auto parser = createParser(std::move(tokens));
     auto ast = parser.parse();
 
-    // Register any virtual objects that were parsed.
-    for (const auto& node : ast) {
-        if (node->getType() == CHTLJSNodeType::VirtualObject) {
-            auto* virNode = static_cast<VirtualObjectNode*>(node.get());
-            // The manager takes ownership, so we need to release and re-wrap.
-            // This is a simplification; a real implementation might need to clone.
-            // For now, we assume the generator doesn't also need ownership.
-            // This part of the logic will be expanded upon in the next step.
+    // Separate Vir declarations from code-generation nodes.
+    std::vector<std::unique_ptr<CHTLJSNode>> generator_ast;
+    for (auto& node : ast) {
+        if (node && node->getType() == CHTLJSNodeType::VirtualObject) {
+            // Cast and move the node to the manager.
+            // This transfers ownership of the node from the AST to the manager.
+            auto virNode = std::unique_ptr<VirtualObjectNode>(static_cast<VirtualObjectNode*>(node.release()));
+            virtualObjectManager.registerVirtualObject(virNode->name, std::move(virNode));
+        } else if (node) {
+            // Move all other nodes to the generator's AST.
+            generator_ast.push_back(std::move(node));
         }
     }
 
-    return generator.generate(ast);
+    // The generator now only receives nodes that should result in output.
+    return generator.generate(generator_ast);
 }
 
 CHTLJSLexer CHTLJSCompiler::createLexer(const std::string& source) {

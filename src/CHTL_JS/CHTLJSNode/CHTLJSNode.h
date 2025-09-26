@@ -22,6 +22,8 @@ enum class CHTLJSNodeType {
     ScriptLoader,
     // Represents a virtual object declaration, e.g., Vir myVar = ...
     VirtualObject,
+    // Represents a property access on a virtual object, e.g., myVir->property
+    VirtualObjectAccess,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.
