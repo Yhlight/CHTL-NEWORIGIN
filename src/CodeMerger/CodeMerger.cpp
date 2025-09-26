@@ -8,10 +8,9 @@ std::string CodeMerger::merge(const std::string& chtl_output, const std::map<std
         const std::string& placeholder = pair.first;
         const std::string& compiled_content = pair.second;
 
-        std::string placeholder_in_script_tag = "{" + placeholder + "}";
-        size_t pos = final_output.find(placeholder_in_script_tag);
+        size_t pos = final_output.find(placeholder);
         if (pos != std::string::npos) {
-            final_output.replace(pos, placeholder_in_script_tag.length(), compiled_content);
+            final_output.replace(pos, placeholder.length(), compiled_content);
         }
     }
 

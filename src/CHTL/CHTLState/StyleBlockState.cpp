@@ -406,8 +406,8 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
         // This allows for values like `font-family: Times New Roman;`
         while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
-             // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
-             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
+             // Stop if we hit a semicolon, comma, or the end of the block, as that marks the end of the value.
+             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace || parser.currentToken.type == TokenType::Comma) {
                  break;
              }
              ss << " " << parser.currentToken.value;

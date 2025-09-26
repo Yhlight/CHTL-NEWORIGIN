@@ -37,6 +37,12 @@ void parseScriptBlock(Parser& parser, ElementNode& element);
 
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
+    // Check for and consume top-level placeholders from the scanner.
+    if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value.rfind("__CHTL_PLACEHOLDER_", 0) == 0) {
+        parser.advanceTokens();
+        return nullptr;
+    }
+
     // --- CONSTAINT CHECKING ---
     if (parser.contextNode && !parser.contextNode->constraints.empty()) {
         std::string upcoming_name;
@@ -170,6 +176,31 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
 std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
     auto conditionalNode = std::make_unique<ConditionalNode>();
 
+    // Helper lambda to parse the body of a conditional case
+    auto parseCaseBody = [&](ConditionalCase& currentCase) {
+        while (parser.currentToken.type != TokenType::CloseBrace) {
+            // Check for property syntax: identifier : value;
+            if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
+                std::string key = parser.currentToken.value;
+                parser.advanceTokens(); // consume key
+                parser.advanceTokens(); // consume ':' or '='
+
+                StyleBlockState tempStyleState;
+                StyleValue value = tempStyleState.parseConditionalExpr(parser);
+                currentCase.properties.push_back({key, value});
+
+                // Properties can be separated by commas or semicolons
+                if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
+                    parser.advanceTokens();
+                }
+            } else {
+                // Otherwise, parse as a child node
+                auto childNode = handle(parser);
+                if (childNode) currentCase.children.push_back(std::move(childNode));
+            }
+        }
+    };
+
     // --- Parse 'if' block ---
     parser.expectToken(TokenType::If);
     parser.expectToken(TokenType::OpenBrace);
@@ -182,16 +213,13 @@ std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
         parser.expectToken(TokenType::Colon);
 
         StyleBlockState tempStyleState;
-        ifCase.condition = tempStyleState.parseStyleExpression(parser);
-        if (parser.currentToken.type == TokenType::Semicolon) {
+        ifCase.condition = tempStyleState.parseConditionalExpr(parser);
+        // The condition can be followed by a comma or a semicolon
+        if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
             parser.advanceTokens();
         }
 
-
-        while (parser.currentToken.type != TokenType::CloseBrace) {
-            auto childNode = handle(parser);
-            if (childNode) ifCase.children.push_back(std::move(childNode));
-        }
+        parseCaseBody(ifCase);
         conditionalNode->cases.push_back(std::move(ifCase));
     }
     parser.expectToken(TokenType::CloseBrace);
@@ -210,15 +238,12 @@ std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
             parser.expectToken(TokenType::Colon);
 
             StyleBlockState tempStyleState;
-            elseIfCase.condition = tempStyleState.parseStyleExpression(parser);
-            if (parser.currentToken.type == TokenType::Semicolon) {
+            elseIfCase.condition = tempStyleState.parseConditionalExpr(parser);
+            if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
                  parser.advanceTokens();
             }
 
-            while (parser.currentToken.type != TokenType::CloseBrace) {
-                auto childNode = handle(parser);
-                if (childNode) elseIfCase.children.push_back(std::move(childNode));
-            }
+            parseCaseBody(elseIfCase);
             conditionalNode->cases.push_back(std::move(elseIfCase));
         }
         parser.expectToken(TokenType::CloseBrace);
@@ -233,10 +258,7 @@ std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
             elseCase.condition.type = StyleValue::BOOL;
             elseCase.condition.bool_val = true;
 
-            while (parser.currentToken.type != TokenType::CloseBrace) {
-                auto childNode = handle(parser);
-                if (childNode) elseCase.children.push_back(std::move(childNode));
-            }
+            parseCaseBody(elseCase);
             conditionalNode->cases.push_back(std::move(elseCase));
         }
         parser.expectToken(TokenType::CloseBrace);

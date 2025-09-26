@@ -4,6 +4,8 @@
 #include "StyleValue.h"
 #include <vector>
 #include <memory>
+#include <string>
+#include <utility>
 
 // Represents a single case in an if-else if-else chain (e.g., an 'if', 'else if', or 'else' block).
 struct ConditionalCase {
@@ -12,6 +14,9 @@ struct ConditionalCase {
 
     // The list of child nodes to include if the condition is met.
     std::vector<std::unique_ptr<BaseNode>> children;
+
+    // The list of properties to apply if the condition is met.
+    std::vector<std::pair<std::string, StyleValue>> properties;
 };
 
 // Represents a full if-else if-else conditional block in the AST.

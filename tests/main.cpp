@@ -71,6 +71,7 @@ void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
 void test_conditional_rendering();
+void test_conditional_rendering_with_properties();
 void test_cmod_import();
 void test_compiler_dispatcher_full_workflow();
 void test_chtl_js_lexer_and_parser();
@@ -479,6 +480,7 @@ int main() {
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
     run_test(test_conditional_rendering, "Conditional Rendering");
+    run_test(test_conditional_rendering_with_properties, "Conditional Rendering with Properties");
     run_test(test_cmod_import, "CMOD Module Import");
     run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
     run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
@@ -543,7 +545,7 @@ void test_scanner_handles_nested_braces_in_script() {
     const auto& fragment = output.fragments.begin()->second;
     assert(fragment.type == FragmentType::CHTL_JS);
     assert(fragment.content.find("console.log(\"nested\");") != std::string::npos);
-    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("__CHTL_PLACEHOLDER_0__") != std::string::npos);
 }
 
 void test_scanner_ignores_nested_style() {
@@ -577,7 +579,7 @@ void test_unified_scanner_style_separation() {
     const auto& fragment = output.fragments.begin()->second;
     assert(fragment.type == FragmentType::CSS);
     assert(fragment.content.find("background-color") != std::string::npos);
-    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("__CHTL_PLACEHOLDER_0__") != std::string::npos);
     assert(output.chtl_with_placeholders.find("div {") != std::string::npos);
 }
 
@@ -597,7 +599,7 @@ void test_unified_scanner_script_separation() {
     const auto& fragment = output.fragments.begin()->second;
     assert(fragment.type == FragmentType::CHTL_JS);
     assert(fragment.content.find("console.log(\"World\")") != std::string::npos);
-    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("__CHTL_PLACEHOLDER_0__") != std::string::npos);
     assert(output.chtl_with_placeholders.find("p { text: \"Hello\"; }") != std::string::npos);
 }
 
@@ -1286,6 +1288,24 @@ void test_conditional_rendering() {
     assert(result4.find("Hidden 1") == std::string::npos);
     assert(result4.find("Hidden 2") == std::string::npos);
     assert(result4.find("Visible") != std::string::npos);
+}
+
+void test_conditional_rendering_with_properties() {
+    std::string source = R"(
+        div {
+            if {
+                condition: 1 == 1,
+                display: block,
+                color: "red"
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+    assert(result.find("style=\"display: block; color: red; \"") != std::string::npos);
 }
 
 void test_cmod_import() {

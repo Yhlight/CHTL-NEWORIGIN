@@ -5,7 +5,7 @@
 
 std::string UnifiedScanner::generate_placeholder() {
     std::stringstream ss;
-    ss << "/*__CHTL_PLACEHOLDER_" << placeholder_id_counter++ << "__*/";
+    ss << "__CHTL_PLACEHOLDER_" << placeholder_id_counter++ << "__";
     return ss.str();
 }
 
@@ -75,13 +75,12 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
             continue;
         }
 
-        // Only consider top-level style blocks for separation
-        if (!is_script) {
-            int brace_level_before = calculate_brace_level_up_to(source, next_pos);
-            if (brace_level_before != 0) {
-                search_pos = next_pos + 1;
-                continue;
-            }
+        int brace_level_before = calculate_brace_level_up_to(source, next_pos);
+
+        // A `style` block is only separated if it's at the top level (not nested).
+        if (!is_script && brace_level_before != 0) {
+            search_pos = next_pos + 1;
+            continue; // It's a local style block, let the CHTL parser handle it.
         }
 
         // Append the CHTL part before this block
@@ -107,11 +106,13 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
 
         // Generate a placeholder and store the fragment
         std::string placeholder = generate_placeholder();
-        result_ss << "{" << placeholder << "}"; // Keep the braces to maintain structure
-        output.fragments[placeholder] = {
-            is_script ? FragmentType::CHTL_JS : FragmentType::CSS,
-            block_content
-        };
+        if (!is_script) { // This is a global style block
+             result_ss << " " << placeholder << " ";
+             output.fragments[placeholder] = { FragmentType::CSS, block_content };
+        } else { // This is a script block
+             result_ss << source.substr(next_pos, open_brace_pos - next_pos + 1) << placeholder << "}";
+             output.fragments[placeholder] = { FragmentType::CHTL_JS, block_content };
+        }
 
         last_pos = end_brace_pos;
         search_pos = last_pos;

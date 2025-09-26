@@ -98,14 +98,39 @@ void Generator::generateConditional(const ConditionalNode* node) {
 
 void Generator::generateElement(ElementNode* node) {
     const std::vector<std::string> selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
+    const std::vector<std::string> inlineContentTags = {"title", "p", "span", "a", "h1", "h2", "h3", "h4", "h5", "h6", "li", "strong", "em", "b", "i", "u"};
+
     bool isSelfClosing = std::find(selfClosingTags.begin(), selfClosingTags.end(), node->tagName) != selfClosingTags.end();
+    bool isInlineContent = std::find(inlineContentTags.begin(), inlineContentTags.end(), node->tagName) != inlineContentTags.end();
 
     append(getIndent() + "<" + node->tagName);
 
     auto finalAttributes = node->attributes;
     std::string styleString;
+    std::vector<const BaseNode*> nodesToGenerate;
 
-    // Filter out responsive values from inline styles, they are handled by the runtime
+    // Pre-process children to find conditional properties and nodes
+    for (const auto& child : node->children) {
+        if (child->getType() == NodeType::Conditional) {
+            const auto* condNode = static_cast<const ConditionalNode*>(child.get());
+            bool caseHandled = false;
+            for (const auto& condCase : condNode->cases) {
+                if (!caseHandled && condCase.condition.type == StyleValue::BOOL && condCase.condition.bool_val) {
+                    for (const auto& propPair : condCase.properties) {
+                        styleString += propPair.first + ": " + styleValueToString(propPair.second) + "; ";
+                    }
+                    for (const auto& caseChild : condCase.children) {
+                        nodesToGenerate.push_back(caseChild.get());
+                    }
+                    caseHandled = true;
+                }
+            }
+        } else {
+            nodesToGenerate.push_back(child.get());
+        }
+    }
+
+    // Filter out responsive values from inline styles
     for (const auto& stylePair : node->inlineStyles) {
         if (stylePair.second.type != StyleValue::RESPONSIVE) {
             styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
@@ -134,17 +159,22 @@ void Generator::generateElement(ElementNode* node) {
     }
 
     append(">");
-    if (isSelfClosing && node->children.empty()) {
+    if (isSelfClosing && nodesToGenerate.empty()) {
         append("\n");
         return;
     }
 
-    if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
-        append("\n");
-        indent();
-        for (const auto& child : node->children) {
-            generateNode(child.get());
+    // Handle content generation based on tag type
+    if (!nodesToGenerate.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
+        if (!isInlineContent) {
+            append("\n");
+            indent();
         }
+
+        for (const auto& childToGen : nodesToGenerate) {
+            generateNode(childToGen);
+        }
+
         if (node->tagName == "head" && !globalCssToInject.empty()) {
             appendLine("<style>");
             indent();
@@ -152,15 +182,18 @@ void Generator::generateElement(ElementNode* node) {
             outdent();
             appendLine("</style>");
         }
-        outdent();
-        append(getIndent());
+
+        if (!isInlineContent) {
+            outdent();
+            append(getIndent());
+        }
     }
 
     append("</" + node->tagName + ">\n");
 }
 
 void Generator::generateText(const TextNode* node) {
-    appendLine(node->text);
+    append(node->text);
 }
 
 void Generator::generateComment(const CommentNode* node) {
