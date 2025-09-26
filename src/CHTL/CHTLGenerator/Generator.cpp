@@ -85,18 +85,20 @@ void Generator::generateNode(const BaseNode* node) {
 
 void Generator::generateConditional(const ConditionalNode* node) {
     for (const auto& conditionalCase : node->cases) {
-        // For static rendering, we assume the condition has been evaluated to a simple boolean.
         if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
-            // If the condition is true, generate the children of this case and stop.
             for (const auto& child : conditionalCase.children) {
                 generateNode(child.get());
             }
-            break; // Exit after the first true case is handled.
+            break;
         }
     }
 }
 
 void Generator::generateElement(ElementNode* node) {
+    if (node->tagName.rfind("chtl_placeholder_", 0) == 0) {
+        append(node->tagName + "{}");
+        return;
+    }
     const std::vector<std::string> selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
     bool isSelfClosing = std::find(selfClosingTags.begin(), selfClosingTags.end(), node->tagName) != selfClosingTags.end();
 
@@ -105,7 +107,6 @@ void Generator::generateElement(ElementNode* node) {
     auto finalAttributes = node->attributes;
     std::string styleString;
 
-    // Filter out responsive values from inline styles, they are handled by the runtime
     for (const auto& stylePair : node->inlineStyles) {
         if (stylePair.second.type != StyleValue::RESPONSIVE) {
             styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
@@ -120,7 +121,6 @@ void Generator::generateElement(ElementNode* node) {
         }
     }
 
-    // Filter out responsive values from attributes
     for (auto it = finalAttributes.begin(); it != finalAttributes.end(); ) {
         if (it->second.type == StyleValue::RESPONSIVE) {
             it = finalAttributes.erase(it);
@@ -140,7 +140,6 @@ void Generator::generateElement(ElementNode* node) {
         return;
     }
 
-    // Special case for elements that only contain a single text node
     if (node->children.size() == 1 && node->children.front()->getType() == NodeType::Text) {
         const auto* textNode = static_cast<const TextNode*>(node->children.front().get());
         append(textNode->text);
@@ -153,7 +152,7 @@ void Generator::generateElement(ElementNode* node) {
         if (node->tagName == "head" && !globalCssToInject.empty()) {
             appendLine("<style>");
             indent();
-            result += globalCssToInject;
+            append(globalCssToInject);
             outdent();
             appendLine("</style>");
         }

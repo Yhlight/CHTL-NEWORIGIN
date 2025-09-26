@@ -6,6 +6,7 @@
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/AnimateNode.h"
+#include "../CHTLJSNode/ScriptLoaderNode.h"
 #include <vector>
 #include <memory>
 
@@ -26,4 +27,5 @@ private:
     std::unique_ptr<EventBindingNode> parseEventBinding();
     std::unique_ptr<DelegateNode> parseDelegateBlock();
     std::unique_ptr<AnimateNode> parseAnimateBlock();
+    std::unique_ptr<ScriptLoaderNode> parseScriptLoaderBlock();
 };

@@ -5,12 +5,15 @@
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/AnimateNode.h"
+#include "../CHTLJSNode/ScriptLoaderNode.h"
 #include <sstream>
 #include <stdexcept>
 
 std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNode>>& ast) {
     std::stringstream final_code;
     std::string last_expression;
+
+    scriptLoaderInjected = false;
 
     for (const auto& node : ast) {
         if (node->getType() == CHTLJSNodeType::Listen) {
@@ -83,10 +86,52 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
     return final_code.str();
 }
 
+std::string CHTLJSGenerator::generateScriptLoader(const ScriptLoaderNode* node) {
+    std::stringstream ss;
+    if (!scriptLoaderInjected) {
+        ss << R"javascript(
+((window) => {
+    if (window.ScriptLoader) return;
+    const ScriptLoader = {
+        load: function(...paths) {
+            const promises = paths.map(path => {
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = path;
+                    script.async = true;
+                    script.onload = () => resolve(path);
+                    script.onerror = () => reject(new Error(`Failed to load script: ${path}`));
+                    document.head.appendChild(script);
+                });
+            });
+            return Promise.all(promises);
+        }
+    };
+    window.ScriptLoader = ScriptLoader;
+})(window);
+)javascript";
+        ss << "\n\n";
+        scriptLoaderInjected = true;
+    }
+
+    ss << "ScriptLoader.load(";
+    for (size_t i = 0; i < node->paths.size(); ++i) {
+        ss << "'" << node->paths[i] << "'";
+        if (i < node->paths.size() - 1) {
+            ss << ", ";
+        }
+    }
+    ss << ");\n";
+
+    return ss.str();
+}
+
 std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
     if (!node) return "";
 
     switch (node->getType()) {
+        case CHTLJSNodeType::ScriptLoader:
+            return generateScriptLoader(static_cast<const ScriptLoaderNode*>(node));
         case CHTLJSNodeType::RawJavaScript: {
             return static_cast<const RawJavaScriptNode*>(node)->js_code;
         }

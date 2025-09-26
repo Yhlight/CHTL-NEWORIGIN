@@ -11,9 +11,13 @@ enum class CHTLJSTokenType {
     Arrow,            // ->
     EventBindingOperator, // &->
 
+    // Keywords
+    ScriptLoader,     // ScriptLoader keyword
+
     // General tokens
-    Identifier,       // e.g., Listen, Delegate, click
+    Identifier,       // e.g., click, custom function names
     RawJS,            // A block of plain JavaScript code
+    StringLiteral,    // For file paths in ScriptLoader
 
     // Punctuation
     OpenBrace,        // {

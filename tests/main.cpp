@@ -78,6 +78,7 @@ void test_chtl_js_listen_block();
 void test_chtl_js_event_binding_operator();
 void test_chtl_js_delegate_block();
 void test_chtl_js_animate_block();
+void test_chtl_js_script_loader();
 
 
 void test_text_block_literals() {
@@ -492,6 +493,7 @@ int main() {
     // run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
     // run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
     // run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
+    run_test(test_chtl_js_script_loader, "CHTL JS ScriptLoader");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1513,4 +1515,25 @@ void test_chtl_js_animate_block() {
     assert(result.find("target: document.querySelector('#my-element')") != std::string::npos);
     assert(result.find("duration: 1000") != std::string::npos);
     assert(result.find("easing: 'ease-in-out'") != std::string::npos);
+}
+
+void test_chtl_js_script_loader() {
+    std::string source = R"(
+        script {
+            ScriptLoader {
+                load: "./module1.js", "module2.js";
+                load: "module3.js";
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check for the injected loader
+    assert(result.find("window.ScriptLoader = ScriptLoader;") != std::string::npos);
+
+    // Check for the load calls
+    std::string expected_js = "ScriptLoader.load('./module1.js', 'module2.js', 'module3.js');";
+    assert(result.find(expected_js) != std::string::npos);
 }

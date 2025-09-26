@@ -5,6 +5,7 @@
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/AnimateNode.h"
+#include "../CHTLJSNode/ScriptLoaderNode.h"
 #include <stdexcept>
 
 CHTLJSParser::CHTLJSParser(std::vector<CHTLJSToken> tokens) : tokens(std::move(tokens)) {}
@@ -27,6 +28,9 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
 
     while (currentToken().type != CHTLJSTokenType::EndOfFile) {
         switch (currentToken().type) {
+            case CHTLJSTokenType::ScriptLoader:
+                nodes.push_back(parseScriptLoaderBlock());
+                break;
             case CHTLJSTokenType::OpenDoubleBrace: {
                 advance(); // Consume '{{'
                 if (currentToken().type != CHTLJSTokenType::RawJS) {
@@ -77,6 +81,54 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
     }
 
     return nodes;
+}
+
+std::unique_ptr<ScriptLoaderNode> CHTLJSParser::parseScriptLoaderBlock() {
+    advance(); // Consume 'ScriptLoader'
+    if (currentToken().type != CHTLJSTokenType::OpenBrace) {
+        throw std::runtime_error("Expected '{' after 'ScriptLoader'.");
+    }
+    advance(); // Consume '{'
+
+    auto scriptLoaderNode = std::make_unique<ScriptLoaderNode>();
+
+    while (currentToken().type != CHTLJSTokenType::CloseBrace && currentToken().type != CHTLJSTokenType::EndOfFile) {
+        if (currentToken().type != CHTLJSTokenType::Identifier || currentToken().value != "load") {
+            throw std::runtime_error("Expected 'load' keyword in ScriptLoader block.");
+        }
+        advance(); // Consume 'load'
+
+        if (currentToken().type != CHTLJSTokenType::Colon) {
+            throw std::runtime_error("Expected ':' after 'load' in ScriptLoader block.");
+        }
+        advance(); // Consume ':'
+
+        // Parse one or more paths separated by commas
+        while (true) {
+            if (currentToken().type == CHTLJSTokenType::CloseBrace) break;
+            if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "load") break;
+
+            if (currentToken().type == CHTLJSTokenType::StringLiteral || currentToken().type == CHTLJSTokenType::RawJS || currentToken().type == CHTLJSTokenType::Identifier) {
+                scriptLoaderNode->paths.push_back(currentToken().value);
+                advance();
+            } else {
+                throw std::runtime_error("Expected a file path in ScriptLoader block.");
+            }
+
+            if (currentToken().type == CHTLJSTokenType::Comma) {
+                advance();
+            } else {
+                break;
+            }
+        }
+    }
+
+    if (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        throw std::runtime_error("Unclosed ScriptLoader block.");
+    }
+    advance(); // Consume '}'
+
+    return scriptLoaderNode;
 }
 
 std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {

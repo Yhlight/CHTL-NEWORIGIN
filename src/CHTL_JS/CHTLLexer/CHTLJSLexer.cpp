@@ -1,6 +1,6 @@
 #include "CHTLJSLexer.h"
 #include <cctype>
-#include <unordered_set>
+#include <unordered_map>
 
 CHTLJSLexer::CHTLJSLexer(const std::string& source) : source(source), position(0) {}
 
@@ -22,8 +22,6 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
     if (position >= source.length()) {
         return {CHTLJSTokenType::EndOfFile, ""};
     }
-
-    size_t start = position;
 
     // Check for multi-char operators first
     if (source.substr(position, 3) == "&->") {
@@ -50,30 +48,40 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
     if (current_char == ':') { position++; return {CHTLJSTokenType::Colon, ":"}; }
     if (current_char == ',') { position++; return {CHTLJSTokenType::Comma, ","}; }
 
-    // Keywords or RawJS
-    const static std::unordered_set<std::string> keywords = {"Listen", "Delegate", "Animate"};
-
-    // Check for a keyword
-    if (isalpha(source[start])) {
-        size_t end = start;
-        while (end < source.length() && isalnum(source[end])) {
-            end++;
+    // Check for string literals (for file paths, etc.)
+    if (current_char == '"' || current_char == '\'') {
+        char quote_type = current_char;
+        position++; // consume opening quote
+        size_t value_start = position;
+        while (position < source.length() && source[position] != quote_type) {
+            // Handle escaped quotes if necessary, for now we keep it simple
+            position++;
         }
-        std::string word = source.substr(start, end - start);
-        if (keywords.count(word)) {
-            position = end;
-            return {CHTLJSTokenType::Identifier, word};
+        std::string value = source.substr(value_start, position - value_start);
+        if (position < source.length()) {
+            position++; // consume closing quote
         }
+        return {CHTLJSTokenType::StringLiteral, value};
     }
 
-
-    // If it's not a keyword or special token, consume as RawJS
-    while (position < source.length()) {
-        // Stop if we hit whitespace that might delimit a token
-        if (isspace(source[position])) {
-            break;
+    // Check for identifiers and keywords
+    if (isalpha(source[position])) {
+        size_t start = position;
+        while (position < source.length() && isalnum(source[position])) {
+            position++;
         }
-        // Stop if we hit the start of any other token
+        std::string word = source.substr(start, position - start);
+
+        if (word == "ScriptLoader") {
+            return {CHTLJSTokenType::ScriptLoader, word};
+        }
+        // Other keywords are treated as identifiers for now.
+        return {CHTLJSTokenType::Identifier, word};
+    }
+
+    // Fallback for raw JS or unquoted literals. This is a greedy consumption.
+    size_t start = position;
+    while (position < source.length()) {
         if (source.substr(position, 3) == "&->" ||
             source.substr(position, 2) == "->" ||
             source.substr(position, 2) == "{{" ||
@@ -83,14 +91,14 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
             break;
         }
 
-        // Lookahead to see if the next word is a keyword
+        // Lookahead to check for keywords
         if (isalpha(source[position])) {
             size_t end = position;
-            while (end < source.length() && isalnum(source[end])) {
+            while(end < source.length() && isalnum(source[end])) {
                 end++;
             }
             std::string word = source.substr(position, end - position);
-            if (keywords.count(word)) {
+            if(word == "ScriptLoader" || word == "Listen" || word == "Delegate" || word == "Animate") {
                 break;
             }
         }
@@ -99,11 +107,13 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
     }
 
     std::string value = source.substr(start, position - start);
-
     if (!value.empty()) {
+        // For unquoted paths, this will be tokenized as RawJS.
+        // The parser will handle this.
         return {CHTLJSTokenType::RawJS, value};
     }
 
-    // If we consumed nothing, it means we're at a token, so retry
-    return getNextToken();
+    // If we get here, something is wrong.
+    position++;
+    return {CHTLJSTokenType::Unexpected, source.substr(position - 1, 1)};
 }

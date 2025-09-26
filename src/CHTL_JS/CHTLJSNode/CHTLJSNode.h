@@ -18,6 +18,8 @@ enum class CHTLJSNodeType {
     Delegate,
     // Represents an Animate block for creating animations.
     Animate,
+    // Represents a ScriptLoader block for loading external scripts.
+    ScriptLoader,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.

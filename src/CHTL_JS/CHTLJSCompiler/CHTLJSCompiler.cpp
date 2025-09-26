@@ -4,11 +4,12 @@
 #include "../CHTLJSGenerator/CHTLJSGenerator.h"
 
 std::string CHTLJSCompiler::compile(const std::string& chtl_js_source) {
-    // Per user instruction, temporarily bypass the CHTL JS compilation
-    // to stabilize the main compiler workflow. The CHTL JS features can be
-    // fixed in a future task. This allows the dispatcher and merger to
-    // function correctly with standard JavaScript.
-    return chtl_js_source;
+    // The full CHTL JS compilation pipeline.
+    auto lexer = createLexer(chtl_js_source);
+    auto tokens = lexer.tokenize();
+    auto parser = createParser(std::move(tokens));
+    auto ast = parser.parse();
+    return generator.generate(ast);
 }
 
 CHTLJSLexer CHTLJSCompiler::createLexer(const std::string& source) {
