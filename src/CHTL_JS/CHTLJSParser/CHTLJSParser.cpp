@@ -2,6 +2,7 @@
 #include "../CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 #include "../CHTLJSNode/RawJavaScriptNode.h"
 #include "../CHTLJSNode/ListenNode.h"
+#include "../CHTLJSNode/EventBindingNode.h"
 #include <stdexcept>
 
 CHTLJSParser::CHTLJSParser(std::vector<CHTLJSToken> tokens) : tokens(std::move(tokens)) {}
@@ -48,6 +49,10 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 }
                 break;
             }
+            case CHTLJSTokenType::EventBindingOperator: {
+                nodes.push_back(parseEventBinding());
+                break;
+            }
             case CHTLJSTokenType::RawJS:
                 nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));
                 advance();
@@ -61,6 +66,34 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
     }
 
     return nodes;
+}
+
+std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {
+    advance(); // Consume '&->'
+
+    std::vector<std::string> event_names;
+    while (currentToken().type == CHTLJSTokenType::Identifier || currentToken().type == CHTLJSTokenType::RawJS) {
+        event_names.push_back(currentToken().value);
+        advance();
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            advance();
+        } else {
+            break;
+        }
+    }
+
+    if (currentToken().type != CHTLJSTokenType::Colon) {
+        throw std::runtime_error("Expected ':' after event name(s) in event binding.");
+    }
+    advance();
+
+    if (currentToken().type != CHTLJSTokenType::RawJS) {
+        throw std::runtime_error("Expected event handler function in event binding.");
+    }
+    std::string handler_code = currentToken().value;
+    advance();
+
+    return std::make_unique<EventBindingNode>(event_names, handler_code);
 }
 
 std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {

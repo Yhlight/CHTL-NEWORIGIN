@@ -75,6 +75,7 @@ void test_cmod_import();
 void test_compiler_dispatcher_full_workflow();
 void test_chtl_js_lexer_and_parser();
 void test_chtl_js_listen_block();
+void test_chtl_js_event_binding_operator();
 
 
 void test_text_block_literals() {
@@ -480,6 +481,7 @@ int main() {
     run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
     run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
+    run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1423,4 +1425,36 @@ void test_chtl_js_listen_block() {
 
     assert(result.find(expected_js1) != std::string::npos);
     assert(result.find(expected_js2) != std::string::npos);
+}
+
+void test_chtl_js_event_binding_operator() {
+    // Test case 1: Single event binding
+    std::string source1 = R"(
+        div {
+            id: "my-btn";
+            script {
+                {{#my-btn}} &-> click: () => { console.log("Clicked!"); };
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher1;
+    std::string result1 = dispatcher1.compile(source1);
+    std::string expected_js1 = "document.querySelector('#my-btn').addEventListener('click', () => { console.log(\"Clicked!\"); });";
+    assert(result1.find(expected_js1) != std::string::npos);
+
+    // Test case 2: Multiple event bindings
+    std::string source2 = R"(
+        div {
+            id: "my-area";
+            script {
+                {{#my-area}} &-> mouseover, mouseout: (e) => { e.target.classList.toggle("hover"); };
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher2;
+    std::string result2 = dispatcher2.compile(source2);
+    std::string expected_js2_1 = "document.querySelector('#my-area').addEventListener('mouseover', (e) => { e.target.classList.toggle(\"hover\"); });";
+    std::string expected_js2_2 = "document.querySelector('#my-area').addEventListener('mouseout', (e) => { e.target.classList.toggle(\"hover\"); });";
+    assert(result2.find(expected_js2_1) != std::string::npos);
+    assert(result2.find(expected_js2_2) != std::string::npos);
 }

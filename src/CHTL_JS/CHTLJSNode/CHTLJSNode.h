@@ -12,6 +12,8 @@ enum class CHTLJSNodeType {
     FunctionCall,
     // Represents a Listen block, e.g., ->Listen { ... }
     Listen,
+    // Represents an event binding expression, e.g., &-> click: ...
+    EventBinding,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.

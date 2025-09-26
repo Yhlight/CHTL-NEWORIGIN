@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CHTLJSNode/CHTLJSNode.h"
+#include "../CHTLJSNode/EventBindingNode.h"
 #include <string>
 #include <vector>
 #include <memory>

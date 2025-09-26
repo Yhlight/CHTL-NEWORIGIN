@@ -3,6 +3,7 @@
 #include "../CHTLLexer/CHTLJSLexer.h"
 #include "../CHTLJSNode/CHTLJSNode.h"
 #include "../CHTLJSNode/ListenNode.h"
+#include "../CHTLJSNode/EventBindingNode.h"
 #include <vector>
 #include <memory>
 
@@ -20,4 +21,5 @@ private:
     void advance();
 
     std::unique_ptr<ListenNode> parseListenBlock();
+    std::unique_ptr<EventBindingNode> parseEventBinding();
 };

@@ -9,6 +9,7 @@ enum class CHTLJSTokenType {
     OpenDoubleBrace,  // {{
     CloseDoubleBrace, // }}
     Arrow,            // ->
+    EventBindingOperator, // &->
 
     // General tokens
     Identifier,       // e.g., Listen, Delegate, click

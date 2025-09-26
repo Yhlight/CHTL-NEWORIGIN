@@ -40,6 +40,7 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
     if (peek() == '{' && peek(1) == '{') { advance(); advance(); return {CHTLJSTokenType::OpenDoubleBrace, "{{"}; }
     if (peek() == '}' && peek(1) == '}') { advance(); advance(); return {CHTLJSTokenType::CloseDoubleBrace, "}}"}; }
     if (peek() == '-' && peek(1) == '>') { advance(); advance(); return {CHTLJSTokenType::Arrow, "->"}; }
+    if (peek() == '&' && peek(1) == '-' && peek(2) == '>') { advance(); advance(); advance(); return {CHTLJSTokenType::EventBindingOperator, "&->"}; }
 
     // Punctuation for Listen blocks
     if (peek() == '{') { advance(); return {CHTLJSTokenType::OpenBrace, "{"}; }
@@ -66,6 +67,7 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
         if ((peek() == '{' && peek(1) == '{') ||
             (peek() == '}' && peek(1) == '}') ||
             (peek() == '-' && peek(1) == '>') ||
+            (peek() == '&' && peek(1) == '-' && peek(2) == '>') ||
             (peek() == '{') || (peek() == '}') || (peek() == ':') || (peek() == ','))
         {
             break;

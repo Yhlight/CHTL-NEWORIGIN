@@ -25,6 +25,7 @@ set(CHTL_SOURCES
     src/CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.cpp
     src/CHTL_JS/CHTLJSNode/RawJavaScriptNode.cpp
     src/CHTL_JS/CHTLJSNode/ListenNode.cpp
+    src/CHTL_JS/CHTLJSNode/EventBindingNode.cpp
     src/CHTL_JS/CHTLJSGenerator/CHTLJSGenerator.cpp
     src/CHTL_JS/CHTLJSCompiler.cpp
     src/CHTL/CHTLLoader/Loader.cpp
