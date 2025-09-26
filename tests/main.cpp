@@ -57,7 +57,30 @@ void test_style_property_modulo_operator();
 void test_generator_comment();
 void test_element_and_attributes();
 void test_element_must_have_body();
+void test_inline_style_block();
 
+
+void test_inline_style_block() {
+    std::string source = R"(
+        div {
+            style {
+                width: 100px;
+                height: 200px;
+                background-color: "red";
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check for the presence of the style attribute and each individual style,
+    // as the order of properties is not guaranteed.
+    size_t style_attr_pos = result.find("style=\"");
+    assert(style_attr_pos != std::string::npos);
+    assert(result.find("width: 100px;", style_attr_pos) != std::string::npos);
+    assert(result.find("height: 200px;", style_attr_pos) != std::string::npos);
+    assert(result.find("background-color: red;", style_attr_pos) != std::string::npos);
+}
 
 void test_element_must_have_body() {
     std::string source = R"(
@@ -507,6 +530,7 @@ int main() {
     run_test(test_generator_comment, "Generator Comment");
     run_test(test_element_and_attributes, "Element and Attributes");
     run_test(test_element_must_have_body, "Element Must Have Body");
+    run_test(test_inline_style_block, "Inline Style Block");
 
     std::cout << "\nTests finished." << std::endl;
     if (failures > 0) {
