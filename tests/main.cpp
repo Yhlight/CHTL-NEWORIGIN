@@ -64,6 +64,9 @@ void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
+void test_scanner_detects_pure_js();
+void test_scanner_detects_chtl_js();
+void test_scanner_detects_chtl_js_with_responsive_value();
 
 
 void test_text_block_literals() {
@@ -427,6 +430,11 @@ int main() {
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
+
+    // CHTL JS Scanning Tests
+    run_test(test_scanner_detects_pure_js, "Scanner Correctly Identifies Pure JS");
+    run_test(test_scanner_detects_chtl_js, "Scanner Correctly Identifies CHTL JS");
+    run_test(test_scanner_detects_chtl_js_with_responsive_value, "Scanner Correctly Identifies CHTL JS with Responsive Value");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1192,4 +1200,46 @@ void test_style_property_modulo_operator() {
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width: 1px;") != std::string::npos);
+}
+
+void test_scanner_detects_pure_js() {
+    std::string source = R"(
+        script {
+            function greet() {
+                console.log("Hello, world!");
+            }
+            greet();
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 1);
+    assert(fragments[0].type == FragmentType::JS);
+}
+
+void test_scanner_detects_chtl_js() {
+    std::string source = R"(
+        script {
+            {{#my-button}}->Listen {
+                click: () => { console.log("Button clicked!"); }
+            };
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 1);
+    assert(fragments[0].type == FragmentType::CHTL_JS);
+}
+
+void test_scanner_detects_chtl_js_with_responsive_value() {
+    std::string source = R"(
+        script {
+            let myValue = $someVar$;
+            console.log(myValue);
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+    assert(fragments.size() == 1);
+    assert(fragments[0].type == FragmentType::CHTL_JS);
 }

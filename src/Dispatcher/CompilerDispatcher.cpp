@@ -28,8 +28,13 @@ std::string CompilerDispatcher::compile(const std::string& source) {
             }
         } else if (fragment.type == FragmentType::CSS) {
             globalCss += fragment.content;
+        } else if (fragment.type == FragmentType::JS) {
+            // JS fragments are ignored until a JS compiler/handler is integrated.
+            continue;
+        } else if (fragment.type == FragmentType::CHTL_JS) {
+            // CHTL_JS fragments are ignored until the CHTL JS compiler is integrated.
+            continue;
         }
-        // JS fragments are ignored for now
     }
 
     Generator generator;

@@ -1,6 +1,7 @@
 #include "UnifiedScanner.h"
 #include <cctype>
 #include <algorithm>
+#include <vector>
 
 namespace {
 // Helper to trim whitespace from both ends of a string
@@ -12,6 +13,21 @@ std::string trim(const std::string& str) {
     }
     size_t last = str.find_last_not_of(whitespace);
     return str.substr(first, (last - first + 1));
+}
+
+// Function to check if a script fragment contains CHTL JS syntax
+bool isCHTLJS(const std::string& script_content) {
+    // A simple heuristic: check for syntax unique to CHTL JS
+    const std::vector<std::string> chtl_js_tokens = {
+        "->", "{{", "Listen", "Delegate", "Animate", "Vir", "Router", "$", "ScriptLoader"
+    };
+
+    for (const auto& token : chtl_js_tokens) {
+        if (script_content.find(token) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // anonymous namespace
@@ -87,7 +103,6 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
 
                 if (open_brace_pos != std::string::npos && whitespace_only) {
                     // Found a valid top-level block.
-                    // Add the preceding CHTL fragment.
                     if (cursor > last_pos) {
                         std::string content = source.substr(last_pos, cursor - last_pos);
                         if (!trim(content).empty()) {
@@ -106,10 +121,15 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
                     }
 
                     if (block_brace_level == 0) {
-                        fragments.push_back({
-                            is_script ? FragmentType::JS : FragmentType::CSS,
-                            source.substr(block_content_start, end_brace_pos - block_content_start - 1)
-                        });
+                        std::string block_content = source.substr(block_content_start, end_brace_pos - block_content_start - 1);
+                        FragmentType type;
+                        if (is_script) {
+                            type = isCHTLJS(block_content) ? FragmentType::CHTL_JS : FragmentType::JS;
+                        } else {
+                            type = FragmentType::CSS;
+                        }
+
+                        fragments.push_back({type, block_content});
                         cursor = end_brace_pos;
                         last_pos = cursor;
                         brace_level = 0; // Reset brace level after block
@@ -130,7 +150,6 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
         }
     }
 
-    // If the entire source is one type and no fragments were made, treat it all as CHTL.
     if (fragments.empty() && !source.empty()) {
         fragments.push_back({FragmentType::CHTL, source});
     }

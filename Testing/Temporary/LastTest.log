@@ -1,10 +1,10 @@
-Start testing: Sep 26 02:09 UTC
+Start testing: Sep 26 02:28 UTC
 ----------------------------------------------------------
 1/1 Testing: RunCHTLTests
 1/1 Test: RunCHTLTests
 Command: "/app/chtl_tests"
 Directory: /app
-"RunCHTLTests" start time: Sep 26 02:09 UTC
+"RunCHTLTests" start time: Sep 26 02:28 UTC
 Output:
 ----------------------------------------------------------
 Running CHTL tests...
@@ -58,13 +58,16 @@ Running CHTL tests...
 [PASS] Colon-Equal Equivalence in Var Template
 [PASS] Style Property Power Operator
 [PASS] Style Property Modulo Operator
+[PASS] Scanner Correctly Identifies Pure JS
+[PASS] Scanner Correctly Identifies CHTL JS
+[PASS] Scanner Correctly Identifies CHTL JS with Responsive Value
 Tests finished.
 <end of output>
 Test time =   0.01 sec
 ----------------------------------------------------------
 Test Passed.
-"RunCHTLTests" end time: Sep 26 02:09 UTC
+"RunCHTLTests" end time: Sep 26 02:28 UTC
 "RunCHTLTests" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Sep 26 02:09 UTC
+End testing: Sep 26 02:28 UTC
