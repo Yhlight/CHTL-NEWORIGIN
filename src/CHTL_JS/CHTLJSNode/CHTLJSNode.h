@@ -16,6 +16,8 @@ enum class CHTLJSNodeType {
     EventBinding,
     // Represents a Delegate block for event delegation.
     Delegate,
+    // Represents an Animate block for creating animations.
+    Animate,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.

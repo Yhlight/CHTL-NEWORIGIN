@@ -4,6 +4,7 @@
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
+#include "../CHTLJSNode/AnimateNode.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -91,6 +92,47 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
         }
         case CHTLJSNodeType::EnhancedSelector: {
             return "document.querySelector('" + static_cast<const CHTLJSEnhancedSelectorNode*>(node)->selector_text + "')";
+        }
+        case CHTLJSNodeType::Animate: {
+            const auto* animateNode = static_cast<const AnimateNode*>(node);
+            std::stringstream ss;
+            ss << "{\n";
+            if (animateNode->target) ss << "  target: " << *animateNode->target << ",\n";
+            if (animateNode->duration) ss << "  duration: " << *animateNode->duration << ",\n";
+            if (animateNode->easing) ss << "  easing: '" << *animateNode->easing << "',\n";
+            if (animateNode->loop) ss << "  loop: " << *animateNode->loop << ",\n";
+            if (animateNode->direction) ss << "  direction: '" << *animateNode->direction << "',\n";
+            if (animateNode->delay) ss << "  delay: " << *animateNode->delay << ",\n";
+            if (animateNode->callback) ss << "  callback: " << *animateNode->callback << ",\n";
+
+            if (!animateNode->begin_styles.empty()) {
+                ss << "  begin: {\n";
+                for (const auto& pair : animateNode->begin_styles) {
+                    ss << "    '" << pair.first << "': '" << pair.second << "',\n";
+                }
+                ss << "  },\n";
+            }
+            if (!animateNode->when_keyframes.empty()) {
+                ss << "  when: [\n";
+                for (const auto& keyframe : animateNode->when_keyframes) {
+                    ss << "    {\n";
+                    ss << "      at: " << keyframe.at << ",\n";
+                    for (const auto& pair : keyframe.styles) {
+                        ss << "      '" << pair.first << "': '" << pair.second << "',\n";
+                    }
+                    ss << "    },\n";
+                }
+                ss << "  ],\n";
+            }
+            if (!animateNode->end_styles.empty()) {
+                ss << "  end: {\n";
+                for (const auto& pair : animateNode->end_styles) {
+                    ss << "    '" << pair.first << "': '" << pair.second << "',\n";
+                }
+                ss << "  },\n";
+            }
+            ss << "}";
+            return ss.str();
         }
         case CHTLJSNodeType::Listen:
         case CHTLJSNodeType::EventBinding:

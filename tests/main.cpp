@@ -77,6 +77,7 @@ void test_chtl_js_lexer_and_parser();
 void test_chtl_js_listen_block();
 void test_chtl_js_event_binding_operator();
 void test_chtl_js_delegate_block();
+void test_chtl_js_animate_block();
 
 
 void test_text_block_literals() {
@@ -484,6 +485,7 @@ int main() {
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
     run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
     run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
+    run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1484,4 +1486,25 @@ void test_chtl_js_delegate_block() {
     assert(result.find("while (target && target !== parent_for_delegation_") != std::string::npos);
     assert(result.find("if (target.matches('.child-button'))") != std::string::npos);
     assert(result.find("((event) => { console.log(\"Delegated click happened!\"); }).call(target, event);") != std::string::npos);
+}
+
+void test_chtl_js_animate_block() {
+    std::string source = R"(
+        script {
+            const myAnimation = Animate {
+                target: {{#my-element}},
+                duration: 1000,
+                easing: 'ease-in-out'
+            };
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check for the main properties
+    assert(result.find("const myAnimation = {") != std::string::npos);
+    assert(result.find("target: document.querySelector('#my-element')") != std::string::npos);
+    assert(result.find("duration: 1000") != std::string::npos);
+    assert(result.find("easing: 'ease-in-out'") != std::string::npos);
 }

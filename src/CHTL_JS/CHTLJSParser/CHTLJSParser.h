@@ -5,6 +5,7 @@
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
+#include "../CHTLJSNode/AnimateNode.h"
 #include <vector>
 #include <memory>
 
@@ -24,4 +25,5 @@ private:
     std::unique_ptr<ListenNode> parseListenBlock();
     std::unique_ptr<EventBindingNode> parseEventBinding();
     std::unique_ptr<DelegateNode> parseDelegateBlock();
+    std::unique_ptr<AnimateNode> parseAnimateBlock();
 };

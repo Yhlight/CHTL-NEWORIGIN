@@ -4,6 +4,7 @@
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
+#include "../CHTLJSNode/AnimateNode.h"
 #include <stdexcept>
 
 CHTLJSParser::CHTLJSParser(std::vector<CHTLJSToken> tokens) : tokens(std::move(tokens)) {}
@@ -55,6 +56,15 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 nodes.push_back(parseEventBinding());
                 break;
             }
+            case CHTLJSTokenType::Identifier: {
+                if (currentToken().value == "Animate") {
+                    nodes.push_back(parseAnimateBlock());
+                } else {
+                    nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));
+                    advance();
+                }
+                break;
+            }
             case CHTLJSTokenType::RawJS:
                 nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));
                 advance();
@@ -71,7 +81,6 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
 
 std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {
     advance(); // Consume '&->'
-
     std::vector<std::string> event_names;
     while (currentToken().type == CHTLJSTokenType::Identifier || currentToken().type == CHTLJSTokenType::RawJS) {
         event_names.push_back(currentToken().value);
@@ -82,53 +91,38 @@ std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {
             break;
         }
     }
-
     if (currentToken().type != CHTLJSTokenType::Colon) {
         throw std::runtime_error("Expected ':' after event name(s) in event binding.");
     }
     advance();
-
     if (currentToken().type != CHTLJSTokenType::RawJS) {
         throw std::runtime_error("Expected event handler function in event binding.");
     }
     std::string handler_code = currentToken().value;
     advance();
-
     return std::make_unique<EventBindingNode>(event_names, handler_code);
 }
 
 std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {
-    advance(); // Consume 'Listen' identifier
+    advance(); // Consume 'Listen'
     if (currentToken().type != CHTLJSTokenType::OpenBrace) {
         throw std::runtime_error("Expected '{' after 'Listen'.");
     }
     advance(); // Consume '{'
-
     auto listenNode = std::make_unique<ListenNode>();
-
     while (currentToken().type != CHTLJSTokenType::CloseBrace) {
-        if (currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) {
-             throw std::runtime_error("Expected event name identifier in Listen block.");
-        }
         std::string eventName = currentToken().value;
         advance();
-
         if (currentToken().type != CHTLJSTokenType::Colon) {
             throw std::runtime_error("Expected ':' after event name in Listen block.");
         }
         advance();
-
-        if (currentToken().type != CHTLJSTokenType::RawJS) {
-            throw std::runtime_error("Expected event handler function in Listen block.");
-        }
         listenNode->event_handlers[eventName] = currentToken().value;
         advance();
-
         if (currentToken().type == CHTLJSTokenType::Comma) {
             advance();
         }
     }
-
     advance(); // Consume '}'
     return listenNode;
 }
@@ -139,40 +133,56 @@ std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
         throw std::runtime_error("Expected '{' after 'Delegate'.");
     }
     advance(); // Consume '{'
-
     auto delegateNode = std::make_unique<DelegateNode>();
-
     while (currentToken().type != CHTLJSTokenType::CloseBrace) {
         std::string key = currentToken().value;
         advance();
-
         if (currentToken().type != CHTLJSTokenType::Colon) {
             throw std::runtime_error("Expected ':' after property name in Delegate block.");
         }
         advance();
-
         if (key == "target") {
-            if (currentToken().type != CHTLJSTokenType::OpenDoubleBrace) {
-                throw std::runtime_error("Delegate target must be an enhanced selector.");
-            }
-            advance(); // consume {{
+            // For now, we'll just read the raw JS for the target value.
             delegateNode->target_selectors.push_back(currentToken().value);
-            advance(); // consume selector
-            if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) {
-                throw std::runtime_error("Unclosed enhanced selector in delegate target.");
-            }
-            advance(); // consume }}
+            advance();
         } else {
-            // It's an event handler
             delegateNode->event_handlers[key] = currentToken().value;
             advance();
         }
-
         if (currentToken().type == CHTLJSTokenType::Comma) {
             advance();
         }
     }
-
     advance(); // Consume '}'
     return delegateNode;
+}
+
+std::unique_ptr<AnimateNode> CHTLJSParser::parseAnimateBlock() {
+    advance(); // Consume 'Animate'
+    if (currentToken().type != CHTLJSTokenType::OpenBrace) {
+        throw std::runtime_error("Expected '{' after 'Animate'.");
+    }
+    advance(); // Consume '{'
+    auto animateNode = std::make_unique<AnimateNode>();
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        advance();
+        if (currentToken().type != CHTLJSTokenType::Colon) {
+            throw std::runtime_error("Expected ':' after property name in Animate block.");
+        }
+        advance();
+        if (key == "target") animateNode->target = currentToken().value;
+        else if (key == "duration") animateNode->duration = std::stoi(currentToken().value);
+        else if (key == "easing") animateNode->easing = currentToken().value;
+        else if (key == "loop") animateNode->loop = std::stoi(currentToken().value);
+        else if (key == "direction") animateNode->direction = currentToken().value;
+        else if (key == "delay") animateNode->delay = std::stoi(currentToken().value);
+        else if (key == "callback") animateNode->callback = currentToken().value;
+        advance();
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            advance();
+        }
+    }
+    advance(); // Consume '}'
+    return animateNode;
 }
