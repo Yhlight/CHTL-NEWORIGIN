@@ -13,6 +13,10 @@
 #include "../src/CHTL/CHTLGenerator/Generator.h"
 #include "../src/Scanner/UnifiedScanner.h"
 #include "../src/Dispatcher/CompilerDispatcher.h"
+#include "../src/CHTL_JS/CHTLLexer/CHTLJSLexer.h"
+#include "../src/CHTL_JS/CHTLJSParser/CHTLJSParser.h"
+#include "../src/CHTL_JS/CHTLJSNode/RawJavaScriptNode.h"
+#include "../src/CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 
 // A simple testing framework
 void run_test(void (*test_func)(), const std::string& test_name) {
@@ -69,6 +73,7 @@ void test_style_property_modulo_operator();
 void test_conditional_rendering();
 void test_cmod_import();
 void test_compiler_dispatcher_full_workflow();
+void test_chtl_js_lexer_and_parser();
 
 
 void test_text_block_literals() {
@@ -472,6 +477,7 @@ int main() {
     run_test(test_conditional_rendering, "Conditional Rendering");
     run_test(test_cmod_import, "CMOD Module Import");
     run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
+    run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -527,7 +533,7 @@ void test_scanner_handles_nested_braces_in_script() {
     auto output = scanner.scan(source);
     assert(output.fragments.size() == 1);
     const auto& fragment = output.fragments.begin()->second;
-    assert(fragment.type == FragmentType::JS);
+    assert(fragment.type == FragmentType::CHTL_JS);
     assert(fragment.content.find("console.log(\"nested\");") != std::string::npos);
     assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
 }
@@ -581,7 +587,7 @@ void test_unified_scanner_script_separation() {
     auto output = scanner.scan(source);
     assert(output.fragments.size() == 1);
     const auto& fragment = output.fragments.begin()->second;
-    assert(fragment.type == FragmentType::JS);
+    assert(fragment.type == FragmentType::CHTL_JS);
     assert(fragment.content.find("console.log(\"World\")") != std::string::npos);
     assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
     assert(output.chtl_with_placeholders.find("p { text: \"Hello\"; }") != std::string::npos);
@@ -1355,4 +1361,40 @@ void test_compiler_dispatcher_full_workflow() {
 
     // 3. Check for re-inserted JavaScript
     assert(result.find("console.log(\"Hello from the script block!\");") != std::string::npos);
+}
+
+void test_chtl_js_lexer_and_parser() {
+    std::string source = "const a = {{#my-id}};";
+
+    // Test Lexer
+    CHTLJSLexer lexer(source);
+    auto tokens = lexer.tokenize();
+
+    // Expected token stream: RawJS, OpenDoubleBrace, RawJS, CloseDoubleBrace, RawJS, EndOfFile
+    assert(tokens.size() == 6);
+    assert(tokens[0].type == CHTLJSTokenType::RawJS && tokens[0].value == "const a = ");
+    assert(tokens[1].type == CHTLJSTokenType::OpenDoubleBrace);
+    assert(tokens[2].type == CHTLJSTokenType::RawJS && tokens[2].value == "#my-id");
+    assert(tokens[3].type == CHTLJSTokenType::CloseDoubleBrace);
+    assert(tokens[4].type == CHTLJSTokenType::RawJS && tokens[4].value == ";");
+    assert(tokens[5].type == CHTLJSTokenType::EndOfFile);
+
+    // Test Parser
+    CHTLJSParser parser(tokens);
+    auto nodes = parser.parse();
+
+    assert(nodes.size() == 3);
+    assert(nodes[0]->getType() == CHTLJSNodeType::RawJavaScript);
+    assert(nodes[1]->getType() == CHTLJSNodeType::EnhancedSelector);
+    assert(nodes[2]->getType() == CHTLJSNodeType::RawJavaScript);
+
+    // Verify the content of the parsed nodes
+    auto* raw_node_1 = static_cast<RawJavaScriptNode*>(nodes[0].get());
+    assert(raw_node_1->js_code == "const a = ");
+
+    auto* selector_node = static_cast<CHTLJSEnhancedSelectorNode*>(nodes[1].get());
+    assert(selector_node->selector_text == "#my-id");
+
+    auto* raw_node_2 = static_cast<RawJavaScriptNode*>(nodes[2].get());
+    assert(raw_node_2->js_code == ";");
 }

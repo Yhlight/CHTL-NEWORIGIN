@@ -19,6 +19,10 @@ add_subdirectory(third-party/libzippp)
 set(CHTL_SOURCES
     src/CHTL/CHTLGenerator/Generator.cpp
     src/CHTL/CHTLLexer/Lexer.cpp
+    src/CHTL_JS/CHTLLexer/CHTLJSLexer.cpp
+    src/CHTL_JS/CHTLJSParser/CHTLJSParser.cpp
+    src/CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.cpp
+    src/CHTL_JS/CHTLJSNode/RawJavaScriptNode.cpp
     src/CHTL/CHTLLoader/Loader.cpp
     src/CHTL/CHTLManage/TemplateManager.cpp
     src/CHTL/CHTLNode/CommentNode.cpp

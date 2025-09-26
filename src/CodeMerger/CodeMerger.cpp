@@ -9,9 +9,8 @@ std::string CodeMerger::merge(const std::string& chtl_output, const std::map<std
         const CodeFragment& fragment = pair.second;
         std::string final_content;
 
-        if (fragment.type == FragmentType::JS) {
-            // For JS fragments, we need to find the placeholder within the <script> tag
-            // that the CHTL generator created and replace just the placeholder.
+        if (fragment.type == FragmentType::CHTL_JS) {
+            // For now, we just pass the CHTL JS through. In the future, this would be compiled JS.
             std::string placeholder_in_script_tag = "{" + placeholder + "}";
             size_t pos = final_output.find(placeholder_in_script_tag);
             if (pos != std::string::npos) {

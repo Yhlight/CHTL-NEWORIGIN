@@ -109,7 +109,7 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
         std::string placeholder = generate_placeholder();
         result_ss << "{" << placeholder << "}"; // Keep the braces to maintain structure
         output.fragments[placeholder] = {
-            is_script ? FragmentType::JS : FragmentType::CSS,
+            is_script ? FragmentType::CHTL_JS : FragmentType::CSS,
             block_content
         };
 
