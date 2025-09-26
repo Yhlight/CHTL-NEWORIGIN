@@ -153,6 +153,19 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     } else if (parser.currentToken.type == TokenType::At) {
         return parseElementTemplateUsage(parser);
     } else if (parser.currentToken.type == TokenType::Identifier) {
+        // Check for placeholder-filled blocks from the scanner and ignore them
+        if ((parser.currentToken.value == "style" || parser.currentToken.value == "script") &&
+            parser.peekToken.type == TokenType::OpenBrace &&
+            parser.peekToken2.type == TokenType::HashComment &&
+            parser.peekToken2.value.find("__CHTL_PLACEHOLDER_") != std::string::npos)
+        {
+            parser.advanceTokens(); // style or script
+            parser.advanceTokens(); // {
+            parser.advanceTokens(); // placeholder comment
+            parser.expectToken(TokenType::CloseBrace);
+            return nullptr; // Ignored.
+        }
+
         if (parser.currentToken.value == "text") {
             return parseTextElement(parser);
         }

@@ -39,6 +39,20 @@ std::string CompilerDispatcher::compile(const std::string& source) {
     Generator generator;
     std::string htmlOutput = generator.generate(ast, globalCss, sharedContext, outputDoctype);
 
-    // 5. Use the CodeMerger to re-insert the compiled fragments
-    return merger.merge(htmlOutput, compiled_fragments);
+    // 5. Use the CodeMerger to re-insert any compiled JS fragments (currently none)
+    std::string finalHtml = merger.merge(htmlOutput, compiled_fragments);
+
+    // 6. Inject the global CSS into the head of the document
+    if (!globalCss.empty()) {
+        std::string style_tag = "<style>" + globalCss + "</style>";
+        size_t head_pos = finalHtml.find("</head>");
+        if (head_pos != std::string::npos) {
+            finalHtml.insert(head_pos, style_tag);
+        } else {
+            // Fallback if no </head> is found
+            finalHtml = style_tag + finalHtml;
+        }
+    }
+
+    return finalHtml;
 }

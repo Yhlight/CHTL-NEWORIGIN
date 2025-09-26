@@ -15,9 +15,7 @@ void add_directory_to_archive(libzippp::ZipArchive& archive, const fs::path& dir
         if (fs::is_directory(path)) {
             archive.addEntry(relative_path.string() + "/");
         } else if (fs::is_regular_file(path)) {
-            std::ifstream file(path, std::ios::binary);
-            std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            archive.addData(relative_path.string(), content.data(), content.size());
+            archive.addFile(relative_path.string(), path.string());
         }
     }
 }
