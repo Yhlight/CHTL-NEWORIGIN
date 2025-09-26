@@ -91,6 +91,8 @@ Token Lexer::identifier() {
     if (value == "Configuration") return {TokenType::Configuration, value, line, startCol, startPos};
     if (value == "except") return {TokenType::Except, value, line, startCol, startPos};
     if (value == "Info") return {TokenType::Info, value, line, startCol, startPos};
+    if (value == "if") return {TokenType::If, value, line, startCol, startPos};
+    if (value == "else") return {TokenType::Else, value, line, startCol, startPos};
 
     return {TokenType::Identifier, value, line, startCol, startPos};
 }

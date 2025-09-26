@@ -24,6 +24,9 @@ enum class NodeType {
     // Behavior Blocks
     Script,
 
+    // Control Flow
+    Conditional,
+
     // CHTL JS Specific
     EnhancedSelector,
     RawScript,

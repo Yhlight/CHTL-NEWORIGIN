@@ -64,6 +64,7 @@ void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
+void test_conditional_rendering();
 
 
 void test_text_block_literals() {
@@ -464,6 +465,7 @@ int main() {
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
+    run_test(test_conditional_rendering, "Conditional Rendering");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1183,4 +1185,80 @@ void test_style_property_modulo_operator() {
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width: 1px;") != std::string::npos);
+}
+
+void test_conditional_rendering() {
+    // Test case 1: 'if' condition is true
+    std::string source1 = R"(
+        div {
+            if {
+                condition: 10 > 5;
+                p { text: "Visible"; }
+            }
+        }
+    )";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    auto nodes1 = parser1.parse();
+    Generator generator1;
+    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, parser1.sharedContext, false);
+    assert(result1.find("Visible") != std::string::npos);
+
+    // Test case 2: 'if' condition is false, no else block
+    std::string source2 = R"(
+        div {
+            if {
+                condition: 5 > 10;
+                p { text: "Hidden"; }
+            }
+        }
+    )";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    auto nodes2 = parser2.parse();
+    Generator generator2;
+    std::string result2 = generator2.generate(nodes2, parser2.globalStyleContent, parser2.sharedContext, false);
+    assert(result2.find("Hidden") == std::string::npos);
+
+    // Test case 3: 'if' is false, 'else' is rendered
+    std::string source3 = R"(
+        div {
+            if {
+                condition: 5 > 10;
+                p { text: "Hidden"; }
+            } else {
+                p { text: "Visible"; }
+            }
+        }
+    )";
+    Lexer lexer3(source3);
+    Parser parser3(lexer3);
+    auto nodes3 = parser3.parse();
+    Generator generator3;
+    std::string result3 = generator3.generate(nodes3, parser3.globalStyleContent, parser3.sharedContext, false);
+    assert(result3.find("Hidden") == std::string::npos);
+    assert(result3.find("Visible") != std::string::npos);
+
+    // Test case 4: 'else if' is rendered
+    std::string source4 = R"(
+        div {
+            if {
+                condition: 1 == 0;
+                p { text: "Hidden 1"; }
+            } else if {
+                condition: 2 > 1;
+                p { text: "Visible"; }
+            } else {
+                p { text: "Hidden 2"; }
+            }
+        }
+    )";
+    Lexer lexer4(source4);
+    Parser parser4(lexer4);
+    auto nodes4 = parser4.parse();
+    Generator generator4;
+    std::string result4 = generator4.generate(nodes4, parser4.globalStyleContent, parser4.sharedContext, false);
+    assert(result4.find("Hidden 1") == std::string::npos);
+    assert(result4.find("Hidden 2") == std::string::npos);
+    assert(result4.find("Visible") != std::string::npos);
 }

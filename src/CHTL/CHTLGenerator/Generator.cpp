@@ -75,8 +75,24 @@ void Generator::generateNode(const BaseNode* node) {
         case NodeType::Script:
             generateScript(static_cast<const ScriptNode*>(node));
             break;
+        case NodeType::Conditional:
+            generateConditional(static_cast<const ConditionalNode*>(node));
+            break;
         default:
             break;
+    }
+}
+
+void Generator::generateConditional(const ConditionalNode* node) {
+    for (const auto& conditionalCase : node->cases) {
+        // For static rendering, we assume the condition has been evaluated to a simple boolean.
+        if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
+            // If the condition is true, generate the children of this case and stop.
+            for (const auto& child : conditionalCase.children) {
+                generateNode(child.get());
+            }
+            break; // Exit after the first true case is handled.
+        }
     }
 }
 

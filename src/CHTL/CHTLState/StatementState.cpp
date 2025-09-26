@@ -6,6 +6,7 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/ScriptNode.h"
@@ -156,11 +157,91 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         }
         // Any other identifier is assumed to be an element tag.
         return parseElement(parser);
+    } else if (parser.currentToken.type == TokenType::If) {
+        return parseIfStatement(parser);
     } else if (parser.currentToken.type == TokenType::HashComment) {
         return parseComment(parser);
     }
 
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
+}
+
+std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
+    auto conditionalNode = std::make_unique<ConditionalNode>();
+
+    // --- Parse 'if' block ---
+    parser.expectToken(TokenType::If);
+    parser.expectToken(TokenType::OpenBrace);
+    {
+        ConditionalCase ifCase;
+        if (parser.currentToken.value != "condition") {
+            throw std::runtime_error("'if' block must start with a 'condition' property.");
+        }
+        parser.expectToken(TokenType::Identifier); // consume 'condition'
+        parser.expectToken(TokenType::Colon);
+
+        StyleBlockState tempStyleState;
+        ifCase.condition = tempStyleState.parseStyleExpression(parser);
+        if (parser.currentToken.type == TokenType::Semicolon) {
+            parser.advanceTokens();
+        }
+
+
+        while (parser.currentToken.type != TokenType::CloseBrace) {
+            auto childNode = handle(parser);
+            if (childNode) ifCase.children.push_back(std::move(childNode));
+        }
+        conditionalNode->cases.push_back(std::move(ifCase));
+    }
+    parser.expectToken(TokenType::CloseBrace);
+
+    // --- Parse 'else if' blocks ---
+    while (parser.currentToken.type == TokenType::Else && parser.peekToken.type == TokenType::If) {
+        parser.advanceTokens(); // else
+        parser.advanceTokens(); // if
+        parser.expectToken(TokenType::OpenBrace);
+        {
+            ConditionalCase elseIfCase;
+            if (parser.currentToken.value != "condition") {
+                throw std::runtime_error("'else if' block must start with a 'condition' property.");
+            }
+            parser.expectToken(TokenType::Identifier); // consume 'condition'
+            parser.expectToken(TokenType::Colon);
+
+            StyleBlockState tempStyleState;
+            elseIfCase.condition = tempStyleState.parseStyleExpression(parser);
+            if (parser.currentToken.type == TokenType::Semicolon) {
+                 parser.advanceTokens();
+            }
+
+            while (parser.currentToken.type != TokenType::CloseBrace) {
+                auto childNode = handle(parser);
+                if (childNode) elseIfCase.children.push_back(std::move(childNode));
+            }
+            conditionalNode->cases.push_back(std::move(elseIfCase));
+        }
+        parser.expectToken(TokenType::CloseBrace);
+    }
+
+    // --- Parse final 'else' block ---
+    if (parser.currentToken.type == TokenType::Else) {
+        parser.advanceTokens(); // else
+        parser.expectToken(TokenType::OpenBrace);
+        {
+            ConditionalCase elseCase;
+            elseCase.condition.type = StyleValue::BOOL;
+            elseCase.condition.bool_val = true;
+
+            while (parser.currentToken.type != TokenType::CloseBrace) {
+                auto childNode = handle(parser);
+                if (childNode) elseCase.children.push_back(std::move(childNode));
+            }
+            conditionalNode->cases.push_back(std::move(elseCase));
+        }
+        parser.expectToken(TokenType::CloseBrace);
+    }
+
+    return conditionalNode;
 }
 
 void StatementState::parseExceptClause(Parser& parser, ElementNode& element) {

@@ -4,6 +4,7 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include "../Bridge/SharedContext.h"
 #include <string>
 #include <vector>
@@ -31,6 +32,7 @@ private:
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
     void generateScript(const ScriptNode* node);
+    void generateConditional(const ConditionalNode* node);
     void generateRuntimeScript(const SharedContext& context);
 
     // Helper methods for managing indentation and building the result string.
