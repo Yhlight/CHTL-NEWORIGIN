@@ -12,17 +12,7 @@
 #include "../src/Scanner/UnifiedScanner.h"
 #include "../src/Dispatcher/CompilerDispatcher.h"
 
-// A simple testing framework
-void run_test(void (*test_func)(), const std::string& test_name) {
-    try {
-        test_func();
-        std::cout << "[PASS] " << test_name << std::endl;
-    } catch (const std::runtime_error& e) {
-        std::cout << "[FAIL] " << test_name << " - " << e.what() << std::endl;
-    } catch (...) {
-        std::cout << "[FAIL] " << test_name << " - Unknown exception" << std::endl;
-    }
-}
+// A simple testing framework is defined in main().
 
 // --- Test Cases ---
 
@@ -64,7 +54,80 @@ void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
+void test_generator_comment();
+void test_element_and_attributes();
+void test_element_must_have_body();
 
+
+void test_element_must_have_body() {
+    std::string source = R"(
+        div // Missing body
+    )";
+    CompilerDispatcher dispatcher;
+    bool exception_thrown = false;
+    try {
+        dispatcher.compile(source);
+    } catch (const std::runtime_error& e) {
+        exception_thrown = true;
+        std::string msg = e.what();
+        assert(msg.find("Expected '{'") != std::string::npos);
+    }
+    assert(exception_thrown);
+}
+
+void test_element_and_attributes() {
+    std::string source = R"(
+        div {
+            id: "parent-div";
+            class: main-container;
+
+            p {
+                text: "child paragraph";
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check for parent div and its attributes (order-independent)
+    assert(result.find("<div") != std::string::npos);
+    assert(result.find("id=\"parent-div\"") != std::string::npos);
+    assert(result.find("class=\"main-container\"") != std::string::npos);
+
+    // Check for nested paragraph
+    size_t p_open = result.find("<p");
+    size_t p_content = result.find("child paragraph");
+    size_t p_close = result.find("</p>");
+    assert(p_open != std::string::npos);
+    assert(p_content != std::string::npos);
+    assert(p_close != std::string::npos);
+    assert(p_open < p_content && p_content < p_close);
+}
+
+void test_generator_comment() {
+    std::string source = R"(
+        # This is a generator comment.
+        p { text: "hello"; }
+        #not-a-comment
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check that the generator comment is rendered as an HTML comment
+    assert(result.find("<!-- This is a generator comment. -->") != std::string::npos);
+
+    // Check that the paragraph is rendered, tolerant of whitespace
+    size_t p_open = result.find("<p");
+    size_t p_content = result.find("hello");
+    size_t p_close = result.find("</p>");
+    assert(p_open != std::string::npos);
+    assert(p_content != std::string::npos);
+    assert(p_close != std::string::npos);
+    assert(p_open < p_content && p_content < p_close);
+
+    // Check that the token without a space after '#' is treated as a regular element/identifier
+    assert(result.find("<not-a-comment></not-a-comment>") != std::string::npos);
+}
 
 void test_text_block_literals() {
     std::string source = R"(
@@ -375,6 +438,20 @@ void test_import() {
 
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
+    int failures = 0;
+
+    auto run_test = [&](void (*test_func)(), const std::string& test_name) {
+        try {
+            test_func();
+            std::cout << "[PASS] " << test_name << std::endl;
+        } catch (const std::runtime_error& e) {
+            std::cout << "[FAIL] " << test_name << " - " << e.what() << std::endl;
+            failures++;
+        } catch (...) {
+            std::cout << "[FAIL] " << test_name << " - Unknown exception" << std::endl;
+            failures++;
+        }
+    };
 
     run_test(test_lexer_configuration_keyword, "Lexer Configuration Keyword");
     run_test(test_referenced_property, "Referenced Property");
@@ -427,8 +504,16 @@ int main() {
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
+    run_test(test_generator_comment, "Generator Comment");
+    run_test(test_element_and_attributes, "Element and Attributes");
+    run_test(test_element_must_have_body, "Element Must Have Body");
 
-    std::cout << "Tests finished." << std::endl;
+    std::cout << "\nTests finished." << std::endl;
+    if (failures > 0) {
+        std::cerr << failures << " test(s) failed." << std::endl;
+        return 1;
+    }
+    std::cout << "All tests passed." << std::endl;
     return 0;
 }
 

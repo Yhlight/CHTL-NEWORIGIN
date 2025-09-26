@@ -17,6 +17,7 @@ private:
     // Helper methods to parse specific types of statements.
     // These contain logic moved from the original Parser class.
     std::unique_ptr<BaseNode> parseElement(Parser& parser);
+    std::unique_ptr<BaseNode> parseShorthandElement(Parser& parser, const std::string& tagName);
     std::unique_ptr<BaseNode> parseTextElement(Parser& parser);
     std::unique_ptr<BaseNode> parseComment(Parser& parser);
     void parseTemplateDefinition(Parser& parser);

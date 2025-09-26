@@ -55,12 +55,30 @@ void Parser::advanceTokens() {
 void Parser::expectToken(TokenType type) {
     if (currentToken.type == type) {
         advanceTokens();
-    } else {
-        throw std::runtime_error("Unexpected token: '" + currentToken.value + "' at line " +
-                                 std::to_string(currentToken.line) + ", column " +
-                                 std::to_string(currentToken.column) + ". Expected type " +
-                                 std::to_string(static_cast<int>(type)));
+        return;
     }
+
+    std::string expectation;
+    switch (type) {
+        case TokenType::OpenBrace: expectation = "'{'"; break;
+        case TokenType::CloseBrace: expectation = "'}'"; break;
+        case TokenType::OpenBracket: expectation = "'['"; break;
+        case TokenType::CloseBracket: expectation = "']'"; break;
+        case TokenType::OpenParen: expectation = "'('"; break;
+        case TokenType::CloseParen: expectation = "')'"; break;
+        case TokenType::Semicolon: expectation = "';'"; break;
+        case TokenType::Colon: expectation = "':'"; break;
+        case TokenType::Identifier: expectation = "an identifier"; break;
+        case TokenType::String: expectation = "a string literal"; break;
+        case TokenType::Number: expectation = "a number"; break;
+        default:
+            expectation = "token with type " + std::to_string(static_cast<int>(type));
+    }
+
+    throw std::runtime_error("Unexpected token: '" + currentToken.value + "' at line " +
+                             std::to_string(currentToken.line) + ", column " +
+                             std::to_string(currentToken.column) + ". Expected " +
+                             expectation);
 }
 
 bool Parser::tryExpectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue) {

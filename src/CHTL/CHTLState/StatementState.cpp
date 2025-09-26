@@ -169,6 +169,11 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         return parseElement(parser);
     } else if (parser.currentToken.type == TokenType::HashComment) {
         return parseComment(parser);
+    } else if (parser.currentToken.type == TokenType::Hash) {
+        parser.advanceTokens(); // Consume '#'
+        std::string tagName = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        return parseShorthandElement(parser, tagName);
     }
 
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
@@ -252,6 +257,13 @@ std::unique_ptr<BaseNode> StatementState::parseElement(Parser& parser) {
     parseElementBody(parser, *element);
 
     parser.expectToken(TokenType::CloseBrace);
+    return element;
+}
+
+// Parses a shorthand element like #my-element, which has no body.
+std::unique_ptr<BaseNode> StatementState::parseShorthandElement(Parser& parser, const std::string& tagName) {
+    auto element = std::make_unique<ElementNode>(tagName);
+    // Shorthand elements do not have bodies, so we just return the node.
     return element;
 }
 
