@@ -1,19 +1,23 @@
 #include "UnifiedScanner.h"
 #include <cctype>
+#include <sstream>
 #include <algorithm>
 
-namespace {
-// Helper to trim whitespace from both ends of a string
-std::string trim(const std::string& str) {
-    const std::string whitespace = " \t\n\r\f\v";
-    size_t first = str.find_first_not_of(whitespace);
-    if (std::string::npos == first) {
-        return "";
-    }
-    size_t last = str.find_last_not_of(whitespace);
-    return str.substr(first, (last - first + 1));
+std::string UnifiedScanner::generate_placeholder() {
+    std::stringstream ss;
+    ss << "/*__CHTL_PLACEHOLDER_" << placeholder_id_counter++ << "__*/";
+    return ss.str();
 }
 
+namespace {
+// Helper to check if a keyword is a whole word at a given position
+bool is_whole_word(const std::string& source, size_t pos, size_t len) {
+    bool start_ok = (pos == 0) || !isalnum(source[pos - 1]);
+    bool end_ok = (pos + len >= source.length()) || !isalnum(source[pos + len]);
+    return start_ok && end_ok;
+}
+
+// Helper to find the level of nested braces up to a certain point in the code
 int calculate_brace_level_up_to(const std::string& s, size_t end) {
     int level = 0;
     for(size_t i = 0; i < end && i < s.length(); ++i) {
@@ -25,10 +29,13 @@ int calculate_brace_level_up_to(const std::string& s, size_t end) {
 
 } // anonymous namespace
 
-std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
-    std::vector<CodeFragment> fragments;
+
+ScannedOutput UnifiedScanner::scan(const std::string& source) {
+    ScannedOutput output;
+    std::stringstream result_ss;
     size_t last_pos = 0;
     size_t search_pos = 0;
+    placeholder_id_counter = 0; // Reset for each scan
 
     while (search_pos < source.length()) {
         size_t script_pos = source.find("script", search_pos);
@@ -38,6 +45,7 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
         bool is_script = false;
         size_t keyword_len = 0;
 
+        // Find the next occurrence of either "script" or "style"
         if (script_pos != std::string::npos && (style_pos == std::string::npos || script_pos < style_pos)) {
             next_pos = script_pos;
             is_script = true;
@@ -47,20 +55,18 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
             is_script = false;
             keyword_len = 5;
         } else {
-            break; // No more keywords
+            break; // No more keywords found
         }
 
-        // Validate it's a whole word
-        bool is_whole_word = (next_pos == 0 || !isalnum(source[next_pos - 1])) &&
-                             (next_pos + keyword_len >= source.length() || !isalnum(source[next_pos + keyword_len]));
-        if (!is_whole_word) {
+        // Make sure we found a whole word, not part of another identifier
+        if (!is_whole_word(source, next_pos, keyword_len)) {
             search_pos = next_pos + 1;
             continue;
         }
 
-        // Find the opening brace
+        // Find the opening brace '{'
         size_t open_brace_pos = next_pos + keyword_len;
-        while(open_brace_pos < source.length() && isspace(source[open_brace_pos])) {
+        while (open_brace_pos < source.length() && isspace(source[open_brace_pos])) {
             open_brace_pos++;
         }
 
@@ -69,57 +75,59 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
             continue;
         }
 
-        // Check if the block is top-level (for style) or any level (for script)
-        int brace_level_before = calculate_brace_level_up_to(source, next_pos);
-        if (!is_script && brace_level_before != 0) { // style block must be top-level
-             search_pos = next_pos + 1;
-             continue;
-        }
-
-        // A valid block is found.
-        // Add the preceding CHTL fragment.
-        if (next_pos > last_pos) {
-            std::string content = source.substr(last_pos, next_pos - last_pos);
-            if (!trim(content).empty()) {
-                fragments.push_back({FragmentType::CHTL, content});
+        // Only consider top-level style blocks for separation
+        if (!is_script) {
+            int brace_level_before = calculate_brace_level_up_to(source, next_pos);
+            if (brace_level_before != 0) {
+                search_pos = next_pos + 1;
+                continue;
             }
         }
 
-        // Find matching closing brace
+        // Append the CHTL part before this block
+        result_ss << source.substr(last_pos, next_pos - last_pos);
+
+        // Find the matching closing brace '}'
         size_t block_content_start = open_brace_pos + 1;
         size_t end_brace_pos = block_content_start;
-        int block_brace_level = 1;
-        while (block_brace_level > 0 && end_brace_pos < source.length()) {
-            if (source[end_brace_pos] == '{') block_brace_level++;
-            else if (source[end_brace_pos] == '}') block_brace_level--;
+        int brace_level = 1;
+        while (brace_level > 0 && end_brace_pos < source.length()) {
+            if (source[end_brace_pos] == '{') brace_level++;
+            else if (source[end_brace_pos] == '}') brace_level--;
             end_brace_pos++;
         }
 
-        if (block_brace_level != 0) { // Unterminated block
+        if (brace_level != 0) { // Unterminated block, treat as CHTL
             search_pos = next_pos + 1;
             continue;
         }
 
-        // Add the block's content
-        fragments.push_back({
+        // Extract the content of the block
+        std::string block_content = source.substr(block_content_start, end_brace_pos - block_content_start - 1);
+
+        // Generate a placeholder and store the fragment
+        std::string placeholder = generate_placeholder();
+        result_ss << "{" << placeholder << "}"; // Keep the braces to maintain structure
+        output.fragments[placeholder] = {
             is_script ? FragmentType::JS : FragmentType::CSS,
-            source.substr(block_content_start, end_brace_pos - block_content_start - 1)
-        });
+            block_content
+        };
 
         last_pos = end_brace_pos;
         search_pos = last_pos;
     }
 
+    // Append any remaining CHTL content
     if (last_pos < source.length()) {
-        std::string content = source.substr(last_pos);
-        if (!trim(content).empty()) {
-            fragments.push_back({FragmentType::CHTL, content});
-        }
+        result_ss << source.substr(last_pos);
     }
 
-    if (fragments.empty() && !source.empty()) {
-        fragments.push_back({FragmentType::CHTL, source});
+    output.chtl_with_placeholders = result_ss.str();
+
+    // If no placeholders were made, the whole thing is CHTL.
+    if (output.fragments.empty() && !source.empty()) {
+        output.chtl_with_placeholders = source;
     }
 
-    return fragments;
+    return output;
 }

@@ -7,33 +7,33 @@
 #include <memory>
 
 std::string CompilerDispatcher::compile(const std::string& source) {
-    std::vector<CodeFragment> fragments = scanner.scan(source);
-    std::vector<std::unique_ptr<BaseNode>> finalAst;
+    // 1. Scan the source to separate CHTL from other languages
+    ScannedOutput scanned_output = scanner.scan(source);
+
     std::string globalCss;
     SharedContext sharedContext;
     bool outputDoctype = false;
 
-    for (const auto& fragment : fragments) {
-        if (fragment.type == FragmentType::CHTL) {
-            if (fragment.content.empty()) continue;
-            Lexer lexer(fragment.content);
-            Parser parser(lexer);
-            auto ast = parser.parse();
-            for (auto& node : ast) {
-                finalAst.push_back(std::move(node));
-            }
-            globalCss += parser.globalStyleContent;
-            if (parser.outputHtml5Doctype) {
-                outputDoctype = true;
-            }
-        } else if (fragment.type == FragmentType::CSS) {
-            globalCss += fragment.content;
-        }
-        // JS fragments are ignored for now
+    // 2. Compile the main CHTL content
+    Lexer lexer(scanned_output.chtl_with_placeholders);
+    Parser parser(lexer);
+    auto ast = parser.parse();
+    globalCss += parser.globalStyleContent;
+    if (parser.outputHtml5Doctype) {
+        outputDoctype = true;
     }
 
-    Generator generator;
-    std::string htmlOutput = generator.generate(finalAst, globalCss, sharedContext, outputDoctype);
+    // 3. Collect CSS from style blocks
+    for (const auto& pair : scanned_output.fragments) {
+        if (pair.second.type == FragmentType::CSS) {
+            globalCss += pair.second.content;
+        }
+    }
 
-    return htmlOutput;
+    // 4. Generate the initial HTML from the CHTL AST
+    Generator generator;
+    std::string htmlOutput = generator.generate(ast, globalCss, sharedContext, outputDoctype);
+
+    // 5. Use the CodeMerger to re-insert the original fragments
+    return merger.merge(htmlOutput, scanned_output.fragments);
 }

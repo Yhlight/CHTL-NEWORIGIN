@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "../Scanner/UnifiedScanner.h"
+#include "../CodeMerger/CodeMerger.h"
 
 class CompilerDispatcher {
 public:
@@ -10,4 +11,5 @@ public:
 
 private:
     UnifiedScanner scanner;
+    CodeMerger merger;
 };

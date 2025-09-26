@@ -68,6 +68,7 @@ void test_style_property_power_operator();
 void test_style_property_modulo_operator();
 void test_conditional_rendering();
 void test_cmod_import();
+void test_compiler_dispatcher_full_workflow();
 
 
 void test_text_block_literals() {
@@ -470,6 +471,7 @@ int main() {
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
     run_test(test_conditional_rendering, "Conditional Rendering");
     run_test(test_cmod_import, "CMOD Module Import");
+    run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -522,10 +524,12 @@ void test_scanner_handles_nested_braces_in_script() {
         }
     )";
     UnifiedScanner scanner;
-    auto fragments = scanner.scan(source);
-    assert(fragments.size() == 1);
-    assert(fragments[0].type == FragmentType::JS);
-    assert(fragments[0].content.find("console.log(\"nested\");") != std::string::npos);
+    auto output = scanner.scan(source);
+    assert(output.fragments.size() == 1);
+    const auto& fragment = output.fragments.begin()->second;
+    assert(fragment.type == FragmentType::JS);
+    assert(fragment.content.find("console.log(\"nested\");") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
 }
 
 void test_scanner_ignores_nested_style() {
@@ -537,9 +541,9 @@ void test_scanner_ignores_nested_style() {
         }
     )";
     UnifiedScanner scanner;
-    auto fragments = scanner.scan(source);
-    assert(fragments.size() == 1);
-    assert(fragments[0].type == FragmentType::CHTL);
+    auto output = scanner.scan(source);
+    assert(output.fragments.empty());
+    assert(output.chtl_with_placeholders == source);
 }
 
 void test_unified_scanner_style_separation() {
@@ -554,11 +558,13 @@ void test_unified_scanner_style_separation() {
         }
     )";
     UnifiedScanner scanner;
-    auto fragments = scanner.scan(source);
-    assert(fragments.size() == 2);
-    assert(fragments[0].type == FragmentType::CSS);
-    assert(fragments[1].type == FragmentType::CHTL);
-    assert(fragments[0].content.find("background-color") != std::string::npos);
+    auto output = scanner.scan(source);
+    assert(output.fragments.size() == 1);
+    const auto& fragment = output.fragments.begin()->second;
+    assert(fragment.type == FragmentType::CSS);
+    assert(fragment.content.find("background-color") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("div {") != std::string::npos);
 }
 
 void test_unified_scanner_script_separation() {
@@ -572,12 +578,13 @@ void test_unified_scanner_script_separation() {
         }
     )";
     UnifiedScanner scanner;
-    auto fragments = scanner.scan(source);
-    assert(fragments.size() == 3);
-    assert(fragments[0].type == FragmentType::CHTL);
-    assert(fragments[1].type == FragmentType::JS);
-    assert(fragments[2].type == FragmentType::CHTL);
-    assert(fragments[1].content.find("console.log(\"World\");") != std::string::npos);
+    auto output = scanner.scan(source);
+    assert(output.fragments.size() == 1);
+    const auto& fragment = output.fragments.begin()->second;
+    assert(fragment.type == FragmentType::JS);
+    assert(fragment.content.find("console.log(\"World\")") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("p { text: \"Hello\"; }") != std::string::npos);
 }
 
 void test_precise_import_not_found() {
@@ -1312,4 +1319,40 @@ void test_cmod_import() {
     // 5. Cleanup
     fs::remove(cmod_file);
     fs::remove_all(module_path);
+}
+
+void test_compiler_dispatcher_full_workflow() {
+    std::string source = R"(
+        style {
+            body { font-family: Arial; }
+        }
+        html {
+            head {
+                title { text: "Test Page"; }
+            }
+            body {
+                div {
+                    class: "container";
+                    p { text: "Hello, CHTL!"; }
+                }
+                script {
+                    console.log("Hello from the script block!");
+                }
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // 1. Check for CHTL-generated content
+    assert(result.find("<title>Test Page</title>") != std::string::npos);
+    assert(result.find("<div class=\"container\">") != std::string::npos);
+    assert(result.find("<p>Hello, CHTL!</p>") != std::string::npos);
+
+    // 2. Check for global CSS
+    assert(result.find("body { font-family: Arial; }") != std::string::npos);
+
+    // 3. Check for re-inserted JavaScript
+    assert(result.find("console.log(\"Hello from the script block!\");") != std::string::npos);
 }

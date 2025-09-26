@@ -37,6 +37,7 @@ set(CHTL_SOURCES
     src/CHTL/CHTLState/InfoState.cpp
     src/Dispatcher/CompilerDispatcher.cpp
     src/Scanner/UnifiedScanner.cpp
+    src/CodeMerger/CodeMerger.cpp
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp

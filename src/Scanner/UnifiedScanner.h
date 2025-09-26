@@ -16,10 +16,16 @@ struct CodeFragment {
     std::string content;
 };
 
+struct ScannedOutput {
+    std::string chtl_with_placeholders;
+    std::map<std::string, CodeFragment> fragments;
+};
+
 class UnifiedScanner {
 public:
-    std::vector<CodeFragment> scan(const std::string& source);
+    ScannedOutput scan(const std::string& source);
 
 private:
-    // Helper methods will be added here
+    int placeholder_id_counter = 0;
+    std::string generate_placeholder();
 };
