@@ -399,26 +399,22 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     }
 
     if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
-    std::stringstream ss;
-    ss << parser.currentToken.value;
-    parser.advanceTokens();
+        std::stringstream ss;
+        ss << parser.currentToken.value;
+        parser.advanceTokens();
 
-    // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
-    // This allows for values like `font-family: Times New Roman;`
-    while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
-         // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
-         if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
-             break;
-         }
-         // Also stop if we hit an operator
-         if (parser.currentToken.type == TokenType::Plus || parser.currentToken.type == TokenType::Minus || parser.currentToken.type == TokenType::Asterisk || parser.currentToken.type == TokenType::Slash) {
-             break;
-         }
-         ss << " " << parser.currentToken.value;
-         parser.advanceTokens();
-    }
+        // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
+        // This allows for values like `font-family: Times New Roman;`
+        while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
+             // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
+             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
+                 break;
+             }
+             ss << " " << parser.currentToken.value;
+             parser.advanceTokens();
+        }
 
-    return {StyleValue::STRING, 0.0, "", ss.str()};
+        return {StyleValue::STRING, 0.0, "", ss.str()};
     }
 
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
@@ -588,31 +584,33 @@ StyleValue StyleBlockState::parseConditionalExpr(Parser& parser) {
 
 StyleValue StyleBlockState::parseStyleExpression(Parser& parser) {
     // A property value is a chain of conditional expressions, separated by commas.
-    // The first one that evaluates to a non-empty value wins.
-    StyleValue finalValue; // Default-constructs to EMPTY
-    bool valueFound = false;
+    // The first one that evaluates to true wins.
+    StyleValue finalValue{StyleValue::EMPTY};
+    bool conditionMet = false;
 
-    do {
-        StyleValue currentResult = parseConditionalExpr(parser);
+    while (true) {
+        StyleValue result = parseConditionalExpr(parser);
 
-        // The first valid result wins. A valid result is anything that is not EMPTY.
-        if (!valueFound && currentResult.type != StyleValue::EMPTY) {
-            finalValue = currentResult;
-            valueFound = true;
+        if (!conditionMet) {
+            if (result.type != StyleValue::EMPTY) {
+                finalValue = result;
+                // If the result was not a simple value, it must have been a successful conditional
+                if (result.type != StyleValue::NUMERIC && result.type != StyleValue::STRING) {
+                     conditionMet = true;
+                }
+            }
         }
 
-        // If there's a comma, it means another expression follows.
-        // We continue the loop to parse it, even if we've already found our value.
-        // This is necessary to correctly advance the parser past all parts of the property value.
         if (parser.currentToken.type == TokenType::Comma) {
             parser.advanceTokens();
+            // If we've already found our value, we still need to parse the rest of the expression to consume the tokens.
+            if (conditionMet) {
+                parseStyleExpression(parser);
+            }
         } else {
-            // If there's no comma, the chain is broken, so we exit.
-            break;
+            break; // End of chain
         }
-
-    } while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile);
-
+    }
     return finalValue;
 }
 
