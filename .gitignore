@@ -18,6 +18,7 @@
 
 # CMake generated directory
 /CMakeFiles/
+/Testing/
 
 # Test-generated files
 *.chtl

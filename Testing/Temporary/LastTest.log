@@ -1,30 +1,70 @@
-Start testing: Sep 24 18:48 UTC
+Start testing: Sep 26 02:09 UTC
 ----------------------------------------------------------
 1/1 Testing: RunCHTLTests
 1/1 Test: RunCHTLTests
 Command: "/app/chtl_tests"
 Directory: /app
-"RunCHTLTests" start time: Sep 24 18:48 UTC
+"RunCHTLTests" start time: Sep 26 02:09 UTC
 Output:
 ----------------------------------------------------------
 Running CHTL tests...
+[PASS] Lexer Configuration Keyword
 [PASS] Referenced Property
 [PASS] Conditional Expression (True)
 [PASS] Conditional Expression (False)
+[PASS] Custom Style Specialization
 [PASS] Custom Element Deletion
+[PASS] Custom Element Insertion
+[PASS] Custom Element Insertion At Top/Bottom
 [PASS] Import Statement
-[PASS] Unquoted Literals
+[PASS] Text Block Literals
+[PASS] Unquoted Literal Support
+[PASS] Enhanced Selector
+[PASS] Responsive Value
 [PASS] Calc() Generation
 [PASS] Except Constraint
 [PASS] Named Origin and Import
 [PASS] Delete Style Inheritance
+[PASS] Namespace-qualified Template Access
+[PASS] Keyword Aliasing
+[PASS] Hyphenated CSS Property
+[PASS] Attribute Expression
+[PASS] Conditional Attribute
+[PASS] Delete Style Property
+[PASS] Var Template Usage
+[PASS] Var Template Specialization
+[PASS] Style Auto Add Class
+[PASS] Extended Except Clause
+[PASS] Ampersand Selector Order
+[PASS] Delete Element Inheritance
+[PASS] Calc With Percentage
+[PASS] Implicit Style Template Inheritance
+[PASS] Use HTML5 Directive
+[PASS] Named Configuration
+[PASS] Precise Style Import
+[PASS] Precise Var Import
+[PASS] Precise Style Import with Alias
+[PASS] Precise Import Not Found
+[PASS] Scanner Ignores Nested Script
+[PASS] Unified Scanner Style Separation
+[PASS] Scanner Ignores Nested Style
+[PASS] Scanner Handles Nested Braces in Script
+[PASS] Dispatcher Workflow
+[PASS] Info Block Parsing
+[PASS] Literal Types
+[PASS] Ignored Comments
+[PASS] Colon-Equal Equivalence in Info Block
+[PASS] Colon-Equal Equivalence in Config Block
+[PASS] Colon-Equal Equivalence in Var Template
+[PASS] Style Property Power Operator
+[PASS] Style Property Modulo Operator
 Tests finished.
 <end of output>
-Test time =   0.00 sec
+Test time =   0.01 sec
 ----------------------------------------------------------
 Test Passed.
-"RunCHTLTests" end time: Sep 24 18:48 UTC
+"RunCHTLTests" end time: Sep 26 02:09 UTC
 "RunCHTLTests" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Sep 24 18:48 UTC
+End testing: Sep 26 02:09 UTC

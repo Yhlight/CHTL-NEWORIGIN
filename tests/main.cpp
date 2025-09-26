@@ -47,7 +47,7 @@ void test_precise_style_import();
 void test_precise_var_import();
 void test_precise_style_import_with_alias();
 void test_precise_import_not_found();
-void test_unified_scanner_script_separation();
+void test_scanner_ignores_nested_script();
 void test_unified_scanner_style_separation();
 void test_scanner_ignores_nested_style();
 void test_scanner_handles_nested_braces_in_script();
@@ -414,7 +414,7 @@ int main() {
     run_test(test_precise_var_import, "Precise Var Import");
     run_test(test_precise_style_import_with_alias, "Precise Style Import with Alias");
     run_test(test_precise_import_not_found, "Precise Import Not Found");
-    run_test(test_unified_scanner_script_separation, "Unified Scanner Script Separation");
+    run_test(test_scanner_ignores_nested_script, "Scanner Ignores Nested Script");
     run_test(test_unified_scanner_style_separation, "Unified Scanner Style Separation");
     run_test(test_scanner_ignores_nested_style, "Scanner Ignores Nested Style");
     run_test(test_scanner_handles_nested_braces_in_script, "Scanner Handles Nested Braces in Script");
@@ -518,7 +518,7 @@ void test_unified_scanner_style_separation() {
     assert(fragments[0].content.find("background-color") != std::string::npos);
 }
 
-void test_unified_scanner_script_separation() {
+void test_scanner_ignores_nested_script() {
     std::string source = R"(
         div {
             p { text: "Hello"; }
@@ -530,11 +530,11 @@ void test_unified_scanner_script_separation() {
     )";
     UnifiedScanner scanner;
     auto fragments = scanner.scan(source);
-    assert(fragments.size() == 3);
+    // The new scanner should NOT separate nested script blocks.
+    // The entire content should be treated as a single CHTL fragment.
+    assert(fragments.size() == 1);
     assert(fragments[0].type == FragmentType::CHTL);
-    assert(fragments[1].type == FragmentType::JS);
-    assert(fragments[2].type == FragmentType::CHTL);
-    assert(fragments[1].content.find("console.log(\"World\");") != std::string::npos);
+    assert(fragments[0].content.find("console.log(\"World\");") != std::string::npos);
 }
 
 void test_precise_import_not_found() {
