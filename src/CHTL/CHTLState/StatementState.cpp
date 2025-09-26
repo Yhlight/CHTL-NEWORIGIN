@@ -35,6 +35,81 @@ void parseScriptBlock(Parser& parser, ElementNode& element);
 
 // The main handler for this state. It acts as a dispatcher.
 std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
+    // --- CONSTAINT CHECKING ---
+    if (parser.contextNode && !parser.contextNode->constraints.empty()) {
+        std::string upcoming_name;
+        std::string upcoming_meta_qualifier;
+        std::string upcoming_type_qualifier;
+        bool is_html_tag = false;
+        bool is_unconstrained = false; // text, comments, etc. are not constrained
+
+        // 1. Determine the properties of the upcoming node
+        if (parser.currentToken.type == TokenType::Identifier && (parser.currentToken.value == "text" || parser.currentToken.value == "style" || parser.currentToken.value == "script")) {
+            is_unconstrained = true;
+        } else if (parser.currentToken.type == TokenType::HashComment) {
+            is_unconstrained = true;
+        } else if (parser.currentToken.type == TokenType::Identifier) {
+            is_html_tag = true;
+            upcoming_name = parser.currentToken.value;
+        } else if (parser.currentToken.type == TokenType::At) {
+            upcoming_type_qualifier = "@" + parser.peekToken.value;
+            if (upcoming_type_qualifier == "@Element") {
+                upcoming_name = parser.peekToken2.value;
+                ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(parser.getCurrentNamespace(), upcoming_name);
+                if (tmpl) {
+                    upcoming_meta_qualifier = tmpl->isCustom ? "[Custom]" : "[Template]";
+                }
+            }
+        } else if (parser.currentToken.type == TokenType::OpenBracket) {
+            if (parser.peekToken.value == "Origin") {
+                is_html_tag = true; // Treat as @Html for constraint purposes
+            } else {
+                is_unconstrained = true; // Definitions like [Template] are not constrained
+            }
+        } else if (parser.currentToken.type == TokenType::Use) {
+            is_unconstrained = true;
+        }
+
+
+        // 2. Check against all constraints on the contextNode
+        if (!is_unconstrained) {
+            for (const auto& constraint : parser.contextNode->constraints) {
+                bool forbidden = false;
+                switch (constraint.type) {
+                    case ConstraintTargetType::TAG_NAME:
+                        if (is_html_tag && constraint.name == upcoming_name) forbidden = true;
+                        break;
+                    case ConstraintTargetType::QUALIFIED_NAME:
+                        if (constraint.name == upcoming_name &&
+                            constraint.meta_qualifier == upcoming_meta_qualifier &&
+                            constraint.type_qualifier == upcoming_type_qualifier) forbidden = true;
+                        break;
+                    case ConstraintTargetType::HTML_CATEGORY:
+                        if (is_html_tag) forbidden = true;
+                        break;
+                    case ConstraintTargetType::TEMPLATE_CATEGORY:
+                        if (upcoming_meta_qualifier == "[Template]") forbidden = true;
+                        break;
+                    case ConstraintTargetType::CUSTOM_CATEGORY:
+                        if (upcoming_meta_qualifier == "[Custom]") forbidden = true;
+                        break;
+                    default:
+                        break;
+                }
+
+                if (forbidden) {
+                    std::string forbidden_item = upcoming_name;
+                    if (forbidden_item.empty()) {
+                        if (!upcoming_meta_qualifier.empty()) forbidden_item += upcoming_meta_qualifier;
+                        if (!upcoming_type_qualifier.empty()) forbidden_item += " " + upcoming_type_qualifier;
+                    }
+                    throw std::runtime_error("Usage of '" + forbidden_item + "' is forbidden in <" + parser.contextNode->tagName + "> due to an 'except' constraint.");
+                }
+            }
+        }
+    }
+    // --- END CONSTAINT CHECKING ---
+
     if (parser.currentToken.type == TokenType::OpenBracket) {
         // Use the config manager to check the keyword inside the brackets
         const auto& config = parser.configManager;
@@ -74,94 +149,8 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         parser.setState(std::make_unique<UseState>());
         return nullptr; // `use` directive does not produce a node
     } else if (parser.currentToken.type == TokenType::At) {
-        // --- ADD CONSTRAINT CHECK FOR TEMPLATE USAGE ---
-        if (parser.contextNode && !parser.contextNode->constraints.empty()) {
-            if (parser.peekToken.value == "Element") {
-                const std::string& templateName = parser.peekToken2.value;
-                // Note: This simplified lookup assumes the template is in the current namespace.
-                // A full implementation might need to search namespaces.
-                ElementTemplateNode* tmpl = parser.templateManager.getElementTemplate(parser.getCurrentNamespace(), templateName);
-                if (tmpl) {
-                    ConstraintType usageType = tmpl->isCustom ? ConstraintType::CustomElement : ConstraintType::TemplateElement;
-                    for (const auto& constraint : parser.contextNode->constraints) {
-                        bool isForbidden = false;
-                        if (!constraint.identifier.empty() && constraint.identifier == templateName && constraint.type == usageType) {
-                            isForbidden = true;
-                        } else if (constraint.identifier.empty()) {
-                            if (constraint.type == ConstraintType::Custom && tmpl->isCustom) isForbidden = true;
-                            if (constraint.type == ConstraintType::Template && !tmpl->isCustom) isForbidden = true;
-                        }
-                        if (isForbidden) {
-                            throw std::runtime_error("Usage of '" + templateName + "' is not allowed inside <" + parser.contextNode->tagName + "> due to an 'except' constraint.");
-                        }
-                    }
-                }
-            }
-        }
         return parseElementTemplateUsage(parser);
     } else if (parser.currentToken.type == TokenType::Identifier) {
-        // Check for constraints before parsing the element
-        if (parser.contextNode && !parser.contextNode->constraints.empty()) {
-            // Determine the type of the node we are about to parse
-            ConstraintType upcomingType = ConstraintType::TagName;
-            std::string upcomingIdentifier = "";
-            bool isCustom = false;
-            bool isTemplate = false;
-            bool isOrigin = false;
-
-            if (parser.currentToken.type == TokenType::OpenBracket) {
-                if (parser.peekToken.value == "Custom") isCustom = true;
-                else if (parser.peekToken.value == "Template") isTemplate = true;
-                else if (parser.peekToken.value == "Origin") isOrigin = true;
-            }
-
-            if (parser.currentToken.type == TokenType::At) {
-                 if (parser.peekToken.value == "Element") {
-                     upcomingType = isCustom ? ConstraintType::CustomElement : ConstraintType::TemplateElement;
-                     upcomingIdentifier = parser.peekToken2.value;
-                 }
-                 // Add other @ types if needed
-            } else if (isOrigin) {
-                // This is a generic [Origin] block, which we can consider as @Html for constraint purposes
-                upcomingType = ConstraintType::Html;
-            } else if (parser.currentToken.type == TokenType::Identifier) {
-                upcomingType = ConstraintType::TagName;
-                upcomingIdentifier = parser.currentToken.value;
-            }
-
-
-            for (const auto& constraint : parser.contextNode->constraints) {
-                bool isForbidden = false;
-                switch (constraint.type) {
-                    case ConstraintType::TagName:
-                        if (upcomingType == ConstraintType::TagName && constraint.identifier == upcomingIdentifier) isForbidden = true;
-                        break;
-                    case ConstraintType::CustomElement:
-                        if (upcomingType == ConstraintType::CustomElement && constraint.identifier == upcomingIdentifier) isForbidden = true;
-                        break;
-                    case ConstraintType::TemplateElement:
-                        if (upcomingType == ConstraintType::TemplateElement && constraint.identifier == upcomingIdentifier) isForbidden = true;
-                        break;
-                    case ConstraintType::Html:
-                        // This forbids any plain tag, and also Origin blocks
-                        if (upcomingType == ConstraintType::TagName || upcomingType == ConstraintType::Html) isForbidden = true;
-                        break;
-                    case ConstraintType::Custom:
-                        if (isCustom) isForbidden = true;
-                        break;
-                    case ConstraintType::Template:
-                        if (isTemplate) isForbidden = true;
-                        break;
-                    default:
-                        break;
-                }
-
-                if (isForbidden) {
-                     throw std::runtime_error("Usage of '" + upcomingIdentifier + "' is not allowed inside <" + parser.contextNode->tagName + "> due to an 'except' constraint.");
-                }
-            }
-        }
-
         if (parser.currentToken.value == "text") {
             return parseTextElement(parser);
         }
@@ -174,57 +163,62 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
 }
 
-#include "../CHTLNode/Constraint.h" // Add include for new Constraint struct
-
 void StatementState::parseExceptClause(Parser& parser, ElementNode& element) {
-    // The 'except' keyword has already been consumed by tryExpectKeyword in the caller.
+    // The 'except' keyword has already been consumed.
 
     while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
         Constraint constraint;
-        bool isCustom = false;
-        bool isTemplate = false;
 
-        // Check for [Custom] or [Template]
+        // Check for meta qualifiers like [Custom] or [Template]
         if (parser.currentToken.type == TokenType::OpenBracket) {
-            if (parser.peekToken.value == "Custom") {
-                isCustom = true;
-                parser.advanceTokens(); // [
-                parser.advanceTokens(); // Custom
-                parser.expectToken(TokenType::CloseBracket);
-            } else if (parser.peekToken.value == "Template") {
-                isTemplate = true;
-                parser.advanceTokens(); // [
-                parser.advanceTokens(); // Template
-                parser.expectToken(TokenType::CloseBracket);
-            }
+            std::stringstream ss;
+            ss << parser.currentToken.value; // Append '['
+            parser.advanceTokens();
+            ss << parser.currentToken.value; // Append 'Custom' or 'Template'
+            parser.advanceTokens();
+            ss << parser.currentToken.value; // Append ']'
+            parser.expectToken(TokenType::CloseBracket);
+            constraint.meta_qualifier = ss.str();
         }
 
+        // Check for type qualifiers like @Html or @Element
         if (parser.currentToken.type == TokenType::At) {
-            parser.advanceTokens(); // @
-            std::string typeName = parser.currentToken.value;
+            parser.advanceTokens(); // Consume '@'
+            constraint.type_qualifier = "@" + parser.currentToken.value;
             parser.expectToken(TokenType::Identifier);
 
-            if (typeName == "Html") {
-                constraint.type = ConstraintType::Html;
-            } else if (typeName == "Element") {
-                if(isCustom) constraint.type = ConstraintType::CustomElement;
-                else constraint.type = ConstraintType::TemplateElement;
-                constraint.identifier = parser.currentToken.value;
-                parser.advanceTokens();
-            } else if (typeName == "Var") {
-                constraint.type = ConstraintType::TemplateVar;
-                constraint.identifier = parser.currentToken.value;
-                parser.advanceTokens();
+            if (constraint.meta_qualifier.empty()) {
+                // This is a category constraint like `except @Html`
+                if (constraint.type_qualifier == "@Html") {
+                    constraint.type = ConstraintTargetType::HTML_CATEGORY;
+                } else {
+                    throw std::runtime_error("Category constraint with '@' must be '@Html'. Found '" + constraint.type_qualifier + "'.");
+                }
+            } else {
+                // This is a more specific category or a qualified name.
+                if (constraint.type_qualifier == "@Var" && constraint.meta_qualifier == "[Template]") {
+                    constraint.type = ConstraintTargetType::TEMPLATE_VAR_CATEGORY;
+                } else if (constraint.type_qualifier == "@Element" || constraint.type_qualifier == "@Style") {
+                    constraint.type = ConstraintTargetType::QUALIFIED_NAME;
+                    constraint.name = parser.currentToken.value; // The name of the element/style
+                    parser.expectToken(TokenType::Identifier);
+                } else {
+                    throw std::runtime_error("Unsupported type qualifier '" + constraint.type_qualifier + "' for constraint.");
+                }
             }
-            // Add other @-types here if needed
-        } else if (isCustom) {
-            constraint.type = ConstraintType::Custom;
-        } else if (isTemplate) {
-            constraint.type = ConstraintType::Template;
+        } else if (!constraint.meta_qualifier.empty()) {
+            // This is a category constraint like `except [Template]`
+            if (constraint.meta_qualifier == "[Template]") {
+                constraint.type = ConstraintTargetType::TEMPLATE_CATEGORY;
+            } else if (constraint.meta_qualifier == "[Custom]") {
+                constraint.type = ConstraintTargetType::CUSTOM_CATEGORY;
+            } else {
+                 throw std::runtime_error("Unsupported meta qualifier '" + constraint.meta_qualifier + "' for constraint.");
+            }
         } else if (parser.currentToken.type == TokenType::Identifier) {
-            // Simple tag name constraint
-            constraint.type = ConstraintType::TagName;
-            constraint.identifier = parser.currentToken.value;
+            // This is a simple tag name constraint
+            constraint.type = ConstraintTargetType::TAG_NAME;
+            constraint.name = parser.currentToken.value;
             parser.advanceTokens();
         } else {
             throw std::runtime_error("Invalid token in 'except' clause: " + parser.currentToken.value);
@@ -232,7 +226,6 @@ void StatementState::parseExceptClause(Parser& parser, ElementNode& element) {
 
         element.constraints.push_back(constraint);
 
-        // Consume comma if it exists
         if (parser.currentToken.type == TokenType::Comma) {
             parser.advanceTokens();
         } else {

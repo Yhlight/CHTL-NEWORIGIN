@@ -163,24 +163,62 @@ void test_calc_generation() {
     assert(result.find("width: calc(100% - 20px);") != std::string::npos);
 }
 
-void test_except_constraint() {
-    std::string source = R"(
-        div {
-            except span;
-            span { text: "forbidden"; }
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    bool exception_thrown = false;
-    try {
-        parser.parse();
-    } catch (const std::runtime_error& e) {
-        exception_thrown = true;
-        std::string msg = e.what();
-        assert(msg.find("is not allowed") != std::string::npos);
-    }
-    assert(exception_thrown);
+void test_except_constraints_parsing_and_enforcement() {
+    // Test 1: Simple tag name constraint
+    std::string source1 = R"(div { except span; span {} })";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    bool thrown1 = false;
+    try { parser1.parse(); } catch (const std::runtime_error& e) { thrown1 = true; }
+    assert(thrown1);
+
+    // Test 2: Valid nesting with a tag name constraint
+    std::string source2 = R"(div { except span; p {} })";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    bool thrown2 = false;
+    try { parser2.parse(); } catch (const std::runtime_error& e) { thrown2 = true; }
+    assert(!thrown2);
+
+    // Test 3: Qualified name constraint ([Custom] @Element)
+    std::string source3 = R"([Custom] @Element Box {} div { except [Custom] @Element Box; @Element Box; })";
+    Lexer lexer3(source3);
+    Parser parser3(lexer3);
+    bool thrown3 = false;
+    try { parser3.parse(); } catch (const std::runtime_error& e) { thrown3 = true; }
+    assert(thrown3);
+
+    // Test 4: HTML category constraint
+    std::string source4 = R"(div { except @Html; p {} })";
+    Lexer lexer4(source4);
+    Parser parser4(lexer4);
+    bool thrown4 = false;
+    try { parser4.parse(); } catch (const std::runtime_error& e) { thrown4 = true; }
+    assert(thrown4);
+
+    // Test 5: [Template] category constraint
+    std::string source5 = R"([Template] @Element Box {} div { except [Template]; @Element Box; })";
+    Lexer lexer5(source5);
+    Parser parser5(lexer5);
+    bool thrown5 = false;
+    try { parser5.parse(); } catch (const std::runtime_error& e) { thrown5 = true; }
+    assert(thrown5);
+
+    // Test 6: [Custom] category constraint
+    std::string source6 = R"([Custom] @Element Box {} div { except [Custom]; @Element Box; })";
+    Lexer lexer6(source6);
+    Parser parser6(lexer6);
+    bool thrown6 = false;
+    try { parser6.parse(); } catch (const std::runtime_error& e) { thrown6 = true; }
+    assert(thrown6);
+
+    // Test 7: Multiple constraints in one line
+    std::string source7 = R"(div { except p, span; span{} })";
+    Lexer lexer7(source7);
+    Parser parser7(lexer7);
+    bool thrown7 = false;
+    try { parser7.parse(); } catch (const std::runtime_error& e) { thrown7 = true; }
+    assert(thrown7);
 }
 
 void test_named_origin_and_import() {
@@ -390,7 +428,7 @@ int main() {
     run_test(test_enhanced_selector, "Enhanced Selector");
     run_test(test_responsive_value, "Responsive Value");
     run_test(test_calc_generation, "Calc() Generation");
-    run_test(test_except_constraint, "Except Constraint");
+    run_test(test_except_constraints_parsing_and_enforcement, "Except Constraints Parsing and Enforcement");
     run_test(test_named_origin_and_import, "Named Origin and Import");
     run_test(test_delete_style_inheritance, "Delete Style Inheritance");
 
@@ -403,7 +441,6 @@ int main() {
     run_test(test_var_template_usage, "Var Template Usage");
     run_test(test_var_template_specialization, "Var Template Specialization");
     run_test(test_style_auto_add_class, "Style Auto Add Class");
-    run_test(test_except_clause_extended, "Extended Except Clause");
     run_test(test_ampersand_selector_order, "Ampersand Selector Order");
     run_test(test_delete_element_inheritance, "Delete Element Inheritance");
     run_test(test_calc_with_percentage, "Calc With Percentage");
@@ -742,52 +779,6 @@ void test_ampersand_selector_order() {
     assert(result.find("class=\"my-class\"") != std::string::npos);
 }
 
-void test_except_clause_extended() {
-    // Test case 1: Forbid a specific custom element
-    std::string source1 = R"(
-        [Custom] @Element MyComponent { div{} }
-        html {
-            head {}
-            body {
-                except [Custom] @Element MyComponent;
-                @Element MyComponent;
-            }
-        }
-    )";
-    Lexer lexer1(source1);
-    Parser parser1(lexer1);
-    bool exception_thrown1 = false;
-    try {
-        parser1.parse();
-    } catch (const std::runtime_error& e) {
-        exception_thrown1 = true;
-        std::string msg = e.what();
-        assert(msg.find("is not allowed") != std::string::npos);
-    }
-    assert(exception_thrown1);
-
-    // Test case 2: Forbid all HTML tags
-    std::string source2 = R"(
-        html {
-            head {}
-            body {
-                except @Html;
-                div { }
-            }
-        }
-    )";
-    Lexer lexer2(source2);
-    Parser parser2(lexer2);
-    bool exception_thrown2 = false;
-    try {
-        parser2.parse();
-    } catch (const std::runtime_error& e) {
-        exception_thrown2 = true;
-        std::string msg = e.what();
-        assert(msg.find("is not allowed") != std::string::npos);
-    }
-    assert(exception_thrown2);
-}
 
 void test_style_auto_add_class() {
     // Test case 1: Class should be added automatically
