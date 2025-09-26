@@ -11,6 +11,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/RawScriptNode.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
+#include "../CHTLNode/ListenNode.h"
 #include "../Util/NodeCloner.h"
 #include "../CHTLLoader/Loader.h"
 #include <stdexcept>
@@ -967,6 +968,7 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
     auto scriptNode = std::make_unique<ScriptNode>("");
     size_t rawContentStartPos = parser.currentToken.start_pos;
 
+    // Helper to flush raw JS content into a node
     auto flushRawContent = [&](size_t endPos) {
         if (endPos > rawContentStartPos) {
             std::string content = parser.lexer.getSource().substr(rawContentStartPos, endPos - rawContentStartPos);
@@ -978,15 +980,80 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
 
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
         if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
-            flushRawContent(parser.currentToken.start_pos);
+            flushRawContent(parser.currentToken.start_pos); // Flush JS before the selector
             parser.advanceTokens(); // Consume '{{'
             std::stringstream selectorContent;
             while (parser.currentToken.type != TokenType::CloseDoubleBrace && parser.currentToken.type != TokenType::EndOfFile) {
                 selectorContent << parser.currentToken.value;
                 parser.advanceTokens();
             }
-            scriptNode->children.push_back(std::make_unique<EnhancedSelectorNode>(selectorContent.str()));
             parser.expectToken(TokenType::CloseDoubleBrace);
+            auto selectorNode = std::make_unique<EnhancedSelectorNode>(selectorContent.str());
+
+            // Check for '->Listen'
+            if (parser.currentToken.type == TokenType::Minus && parser.peekToken.type == TokenType::GreaterThan) {
+                parser.advanceTokens(); // Consume '-'
+                parser.advanceTokens(); // Consume '>'
+                if (parser.currentToken.type == TokenType::Listen) {
+                    parser.advanceTokens(); // Consume 'Listen'
+                    parser.expectToken(TokenType::OpenBrace);
+
+                    auto listenNode = std::make_unique<ListenNode>(std::move(selectorNode));
+
+                    // Parse event-handler pairs
+                    while (parser.currentToken.type != TokenType::CloseBrace) {
+                        std::string eventName = parser.currentToken.value;
+                        parser.expectToken(TokenType::Identifier);
+                        parser.expectToken(TokenType::Colon);
+
+                        size_t handlerStartPos = parser.currentToken.start_pos;
+                        int braceLevel = 0;
+
+                        while (parser.currentToken.type != TokenType::EndOfFile) {
+                            if (parser.currentToken.type == TokenType::OpenBrace) {
+                                braceLevel++;
+                            } else if (parser.currentToken.type == TokenType::CloseBrace) {
+                                if (braceLevel == 0) break; // This is the Listen block's closing brace.
+                                braceLevel--;
+                            } else if (parser.currentToken.type == TokenType::Comma && braceLevel == 0) {
+                                break; // End of this handler.
+                            }
+                            parser.advanceTokens();
+                        }
+
+                        size_t handlerEndPos = parser.currentToken.start_pos;
+                        std::string handlerCode = parser.lexer.getSource().substr(handlerStartPos, handlerEndPos - handlerStartPos);
+
+                        // Trim whitespace
+                        const std::string whitespace = " \t\n\r\f\v";
+                        size_t first = handlerCode.find_first_not_of(whitespace);
+                        if (std::string::npos != first) {
+                            size_t last = handlerCode.find_last_not_of(whitespace);
+                            handlerCode = handlerCode.substr(first, (last - first + 1));
+                        }
+
+                        listenNode->events[eventName] = handlerCode;
+
+                        if (parser.currentToken.type == TokenType::Comma) {
+                            parser.advanceTokens();
+                        }
+                    }
+
+                    scriptNode->children.push_back(std::move(listenNode));
+                    parser.expectToken(TokenType::CloseBrace);
+                    // Semicolon is optional after Listen block
+                    if (parser.currentToken.type == TokenType::Semicolon) {
+                        parser.advanceTokens();
+                    }
+                } else {
+                    // It was '->' but not 'Listen', treat as raw JS
+                    scriptNode->children.push_back(std::move(selectorNode));
+                    scriptNode->children.push_back(std::make_unique<RawScriptNode>("->"));
+                }
+            } else {
+                // Not a '->' token, just a regular selector
+                scriptNode->children.push_back(std::move(selectorNode));
+            }
             rawContentStartPos = parser.currentToken.start_pos;
         } else if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.type == TokenType::Origin) {
             flushRawContent(parser.currentToken.start_pos);

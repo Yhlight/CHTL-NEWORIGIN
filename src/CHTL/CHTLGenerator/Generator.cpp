@@ -5,6 +5,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/RawScriptNode.h"
 #include "../CHTLNode/EnhancedSelectorNode.h"
+#include "../CHTLNode/ListenNode.h"
 #include <stdexcept>
 #include <algorithm>
 #include <set>
@@ -74,6 +75,9 @@ void Generator::generateNode(const BaseNode* node) {
             break;
         case NodeType::Script:
             generateScript(static_cast<const ScriptNode*>(node));
+            break;
+        case NodeType::Listen:
+            generateListen(static_cast<const ListenNode*>(node));
             break;
         default:
             break;
@@ -152,26 +156,50 @@ void Generator::generateComment(const CommentNode* node) {
 }
 
 void Generator::generateScript(const ScriptNode* node) {
-    append(getIndent() + "<script>");
-    std::string scriptContent;
+    append(getIndent() + "<script>\n");
+    indent();
     for (const auto& child : node->children) {
         switch(child->getType()) {
             case NodeType::RawScript:
-                scriptContent += static_cast<const RawScriptNode*>(child.get())->content;
+                append(static_cast<const RawScriptNode*>(child.get())->content);
                 break;
             case NodeType::EnhancedSelector:
-                scriptContent += "document.querySelector('" + static_cast<const EnhancedSelectorNode*>(child.get())->selector + "')";
+                 append("document.querySelector('" + static_cast<const EnhancedSelectorNode*>(child.get())->selector + "')");
                 break;
             case NodeType::Origin:
-                 scriptContent += static_cast<const OriginNode*>(child.get())->content;
+                 append(static_cast<const OriginNode*>(child.get())->content);
+                 break;
+            case NodeType::Listen:
+                 generateListen(static_cast<const ListenNode*>(child.get()));
                  break;
             default:
                 break;
         }
     }
-    append(scriptContent);
-    append("</script>\n");
+    outdent();
+    append("\n" + getIndent() + "</script>\n");
 }
+
+void Generator::generateListen(const ListenNode* node) {
+    if (!node || !node->target) return;
+
+    // Use a unique variable name for the target element to avoid conflicts.
+    std::string selectorVar = "chtl_target_" + std::to_string(reinterpret_cast<uintptr_t>(node));
+
+    append(getIndent() + "const " + selectorVar + " = document.querySelector('" + node->target->selector + "');\n");
+    append(getIndent() + "if (" + selectorVar + ") {\n");
+    indent();
+
+    for (const auto& pair : node->events) {
+        const std::string& eventName = pair.first;
+        const std::string& handler = pair.second;
+        appendLine(selectorVar + ".addEventListener('" + eventName + "', " + handler + ");");
+    }
+
+    outdent();
+    append(getIndent() + "}\n");
+}
+
 
 void Generator::generateRuntimeScript(const SharedContext& context) {
     if (context.responsiveBindings.empty()) {

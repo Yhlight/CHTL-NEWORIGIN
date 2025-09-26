@@ -25,12 +25,14 @@ private:
     std::string globalCssToInject;
 
 #include "../CHTLNode/ScriptNode.h"
+#include "../CHTLNode/ListenNode.h"
     // Visitor-style methods to generate output for each node type.
     void generateNode(const BaseNode* node);
     void generateElement(ElementNode* node); // Needs to be non-const to add id
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
     void generateScript(const ScriptNode* node);
+    void generateListen(const ListenNode* node);
     void generateRuntimeScript(const SharedContext& context);
 
     // Helper methods for managing indentation and building the result string.

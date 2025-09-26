@@ -21,5 +21,6 @@ public:
     std::vector<CodeFragment> scan(const std::string& source);
 
 private:
-    // Helper methods will be added here
+    // Helper method to scan inside a script block
+    std::vector<CodeFragment> scan_script_fragment(const std::string& script_source);
 };

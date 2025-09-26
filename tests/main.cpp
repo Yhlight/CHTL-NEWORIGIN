@@ -64,6 +64,8 @@ void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
+void test_unified_scanner_chtl_js_separation();
+void test_listen_feature();
 
 
 void test_text_block_literals() {
@@ -427,6 +429,8 @@ int main() {
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
+    run_test(test_unified_scanner_chtl_js_separation, "Unified Scanner CHTL JS Separation");
+    run_test(test_listen_feature, "Listen Feature End-to-End");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -530,11 +534,11 @@ void test_unified_scanner_script_separation() {
     )";
     UnifiedScanner scanner;
     auto fragments = scanner.scan(source);
-    assert(fragments.size() == 3);
+    // This test now asserts the correct behavior: nested scripts are NOT separated.
+    // The entire block should be treated as one CHTL fragment.
+    assert(fragments.size() == 1);
     assert(fragments[0].type == FragmentType::CHTL);
-    assert(fragments[1].type == FragmentType::JS);
-    assert(fragments[2].type == FragmentType::CHTL);
-    assert(fragments[1].content.find("console.log(\"World\");") != std::string::npos);
+    assert(fragments[0].content.find("console.log(\"World\");") != std::string::npos);
 }
 
 void test_precise_import_not_found() {
@@ -1192,4 +1196,88 @@ void test_style_property_modulo_operator() {
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width: 1px;") != std::string::npos);
+}
+
+void test_listen_feature() {
+    std::string source = R"(
+        div {
+            id: "my-div";
+            script {
+                {{#my-div}}->Listen {
+                    click: () => { console.log("clicked!"); },
+                    mouseenter: function() { this.style.color = 'red'; }
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check for the addEventListener call for the 'click' event
+    std::string expected_click_listener = ".addEventListener('click', () => { console.log(\"clicked!\"); })";
+    assert(result.find(expected_click_listener) != std::string::npos);
+
+    // Check for the addEventListener call for the 'mouseenter' event
+    std::string expected_mouseenter_listener = ".addEventListener('mouseenter', function() { this.style.color = 'red'; })";
+    assert(result.find(expected_mouseenter_listener) != std::string::npos);
+
+    // Check that the querySelector is also present
+    assert(result.find("document.querySelector('#my-div')") != std::string::npos);
+}
+
+void test_unified_scanner_chtl_js_separation() {
+    UnifiedScanner scanner;
+
+    // Helper to trim whitespace for comparison
+    auto trim = [](const std::string& str) {
+        const std::string whitespace = " \t\n\r\f\v";
+        size_t first = str.find_first_not_of(whitespace);
+        if (std::string::npos == first) return std::string("");
+        size_t last = str.find_last_not_of(whitespace);
+        return str.substr(first, (last - first + 1));
+    };
+
+    // Scenario 1: A simple script with mixed JS and CHTL JS
+    std::string source1 = "script { const a = {{.my-selector}}; a.run(); }";
+    auto fragments1 = scanner.scan(source1);
+    assert(fragments1.size() == 3);
+    assert(fragments1[0].type == FragmentType::JS);
+    assert(trim(fragments1[0].content) == "const a =");
+    assert(fragments1[1].type == FragmentType::CHTL_JS);
+    assert(fragments1[1].content == "{{.my-selector}}");
+    assert(fragments1[2].type == FragmentType::JS);
+    assert(trim(fragments1[2].content) == "; a.run();");
+
+    // Scenario 2: A script with only standard JS
+    std::string source2 = "script { if (x > y) { console.log('hello'); } }";
+    auto fragments2 = scanner.scan(source2);
+    assert(fragments2.size() == 1);
+    assert(fragments2[0].type == FragmentType::JS);
+    assert(trim(fragments2[0].content) == "if (x > y) { console.log('hello'); }");
+
+    // Scenario 3: A script with multiple CHTL JS expressions
+    std::string source3 = "script { var x = {{.x}}; var y = {{.y}}; }";
+    auto fragments3 = scanner.scan(source3);
+    assert(fragments3.size() == 5); // Expect 5 fragments now, including the trailing semicolon
+    assert(fragments3[0].type == FragmentType::JS);
+    assert(trim(fragments3[0].content) == "var x =");
+    assert(fragments3[1].type == FragmentType::CHTL_JS);
+    assert(fragments3[1].content == "{{.x}}");
+    assert(fragments3[2].type == FragmentType::JS); // Corrected typo from fragments2 to fragments3
+    assert(trim(fragments3[2].content) == "; var y =");
+    assert(fragments3[3].type == FragmentType::CHTL_JS);
+    assert(fragments3[3].content == "{{.y}}");
+    assert(fragments3[4].type == FragmentType::JS);
+    assert(trim(fragments3[4].content) == ";");
+
+    // Scenario 4: A script starting and ending with CHTL JS
+    std::string source4 = "script { {{start}} middle {{end}} }";
+    auto fragments4 = scanner.scan(source4);
+    assert(fragments4.size() == 3);
+    assert(fragments4[0].type == FragmentType::CHTL_JS);
+    assert(fragments4[0].content == "{{start}}");
+    assert(fragments4[1].type == FragmentType::JS);
+    assert(trim(fragments4[1].content) == "middle");
+    assert(fragments4[2].type == FragmentType::CHTL_JS);
+    assert(fragments4[2].content == "{{end}}");
 }

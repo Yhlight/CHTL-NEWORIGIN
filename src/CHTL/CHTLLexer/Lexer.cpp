@@ -90,6 +90,7 @@ Token Lexer::identifier() {
     if (value == "Import") return {TokenType::Import, value, line, startCol, startPos};
     if (value == "Configuration") return {TokenType::Configuration, value, line, startCol, startPos};
     if (value == "Info") return {TokenType::Info, value, line, startCol, startPos};
+    if (value == "Listen") return {TokenType::Listen, value, line, startCol, startPos};
 
     return {TokenType::Identifier, value, line, startCol, startPos};
 }

@@ -25,6 +25,55 @@ int calculate_brace_level_up_to(const std::string& s, size_t end) {
 
 } // anonymous namespace
 
+// New method to scan inside script blocks for CHTL JS syntax
+std::vector<CodeFragment> UnifiedScanner::scan_script_fragment(const std::string& script_source) {
+    std::vector<CodeFragment> script_fragments;
+    size_t last_pos = 0;
+    size_t search_pos = 0;
+
+    while (search_pos < script_source.length()) {
+        size_t open_delim_pos = script_source.find("{{", search_pos);
+        if (open_delim_pos == std::string::npos) {
+            break; // No more CHTL JS
+        }
+
+        size_t close_delim_pos = script_source.find("}}", open_delim_pos);
+        if (close_delim_pos == std::string::npos) {
+            break; // Unterminated CHTL JS
+        }
+
+        // Add the preceding JS fragment if it's not just whitespace
+        if (open_delim_pos > last_pos) {
+            std::string js_content = trim(script_source.substr(last_pos, open_delim_pos - last_pos));
+            if (!js_content.empty()) {
+                script_fragments.push_back({FragmentType::JS, js_content});
+            }
+        }
+
+        // Add the CHTL_JS fragment
+        script_fragments.push_back({FragmentType::CHTL_JS, script_source.substr(open_delim_pos, close_delim_pos - open_delim_pos + 2)});
+
+        last_pos = close_delim_pos + 2;
+        search_pos = last_pos;
+    }
+
+    // Add any remaining JS fragment if it's not just whitespace
+    if (last_pos < script_source.length()) {
+        std::string js_content = trim(script_source.substr(last_pos));
+        if (!js_content.empty()) {
+            script_fragments.push_back({FragmentType::JS, js_content});
+        }
+    }
+
+    // If no CHTL JS was found, the whole thing is just JS
+    if (script_fragments.empty() && !script_source.empty()) {
+        script_fragments.push_back({FragmentType::JS, trim(script_source)});
+    }
+
+    return script_fragments;
+}
+
+
 std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
     std::vector<CodeFragment> fragments;
     size_t last_pos = 0;
@@ -69,9 +118,9 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
             continue;
         }
 
-        // Check if the block is top-level (for style) or any level (for script)
+        // Check if the block is top-level. Only top-level blocks are fragmented.
         int brace_level_before = calculate_brace_level_up_to(source, next_pos);
-        if (!is_script && brace_level_before != 0) { // style block must be top-level
+        if (brace_level_before != 0) {
              search_pos = next_pos + 1;
              continue;
         }
@@ -101,10 +150,13 @@ std::vector<CodeFragment> UnifiedScanner::scan(const std::string& source) {
         }
 
         // Add the block's content
-        fragments.push_back({
-            is_script ? FragmentType::JS : FragmentType::CSS,
-            source.substr(block_content_start, end_brace_pos - block_content_start - 1)
-        });
+        std::string block_content = source.substr(block_content_start, end_brace_pos - block_content_start - 1);
+        if (is_script) {
+            auto script_fragments = scan_script_fragment(block_content);
+            fragments.insert(fragments.end(), script_fragments.begin(), script_fragments.end());
+        } else {
+            fragments.push_back({FragmentType::CSS, block_content});
+        }
 
         last_pos = end_brace_pos;
         search_pos = last_pos;
