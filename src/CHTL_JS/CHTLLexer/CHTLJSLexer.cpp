@@ -3,81 +3,131 @@
 
 CHTLJSLexer::CHTLJSLexer(const std::string& source) : source(source) {}
 
-char CHTLJSLexer::peek(int offset) const {
-    if (position + offset >= source.length()) {
-        return '\0';
-    }
-    return source[position + offset];
+CHTLJSToken CHTLJSLexer::makeToken(CHTLJSTokenType type, const std::string& value) {
+    return {type, value};
 }
 
-char CHTLJSLexer::advance() {
-    if (position >= source.length()) {
-        return '\0';
-    }
-    return source[position++];
+CHTLJSToken CHTLJSLexer::makeToken(CHTLJSTokenType type, char value) {
+    return {type, std::string(1, value)};
 }
 
 std::vector<CHTLJSToken> CHTLJSLexer::tokenize() {
     std::vector<CHTLJSToken> tokens;
-    CHTLJSToken token;
-    do {
-        token = getNextToken();
-        tokens.push_back(token);
-    } while (token.type != CHTLJSTokenType::EndOfFile);
-    return tokens;
-}
+    std::string raw_buffer;
 
-CHTLJSToken CHTLJSLexer::getNextToken() {
-    while (position < source.length() && isspace(peek())) {
-        advance();
-    }
+    auto flush_raw_buffer = [this, &raw_buffer, &tokens]() {
+        if (!raw_buffer.empty()) {
+            // Check if the buffer is a known keyword
+            if (raw_buffer == "Listen" || raw_buffer == "Delegate" || raw_buffer == "Animate") {
+                tokens.push_back(this->makeToken(CHTLJSTokenType::Identifier, raw_buffer));
+            } else {
+                 // Check if it could be an event name or property name
+                bool is_identifier = true;
+                if (raw_buffer.empty()) {
+                    is_identifier = false;
+                } else {
+                    for (char c : raw_buffer) {
+                        if (!isalnum(c) && c != '_') {
+                            is_identifier = false;
+                            break;
+                        }
+                    }
+                }
 
-    if (position >= source.length()) {
-        return {CHTLJSTokenType::EndOfFile, ""};
-    }
-
-    // CHTL JS specific operators
-    if (peek() == '{' && peek(1) == '{') { advance(); advance(); return {CHTLJSTokenType::OpenDoubleBrace, "{{"}; }
-    if (peek() == '}' && peek(1) == '}') { advance(); advance(); return {CHTLJSTokenType::CloseDoubleBrace, "}}"}; }
-    if (peek() == '-' && peek(1) == '>') { advance(); advance(); return {CHTLJSTokenType::Arrow, "->"}; }
-    if (peek() == '&' && peek(1) == '-' && peek(2) == '>') { advance(); advance(); advance(); return {CHTLJSTokenType::EventBindingOperator, "&->"}; }
-
-    // Punctuation for Listen blocks
-    if (peek() == '{') { advance(); return {CHTLJSTokenType::OpenBrace, "{"}; }
-    if (peek() == '}') { advance(); return {CHTLJSTokenType::CloseBrace, "}"}; }
-    if (peek() == ':') { advance(); return {CHTLJSTokenType::Colon, ":"}; }
-    if (peek() == ',') { advance(); return {CHTLJSTokenType::Comma, ","}; }
-
-    // Identifiers (like 'Listen') or Raw JS
-    size_t start = position;
-    if (isalpha(peek()) || peek() == '_') {
-        while (isalnum(peek()) || peek() == '_') {
-            advance();
+                if (is_identifier) {
+                     tokens.push_back(this->makeToken(CHTLJSTokenType::Identifier, raw_buffer));
+                } else {
+                     tokens.push_back(this->makeToken(CHTLJSTokenType::RawJS, raw_buffer));
+                }
+            }
+            raw_buffer.clear();
         }
-        std::string value = source.substr(start, position - start);
-        if (value == "Listen") {
-            return {CHTLJSTokenType::Identifier, value};
-        }
-        // If not a keyword, treat it as part of a raw JS block
-        position = start; // backtrack
-    }
+    };
 
-    // Default to consuming as RawJS until a CHTL JS token is found
     while (position < source.length()) {
-        if ((peek() == '{' && peek(1) == '{') ||
-            (peek() == '}' && peek(1) == '}') ||
-            (peek() == '-' && peek(1) == '>') ||
-            (peek() == '&' && peek(1) == '-' && peek(2) == '>') ||
-            (peek() == '{') || (peek() == '}') || (peek() == ':') || (peek() == ','))
-        {
-            break;
+        char current = source[position];
+        char next = (position + 1 < source.length()) ? source[position + 1] : '\0';
+
+        if (current == '-' && next == '>') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::Arrow, "->"));
+            position += 2;
+            continue;
         }
-        advance();
+        if (current == '&' && next == '-' && (position + 2 < source.length()) && source[position + 2] == '>') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::EventBindingOperator, "&->"));
+            position += 3;
+            continue;
+        }
+        if (current == '{' && next == '{') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::OpenDoubleBrace, "{{"));
+            position += 2;
+            continue;
+        }
+        if (current == '}' && next == '}') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::CloseDoubleBrace, "}}"));
+            position += 2;
+            continue;
+        }
+        if (current == '{') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::OpenBrace, "{"));
+            position++;
+            continue;
+        }
+        if (current == '}') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::CloseBrace, "}"));
+            position++;
+            continue;
+        }
+        if (current == ':') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::Colon, ":"));
+            position++;
+            continue;
+        }
+        if (current == ',') {
+            flush_raw_buffer();
+            tokens.push_back(this->makeToken(CHTLJSTokenType::Comma, ","));
+            position++;
+            continue;
+        }
+        if (current == '"') {
+            flush_raw_buffer();
+            raw_buffer += current; // Add opening quote
+            position++;
+            while (position < source.length()) {
+                raw_buffer += source[position];
+                if (source[position] == '"' && source[position - 1] != '\\') {
+                    position++;
+                    break;
+                }
+                position++;
+            }
+            flush_raw_buffer();
+            continue;
+        }
+        if (isspace(current)) {
+             flush_raw_buffer();
+             // Consume all whitespace
+             while(position < source.length() && isspace(source[position])) {
+                 position++;
+             }
+             raw_buffer += ' '; // Preserve a single space to separate tokens
+             continue;
+        }
+
+        // If it's not a special character, add to the raw buffer
+        raw_buffer += current;
+        position++;
     }
 
-    if (position > start) {
-        return {CHTLJSTokenType::RawJS, source.substr(start, position - start)};
-    }
+    flush_raw_buffer(); // Flush any remaining content in the buffer
 
-    return {CHTLJSTokenType::Unexpected, std::string(1, peek())};
+    tokens.push_back(this->makeToken(CHTLJSTokenType::EndOfFile, ""));
+    return tokens;
 }

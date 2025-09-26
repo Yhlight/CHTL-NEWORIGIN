@@ -1034,12 +1034,14 @@ void StatementState::parseImportStatement(Parser& parser) {
         }
     } else if (importType == "Chtl") {
         try {
-            if (path.size() > 5 && path.substr(path.size() - 5) == ".cmod") {
+            // Check if the path ends with .cmod
+            if (path.length() >= 5 && path.substr(path.length() - 5) == ".cmod") {
                 auto cmod_contents = Loader::loadCmod(path);
                 for (const auto& pair : cmod_contents) {
                     const std::string& filename = pair.first;
                     const std::string& content = pair.second;
-                    if (filename.rfind("src/", 0) == 0 && filename.size() > 5 && filename.substr(filename.size() - 5) == ".chtl") {
+                    // Only parse .chtl files from the src directory of the module
+                    if (filename.rfind("src/", 0) == 0 && filename.length() >= 5 && filename.substr(filename.length() - 5) == ".chtl") {
                         Lexer importLexer(content);
                         Parser importParser(importLexer);
                         importParser.parse();
@@ -1047,6 +1049,7 @@ void StatementState::parseImportStatement(Parser& parser) {
                     }
                 }
             } else {
+                // Otherwise, load as a regular CHTL file
                 std::string fileContent = Loader::loadFile(path);
                 Lexer importLexer(fileContent);
                 Parser importParser(importLexer);

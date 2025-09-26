@@ -7,17 +7,18 @@
 
 namespace fs = std::filesystem;
 
-void add_directory_to_archive(libzippp::ZipArchive& archive, const fs::path& dir_path, const fs::path& base_path) {
+void add_directory_to_archive(libzippp::ZipArchive& archive, const fs::path& dir_path, const fs::path& base_path_in_archive) {
     for (const auto& entry : fs::recursive_directory_iterator(dir_path)) {
         const auto& path = entry.path();
-        auto relative_path = fs::relative(path, base_path);
+        auto relative_to_dir = fs::relative(path, dir_path);
+        fs::path path_in_archive = base_path_in_archive / relative_to_dir;
 
         if (fs::is_directory(path)) {
-            archive.addEntry(relative_path.string() + "/");
+            archive.addEntry(path_in_archive.string() + "/");
         } else if (fs::is_regular_file(path)) {
             std::ifstream file(path, std::ios::binary);
             std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            archive.addData(relative_path.string(), content.data(), content.size());
+            archive.addData(path_in_archive.string(), content.data(), content.size());
         }
     }
 }
@@ -48,8 +49,8 @@ int main(int argc, char* argv[]) {
         libzippp::ZipArchive zf(output_file.string());
         zf.open(libzippp::ZipArchive::New);
 
-        add_directory_to_archive(zf, src_subdir, source_dir);
-        add_directory_to_archive(zf, info_subdir, source_dir);
+        add_directory_to_archive(zf, src_subdir, "src");
+        add_directory_to_archive(zf, info_subdir, "info");
 
         zf.close();
         std::cout << "Successfully created CMOD package: " << output_file << std::endl;

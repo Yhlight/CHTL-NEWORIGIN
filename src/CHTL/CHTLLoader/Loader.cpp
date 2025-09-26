@@ -23,7 +23,12 @@ std::map<std::string, std::string> Loader::loadCmod(const std::string& path) {
     auto entries = zf.getEntries();
     for (const auto& entry : entries) {
         if (!entry.isDirectory()) {
-            fileContents[entry.getName()] = entry.readAsText();
+            void* binaryData = entry.readAsBinary();
+            if (binaryData) {
+                std::string content(static_cast<char*>(binaryData), entry.getSize());
+                fileContents[entry.getName()] = content;
+                delete[] static_cast<char*>(binaryData);
+            }
         }
     }
 

@@ -45,4 +45,8 @@ private:
     CHTLJSToken getNextToken();
     char peek(int offset = 0) const;
     char advance();
+
+    // Helper functions for token creation
+    CHTLJSToken makeToken(CHTLJSTokenType type, const std::string& value);
+    CHTLJSToken makeToken(CHTLJSTokenType type, char value);
 };
