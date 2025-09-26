@@ -195,8 +195,7 @@ Token Lexer::getNextToken() {
 
         if (current == '#') {
             if ((position + 1 < source.length()) && isspace(source[position + 1])) {
-                advance(); // Consume '#'
-                // The space is part of the comment content
+                advance(); advance();
                 std::string value;
                 while (peek() != '\n' && peek() != '\0') {
                     value += advance();

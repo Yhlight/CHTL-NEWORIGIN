@@ -3,31 +3,29 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
+#include <fstream>
+#include <sstream>
 
 #include "Dispatcher/CompilerDispatcher.h"
 
 // This main function serves as the entry point for the CHTL compiler.
 // It demonstrates the new workflow: CompilerDispatcher -> Final Output.
-int main() {
-    std::string chtlSource = R"(
-style {
-    body {
-        font-family: "Arial", sans-serif;
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <input_file.chtl>" << std::endl;
+        return 1;
     }
-}
 
-html {
-    head { }
-    body {
-        div {
-            text: "Hello, CHTL!";
-            style {
-                color: blue;
-            }
-        }
+    std::string input_file = argv[1];
+    std::ifstream file_stream(input_file);
+    if (!file_stream) {
+        std::cerr << "Error: Could not open file " << input_file << std::endl;
+        return 1;
     }
-}
-)";
+
+    std::stringstream buffer;
+    buffer << file_stream.rdbuf();
+    std::string chtlSource = buffer.str();
 
     try {
         // 1. Dispatching Stage

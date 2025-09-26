@@ -1,24 +1,28 @@
-# CMake build files
-CMakeCache.txt
-CTestTestfile.cmake
-Makefile
-cmake_install.cmake
-CMakeFiles/
-
-# CTest files
-Testing/
-
 # Build artifacts
-*.o
-*.a
-*.so
+/build/
+/CMakeCache.txt
+/CTestTestfile.cmake
+/Makefile
+/cmake_install.cmake
+/compile_commands.json
 
-# Executables
-chtl_compiler
-chtl_tests
+# Executables and libraries
+/chtl_compiler
+/chtl_tests
+/*.a
+/*.so
+/*.o
 
-# Common build directories
-build/
-bin/
-dist/
-out/
+# User-specific files
+.vscode/
+
+# CMake generated directory
+/CMakeFiles/
+
+# Test-generated files
+*.chtl
+*.js
+third-party/antlr4/
+third-party/libsass/
+third-party/libzippp/
+third-party/quickjs/

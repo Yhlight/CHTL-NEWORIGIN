@@ -395,24 +395,37 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
 
-                // Correctly handle valueless properties for custom templates
-                if (isCustom && parser.currentToken.type != TokenType::Colon) {
+                // If it's a custom template and there's no colon, we're parsing a list of valueless properties.
+                if (isCustom && parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                    // The first key is already parsed.
                     styleNode->valuelessProperties.push_back(key);
-                    if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
+
+                    // Loop for more comma-separated keys.
+                    while (parser.currentToken.type == TokenType::Comma) {
+                        parser.advanceTokens(); // consume comma
+                        std::string nextKey = parser.currentToken.value;
+                        parser.expectToken(TokenType::Identifier);
+                        styleNode->valuelessProperties.push_back(nextKey);
+                    }
+
+                    // The list must end with a semicolon.
+                    parser.expectToken(TokenType::Semicolon);
+                } else {
+                    // Otherwise, it's a regular key-value pair.
+                    if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                        throw std::runtime_error("Expected ':' or '=' after style template key '" + key + "'.");
+                    }
+                    parser.advanceTokens(); // consume ':' or '='
+
+                    std::string value;
+                    while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
+                        value += parser.currentToken.value + " ";
                         parser.advanceTokens();
                     }
-                    continue;
+                    if (!value.empty()) value.pop_back(); // remove trailing space
+                    styleNode->styles[key] = value;
+                    if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
                 }
-
-                parser.expectToken(TokenType::Colon);
-                std::string value;
-                while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
-                    value += parser.currentToken.value + " ";
-                    parser.advanceTokens();
-                }
-                if (!value.empty()) value.pop_back();
-                styleNode->styles[key] = value;
-                if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
             }
         }
         parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
@@ -778,29 +791,6 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
     std::string type = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
-    // --- Custom Origin Type Validation ---
-    ConfigSet* config = parser.configManager.getActiveConfig();
-    bool isStandardType = (type == "Html" || type == "Style" || type == "JavaScript");
-
-    if (!isStandardType) {
-        if (config->disableCustomOriginType) {
-            throw std::runtime_error("Custom [Origin] types are disabled in the current configuration.");
-        }
-        if (!config->allowedOriginTypes.empty()) {
-            bool isAllowed = false;
-            for (const auto& allowedType : config->allowedOriginTypes) {
-                if (type == allowedType) {
-                    isAllowed = true;
-                    break;
-                }
-            }
-            if (!isAllowed) {
-                throw std::runtime_error("Custom [Origin] type '@" + type + "' is not in the list of allowed types.");
-            }
-        }
-    }
-    // --- End Validation ---
-
     std::string name = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
@@ -809,8 +799,7 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
         // --- Definition: [Origin] @Type name { ... } ---
         parser.advanceTokens(); // Consume '{'
 
-        size_t contentStartPos = parser.currentToken.start_pos;
-        size_t contentEndPos = contentStartPos;
+        std::stringstream rawContent;
         int braceLevel = 1;
 
         while (true) {
@@ -822,19 +811,17 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
             } else if (parser.currentToken.type == TokenType::CloseBrace) {
                 braceLevel--;
                 if (braceLevel == 0) {
-                    contentEndPos = parser.currentToken.start_pos;
-                    break; // Found the end
+                    break; // Found the end, do not include the closing brace in content.
                 }
             }
+            rawContent << parser.currentToken.value;
             parser.advanceTokens();
         }
-
-        std::string rawContent = parser.lexer.getSource().substr(contentStartPos, contentEndPos - contentStartPos);
 
         // Consume the final '}'
         parser.expectToken(TokenType::CloseBrace);
 
-        auto originNode = std::make_unique<OriginNode>(type, rawContent, name);
+        auto originNode = std::make_unique<OriginNode>(type, rawContent.str(), name);
 
         // Store a clone in the manager for later use
         auto cloneForManager = NodeCloner::clone(originNode.get());

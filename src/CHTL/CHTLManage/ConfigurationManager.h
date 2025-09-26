@@ -18,10 +18,6 @@ struct ConfigSet {
     bool disableDefaultNamespace = false;
     bool disableCustomOriginType = false;
 
-    // --- Origin Type Whitelist ---
-    // If not empty, only these custom types are allowed for [Origin] blocks.
-    std::vector<std::string> allowedOriginTypes;
-
     // --- Keyword Customization ---
     std::map<std::string, std::vector<std::string>> keywordMap;
 };

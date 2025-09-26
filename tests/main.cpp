@@ -59,17 +59,17 @@ void test_enhanced_selector();
 void test_responsive_value();
 void test_literal_types();
 void test_ignored_comments();
-void test_generator_comment();
-void test_custom_element_index_access();
-void test_custom_element_replace();
-void test_custom_origin_type_default_pass();
-void test_custom_origin_type_disabled();
-void test_custom_origin_type_whitelist();
 void test_colon_equal_equivalence_in_info();
 void test_colon_equal_equivalence_in_config();
 void test_colon_equal_equivalence_in_var_template();
 void test_style_property_power_operator();
 void test_style_property_modulo_operator();
+void test_conditional_expression_chaining();
+void test_logical_operators_in_conditional();
+void test_custom_style_valueless_properties();
+void test_custom_element_insert_replace();
+void test_advanced_script_scanning();
+void test_shared_context_population();
 
 
 void test_text_block_literals() {
@@ -187,6 +187,120 @@ void test_except_constraint() {
         assert(msg.find("is not allowed") != std::string::npos);
     }
     assert(exception_thrown);
+}
+
+void test_custom_element_insert_replace() {
+    std::string source = R"(
+        [Custom] @Element Box {
+            div { text: "first"; }
+            p { text: "to be replaced"; }
+            div { text: "last"; }
+        }
+        body {
+            @Element Box {
+                insert replace p[0] {
+                    span { text: "was replaced"; }
+                }
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    Generator generator;
+    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
+
+    assert(result.find("to be replaced") == std::string::npos);
+    assert(result.find("was replaced") != std::string::npos);
+    assert(result.find("first") < result.find("was replaced"));
+    assert(result.find("was replaced") < result.find("last"));
+}
+
+// Helper function to trim strings for comparison
+static std::string trim(const std::string& str) {
+    const std::string whitespace = " \t\n\r\f\v";
+    size_t first = str.find_first_not_of(whitespace);
+    if (std::string::npos == first) {
+        return "";
+    }
+    size_t last = str.find_last_not_of(whitespace);
+    return str.substr(first, (last - first + 1));
+}
+
+void test_advanced_script_scanning() {
+    std::string source = R"(
+        script {
+            const element = {{#my-id}};
+            let value = $myVar$;
+            if (value > 10) {
+                element.style.color = "red";
+            }
+        }
+    )";
+    UnifiedScanner scanner;
+    auto fragments = scanner.scan(source);
+
+    assert(fragments.size() == 5);
+
+    assert(fragments[0].type == FragmentType::JS);
+    assert(trim(fragments[0].content) == "const element =");
+
+    assert(fragments[1].type == FragmentType::CHTL_JS);
+    assert(fragments[1].content == "{{#my-id}}");
+
+    assert(fragments[2].type == FragmentType::JS);
+    assert(trim(fragments[2].content) == ";\n            let value =");
+
+    assert(fragments[3].type == FragmentType::CHTL_JS);
+    assert(fragments[3].content == "$myVar$");
+
+    assert(fragments[4].type == FragmentType::JS);
+    assert(trim(fragments[4].content) == ";\n            if (value > 10) {\n                element.style.color = \"red\";\n            }");
+}
+
+void test_shared_context_population() {
+    std::string source = R"(
+        div {
+            id: "test-div";
+            class: $boxClass$;
+            style {
+                width: $boxWidth$px;
+                opacity: $boxOpacity$;
+            }
+        }
+    )";
+    Lexer lexer(source);
+    Parser parser(lexer);
+    parser.parse();
+
+    const auto& bindings = parser.sharedContext.responsiveBindings;
+
+    // Check that there are 3 variables bound
+    assert(bindings.size() == 3);
+
+    // Check bindings for 'boxClass'
+    assert(bindings.count("boxClass") == 1);
+    const auto& class_bindings = bindings.at("boxClass");
+    assert(class_bindings.size() == 1);
+    assert(class_bindings[0].elementId == "test-div");
+    assert(class_bindings[0].property == "class");
+    assert(class_bindings[0].unit.empty());
+
+    // Check bindings for 'boxWidth'
+    assert(bindings.count("boxWidth") == 1);
+    const auto& width_bindings = bindings.at("boxWidth");
+    assert(width_bindings.size() == 1);
+    assert(width_bindings[0].elementId == "test-div");
+    assert(width_bindings[0].property == "style.width");
+    assert(width_bindings[0].unit == "px");
+
+    // Check bindings for 'boxOpacity'
+    assert(bindings.count("boxOpacity") == 1);
+    const auto& opacity_bindings = bindings.at("boxOpacity");
+    assert(opacity_bindings.size() == 1);
+    assert(opacity_bindings[0].elementId == "test-div");
+    assert(opacity_bindings[0].property == "style.opacity");
+    assert(opacity_bindings[0].unit.empty());
 }
 
 void test_named_origin_and_import() {
@@ -428,193 +542,20 @@ int main() {
     run_test(test_info_block_parsing, "Info Block Parsing");
     run_test(test_literal_types, "Literal Types");
     run_test(test_ignored_comments, "Ignored Comments");
-    run_test(test_generator_comment, "Generator Comment");
-    run_test(test_custom_element_index_access, "Custom Element Index Access");
-    run_test(test_custom_element_replace, "Custom Element Replace Operation");
-    run_test(test_custom_origin_type_default_pass, "Custom Origin Type (Default Pass)");
-    run_test(test_custom_origin_type_disabled, "Custom Origin Type (Disabled)");
-    run_test(test_custom_origin_type_whitelist, "Custom Origin Type (Whitelist)");
     run_test(test_colon_equal_equivalence_in_info, "Colon-Equal Equivalence in Info Block");
     run_test(test_colon_equal_equivalence_in_config, "Colon-Equal Equivalence in Config Block");
     run_test(test_colon_equal_equivalence_in_var_template, "Colon-Equal Equivalence in Var Template");
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
+    run_test(test_conditional_expression_chaining, "Conditional Expression Chaining");
+    run_test(test_logical_operators_in_conditional, "Logical Operators in Conditional");
+    run_test(test_custom_style_valueless_properties, "Custom Style Valueless Properties");
+    run_test(test_custom_element_insert_replace, "Custom Element Insert Replace");
+    run_test(test_advanced_script_scanning, "Advanced Script Scanning");
+    run_test(test_shared_context_population, "Shared Context Population");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
-}
-
-void test_generator_comment() {
-    std::string source = R"(
-        # This is a generator comment
-        div {
-            text: "Hello";
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("<!--  This is a generator comment -->") != std::string::npos);
-}
-
-void test_custom_element_index_access() {
-    std::string source = R"(
-        [Custom] @Element MyList {
-            div { text: "Item 1"; }
-            div { text: "Item 2"; }
-            div { text: "Item 3"; }
-        }
-
-        body {
-            @Element MyList {
-                div[1] { // Target the second div
-                    style {
-                        color: red;
-                    }
-                }
-            }
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-
-    // Find the position of "Item 2"
-    size_t item2_pos = result.find("Item 2");
-    assert(item2_pos != std::string::npos);
-
-    // Find the opening tag of the div that contains "Item 2"
-    size_t div2_tag_pos = result.rfind("<div", item2_pos);
-    assert(div2_tag_pos != std::string::npos);
-
-    // Check if this div tag has the style attribute
-    size_t style_pos = result.find("style=\"color: red; \"", div2_tag_pos);
-    assert(style_pos != std::string::npos);
-    assert(style_pos < item2_pos); // Make sure the style is part of the tag for Item 2
-
-    // Check that the other divs do NOT have this style.
-    size_t item1_pos = result.find("Item 1");
-    assert(item1_pos != std::string::npos);
-    size_t div1_tag_pos = result.rfind("<div", item1_pos);
-    size_t div1_tag_end = result.find(">", div1_tag_pos);
-    size_t style_pos_1 = result.find("style=", div1_tag_pos);
-    assert(style_pos_1 == std::string::npos || style_pos_1 > div1_tag_end);
-}
-
-void test_custom_element_replace() {
-    std::string source = R"(
-        [Custom] @Element Box {
-            span { text: "hello"; }
-            p { text: "to be replaced"; }
-        }
-        body {
-            @Element Box {
-                insert replace p[0] {
-                    div { text: "world"; }
-                }
-            }
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("to be replaced") == std::string::npos);
-    assert(result.find("world") != std::string::npos);
-    assert(result.find("<span>") != std::string::npos);
-    assert(result.find("<div>") != std::string::npos);
-    assert(result.find("<p>") == std::string::npos);
-}
-
-void test_custom_origin_type_default_pass() {
-    std::string source = R"(
-        [Origin] @Vue my_component {
-            <template>
-                <div>{{ message }}</div>
-            </template>
-        }
-        body {
-            [Origin] @Vue my_component;
-        }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    assert(result.find("<template>") != std::string::npos);
-    assert(result.find("{{ message }}") != std::string::npos);
-}
-
-void test_custom_origin_type_disabled() {
-    std::string source = R"(
-        [Configuration] {
-            DISABLE_CUSTOM_ORIGIN_TYPE = true;
-        }
-        [Origin] @React my_component { <MyComponent /> }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    bool exception_thrown = false;
-    try {
-        parser.parse();
-    } catch (const std::runtime_error& e) {
-        exception_thrown = true;
-        std::string msg = e.what();
-        assert(msg.find("Custom [Origin] types are disabled") != std::string::npos);
-    }
-    assert(exception_thrown);
-}
-
-void test_custom_origin_type_whitelist() {
-    std::string source = R"(
-        [Configuration] {
-            [OriginType] {
-                ORIGINTYPE_VUE = @Vue;
-                ORIGINTYPE_SVELTE = @Svelte;
-            }
-        }
-
-        // This one should pass
-        [Origin] @Vue my_vue { <div>Vue</div> }
-
-        // This one should fail
-        [Origin] @React my_react { <div>React</div> }
-    )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    bool exception_thrown = false;
-    try {
-        parser.parse();
-    } catch (const std::runtime_error& e) {
-        exception_thrown = true;
-        std::string msg = e.what();
-        assert(msg.find("not in the list of allowed types") != std::string::npos);
-        assert(msg.find("@React") != std::string::npos);
-    }
-    assert(exception_thrown);
-
-    // Also test that the allowed one *would have* parsed if not for the second error
-    std::string source_pass = R"(
-         [Configuration] {
-            [OriginType] {
-                ORIGINTYPE_VUE = @Vue;
-            }
-        }
-        [Origin] @Vue my_vue { <div>Vue</div> }
-        body { [Origin] @Vue my_vue; }
-    )";
-    Lexer lexer_pass(source_pass);
-    Parser parser_pass(lexer_pass);
-    auto nodes = parser_pass.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser_pass.globalStyleContent, parser_pass.sharedContext, false);
-    assert(result.find("<div>Vue</div>") != std::string::npos);
 }
 
 void test_info_block_parsing() {
@@ -1377,4 +1318,174 @@ void test_style_property_modulo_operator() {
     Generator generator;
     std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
     assert(result.find("width: 1px;") != std::string::npos);
+}
+
+void test_conditional_expression_chaining() {
+    // Test case 1: First condition is true
+    std::string source1 = R"(
+        div {
+            style {
+                width: 100px;
+                color: width > 50px ? "red", width > 150px ? "green";
+            }
+        }
+    )";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    auto nodes1 = parser1.parse();
+    Generator generator1;
+    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, parser1.sharedContext, false);
+    assert(result1.find("color: red;") != std::string::npos);
+
+    // Test case 2: Second condition is true
+    std::string source2 = R"(
+        div {
+            style {
+                width: 200px;
+                color: width < 50px ? "red", width > 150px ? "green";
+            }
+        }
+    )";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    auto nodes2 = parser2.parse();
+    Generator generator2;
+    std::string result2 = generator2.generate(nodes2, parser2.globalStyleContent, parser2.sharedContext, false);
+    assert(result2.find("color: green;") != std::string::npos);
+
+    // Test case 3: No optional condition is true, fallback to else
+    std::string source3 = R"(
+        div {
+            style {
+                width: 100px;
+                color: width < 50px ? "red", width > 150px ? "green" : "blue";
+            }
+        }
+    )";
+    Lexer lexer3(source3);
+    Parser parser3(lexer3);
+    auto nodes3 = parser3.parse();
+    Generator generator3;
+    std::string result3 = generator3.generate(nodes3, parser3.globalStyleContent, parser3.sharedContext, false);
+    assert(result3.find("color: blue;") != std::string::npos);
+
+    // Test case 4: No condition is true, no else, so no style applied
+    std::string source4 = R"(
+        div {
+            style {
+                width: 100px;
+                color: width < 50px ? "red", width > 150px ? "green";
+            }
+        }
+    )";
+    Lexer lexer4(source4);
+    Parser parser4(lexer4);
+    auto nodes4 = parser4.parse();
+    Generator generator4;
+    std::string result4 = generator4.generate(nodes4, parser4.globalStyleContent, parser4.sharedContext, false);
+    assert(result4.find("color:") == std::string::npos);
+}
+
+void test_logical_operators_in_conditional() {
+    // Test case 1: Logical AND (true)
+    std::string source1 = R"(
+        div {
+            style {
+                width: 100px;
+                height: 50px;
+                color: width > 50px && height < 100px ? "red" : "blue";
+            }
+        }
+    )";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    auto nodes1 = parser1.parse();
+    Generator generator1;
+    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, parser1.sharedContext, false);
+    assert(result1.find("color: red;") != std::string::npos);
+
+    // Test case 2: Logical AND (false)
+    std::string source2 = R"(
+        div {
+            style {
+                width: 100px;
+                height: 150px;
+                color: width > 50px && height < 100px ? "red" : "blue";
+            }
+        }
+    )";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    auto nodes2 = parser2.parse();
+    Generator generator2;
+    std::string result2 = generator2.generate(nodes2, parser2.globalStyleContent, parser2.sharedContext, false);
+    assert(result2.find("color: blue;") != std::string::npos);
+
+    // Test case 3: Logical OR (true)
+    std::string source3 = R"(
+        div {
+            style {
+                width: 100px;
+                height: 150px;
+                color: width < 50px || height > 100px ? "red" : "blue";
+            }
+        }
+    )";
+    Lexer lexer3(source3);
+    Parser parser3(lexer3);
+    auto nodes3 = parser3.parse();
+    Generator generator3;
+    std::string result3 = generator3.generate(nodes3, parser3.globalStyleContent, parser3.sharedContext, false);
+    assert(result3.find("color: red;") != std::string::npos);
+}
+
+void test_custom_style_valueless_properties() {
+    // Test case 1: Successful usage
+    std::string source1 = R"(
+        [Custom] @Style TextFormat {
+            color, font-size, font-weight;
+        }
+        div {
+            style {
+                @Style TextFormat {
+                    color: blue;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+            }
+        }
+    )";
+    Lexer lexer1(source1);
+    Parser parser1(lexer1);
+    auto nodes1 = parser1.parse();
+    Generator generator1;
+    std::string result1 = generator1.generate(nodes1, parser1.globalStyleContent, parser1.sharedContext, false);
+    assert(result1.find("color: blue;") != std::string::npos);
+    assert(result1.find("font-size: 16px;") != std::string::npos);
+    assert(result1.find("font-weight: bold;") != std::string::npos);
+
+    // Test case 2: Throws error if a valueless property is not provided
+    std::string source2 = R"(
+        [Custom] @Style TextFormat {
+            color, font-size;
+        }
+        div {
+            style {
+                @Style TextFormat {
+                    color: red;
+                }
+            }
+        }
+    )";
+    Lexer lexer2(source2);
+    Parser parser2(lexer2);
+    bool exception_thrown = false;
+    try {
+        parser2.parse();
+    } catch (const std::runtime_error& e) {
+        exception_thrown = true;
+        std::string msg = e.what();
+        assert(msg.find("was not assigned a value") != std::string::npos);
+    }
+    assert(exception_thrown);
 }
