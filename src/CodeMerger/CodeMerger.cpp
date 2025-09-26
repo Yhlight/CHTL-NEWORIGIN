@@ -8,10 +8,14 @@ std::string CodeMerger::merge(const std::string& chtl_output, const std::map<std
         const std::string& placeholder = pair.first;
         const std::string& compiled_content = pair.second;
 
-        std::string placeholder_in_script_tag = "{" + placeholder + "}";
-        size_t pos = final_output.find(placeholder_in_script_tag);
+        // The generator will have created an empty tag like <chtl_placeholder_0></chtl_placeholder_0>
+        std::string search_tag = "<" + placeholder + "></" + placeholder + ">";
+        size_t pos = final_output.find(search_tag);
+
         if (pos != std::string::npos) {
-            final_output.replace(pos, placeholder_in_script_tag.length(), compiled_content);
+            // Replace the placeholder tag with the actual compiled script
+            std::string replacement = "<script>" + compiled_content + "</script>";
+            final_output.replace(pos, search_tag.length(), replacement);
         }
     }
 

@@ -971,6 +971,14 @@ void StatementState::parseImportStatement(Parser& parser) {
     std::string path = parser.currentToken.value;
     parser.advanceTokens();
 
+    // Sanitize path by removing leading/trailing quotes if they exist
+    if (!path.empty() && path.front() == '"') {
+        path.erase(0, 1);
+    }
+    if (!path.empty() && path.back() == '"') {
+        path.pop_back();
+    }
+
     std::string alias;
     if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_AS", "as")) {
         alias = parser.currentToken.value;
@@ -1012,7 +1020,7 @@ void StatementState::parseImportStatement(Parser& parser) {
         }
     } else if (importType == "Chtl") {
         try {
-            if (path.size() > 5 && path.substr(path.size() - 5) == ".cmod") {
+        if (path.length() >= 5 && path.rfind(".cmod") == path.length() - 5) {
                 auto cmod_contents = Loader::loadCmod(path);
                 for (const auto& pair : cmod_contents) {
                     const std::string& filename = pair.first;

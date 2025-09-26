@@ -29,7 +29,6 @@ set(CHTL_SOURCES
     src/CHTL_JS/CHTLJSNode/DelegateNode.cpp
     src/CHTL_JS/CHTLJSNode/AnimateNode.cpp
     src/CHTL_JS/CHTLJSGenerator/CHTLJSGenerator.cpp
-    src/CHTL_JS/CHTLJSCompiler.cpp
     src/CHTL/CHTLLoader/Loader.cpp
     src/CHTL/CHTLManage/TemplateManager.cpp
     src/CHTL/CHTLNode/CommentNode.cpp

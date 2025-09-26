@@ -134,12 +134,17 @@ void Generator::generateElement(ElementNode* node) {
     }
 
     append(">");
+
     if (isSelfClosing && node->children.empty()) {
         append("\n");
         return;
     }
 
-    if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
+    // Special case for elements that only contain a single text node
+    if (node->children.size() == 1 && node->children.front()->getType() == NodeType::Text) {
+        const auto* textNode = static_cast<const TextNode*>(node->children.front().get());
+        append(textNode->text);
+    } else if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
         append("\n");
         indent();
         for (const auto& child : node->children) {

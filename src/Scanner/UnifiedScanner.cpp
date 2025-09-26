@@ -5,7 +5,7 @@
 
 std::string UnifiedScanner::generate_placeholder() {
     std::stringstream ss;
-    ss << "/*__CHTL_PLACEHOLDER_" << placeholder_id_counter++ << "__*/";
+    ss << "chtl_placeholder_" << placeholder_id_counter++;
     return ss.str();
 }
 
@@ -107,7 +107,7 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
 
         // Generate a placeholder and store the fragment
         std::string placeholder = generate_placeholder();
-        result_ss << "{" << placeholder << "}"; // Keep the braces to maintain structure
+        result_ss << placeholder << "{}"; // Create an empty CHTL element as a placeholder
         output.fragments[placeholder] = {
             is_script ? FragmentType::CHTL_JS : FragmentType::CSS,
             block_content

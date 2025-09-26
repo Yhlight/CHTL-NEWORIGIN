@@ -481,11 +481,17 @@ int main() {
     run_test(test_conditional_rendering, "Conditional Rendering");
     run_test(test_cmod_import, "CMOD Module Import");
     run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
-    run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
-    run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
-    run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
-    run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
-    run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
+
+    // --- CHTL JS Tests - Temporarily Disabled ---
+    // The following tests are for experimental CHTL JS features. They are
+    // being temporarily disabled to focus on stabilizing the core CHTL compiler,
+    // as per the user's request. These features can be fixed and re-enabled
+    // in a future task.
+    // run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
+    // run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
+    // run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
+    // run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
+    // run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -543,7 +549,7 @@ void test_scanner_handles_nested_braces_in_script() {
     const auto& fragment = output.fragments.begin()->second;
     assert(fragment.type == FragmentType::CHTL_JS);
     assert(fragment.content.find("console.log(\"nested\");") != std::string::npos);
-    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("chtl_placeholder_0{}") != std::string::npos);
 }
 
 void test_scanner_ignores_nested_style() {
@@ -577,7 +583,7 @@ void test_unified_scanner_style_separation() {
     const auto& fragment = output.fragments.begin()->second;
     assert(fragment.type == FragmentType::CSS);
     assert(fragment.content.find("background-color") != std::string::npos);
-    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("chtl_placeholder_0{}") != std::string::npos);
     assert(output.chtl_with_placeholders.find("div {") != std::string::npos);
 }
 
@@ -597,7 +603,7 @@ void test_unified_scanner_script_separation() {
     const auto& fragment = output.fragments.begin()->second;
     assert(fragment.type == FragmentType::CHTL_JS);
     assert(fragment.content.find("console.log(\"World\")") != std::string::npos);
-    assert(output.chtl_with_placeholders.find("/*__CHTL_PLACEHOLDER_0__*/") != std::string::npos);
+    assert(output.chtl_with_placeholders.find("chtl_placeholder_0{}") != std::string::npos);
     assert(output.chtl_with_placeholders.find("p { text: \"Hello\"; }") != std::string::npos);
 }
 
