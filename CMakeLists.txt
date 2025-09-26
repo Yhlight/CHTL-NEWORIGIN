@@ -44,6 +44,7 @@ set(CHTL_SOURCES
     src/CHTL/CHTLNode/ResponsiveValueNode.cpp
     src/CHTL/CHTLNode/ScriptNode.cpp
     src/CHTL/CHTLNode/TextNode.cpp
+    src/CHTL/CHTLNode/StyleValue.cpp
     src/CHTL/CHTLParser/Parser.cpp
     src/CHTL/CHTLState/ConfigurationState.cpp
     src/CHTL/CHTLState/StatementState.cpp

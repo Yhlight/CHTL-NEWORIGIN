@@ -27,6 +27,7 @@ enum class TokenType {
     HashComment, // # a special comment to be processed
 
     // Operators
+    RightArrow,  // ->
     Plus,        // +
     Minus,       // -
     Asterisk,    // *

@@ -6,7 +6,9 @@
 #include <stdexcept>
 
 // Forward declarations for the recursive descent parser
+StyleValue parseStyleExpression(Parser& parser);
 StyleValue parseConditionalExpr(Parser& parser);
+StyleValue parseDynamicConditionalExpression(Parser& parser);
 
 std::string styleValueToString(const StyleValue& sv) {
     switch (sv.type) {
@@ -15,7 +17,6 @@ std::string styleValueToString(const StyleValue& sv) {
             oss.precision(15); // Preserve precision
             oss << sv.numeric_val;
             std::string numStr = oss.str();
-            // Clean up trailing zeros for non-decimal numbers
             if (numStr.find('.') != std::string::npos) {
                 numStr.erase(numStr.find_last_not_of('0') + 1, std::string::npos);
                 if (numStr.back() == '.') {
@@ -29,13 +30,58 @@ std::string styleValueToString(const StyleValue& sv) {
         case StyleValue::EMPTY:
             return "";
         case StyleValue::BOOL:
-            throw std::runtime_error("Cannot convert a boolean expression result to a string style value.");
+        case StyleValue::DYNAMIC_CONDITIONAL:
+             throw std::runtime_error("Cannot convert a complex expression result to a string style value directly.");
     }
     return ""; // Should not be reached
 }
 
 
 // --- Start of Expression Parsing Implementation ---
+
+StyleValue parseDynamicConditionalExpression(Parser& parser) {
+    auto expr = std::make_shared<DynamicConditionalExpression>();
+
+    parser.expectToken(TokenType::OpenDoubleBrace);
+    if(parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected identifier for selector in dynamic expression");
+    expr->selector = parser.currentToken.value;
+    parser.advanceTokens();
+    parser.expectToken(TokenType::CloseDoubleBrace);
+
+    parser.expectToken(TokenType::RightArrow);
+
+    if(parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected property name in dynamic expression");
+    expr->property = parser.currentToken.value;
+    parser.advanceTokens();
+
+    // Parse operator
+    const auto& opToken = parser.currentToken;
+    if (opToken.type == TokenType::GreaterThan || opToken.type == TokenType::LessThan || opToken.type == TokenType::EqualsEquals ||
+        opToken.type == TokenType::NotEquals || opToken.type == TokenType::GreaterThanEquals || opToken.type == TokenType::LessThanEquals) {
+        expr->op = opToken.value;
+        parser.advanceTokens();
+    } else {
+        throw std::runtime_error("Expected a comparison operator in dynamic expression.");
+    }
+
+    // Parse value to compare
+    if(parser.currentToken.type != TokenType::Number) throw std::runtime_error("Expected number for comparison in dynamic expression");
+    expr->value_to_compare = std::stod(parser.currentToken.value);
+    parser.advanceTokens();
+
+    parser.expectToken(TokenType::QuestionMark);
+
+    // Parse true and false branches.
+    expr->true_branch = std::make_unique<StyleValue>(parseStyleExpression(parser));
+    parser.expectToken(TokenType::Colon);
+    expr->false_branch = std::make_unique<StyleValue>(parseStyleExpression(parser));
+
+    StyleValue result;
+    result.type = StyleValue::DYNAMIC_CONDITIONAL;
+    result.dynamic_expr = expr;
+    return result;
+}
+
 
 Selector parseSelector(Parser& parser) {
     Selector selector;
@@ -59,7 +105,6 @@ Selector parseSelector(Parser& parser) {
             parser.advanceTokens();
         }
 
-        // Check for an index, e.g., [0]
         if (parser.currentToken.type == TokenType::OpenBracket) {
             parser.advanceTokens(); // consume '['
             if (parser.currentToken.type != TokenType::Number) throw std::runtime_error("Expected number inside index '[]'.");
@@ -68,17 +113,12 @@ Selector parseSelector(Parser& parser) {
             parser.expectToken(TokenType::CloseBracket);
         }
 
-        // Peek ahead to see if there's a descendant selector (another part)
-        // or if the selector is ending (e.g., followed by a dot for the property).
         if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
-            // If the next token is a property-dot, the selector is done.
             if(parser.currentToken.type == TokenType::Dot && parser.peekToken.type == TokenType::Identifier && parser.peekToken2.type != TokenType::OpenBracket) {
                 break;
             }
-             // Otherwise, it's a new part of a descendant selector
             selector.parts.emplace_back();
         } else {
-            // Any other token ends the selector
             break;
         }
     }
@@ -86,22 +126,17 @@ Selector parseSelector(Parser& parser) {
 }
 
 StyleValue parseReferencedProperty(Parser& parser) {
-    // 1. Use the new selector parser
     Selector selector = parseSelector(parser);
 
-    // 2. The selector parser stops right before the property's dot.
     parser.expectToken(TokenType::Dot);
     std::string propertyName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
-    // 3. Find the node using the new findNodeBySelector (which we'll update next)
     if (!parser.parsedNodes) {
         throw std::runtime_error("Parser context does not have access to parsed nodes for lookup.");
     }
-    // Note: This will fail to compile until we update ASTUtil.h/cpp
     const ElementNode* referencedNode = findNodeBySelector(*parser.parsedNodes, selector);
     if (!referencedNode) {
-        // TODO: Create a utility to serialize the selector struct to a string for better error messages
         throw std::runtime_error("Could not find element for property reference.");
     }
     auto it = referencedNode->inlineStyles.find(propertyName);
@@ -113,8 +148,6 @@ StyleValue parseReferencedProperty(Parser& parser) {
 
 StyleValue parsePrimaryExpr(Parser& parser) {
     if (parser.currentToken.type == TokenType::Identifier) {
-        // Could be a self-referential property or a string literal.
-        // Check for self-reference by looking up the identifier in the current node's styles.
         auto it = parser.contextNode->inlineStyles.find(parser.currentToken.value);
         if (it != parser.contextNode->inlineStyles.end()) {
             parser.advanceTokens();
@@ -122,14 +155,10 @@ StyleValue parsePrimaryExpr(Parser& parser) {
         }
     }
 
-    // Check if the expression is a property reference.
     if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
-        // Starts with a class or ID selector, must be a reference.
         return parseReferencedProperty(parser);
     }
     if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::Dot) {
-        // Starts with a tag selector, e.g., "div.width".
-        // We must also check that it's not a self-reference to a property with the same name.
         if (parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()) {
             return parseReferencedProperty(parser);
         }
@@ -146,15 +175,14 @@ StyleValue parsePrimaryExpr(Parser& parser) {
 
     if (parser.currentToken.type == TokenType::OpenParen) {
         parser.advanceTokens();
-        auto result = parseStyleExpression(parser); // Recursive call for precedence
+        auto result = parseStyleExpression(parser);
         parser.expectToken(TokenType::CloseParen);
         return result;
     }
 
     if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::OpenParen) {
-        // This is a variable template usage, e.g., MyTheme(primaryColor)
         std::string templateName = parser.currentToken.value;
-        parser.advanceTokens(); // consume template name
+        parser.advanceTokens();
         parser.expectToken(TokenType::OpenParen);
 
         std::string varName = parser.currentToken.value;
@@ -163,7 +191,7 @@ StyleValue parsePrimaryExpr(Parser& parser) {
         std::string specializedValue;
         bool isSpecialized = false;
         if (parser.currentToken.type == TokenType::Equals) {
-            parser.advanceTokens(); // consume '='
+            parser.advanceTokens();
 
             std::stringstream ss;
             bool first = true;
@@ -176,22 +204,20 @@ StyleValue parsePrimaryExpr(Parser& parser) {
 
             specializedValue = ss.str();
             isSpecialized = true;
-            // Do not advance tokens here, the loop consumes up to the ')'
         }
 
         parser.expectToken(TokenType::CloseParen);
 
-        // Handle optional 'from <namespace>' clause
         std::string ns = parser.getCurrentNamespace();
         if (parser.currentToken.type == TokenType::From) {
-            parser.advanceTokens(); // consume 'from'
+            parser.advanceTokens();
 
             std::stringstream ns_builder;
             ns_builder << parser.currentToken.value;
             parser.expectToken(TokenType::Identifier);
 
             while(parser.currentToken.type == TokenType::Dot) {
-                parser.advanceTokens(); // consume '.'
+                parser.advanceTokens();
                 ns_builder << "." << parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
             }
@@ -202,7 +228,6 @@ StyleValue parsePrimaryExpr(Parser& parser) {
             return {StyleValue::STRING, 0.0, "", specializedValue};
         }
 
-        // Handle non-specialized case
         VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(ns, templateName);
         if (!varTmpl) throw std::runtime_error("Variable template '" + templateName + "' not found in namespace '" + ns + "'.");
 
@@ -217,10 +242,7 @@ StyleValue parsePrimaryExpr(Parser& parser) {
         ss << parser.currentToken.value;
         parser.advanceTokens();
 
-        // Greedily consume subsequent identifiers/numbers as part of a multi-word string literal.
-        // This allows for values like `font-family: Times New Roman;`
         while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
-             // Stop if we hit a semicolon or the end of the block, as that marks the end of the value.
              if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
                  break;
              }
@@ -243,7 +265,6 @@ StyleValue parseMultiplicativeExpr(Parser& parser) {
         StyleValue rhs = parsePrimaryExpr(parser);
         if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of * or / must be numeric.");
 
-        // For multiplication and division, one of the operands must be unitless.
         if (!result.unit.empty() && !rhs.unit.empty()) {
             throw std::runtime_error("Cannot multiply or divide two values with units.");
         }
@@ -255,7 +276,6 @@ StyleValue parseMultiplicativeExpr(Parser& parser) {
             result.numeric_val /= rhs.numeric_val;
         }
 
-        // The result should adopt the unit of whichever operand had one.
         if (result.unit.empty()) {
             result.unit = rhs.unit;
         }
@@ -272,17 +292,14 @@ StyleValue parseAdditiveExpr(Parser& parser) {
         StyleValue rhs = parseMultiplicativeExpr(parser);
         if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of + or - must be numeric.");
 
-        // If units are different and both are non-empty, generate a calc() expression.
         if (result.unit != rhs.unit && !result.unit.empty() && !rhs.unit.empty()) {
             std::string lhs_str = styleValueToString(result);
             std::string rhs_str = styleValueToString(rhs);
             std::string op_str = (op == TokenType::Plus) ? " + " : " - ";
             result = {StyleValue::STRING, 0.0, "", "calc(" + lhs_str + op_str + rhs_str + ")"};
         } else {
-            // Otherwise, perform the calculation directly.
             if (op == TokenType::Plus) result.numeric_val += rhs.numeric_val;
             else result.numeric_val -= rhs.numeric_val;
-            // If the original value had no unit, adopt the unit of the RHS.
             if (result.unit.empty()) {
                 result.unit = rhs.unit;
             }
@@ -324,7 +341,7 @@ StyleValue parseBooleanRelationalExpr(Parser& parser) {
         }
         return bool_result;
     }
-    return lhs; // Not a relational expression, return the value.
+    return lhs;
 }
 
 StyleValue parseBooleanAndExpr(Parser& parser) {
@@ -358,12 +375,12 @@ StyleValue parseConditionalExpr(Parser& parser) {
         if (condition.type != StyleValue::BOOL) {
             throw std::runtime_error("Expression before '?' must evaluate to a boolean.");
         }
-        parser.advanceTokens(); // consume '?'
+        parser.advanceTokens();
 
-        StyleValue true_val = parseConditionalExpr(parser); // Recurse for nested conditionals
+        StyleValue true_val = parseConditionalExpr(parser);
 
         if (parser.currentToken.type == TokenType::Colon) {
-            parser.advanceTokens(); // consume ':'
+            parser.advanceTokens();
             StyleValue false_val = parseConditionalExpr(parser);
             return condition.bool_val ? true_val : false_val;
         }
@@ -371,12 +388,15 @@ StyleValue parseConditionalExpr(Parser& parser) {
         return condition.bool_val ? true_val : StyleValue{StyleValue::EMPTY};
     }
 
-    return condition; // Not a conditional, just return the value.
+    return condition;
 }
 
 StyleValue parseStyleExpression(Parser& parser) {
-    // A property value is a chain of conditional expressions, separated by commas.
-    // The first one that evaluates to true wins.
+    // Check for dynamic conditional at the start of the expression
+    if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
+        return parseDynamicConditionalExpression(parser);
+    }
+
     StyleValue finalValue{StyleValue::EMPTY};
     bool conditionMet = false;
 
@@ -386,7 +406,6 @@ StyleValue parseStyleExpression(Parser& parser) {
         if (!conditionMet) {
             if (result.type != StyleValue::EMPTY) {
                 finalValue = result;
-                // If the result was not a simple value, it must have been a successful conditional
                 if (result.type != StyleValue::NUMERIC && result.type != StyleValue::STRING) {
                      conditionMet = true;
                 }
@@ -395,12 +414,11 @@ StyleValue parseStyleExpression(Parser& parser) {
 
         if (parser.currentToken.type == TokenType::Comma) {
             parser.advanceTokens();
-            // If we've already found our value, we still need to parse the rest of the expression to consume the tokens.
             if (conditionMet) {
                 parseStyleExpression(parser);
             }
         } else {
-            break; // End of chain
+            break;
         }
     }
     return finalValue;

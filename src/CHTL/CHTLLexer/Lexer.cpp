@@ -212,7 +212,14 @@ Token Lexer::getNextToken() {
         if (current == '.') { advance(); return {TokenType::Dot, ".", line, startCol, startPos}; }
         if (current == '$') { advance(); return {TokenType::Dollar, "$", line, startCol, startPos}; }
         if (current == '+') { advance(); return {TokenType::Plus, "+", line, startCol, startPos}; }
-        if (current == '-') { advance(); return {TokenType::Minus, "-", line, startCol, startPos}; }
+        if (current == '-') {
+            advance();
+            if (peek() == '>') {
+                advance();
+                return {TokenType::RightArrow, "->", line, startCol, startPos};
+            }
+            return {TokenType::Minus, "-", line, startCol, startPos};
+        }
         if (current == '*') {
             advance();
             if (peek() == '*') {
