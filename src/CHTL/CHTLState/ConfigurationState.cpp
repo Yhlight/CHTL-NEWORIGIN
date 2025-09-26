@@ -33,6 +33,8 @@ std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
         if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.value == "Name") {
             parseNameBlock(parser, *currentConfig);
+        } else if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.value == "OriginType") {
+            parseOriginTypeBlock(parser, *currentConfig);
         } else if (parser.currentToken.type == TokenType::Identifier) {
             std::string key = parser.currentToken.value;
             parser.advanceTokens();
@@ -50,6 +52,8 @@ std::unique_ptr<BaseNode> ConfigurationState::handle(Parser& parser) {
                 currentConfig->disableStyleAutoAddClass = (value == "true");
             } else if (key == "DISABLE_STYLE_AUTO_ADD_ID") {
                 currentConfig->disableStyleAutoAddId = (value == "true");
+            } else if (key == "DISABLE_CUSTOM_ORIGIN_TYPE") {
+                currentConfig->disableCustomOriginType = (value == "true");
             }
 
             parser.advanceTokens();
@@ -106,6 +110,38 @@ void ConfigurationState::parseNameBlock(Parser& parser, ConfigSet& configSet) {
             parser.expectToken(TokenType::Semicolon);
         } else {
             throw std::runtime_error("Unexpected token in [Name] block: " + parser.currentToken.value);
+        }
+    }
+    parser.expectToken(TokenType::CloseBrace);
+}
+
+void ConfigurationState::parseOriginTypeBlock(Parser& parser, ConfigSet& configSet) {
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectToken(TokenType::Identifier); // consume "OriginType"
+    parser.expectToken(TokenType::CloseBracket);
+    parser.expectToken(TokenType::OpenBrace);
+
+    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        if (parser.currentToken.type == TokenType::Identifier) {
+            // The key (e.g., ORIGINTYPE_VUE) is parsed but not used for now.
+            // The spec enforces a naming convention, but the parser just needs to handle the structure.
+            parser.advanceTokens();
+
+            if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                throw std::runtime_error("Expected ':' or '=' after [OriginType] key.");
+            }
+            parser.advanceTokens(); // Consume ':' or '='
+
+            parser.expectToken(TokenType::At);
+
+            // The value after the '@' is the type we need to whitelist.
+            std::string typeName = parser.currentToken.value;
+            configSet.allowedOriginTypes.push_back(typeName);
+            parser.expectToken(TokenType::Identifier);
+
+            parser.expectToken(TokenType::Semicolon);
+        } else {
+            throw std::runtime_error("Unexpected token in [OriginType] block: " + parser.currentToken.value);
         }
     }
     parser.expectToken(TokenType::CloseBrace);

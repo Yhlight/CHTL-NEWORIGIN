@@ -38,7 +38,4 @@ private:
 
     // Helper for parsing an 'except' clause
     void parseExceptClause(Parser& parser, ElementNode& element);
-
-    // Helper for parsing a script block
-    void parseScriptBlock(Parser& parser, ElementNode& element);
 };

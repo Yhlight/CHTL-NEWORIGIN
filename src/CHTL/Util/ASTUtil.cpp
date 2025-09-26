@@ -7,50 +7,23 @@ bool elementMatchesPart(const ElementNode* element, const SelectorPart& part) {
     if (!element) {
         return false;
     }
-
-    // Check for an ambiguous selector (only tagname is specified, no class or id).
-    bool isAmbiguous = !part.tagName.empty() && part.id.empty() && part.className.empty();
-
-    if (isAmbiguous) {
-        // Auto-inference order: tag -> id -> class
-        // 1. Match by tag name
-        if (element->tagName == part.tagName) {
-            return true;
-        }
-        // 2. Match by ID
-        auto id_it = element->attributes.find("id");
-        if (id_it != element->attributes.end() && id_it->second.string_val == part.tagName) {
-            return true;
-        }
-        // 3. Match by class
-        auto class_it = element->attributes.find("class");
-        if (class_it != element->attributes.end() && class_it->second.string_val.find(part.tagName) != std::string::npos) {
-            // This basic check is consistent with the original logic.
-            return true;
-        }
-        // If none of the above match for an ambiguous selector, it's a fail.
+    if (!part.tagName.empty() && element->tagName != part.tagName) {
         return false;
-
-    } else {
-        // This is a specific selector (e.g. .class, #id, tag#id).
-        // Use the original strict matching logic.
-        if (!part.tagName.empty() && element->tagName != part.tagName) {
+    }
+    if (!part.id.empty()) {
+        auto it = element->attributes.find("id");
+        if (it == element->attributes.end() || it->second.string_val != part.id) {
             return false;
         }
-        if (!part.id.empty()) {
-            auto it = element->attributes.find("id");
-            if (it == element->attributes.end() || it->second.string_val != part.id) {
-                return false;
-            }
-        }
-        if (!part.className.empty()) {
-            auto it = element->attributes.find("class");
-            if (it == element->attributes.end() || it->second.string_val.find(part.className) == std::string::npos) {
-                return false;
-            }
-        }
-        return true;
     }
+    if (!part.className.empty()) {
+        auto it = element->attributes.find("class");
+        if (it == element->attributes.end() || it->second.string_val.find(part.className) == std::string::npos) {
+            // Basic check, doesn't handle whole-word matching perfectly but is an improvement.
+            return false;
+        }
+    }
+    return true;
 }
 
 // Recursive helper to find all nodes matching a selector part within a subtree.
