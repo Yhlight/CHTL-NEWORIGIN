@@ -20,6 +20,8 @@ enum class CHTLJSNodeType {
     Animate,
     // Represents a ScriptLoader block for loading external scripts.
     ScriptLoader,
+    // Represents a virtual object declaration, e.g., Vir myVar = ...
+    VirtualObject,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.

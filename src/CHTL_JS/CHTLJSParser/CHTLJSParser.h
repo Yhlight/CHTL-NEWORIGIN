@@ -7,6 +7,7 @@
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/AnimateNode.h"
 #include "../CHTLJSNode/ScriptLoaderNode.h"
+#include "../CHTLJSNode/VirtualObjectNode.h"
 #include <vector>
 #include <memory>
 
@@ -29,4 +30,5 @@ private:
     std::unique_ptr<DelegateNode> parseDelegateBlock();
     std::unique_ptr<AnimateNode> parseAnimateBlock();
     std::unique_ptr<ScriptLoaderNode> parseScriptLoaderBlock();
+    std::unique_ptr<VirtualObjectNode> parseVirtualObjectDeclaration();
 };

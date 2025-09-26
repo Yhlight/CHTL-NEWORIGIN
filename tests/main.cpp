@@ -86,6 +86,7 @@ void test_chtl_js_event_binding_operator();
 void test_chtl_js_delegate_block();
 void test_chtl_js_animate_block();
 void test_chtl_js_script_loader();
+void test_chtl_js_virtual_object_declaration();
 
 
 void test_text_block_literals() {
@@ -501,6 +502,7 @@ int main() {
     run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
     run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
     run_test(test_chtl_js_script_loader, "CHTL JS ScriptLoader");
+    run_test(test_chtl_js_virtual_object_declaration, "CHTL JS Virtual Object Declaration");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1476,6 +1478,28 @@ void test_chtl_js_event_binding_operator() {
     std::string expected_js2_2 = "document.querySelector('#my-area').addEventListener('mouseout', (e) => { e.target.classList.toggle(\"hover\"); });";
     assert(remove_whitespace(result2).find(remove_whitespace(expected_js2_1)) != std::string::npos);
     assert(remove_whitespace(result2).find(remove_whitespace(expected_js2_2)) != std::string::npos);
+}
+
+void test_chtl_js_virtual_object_declaration() {
+    std::string source = R"(
+        Vir myTest = Listen {
+            click: () => {}
+        };
+    )";
+
+    // We test the parser directly, as the compiler/generator logic for Vir is not yet implemented.
+    CHTLJSLexer lexer(source);
+    auto tokens = lexer.tokenize();
+    CHTLJSParser parser(tokens);
+    auto nodes = parser.parse();
+
+    assert(nodes.size() == 1);
+    assert(nodes[0]->getType() == CHTLJSNodeType::VirtualObject);
+
+    auto* virNode = static_cast<VirtualObjectNode*>(nodes[0].get());
+    assert(virNode->name == "myTest");
+    assert(virNode->value != nullptr);
+    assert(virNode->value->getType() == CHTLJSNodeType::Listen);
 }
 
 void test_chtl_js_delegate_block() {

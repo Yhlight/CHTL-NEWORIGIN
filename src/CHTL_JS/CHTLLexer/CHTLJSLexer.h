@@ -13,6 +13,7 @@ enum class CHTLJSTokenType {
 
     // Keywords
     ScriptLoader,     // ScriptLoader keyword
+    Vir,              // Vir keyword for virtual objects
 
     // General tokens
     Identifier,       // e.g., click, custom function names

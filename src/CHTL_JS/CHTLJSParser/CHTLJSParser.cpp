@@ -6,6 +6,7 @@
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/AnimateNode.h"
 #include "../CHTLJSNode/ScriptLoaderNode.h"
+#include "../CHTLJSNode/VirtualObjectNode.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -50,6 +51,9 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
 
     while (currentToken().type != CHTLJSTokenType::EndOfFile) {
         switch (currentToken().type) {
+            case CHTLJSTokenType::Vir:
+                nodes.push_back(parseVirtualObjectDeclaration());
+                break;
             case CHTLJSTokenType::ScriptLoader:
                 nodes.push_back(parseScriptLoaderBlock());
                 break;
@@ -101,6 +105,35 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
     }
 
     return nodes;
+}
+
+std::unique_ptr<VirtualObjectNode> CHTLJSParser::parseVirtualObjectDeclaration() {
+    advance(); // Consume 'Vir'
+
+    if (currentToken().type != CHTLJSTokenType::Identifier) {
+        throw std::runtime_error("Expected identifier after 'Vir'.");
+    }
+    std::string name = currentToken().value;
+    advance();
+
+    if (currentToken().type != CHTLJSTokenType::RawJS || currentToken().value != "=") {
+        throw std::runtime_error("Expected '=' after virtual object name.");
+    }
+    advance();
+
+    std::unique_ptr<CHTLJSNode> valueNode;
+    if (currentToken().type == CHTLJSTokenType::Identifier) {
+        if(currentToken().value == "Listen") valueNode = parseListenBlock();
+        else if(currentToken().value == "Animate") valueNode = parseAnimateBlock();
+        else if(currentToken().value == "Delegate") valueNode = parseDelegateBlock();
+        else {
+            throw std::runtime_error("Unsupported function type for virtual object assignment.");
+        }
+    } else {
+        throw std::runtime_error("Expected a CHTL JS function after '=' in virtual object declaration.");
+    }
+
+    return std::make_unique<VirtualObjectNode>(name, std::move(valueNode));
 }
 
 std::unique_ptr<ScriptLoaderNode> CHTLJSParser::parseScriptLoaderBlock() {
