@@ -22,3 +22,7 @@
 # Test-generated files
 *.chtl
 *.js
+third-party/antlr4/
+third-party/libsass/
+third-party/libzippp/
+third-party/quickjs/

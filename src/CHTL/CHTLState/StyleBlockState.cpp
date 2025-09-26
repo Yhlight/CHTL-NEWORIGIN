@@ -172,14 +172,53 @@ std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
 
 // --- Start of Expression Parsing Implementation ---
 
+// Helper function to check for tokens that can legally follow a style value expression.
+// This helps distinguish a class selector `.foo` from a property access `.foo`.
+static bool isStyleValueTerminator(TokenType type) {
+    switch (type) {
+        // Tokens that can follow a style value (operators)
+        case TokenType::Plus: case TokenType::Minus: case TokenType::Asterisk: case TokenType::Slash:
+        case TokenType::Percent: case TokenType::DoubleAsterisk: case TokenType::QuestionMark:
+        case TokenType::LogicalAnd: case TokenType::LogicalOr: case TokenType::EqualsEquals:
+        case TokenType::NotEquals: case TokenType::GreaterThan: case TokenType::LessThan:
+        case TokenType::GreaterThanEquals: case TokenType::LessThanEquals:
+        // Tokens that end a style statement (delimiters)
+        case TokenType::Semicolon: case TokenType::Comma: case TokenType::CloseParen: case TokenType::CloseBrace:
+        // End of file is also a terminator
+        case TokenType::EndOfFile:
+            return true;
+        default:
+            return false;
+    }
+}
+
 Selector StyleBlockState::parseSelector(Parser& parser) {
     Selector selector;
-    selector.parts.emplace_back(); // Start with the first part
 
+    // Loop for each descendant part of the selector (e.g., ".container" then "div").
     while (true) {
+        // Lookahead to distinguish between a class selector part and a property access.
+        if (parser.currentToken.type == TokenType::Dot && parser.peekToken.type == TokenType::Identifier) {
+            if (isStyleValueTerminator(parser.peekToken2.type)) {
+                break; // It's a property access, so the selector is finished.
+            }
+        }
+
+        // If the current token cannot start a selector part, then we're done.
+        if (parser.currentToken.type != TokenType::Identifier &&
+            parser.currentToken.type != TokenType::Dot &&
+            parser.currentToken.type != TokenType::Hash) {
+            break;
+        }
+
+        selector.parts.emplace_back();
         SelectorPart& currentPart = selector.parts.back();
 
-        if (parser.currentToken.type == TokenType::Dot) {
+        // A selector part can be a tag, a class, or an id. It cannot be a combination like `div.class`.
+        if (parser.currentToken.type == TokenType::Identifier) {
+            currentPart.tagName = parser.currentToken.value;
+            parser.advanceTokens();
+        } else if (parser.currentToken.type == TokenType::Dot) {
             parser.advanceTokens(); // consume '.'
             if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected class name after '.'.");
             currentPart.className = parser.currentToken.value;
@@ -189,12 +228,9 @@ Selector StyleBlockState::parseSelector(Parser& parser) {
             if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected id name after '#'.");
             currentPart.id = parser.currentToken.value;
             parser.advanceTokens();
-        } else if (parser.currentToken.type == TokenType::Identifier) {
-            currentPart.tagName = parser.currentToken.value;
-            parser.advanceTokens();
         }
 
-        // Check for an index, e.g., [0]
+        // Handle index access, e.g., [0]
         if (parser.currentToken.type == TokenType::OpenBracket) {
             parser.advanceTokens(); // consume '['
             if (parser.currentToken.type != TokenType::Number) throw std::runtime_error("Expected number inside index '[]'.");
@@ -202,21 +238,8 @@ Selector StyleBlockState::parseSelector(Parser& parser) {
             parser.advanceTokens();
             parser.expectToken(TokenType::CloseBracket);
         }
-
-        // Peek ahead to see if there's a descendant selector (another part)
-        // or if the selector is ending (e.g., followed by a dot for the property).
-        if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
-            // If the next token is a property-dot, the selector is done.
-            if(parser.currentToken.type == TokenType::Dot && parser.peekToken.type == TokenType::Identifier && parser.peekToken2.type != TokenType::OpenBracket) {
-                break;
-            }
-             // Otherwise, it's a new part of a descendant selector
-            selector.parts.emplace_back();
-        } else {
-            // Any other token ends the selector
-            break;
-        }
     }
+
     return selector;
 }
 
