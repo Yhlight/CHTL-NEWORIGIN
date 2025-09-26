@@ -14,6 +14,12 @@ enum class CHTLJSTokenType {
     Identifier,       // e.g., Listen, Delegate, click
     RawJS,            // A block of plain JavaScript code
 
+    // Punctuation
+    OpenBrace,        // {
+    CloseBrace,       // }
+    Colon,            // :
+    Comma,            // ,
+
     // Special tokens
     EndOfFile,
     Unexpected,

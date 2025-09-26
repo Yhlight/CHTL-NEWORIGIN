@@ -74,6 +74,7 @@ void test_conditional_rendering();
 void test_cmod_import();
 void test_compiler_dispatcher_full_workflow();
 void test_chtl_js_lexer_and_parser();
+void test_chtl_js_listen_block();
 
 
 void test_text_block_literals() {
@@ -478,6 +479,7 @@ int main() {
     run_test(test_cmod_import, "CMOD Module Import");
     run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
     run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
+    run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1397,4 +1399,28 @@ void test_chtl_js_lexer_and_parser() {
 
     auto* raw_node_2 = static_cast<RawJavaScriptNode*>(nodes[2].get());
     assert(raw_node_2->js_code == ";");
+}
+
+void test_chtl_js_listen_block() {
+    std::string source = R"(
+        div {
+            id: "my-btn";
+            script {
+                {{#my-btn}} -> Listen {
+                    click: () => { console.log("Clicked!"); },
+                    mouseover: () => { console.log("Hovered!"); }
+                }
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check that the generated JS is correct
+    std::string expected_js1 = "document.querySelector('#my-btn').addEventListener('click', () => { console.log(\"Clicked!\"); });";
+    std::string expected_js2 = "document.querySelector('#my-btn').addEventListener('mouseover', () => { console.log(\"Hovered!\"); });";
+
+    assert(result.find(expected_js1) != std::string::npos);
+    assert(result.find(expected_js2) != std::string::npos);
 }

@@ -18,11 +18,15 @@ add_subdirectory(third-party/libzippp)
 # Define the source files for the CHTL library explicitly
 set(CHTL_SOURCES
     src/CHTL/CHTLGenerator/Generator.cpp
+    src/CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.cpp
     src/CHTL/CHTLLexer/Lexer.cpp
     src/CHTL_JS/CHTLLexer/CHTLJSLexer.cpp
     src/CHTL_JS/CHTLJSParser/CHTLJSParser.cpp
     src/CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.cpp
     src/CHTL_JS/CHTLJSNode/RawJavaScriptNode.cpp
+    src/CHTL_JS/CHTLJSNode/ListenNode.cpp
+    src/CHTL_JS/CHTLJSGenerator/CHTLJSGenerator.cpp
+    src/CHTL_JS/CHTLJSCompiler.cpp
     src/CHTL/CHTLLoader/Loader.cpp
     src/CHTL/CHTLManage/TemplateManager.cpp
     src/CHTL/CHTLNode/CommentNode.cpp

@@ -23,10 +23,15 @@ std::string CompilerDispatcher::compile(const std::string& source) {
         outputDoctype = true;
     }
 
-    // 3. Collect CSS from style blocks
+    // 3. Compile other fragments (CHTL_JS, CSS, etc.)
+    std::map<std::string, std::string> compiled_fragments;
     for (const auto& pair : scanned_output.fragments) {
-        if (pair.second.type == FragmentType::CSS) {
-            globalCss += pair.second.content;
+        const std::string& placeholder = pair.first;
+        const CodeFragment& fragment = pair.second;
+        if (fragment.type == FragmentType::CSS) {
+            globalCss += fragment.content;
+        } else if (fragment.type == FragmentType::CHTL_JS) {
+            compiled_fragments[placeholder] = chtl_js_compiler.compile(fragment.content);
         }
     }
 
@@ -34,6 +39,6 @@ std::string CompilerDispatcher::compile(const std::string& source) {
     Generator generator;
     std::string htmlOutput = generator.generate(ast, globalCss, sharedContext, outputDoctype);
 
-    // 5. Use the CodeMerger to re-insert the original fragments
-    return merger.merge(htmlOutput, scanned_output.fragments);
+    // 5. Use the CodeMerger to re-insert the compiled fragments
+    return merger.merge(htmlOutput, compiled_fragments);
 }

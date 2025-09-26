@@ -1,4 +1,5 @@
 #include "CHTLJSLexer.h"
+#include <cctype>
 
 CHTLJSLexer::CHTLJSLexer(const std::string& source) : source(source) {}
 
@@ -27,45 +28,54 @@ std::vector<CHTLJSToken> CHTLJSLexer::tokenize() {
 }
 
 CHTLJSToken CHTLJSLexer::getNextToken() {
+    while (position < source.length() && isspace(peek())) {
+        advance();
+    }
+
     if (position >= source.length()) {
         return {CHTLJSTokenType::EndOfFile, ""};
     }
 
-    // Accumulate raw JS until a CHTL JS token is found
+    // CHTL JS specific operators
+    if (peek() == '{' && peek(1) == '{') { advance(); advance(); return {CHTLJSTokenType::OpenDoubleBrace, "{{"}; }
+    if (peek() == '}' && peek(1) == '}') { advance(); advance(); return {CHTLJSTokenType::CloseDoubleBrace, "}}"}; }
+    if (peek() == '-' && peek(1) == '>') { advance(); advance(); return {CHTLJSTokenType::Arrow, "->"}; }
+
+    // Punctuation for Listen blocks
+    if (peek() == '{') { advance(); return {CHTLJSTokenType::OpenBrace, "{"}; }
+    if (peek() == '}') { advance(); return {CHTLJSTokenType::CloseBrace, "}"}; }
+    if (peek() == ':') { advance(); return {CHTLJSTokenType::Colon, ":"}; }
+    if (peek() == ',') { advance(); return {CHTLJSTokenType::Comma, ","}; }
+
+    // Identifiers (like 'Listen') or Raw JS
     size_t start = position;
+    if (isalpha(peek()) || peek() == '_') {
+        while (isalnum(peek()) || peek() == '_') {
+            advance();
+        }
+        std::string value = source.substr(start, position - start);
+        if (value == "Listen") {
+            return {CHTLJSTokenType::Identifier, value};
+        }
+        // If not a keyword, treat it as part of a raw JS block
+        position = start; // backtrack
+    }
+
+    // Default to consuming as RawJS until a CHTL JS token is found
     while (position < source.length()) {
-        if (peek() == '{' && peek(1) == '{') {
-            if (position > start) {
-                // Return the accumulated RawJS token first
-                std::string raw_js = source.substr(start, position - start);
-                return {CHTLJSTokenType::RawJS, raw_js};
-            }
-            advance(); advance();
-            return {CHTLJSTokenType::OpenDoubleBrace, "{{"};
-        }
-        if (peek() == '}' && peek(1) == '}') {
-             if (position > start) {
-                std::string raw_js = source.substr(start, position - start);
-                return {CHTLJSTokenType::RawJS, raw_js};
-            }
-            advance(); advance();
-            return {CHTLJSTokenType::CloseDoubleBrace, "}}"};
-        }
-        if (peek() == '-' && peek(1) == '>') {
-             if (position > start) {
-                std::string raw_js = source.substr(start, position - start);
-                return {CHTLJSTokenType::RawJS, raw_js};
-            }
-            advance(); advance();
-            return {CHTLJSTokenType::Arrow, "->"};
+        if ((peek() == '{' && peek(1) == '{') ||
+            (peek() == '}' && peek(1) == '}') ||
+            (peek() == '-' && peek(1) == '>') ||
+            (peek() == '{') || (peek() == '}') || (peek() == ':') || (peek() == ','))
+        {
+            break;
         }
         advance();
     }
 
-    // If we reached the end, return any remaining RawJS
     if (position > start) {
         return {CHTLJSTokenType::RawJS, source.substr(start, position - start)};
     }
 
-    return {CHTLJSTokenType::EndOfFile, ""};
+    return {CHTLJSTokenType::Unexpected, std::string(1, peek())};
 }

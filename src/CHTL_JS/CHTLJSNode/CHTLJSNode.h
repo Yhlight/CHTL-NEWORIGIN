@@ -10,6 +10,8 @@ enum class CHTLJSNodeType {
     EnhancedSelector,
     // Represents a CHTL JS function call, e.g., ->Listen { ... }
     FunctionCall,
+    // Represents a Listen block, e.g., ->Listen { ... }
+    Listen,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.
