@@ -24,6 +24,7 @@ enum class CHTLJSTokenType {
     CloseBrace,       // }
     Colon,            // :
     Comma,            // ,
+    Semicolon,        // ;
 
     // Special tokens
     EndOfFile,

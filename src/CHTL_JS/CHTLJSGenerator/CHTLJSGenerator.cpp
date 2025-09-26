@@ -142,7 +142,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             const auto* animateNode = static_cast<const AnimateNode*>(node);
             std::stringstream ss;
             ss << "{\n";
-            if (animateNode->target) ss << "  target: " << *animateNode->target << ",\n";
+            if (animateNode->target) ss << "  target: document.querySelector('" << *animateNode->target << "'),\n";
             if (animateNode->duration) ss << "  duration: " << *animateNode->duration << ",\n";
             if (animateNode->easing) ss << "  easing: '" << *animateNode->easing << "',\n";
             if (animateNode->loop) ss << "  loop: " << *animateNode->loop << ",\n";

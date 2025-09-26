@@ -14,7 +14,6 @@ std::vector<CHTLJSToken> CHTLJSLexer::tokenize() {
 }
 
 CHTLJSToken CHTLJSLexer::getNextToken() {
-    // Skip whitespace
     while (position < source.length() && isspace(source[position])) {
         position++;
     }
@@ -23,75 +22,59 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
         return {CHTLJSTokenType::EndOfFile, ""};
     }
 
-    // Check for multi-char operators first
-    if (source.substr(position, 3) == "&->") {
-        position += 3;
-        return {CHTLJSTokenType::EventBindingOperator, "&->"};
-    }
-    if (source.substr(position, 2) == "->") {
-        position += 2;
-        return {CHTLJSTokenType::Arrow, "->"};
-    }
-    if (source.substr(position, 2) == "{{") {
-        position += 2;
-        return {CHTLJSTokenType::OpenDoubleBrace, "{{"};
-    }
-    if (source.substr(position, 2) == "}}") {
-        position += 2;
-        return {CHTLJSTokenType::CloseDoubleBrace, "}}"};
-    }
+    // CHTL JS specific operators
+    if (source.substr(position, 3) == "&->") { position += 3; return {CHTLJSTokenType::EventBindingOperator, "&->"}; }
+    if (source.substr(position, 2) == "->") { position += 2; return {CHTLJSTokenType::Arrow, "->"}; }
+    if (source.substr(position, 2) == "{{") { position += 2; return {CHTLJSTokenType::OpenDoubleBrace, "{{"}; }
+    if (source.substr(position, 2) == "}}") { position += 2; return {CHTLJSTokenType::CloseDoubleBrace, "}}"}; }
 
-    // Check for single-char punctuation
+    // Punctuation
     char current_char = source[position];
     if (current_char == '{') { position++; return {CHTLJSTokenType::OpenBrace, "{"}; }
     if (current_char == '}') { position++; return {CHTLJSTokenType::CloseBrace, "}"}; }
     if (current_char == ':') { position++; return {CHTLJSTokenType::Colon, ":"}; }
     if (current_char == ',') { position++; return {CHTLJSTokenType::Comma, ","}; }
+    if (current_char == ';') { position++; return {CHTLJSTokenType::Semicolon, ";"}; }
 
-    // Check for string literals (for file paths, etc.)
+    // String literals
     if (current_char == '"' || current_char == '\'') {
         char quote_type = current_char;
-        position++; // consume opening quote
+        position++;
         size_t value_start = position;
         while (position < source.length() && source[position] != quote_type) {
-            // Handle escaped quotes if necessary, for now we keep it simple
             position++;
         }
         std::string value = source.substr(value_start, position - value_start);
-        if (position < source.length()) {
-            position++; // consume closing quote
-        }
+        if (position < source.length()) position++;
         return {CHTLJSTokenType::StringLiteral, value};
     }
 
-    // Check for identifiers and keywords
+    // Keywords
     if (isalpha(source[position])) {
         size_t start = position;
-        while (position < source.length() && isalnum(source[position])) {
-            position++;
+        size_t end = start;
+        while (end < source.length() && isalnum(source[end])) {
+            end++;
         }
-        std::string word = source.substr(start, position - start);
-
+        std::string word = source.substr(start, end - start);
         if (word == "ScriptLoader") {
+            position = end;
             return {CHTLJSTokenType::ScriptLoader, word};
         }
-        // Other keywords are treated as identifiers for now.
-        return {CHTLJSTokenType::Identifier, word};
+        if (word == "Listen" || word == "Delegate" || word == "Animate") {
+            position = end;
+            return {CHTLJSTokenType::Identifier, word};
+        }
     }
 
-    // Fallback for raw JS or unquoted literals. This is a greedy consumption.
+    // Fallback for raw JS
     size_t start = position;
     while (position < source.length()) {
-        if (source.substr(position, 3) == "&->" ||
-            source.substr(position, 2) == "->" ||
-            source.substr(position, 2) == "{{" ||
-            source.substr(position, 2) == "}}" ||
-            source[position] == '{' || source[position] == '}' ||
-            source[position] == ':' || source[position] == ',') {
+        if (source.substr(position, 2) == "{{" || source.substr(position, 2) == "}}" || source.substr(position, 2) == "->" || source.substr(position, 3) == "&->" ||
+            source[position] == '{' || source[position] == '}' || source[position] == ':' || source[position] == ',') {
             break;
         }
 
-        // Lookahead to check for keywords
         if (isalpha(source[position])) {
             size_t end = position;
             while(end < source.length() && isalnum(source[end])) {
@@ -102,18 +85,19 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
                 break;
             }
         }
-
         position++;
     }
 
     std::string value = source.substr(start, position - start);
     if (!value.empty()) {
-        // For unquoted paths, this will be tokenized as RawJS.
-        // The parser will handle this.
         return {CHTLJSTokenType::RawJS, value};
     }
 
-    // If we get here, something is wrong.
-    position++;
-    return {CHTLJSTokenType::Unexpected, source.substr(position - 1, 1)};
+    // This should not be reached if the logic is correct, but as a safeguard
+    if (position < source.length()) {
+        position++;
+        return {CHTLJSTokenType::Unexpected, source.substr(position - 1, 1)};
+    }
+
+    return {CHTLJSTokenType::EndOfFile, ""};
 }

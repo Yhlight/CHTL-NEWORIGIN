@@ -22,6 +22,7 @@ private:
 
     CHTLJSToken currentToken() const;
     void advance();
+    std::string parseJsCodeBlock();
 
     std::unique_ptr<ListenNode> parseListenBlock();
     std::unique_ptr<EventBindingNode> parseEventBinding();

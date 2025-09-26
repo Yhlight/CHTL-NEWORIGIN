@@ -6,6 +6,13 @@
 #include <cstdio>  // For remove()
 #include <filesystem>
 #include <cstdlib> // For system()
+#include <algorithm> // for std::remove_if
+
+// Helper function to remove all whitespace from a string
+std::string remove_whitespace(std::string str) {
+    str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
+    return str;
+}
 
 // Include all necessary CHTL headers
 #include "../src/CHTL/CHTLLexer/Lexer.h"
@@ -488,11 +495,11 @@ int main() {
     // being temporarily disabled to focus on stabilizing the core CHTL compiler,
     // as per the user's request. These features can be fixed and re-enabled
     // in a future task.
-    // run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
-    // run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
-    // run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
-    // run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
-    // run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
+    run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
+    run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
+    run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
+    run_test(test_chtl_js_delegate_block, "CHTL JS Delegate Block");
+    run_test(test_chtl_js_animate_block, "CHTL JS Animate Block");
     run_test(test_chtl_js_script_loader, "CHTL JS ScriptLoader");
 
     std::cout << "Tests finished." << std::endl;
@@ -1386,13 +1393,13 @@ void test_chtl_js_lexer_and_parser() {
     CHTLJSLexer lexer(source);
     auto tokens = lexer.tokenize();
 
-    // Expected token stream: RawJS, OpenDoubleBrace, RawJS, CloseDoubleBrace, RawJS, EndOfFile
+    // Expected token stream: RawJS, OpenDoubleBrace, RawJS, CloseDoubleBrace, Semicolon, EndOfFile
     assert(tokens.size() == 6);
     assert(tokens[0].type == CHTLJSTokenType::RawJS && tokens[0].value == "const a = ");
     assert(tokens[1].type == CHTLJSTokenType::OpenDoubleBrace);
     assert(tokens[2].type == CHTLJSTokenType::RawJS && tokens[2].value == "#my-id");
     assert(tokens[3].type == CHTLJSTokenType::CloseDoubleBrace);
-    assert(tokens[4].type == CHTLJSTokenType::RawJS && tokens[4].value == ";");
+    assert(tokens[4].type == CHTLJSTokenType::Semicolon);
     assert(tokens[5].type == CHTLJSTokenType::EndOfFile);
 
     // Test Parser
@@ -1435,8 +1442,8 @@ void test_chtl_js_listen_block() {
     std::string expected_js1 = "document.querySelector('#my-btn').addEventListener('click', () => { console.log(\"Clicked!\"); });";
     std::string expected_js2 = "document.querySelector('#my-btn').addEventListener('mouseover', () => { console.log(\"Hovered!\"); });";
 
-    assert(result.find(expected_js1) != std::string::npos);
-    assert(result.find(expected_js2) != std::string::npos);
+    assert(remove_whitespace(result).find(remove_whitespace(expected_js1)) != std::string::npos);
+    assert(remove_whitespace(result).find(remove_whitespace(expected_js2)) != std::string::npos);
 }
 
 void test_chtl_js_event_binding_operator() {
@@ -1452,7 +1459,7 @@ void test_chtl_js_event_binding_operator() {
     CompilerDispatcher dispatcher1;
     std::string result1 = dispatcher1.compile(source1);
     std::string expected_js1 = "document.querySelector('#my-btn').addEventListener('click', () => { console.log(\"Clicked!\"); });";
-    assert(result1.find(expected_js1) != std::string::npos);
+    assert(remove_whitespace(result1).find(remove_whitespace(expected_js1)) != std::string::npos);
 
     // Test case 2: Multiple event bindings
     std::string source2 = R"(
@@ -1467,8 +1474,8 @@ void test_chtl_js_event_binding_operator() {
     std::string result2 = dispatcher2.compile(source2);
     std::string expected_js2_1 = "document.querySelector('#my-area').addEventListener('mouseover', (e) => { e.target.classList.toggle(\"hover\"); });";
     std::string expected_js2_2 = "document.querySelector('#my-area').addEventListener('mouseout', (e) => { e.target.classList.toggle(\"hover\"); });";
-    assert(result2.find(expected_js2_1) != std::string::npos);
-    assert(result2.find(expected_js2_2) != std::string::npos);
+    assert(remove_whitespace(result2).find(remove_whitespace(expected_js2_1)) != std::string::npos);
+    assert(remove_whitespace(result2).find(remove_whitespace(expected_js2_2)) != std::string::npos);
 }
 
 void test_chtl_js_delegate_block() {
@@ -1488,12 +1495,13 @@ void test_chtl_js_delegate_block() {
     std::string result = dispatcher.compile(source);
 
     // Check that the generated JS contains the key parts of the delegation logic
-    assert(result.find("const parent_for_delegation_") != std::string::npos);
-    assert(result.find(".addEventListener('click', (event) => {") != std::string::npos);
-    assert(result.find("let target = event.target;") != std::string::npos);
-    assert(result.find("while (target && target !== parent_for_delegation_") != std::string::npos);
-    assert(result.find("if (target.matches('.child-button'))") != std::string::npos);
-    assert(result.find("((event) => { console.log(\"Delegated click happened!\"); }).call(target, event);") != std::string::npos);
+    std::string result_no_space = remove_whitespace(result);
+    assert(result_no_space.find(remove_whitespace("const parent_for_delegation_")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace(".addEventListener('click', (event) => {")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("let target = event.target;")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("while (target && target !== parent_for_delegation_")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("if (target.matches('.child-button'))")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("((event) => { console.log(\"Delegated click happened!\"); }).call(target, event);")) != std::string::npos);
 }
 
 void test_chtl_js_animate_block() {
@@ -1511,10 +1519,11 @@ void test_chtl_js_animate_block() {
     std::string result = dispatcher.compile(source);
 
     // Check for the main properties
-    assert(result.find("const myAnimation = {") != std::string::npos);
-    assert(result.find("target: document.querySelector('#my-element')") != std::string::npos);
-    assert(result.find("duration: 1000") != std::string::npos);
-    assert(result.find("easing: 'ease-in-out'") != std::string::npos);
+    std::string result_no_space = remove_whitespace(result);
+    assert(result_no_space.find(remove_whitespace("const myAnimation = {")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("target: document.querySelector('#my-element')")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("duration: 1000")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("easing: 'ease-in-out'")) != std::string::npos);
 }
 
 void test_chtl_js_script_loader() {
