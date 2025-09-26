@@ -88,6 +88,7 @@ void test_chtl_js_animate_block();
 void test_chtl_js_script_loader();
 void test_chtl_js_virtual_object_declaration();
 void test_chtl_js_virtual_object_usage();
+void test_chtl_js_router();
 
 
 void test_text_block_literals() {
@@ -505,6 +506,7 @@ int main() {
     run_test(test_chtl_js_script_loader, "CHTL JS ScriptLoader");
     run_test(test_chtl_js_virtual_object_declaration, "CHTL JS Virtual Object Declaration");
     run_test(test_chtl_js_virtual_object_usage, "CHTL JS Virtual Object Usage");
+    run_test(test_chtl_js_router, "CHTL JS Router");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1518,6 +1520,33 @@ void test_chtl_js_virtual_object_usage() {
 
     std::string expected_js = "document.querySelector('#my-button').addEventListener('click', () => { console.log(\"Virtual click!\"); });";
     assert(remove_whitespace(result).find(remove_whitespace(expected_js)) != std::string::npos);
+}
+
+void test_chtl_js_router() {
+    std::string source = R"(
+        script {
+            Router {
+                mode: "history",
+                root: "/",
+                url: "/home", "/about",
+                page: {{#home-page}}, {{#about-page}}
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+    std::string result_no_space = remove_whitespace(result);
+
+    // 1. Check for the injected router library
+    assert(result_no_space.find(remove_whitespace("window.CHTLRouter=CHTLRouter;")) != std::string::npos);
+
+    // 2. Check for the configuration call
+    assert(result_no_space.find(remove_whitespace("CHTLRouter.config({mode:'history',rootPath:'/',});")) != std::string::npos);
+
+    // 3. Check for the route adding calls
+    assert(result_no_space.find(remove_whitespace("CHTLRouter.add('/home','#home-page');")) != std::string::npos);
+    assert(result_no_space.find(remove_whitespace("CHTLRouter.add('/about','#about-page');")) != std::string::npos);
 }
 
 void test_chtl_js_delegate_block() {

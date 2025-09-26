@@ -24,6 +24,8 @@ enum class CHTLJSNodeType {
     VirtualObject,
     // Represents a property access on a virtual object, e.g., myVir->property
     VirtualObjectAccess,
+    // Represents a Router block for defining client-side routes.
+    Router,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
     // More types will be added as the compiler is developed.

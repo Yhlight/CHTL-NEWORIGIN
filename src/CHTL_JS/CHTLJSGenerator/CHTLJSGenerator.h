@@ -5,6 +5,7 @@
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/ScriptLoaderNode.h"
 #include "../CHTLJSManage/VirtualObjectManager.h"
+#include "../CHTLJSNode/RouterNode.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -15,7 +16,9 @@ public:
 
 private:
     bool scriptLoaderInjected = false;
+    bool routerInjected = false;
     const VirtualObjectManager* vom = nullptr;
     std::string generateNode(const CHTLJSNode* node);
     std::string generateScriptLoader(const ScriptLoaderNode* node);
+    std::string generateRouter(const RouterNode* node);
 };

@@ -31,6 +31,7 @@ set(CHTL_SOURCES
     src/CHTL_JS/CHTLJSNode/ScriptLoaderNode.cpp
     src/CHTL_JS/CHTLJSNode/VirtualObjectNode.cpp
     src/CHTL_JS/CHTLJSNode/VirtualObjectAccessNode.cpp
+    src/CHTL_JS/CHTLJSNode/RouterNode.cpp
     src/CHTL_JS/CHTLJSGenerator/CHTLJSGenerator.cpp
     src/CHTL_JS/CHTLJSManage/VirtualObjectManager.cpp
     src/CHTL/CHTLLoader/Loader.cpp

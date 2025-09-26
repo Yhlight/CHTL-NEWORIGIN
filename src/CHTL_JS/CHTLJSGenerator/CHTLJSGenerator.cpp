@@ -8,6 +8,7 @@
 #include "../CHTLJSNode/ScriptLoaderNode.h"
 #include "../CHTLJSNode/VirtualObjectAccessNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
+#include "../CHTLJSNode/RouterNode.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -17,6 +18,7 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
     std::string last_expression;
 
     scriptLoaderInjected = false;
+    routerInjected = false;
 
     for (const auto& node : ast) {
         if (node->getType() == CHTLJSNodeType::Listen) {
@@ -89,6 +91,92 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
     return final_code.str();
 }
 
+std::string CHTLJSGenerator::generateRouter(const RouterNode* node) {
+    std::stringstream ss;
+    if (!routerInjected) {
+        ss << R"javascript(
+((window) => {
+    if (window.CHTLRouter) return;
+    const CHTLRouter = {
+        routes: [],
+        mode: 'history',
+        root: '/',
+        rootContainer: document.body,
+        config: function(options) {
+            if (options.mode) this.mode = options.mode;
+            if (options.rootPath) this.root = options.rootPath;
+            if (options.rootContainer) this.rootContainer = document.querySelector(options.rootContainer);
+            return this;
+        },
+        add: function(path, selector) {
+            this.routes.push({ path, selector });
+            return this;
+        },
+        navigate: function(path = '') {
+            if (this.mode === 'history') {
+                history.pushState(null, null, this.root + path);
+                this.checkRoutes();
+            } else {
+                window.location.href = `${window.location.href.replace(/#(.*)$/, '')}#${path}`;
+            }
+        },
+        checkRoutes: function() {
+            const currentPath = this.getCurrentPath();
+            const allPages = this.rootContainer.children;
+            for (let i = 0; i < allPages.length; i++) {
+                allPages[i].style.display = 'none';
+            }
+            for (const route of this.routes) {
+                if (route.path === currentPath) {
+                    const page = this.rootContainer.querySelector(route.selector);
+                    if (page) page.style.display = 'block';
+                }
+            }
+        },
+        getCurrentPath: function() {
+             if (this.mode === 'history') {
+                return window.location.pathname.replace(this.root, '');
+            } else {
+                return window.location.hash.replace('#', '');
+            }
+        },
+        listen: function() {
+            window.addEventListener('popstate', this.checkRoutes.bind(this));
+            window.addEventListener('hashchange', this.checkRoutes.bind(this));
+            document.addEventListener('DOMContentLoaded', () => {
+                this.checkRoutes();
+                // Add click listener for SPA navigation
+                document.body.addEventListener('click', e => {
+                    if (e.target.matches('[data-chtl-link]')) {
+                        e.preventDefault();
+                        this.navigate(e.target.getAttribute('href'));
+                    }
+                });
+            });
+        }
+    };
+    window.CHTLRouter = CHTLRouter;
+    CHTLRouter.listen();
+})(window);
+)javascript";
+        ss << "\n\n";
+        routerInjected = true;
+    }
+
+    // Generate configuration based on the RouterNode
+    ss << "CHTLRouter.config({";
+    if (node->mode) ss << "mode: '" << *node->mode << "',";
+    if (node->rootPath) ss << "rootPath: '" << *node->rootPath << "',";
+    if (node->rootContainer) ss << "rootContainer: '" << *node->rootContainer << "',";
+    ss << "});\n";
+
+    for (const auto& route : node->routes) {
+        ss << "CHTLRouter.add('" << route.first << "', '" << route.second << "');\n";
+    }
+
+    return ss.str();
+}
+
 std::string CHTLJSGenerator::generateScriptLoader(const ScriptLoaderNode* node) {
     std::stringstream ss;
     if (!scriptLoaderInjected) {
@@ -133,6 +221,8 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
     if (!node) return "";
 
     switch (node->getType()) {
+        case CHTLJSNodeType::Router:
+            return generateRouter(static_cast<const RouterNode*>(node));
         case CHTLJSNodeType::ScriptLoader:
             return generateScriptLoader(static_cast<const ScriptLoaderNode*>(node));
         case CHTLJSNodeType::RawJavaScript: {
@@ -156,7 +246,6 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
                     return it->second;
                 }
             }
-            // Add other cases for Animate, etc. here in the future.
             throw std::runtime_error("Property '" + accessNode->propertyName + "' not found in virtual object '" + accessNode->objectName + "'.");
         }
         case CHTLJSNodeType::Animate: {

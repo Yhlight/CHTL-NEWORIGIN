@@ -65,6 +65,10 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
             position = end;
             return {CHTLJSTokenType::Vir, word};
         }
+        if (word == "Router") {
+            position = end;
+            return {CHTLJSTokenType::Router, word};
+        }
         if (word == "Listen" || word == "Delegate" || word == "Animate") {
             position = end;
             return {CHTLJSTokenType::Identifier, word};

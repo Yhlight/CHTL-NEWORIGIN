@@ -8,6 +8,7 @@
 #include "../CHTLJSNode/ScriptLoaderNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
 #include "../CHTLJSNode/VirtualObjectAccessNode.h"
+#include "../CHTLJSNode/RouterNode.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -52,6 +53,9 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
 
     while (currentToken().type != CHTLJSTokenType::EndOfFile) {
         switch (currentToken().type) {
+            case CHTLJSTokenType::Router:
+                nodes.push_back(parseRouterBlock());
+                break;
             case CHTLJSTokenType::Vir:
                 nodes.push_back(parseVirtualObjectDeclaration());
                 break;
@@ -92,13 +96,13 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
             case CHTLJSTokenType::Identifier: {
                 if (position + 1 < tokens.size() && tokens[position + 1].type == CHTLJSTokenType::Arrow) {
                     std::string objectName = currentToken().value;
-                    advance(); // consume object name
-                    advance(); // consume '->'
+                    advance();
+                    advance();
                     if (currentToken().type != CHTLJSTokenType::Identifier) {
                         throw std::runtime_error("Expected identifier after '->' for virtual object access.");
                     }
                     std::string propertyName = currentToken().value;
-                    advance(); // consume property name
+                    advance();
                     nodes.push_back(std::make_unique<VirtualObjectAccessNode>(objectName, propertyName));
                 }
                 else if (currentToken().value == "Animate") {
@@ -117,6 +121,69 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
     }
 
     return nodes;
+}
+
+std::unique_ptr<RouterNode> CHTLJSParser::parseRouterBlock() {
+    advance(); // Consume 'Router'
+    if (currentToken().type != CHTLJSTokenType::OpenBrace) throw std::runtime_error("Expected '{' after 'Router'.");
+    advance(); // Consume '{'
+
+    auto routerNode = std::make_unique<RouterNode>();
+
+    while(currentToken().type != CHTLJSTokenType::CloseBrace) {
+        if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected identifier (e.g., 'url', 'page', 'mode', 'root') in Router block.");
+        std::string key = currentToken().value;
+        advance();
+
+        if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after router key.");
+        advance();
+
+        if (key == "url") {
+            do {
+                if (currentToken().type == CHTLJSTokenType::Comma) advance();
+                if (currentToken().type != CHTLJSTokenType::StringLiteral) throw std::runtime_error("Expected string literal for router URL.");
+                routerNode->routes[currentToken().value] = ""; // Placeholder for page
+                advance();
+            } while (currentToken().type == CHTLJSTokenType::Comma);
+        } else if (key == "page") {
+            auto route_it = routerNode->routes.begin();
+             do {
+                if (currentToken().type == CHTLJSTokenType::Comma) advance();
+                if (currentToken().type != CHTLJSTokenType::OpenDoubleBrace) throw std::runtime_error("Expected '{{' for router page selector.");
+                advance();
+                if (currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected selector inside '{{...}}'.");
+
+                if(route_it != routerNode->routes.end()) {
+                    route_it->second = currentToken().value;
+                    route_it++;
+                }
+                advance();
+                if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) throw std::runtime_error("Unclosed '{{...}}' for router page selector.");
+                advance();
+            } while (currentToken().type == CHTLJSTokenType::Comma);
+        } else if (key == "mode") {
+            if (currentToken().type != CHTLJSTokenType::StringLiteral) throw std::runtime_error("Expected string literal for router mode.");
+            routerNode->mode = currentToken().value;
+            advance();
+        } else if (key == "root") {
+            if (currentToken().type == CHTLJSTokenType::StringLiteral) {
+                 routerNode->rootPath = currentToken().value;
+                 advance();
+            } else if (currentToken().type == CHTLJSTokenType::OpenDoubleBrace) {
+                advance();
+                if (currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected selector inside '{{...}}'.");
+                routerNode->rootContainer = currentToken().value;
+                advance();
+                if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) throw std::runtime_error("Unclosed '{{...}}' for router root container.");
+                advance();
+            }
+        }
+
+        if(currentToken().type == CHTLJSTokenType::Comma) advance();
+    }
+
+    advance(); // Consume '}'
+    return routerNode;
 }
 
 std::unique_ptr<VirtualObjectNode> CHTLJSParser::parseVirtualObjectDeclaration() {

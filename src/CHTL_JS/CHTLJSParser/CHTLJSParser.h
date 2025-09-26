@@ -9,6 +9,7 @@
 #include "../CHTLJSNode/ScriptLoaderNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
 #include "../CHTLJSNode/VirtualObjectAccessNode.h"
+#include "../CHTLJSNode/RouterNode.h"
 #include <vector>
 #include <memory>
 
@@ -32,4 +33,5 @@ private:
     std::unique_ptr<AnimateNode> parseAnimateBlock();
     std::unique_ptr<ScriptLoaderNode> parseScriptLoaderBlock();
     std::unique_ptr<VirtualObjectNode> parseVirtualObjectDeclaration();
+    std::unique_ptr<RouterNode> parseRouterBlock();
 };
