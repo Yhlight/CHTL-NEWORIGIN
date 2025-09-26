@@ -7,6 +7,7 @@
 #include "../CHTLJSNode/AnimateNode.h"
 #include "../CHTLJSNode/ScriptLoaderNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
+#include "../CHTLJSNode/VirtualObjectAccessNode.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -89,7 +90,18 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 break;
             }
             case CHTLJSTokenType::Identifier: {
-                if (currentToken().value == "Animate") {
+                if (position + 1 < tokens.size() && tokens[position + 1].type == CHTLJSTokenType::Arrow) {
+                    std::string objectName = currentToken().value;
+                    advance(); // consume object name
+                    advance(); // consume '->'
+                    if (currentToken().type != CHTLJSTokenType::Identifier) {
+                        throw std::runtime_error("Expected identifier after '->' for virtual object access.");
+                    }
+                    std::string propertyName = currentToken().value;
+                    advance(); // consume property name
+                    nodes.push_back(std::make_unique<VirtualObjectAccessNode>(objectName, propertyName));
+                }
+                else if (currentToken().value == "Animate") {
                     nodes.push_back(parseAnimateBlock());
                 } else {
                     nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));

@@ -15,18 +15,15 @@ std::string CHTLJSCompiler::compile(const std::string& chtl_js_source) {
     std::vector<std::unique_ptr<CHTLJSNode>> generator_ast;
     for (auto& node : ast) {
         if (node && node->getType() == CHTLJSNodeType::VirtualObject) {
-            // Cast and move the node to the manager.
-            // This transfers ownership of the node from the AST to the manager.
             auto virNode = std::unique_ptr<VirtualObjectNode>(static_cast<VirtualObjectNode*>(node.release()));
             virtualObjectManager.registerVirtualObject(virNode->name, std::move(virNode));
         } else if (node) {
-            // Move all other nodes to the generator's AST.
             generator_ast.push_back(std::move(node));
         }
     }
 
-    // The generator now only receives nodes that should result in output.
-    return generator.generate(generator_ast);
+    // The generator now receives the AST and the virtual object manager.
+    return generator.generate(generator_ast, virtualObjectManager);
 }
 
 CHTLJSLexer CHTLJSCompiler::createLexer(const std::string& source) {

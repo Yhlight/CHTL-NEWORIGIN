@@ -8,6 +8,7 @@
 #include "../CHTLJSNode/AnimateNode.h"
 #include "../CHTLJSNode/ScriptLoaderNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
+#include "../CHTLJSNode/VirtualObjectAccessNode.h"
 #include <vector>
 #include <memory>
 

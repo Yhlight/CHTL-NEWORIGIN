@@ -6,10 +6,13 @@
 #include "../CHTLJSNode/DelegateNode.h"
 #include "../CHTLJSNode/AnimateNode.h"
 #include "../CHTLJSNode/ScriptLoaderNode.h"
+#include "../CHTLJSNode/VirtualObjectAccessNode.h"
+#include "../CHTLJSNode/VirtualObjectNode.h"
 #include <sstream>
 #include <stdexcept>
 
-std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNode>>& ast) {
+std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNode>>& ast, const VirtualObjectManager& vom) {
+    this->vom = &vom;
     std::stringstream final_code;
     std::string last_expression;
 
@@ -138,6 +141,24 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
         case CHTLJSNodeType::EnhancedSelector: {
             return "document.querySelector('" + static_cast<const CHTLJSEnhancedSelectorNode*>(node)->selector_text + "')";
         }
+        case CHTLJSNodeType::VirtualObjectAccess: {
+            const auto* accessNode = static_cast<const VirtualObjectAccessNode*>(node);
+            const auto* virNode = vom->getVirtualObject(accessNode->objectName);
+            if (!virNode) {
+                throw std::runtime_error("Virtual object '" + accessNode->objectName + "' not found.");
+            }
+
+            const auto* valueNode = virNode->value.get();
+            if (valueNode->getType() == CHTLJSNodeType::Listen) {
+                const auto* listenNode = static_cast<const ListenNode*>(valueNode);
+                auto it = listenNode->event_handlers.find(accessNode->propertyName);
+                if (it != listenNode->event_handlers.end()) {
+                    return it->second;
+                }
+            }
+            // Add other cases for Animate, etc. here in the future.
+            throw std::runtime_error("Property '" + accessNode->propertyName + "' not found in virtual object '" + accessNode->objectName + "'.");
+        }
         case CHTLJSNodeType::Animate: {
             const auto* animateNode = static_cast<const AnimateNode*>(node);
             std::stringstream ss;
@@ -182,6 +203,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
         case CHTLJSNodeType::Listen:
         case CHTLJSNodeType::EventBinding:
         case CHTLJSNodeType::Delegate:
+        case CHTLJSNodeType::VirtualObject:
             return "";
         default:
             return "";
