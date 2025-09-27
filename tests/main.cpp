@@ -67,6 +67,7 @@ void test_use_html5_directive();
 void test_use_named_configuration();
 void test_static_conditional_rendering();
 void test_dynamic_conditional_rendering();
+void test_script_loader_dependency_resolution();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -432,6 +433,10 @@ int main() {
     run_test(test_static_conditional_rendering, "Static Conditional Rendering");
     run_test(test_dynamic_conditional_rendering, "Dynamic Conditional Rendering");
 
+    // --- CHTL JS Feature Tests ---
+    std::cout << "\n--- Running CHTL JS Feature Tests ---\n";
+    run_test(test_script_loader_dependency_resolution, "ScriptLoader Dependency Resolution");
+
 
     run_test(test_text_block_literals, "Text Block Literals");
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
@@ -731,6 +736,45 @@ void test_static_conditional_rendering() {
     assert(result.html_content.find("Case 1") == std::string::npos);
     assert(result.html_content.find("Case 2: Should appear") != std::string::npos);
     assert(result.html_content.find("Case 3") == std::string::npos);
+}
+
+void test_script_loader_dependency_resolution() {
+    // Create dummy JS files with dependencies
+    write_file("test_modules/d.js", "const d = 'd';");
+    write_file("test_modules/c.js", "// define(['d'], function(d) { ... })\nconst c = 'c';");
+    write_file("test_modules/b.js", "// define(['d'], function(d) { ... })\nconst b = 'b';");
+    write_file("test_modules/a.js", "// define(['b', 'c'], function(b, c) { ... })\nconst a = 'a';");
+
+    std::string source = R"(
+        script {
+            ScriptLoader {
+                load: "./test_modules/a.js",
+                      "./test_modules/c.js",
+                      "./test_modules/b.js",
+                      "./test_modules/d.js";
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "test.chtl", true);
+
+    // Find the positions of each file's content in the final output
+    size_t pos_a = result.js_content.find("const a = 'a';");
+    size_t pos_b = result.js_content.find("const b = 'b';");
+    size_t pos_c = result.js_content.find("const c = 'c';");
+    size_t pos_d = result.js_content.find("const d = 'd';");
+
+    // Assert that the dependencies were loaded before the files that depend on them
+    assert(pos_d != std::string::npos);
+    assert(pos_b != std::string::npos);
+    assert(pos_c != std::string::npos);
+    assert(pos_a != std::string::npos);
+
+    assert(pos_d < pos_b); // d must come before b
+    assert(pos_d < pos_c); // d must come before c
+    assert(pos_b < pos_a); // b must come before a
+    assert(pos_c < pos_a); // c must come before a
 }
 
 void test_dynamic_conditional_rendering() {

@@ -60,6 +60,7 @@ set(CHTL_SOURCES
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp
+    src/CHTL_JS/Util/DependencyResolver.cpp
 )
 
 # Add a library for the CHTL compiler components

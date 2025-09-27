@@ -6,6 +6,9 @@
 #include "../CodeMerger/CodeMerger.h"
 #include "CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.h"
 #include "CompilationResult.h"
+#include "../CHTL_JS/Util/DependencyResolver.h"
+#include "../CHTL_JS/CHTLJSNode/ScriptLoaderNode.h"
+#include "../CHTL/CHTLLoader/Loader.h"
 
 class CompilerDispatcher {
 public:

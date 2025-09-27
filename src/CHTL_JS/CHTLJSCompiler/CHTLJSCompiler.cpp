@@ -4,13 +4,14 @@
 #include "../CHTLJSGenerator/CHTLJSGenerator.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
 
-std::string CHTLJSCompiler::compile(const std::string& chtl_js_source) {
-    // The full CHTL JS compilation pipeline.
+std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSCompiler::parse(const std::string& chtl_js_source) {
     auto lexer = createLexer(chtl_js_source);
     auto tokens = lexer.tokenize();
     auto parser = createParser(std::move(tokens));
-    auto ast = parser.parse();
+    return parser.parse();
+}
 
+std::string CHTLJSCompiler::generate(std::vector<std::unique_ptr<CHTLJSNode>>& ast) {
     // Separate Vir declarations from code-generation nodes.
     std::vector<std::unique_ptr<CHTLJSNode>> generator_ast;
     for (auto& node : ast) {

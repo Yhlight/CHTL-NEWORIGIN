@@ -123,16 +123,39 @@ CompilationResult CompilerDispatcher::compile(
     }
 
     // 5. Process all fragments from the scanner
-    for (const auto& pair : scanned_output.fragments) {
+    std::stringstream loaded_scripts_stream;
+    std::filesystem::path base_path = !source_path.empty() ? std::filesystem::path(source_path).parent_path() : std::filesystem::current_path();
+
+    for (auto& pair : scanned_output.fragments) {
         const std::string& placeholder = pair.first;
-        const CodeFragment& fragment = pair.second;
+        CodeFragment& fragment = pair.second;
 
         if (fragment.type == FragmentType::CSS) {
             css_content += fragment.content + "\n";
         } else if (fragment.type == FragmentType::CHTL_JS) {
-            std::string compiled_js = chtl_js_compiler.compile(fragment.content);
+            // First, compile the CHTL JS to get the AST
+            auto chtl_js_ast = chtl_js_compiler.parse(fragment.content);
+
+            // Now, check the AST for ScriptLoaderNodes
+            for(const auto& node : chtl_js_ast) {
+                if(node->getType() == CHTLJSNodeType::ScriptLoader) {
+                    auto* loader_node = static_cast<ScriptLoaderNode*>(node.get());
+                    DependencyResolver resolver;
+                    for(const auto& path : loader_node->paths) {
+                        resolver.addFile(path);
+                    }
+                    std::vector<std::string> resolved_files = resolver.resolve(base_path);
+                    for(const auto& file_path : resolved_files) {
+                        loaded_scripts_stream << Loader::loadFile(file_path) << "\n";
+                    }
+                }
+            }
+
+            // Generate JS from the AST
+            std::string compiled_js = chtl_js_compiler.generate(chtl_js_ast);
             js_content_stream << compiled_js << "\n";
             script_fragments_for_merging[placeholder] = "<script>" + compiled_js + "</script>";
+
         } else if (fragment.type == FragmentType::JS) {
             js_content_stream << fragment.content << "\n";
             script_fragments_for_merging[placeholder] = "<script>" + fragment.content + "</script>";
@@ -140,10 +163,11 @@ CompilationResult CompilerDispatcher::compile(
     }
 
 
-    // 6. Generate and prepend runtime script if needed
+    // 6. Prepend loaded scripts and generate runtime script
+    std::string final_js_content = loaded_scripts_stream.str() + js_content_stream.str();
     std::string runtime_script = generateRuntimeScript(parser.sharedContext);
     if (!runtime_script.empty()) {
-        js_content_stream.str(runtime_script + js_content_stream.str());
+        final_js_content = runtime_script + final_js_content;
     }
 
     // 7. Add any CSS hoisted from local style blocks by the parser
@@ -154,7 +178,7 @@ CompilationResult CompilerDispatcher::compile(
     std::string html_content = generator.generate(
         ast,
         css_content,
-        js_content_stream.str(),
+        final_js_content,
         parser.sharedContext,
         parser.outputHtml5Doctype,
         inline_mode,
@@ -170,7 +194,7 @@ CompilationResult CompilerDispatcher::compile(
     CompilationResult result;
     result.html_content = html_content;
     result.css_content = css_content;
-    result.js_content = js_content_stream.str();
+    result.js_content = final_js_content;
 
     return result;
 }
