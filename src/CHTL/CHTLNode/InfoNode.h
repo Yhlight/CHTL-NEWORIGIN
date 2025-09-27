@@ -9,6 +9,7 @@ class InfoNode : public BaseNode {
 public:
     std::map<std::string, std::string> metadata;
     std::map<std::string, std::vector<std::string>> exports;
+    bool exportBlockExists = false;
 
     InfoNode() : BaseNode() {}
 

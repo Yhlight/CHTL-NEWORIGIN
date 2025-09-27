@@ -86,6 +86,66 @@ void TemplateManager::merge(const TemplateManager& other) {
     }
 }
 
+void TemplateManager::merge(const TemplateManager& other, const MergeOptions& options) {
+    if (options.type == ImportType::ALL) {
+        merge(other);
+        return;
+    }
+
+    bool merge_templates = (options.type == ImportType::TEMPLATE);
+    bool merge_customs = (options.type == ImportType::CUSTOM);
+    bool merge_origins = (options.type == ImportType::ORIGIN);
+
+    if ((merge_templates || merge_customs) && (options.subType.empty() || options.subType == "Style")) {
+        for (const auto& ns_pair : other.styleTemplates) {
+            for (const auto& name_pair : ns_pair.second) {
+                bool is_custom_node = name_pair.second->isCustom;
+                if ((merge_templates && !is_custom_node) || (merge_customs && is_custom_node)) {
+                    if (getStyleTemplate(ns_pair.first, name_pair.first)) continue;
+                    auto cloned_node = NodeCloner::clone(name_pair.second.get());
+                    addStyleTemplate(ns_pair.first, name_pair.first, std::unique_ptr<StyleTemplateNode>(static_cast<StyleTemplateNode*>(cloned_node.release())));
+                }
+            }
+        }
+    }
+
+    if ((merge_templates || merge_customs) && (options.subType.empty() || options.subType == "Element")) {
+        for (const auto& ns_pair : other.elementTemplates) {
+            for (const auto& name_pair : ns_pair.second) {
+                bool is_custom_node = name_pair.second->isCustom;
+                if ((merge_templates && !is_custom_node) || (merge_customs && is_custom_node)) {
+                    if (getElementTemplate(ns_pair.first, name_pair.first)) continue;
+                    auto cloned_node = NodeCloner::clone(name_pair.second.get());
+                    addElementTemplate(ns_pair.first, name_pair.first, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
+                }
+            }
+        }
+    }
+
+    if ((merge_templates || merge_customs) && (options.subType.empty() || options.subType == "Var")) {
+        for (const auto& ns_pair : other.varTemplates) {
+            for (const auto& name_pair : ns_pair.second) {
+                bool is_custom_node = name_pair.second->isCustom;
+                if ((merge_templates && !is_custom_node) || (merge_customs && is_custom_node)) {
+                    if (getVarTemplate(ns_pair.first, name_pair.first)) continue;
+                    auto cloned_node = NodeCloner::clone(name_pair.second.get());
+                    addVarTemplate(ns_pair.first, name_pair.first, std::unique_ptr<VarTemplateNode>(static_cast<VarTemplateNode*>(cloned_node.release())));
+                }
+            }
+        }
+    }
+
+    if (merge_origins && (options.subType.empty() || options.subType == "Origin")) {
+        for (const auto& ns_pair : other.namedOrigins) {
+            for (const auto& name_pair : ns_pair.second) {
+                if (getNamedOrigin(ns_pair.first, name_pair.first)) continue;
+                auto cloned_node = NodeCloner::clone(name_pair.second.get());
+                addNamedOrigin(ns_pair.first, name_pair.first, std::unique_ptr<OriginNode>(static_cast<OriginNode*>(cloned_node.release())));
+            }
+        }
+    }
+}
+
 // --- Element Templates ---
 
 void TemplateManager::addElementTemplate(const std::string& ns, const std::string& name, std::unique_ptr<ElementTemplateNode> node) {

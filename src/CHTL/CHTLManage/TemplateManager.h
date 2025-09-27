@@ -27,6 +27,14 @@ public:
     // Merges templates from another manager into this one.
     void merge(const TemplateManager& other);
 
+    enum class ImportType { ALL, TEMPLATE, CUSTOM, ORIGIN, CONFIG };
+    struct MergeOptions {
+        ImportType type = ImportType::ALL;
+        std::string subType; // e.g., "Element", "Style", "Var"
+    };
+    void merge(const TemplateManager& other, const MergeOptions& options);
+
+
 private:
     // Use type aliases for cleaner nested map declarations
     using StyleTemplateMap = std::map<std::string, std::unique_ptr<StyleTemplateNode>>;

@@ -82,7 +82,7 @@ void test_attribute_expression();
 void test_conditional_attribute();
 void test_delete_style_property();
 void test_var_template_usage();
-void test_var_template_specialization();
+void test_var_template_specialization_and_inheritance();
 void test_style_auto_add_class();
 void test_ampersand_selector_order();
 void test_delete_element_inheritance();
@@ -133,7 +133,14 @@ void test_custom_style_definition_delete();
 void test_style_template_with_calculation();
 void test_style_template_with_var_reference();
 void test_keyword_aliasing();
+void test_multiple_keyword_aliases();
+void test_named_configuration_activation();
 void test_custom_origin_type();
+void test_anonymous_origin_block();
+void test_multiple_style_template_inheritance();
+void test_multiple_element_template_inheritance();
+void test_custom_style_valueless_property_error();
+void test_wildcard_import();
 
 
 void test_text_block_literals() {
@@ -363,6 +370,21 @@ void test_keyword_aliasing() {
     assert(result.html_content.find("<span>content</span>") == std::string::npos);
 }
 
+void test_multiple_keyword_aliases() {
+    std::string source = R"([Configuration] { [Name] { KEYWORD_DELETE = [remove, discard]; } } [Custom] @Element Box { span { text: "content"; } p { text: "more content"; } } body { @Element Box { remove span; discard p; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<span>content</span>") == std::string::npos);
+    assert(result.html_content.find("<p>more content</p>") == std::string::npos);
+}
+
+void test_named_configuration_activation() {
+    std::string source = R"([Configuration] @Config my_config { [Name] { KEYWORD_DELETE = destroy; } } use @Config my_config; [Custom] @Element Box { span { text: "content"; } } body { @Element Box { destroy span; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<span>content</span>") == std::string::npos);
+}
+
 void test_custom_origin_type() {
     std::string source = R"([Configuration] { [OriginType] { ORIGINTYPE_VUE = @Vue; } } body { [Origin] @Vue my_vue { <div id="app">{{ message }}</div> }; })";
     CompilerDispatcher dispatcher;
@@ -401,6 +423,12 @@ int main() {
     run_test(test_custom_element_insert, "Custom Element Insertion");
     run_test(test_custom_element_insert_at_top_bottom, "Custom Element Insertion At Top/Bottom");
     run_test(test_import, "Import Statement");
+    run_test(test_anonymous_origin_block, "Anonymous Origin Block");
+    run_test(test_multiple_style_template_inheritance, "Multiple Style Template Inheritance");
+    run_test(test_multiple_element_template_inheritance, "Multiple Element Template Inheritance");
+    run_test(test_var_template_specialization_and_inheritance, "Variable Template Specialization and Inheritance");
+    run_test(test_custom_style_valueless_property_error, "Custom Style Valueless Property Error");
+    run_test(test_wildcard_import, "Wildcard Import");
 
     std::cout << "\n--- Running Import/Export Tests ---\n";
     run_test(test_import_basic_element, "Import: Basic Element");
@@ -414,6 +442,8 @@ int main() {
     run_test(test_style_template_with_calculation, "Style Template with Calculation");
     run_test(test_style_template_with_var_reference, "Style Template with Var Reference");
     run_test(test_keyword_aliasing, "Keyword Aliasing");
+    run_test(test_multiple_keyword_aliases, "Multiple Keyword Aliases");
+    run_test(test_named_configuration_activation, "Named Configuration Activation");
     run_test(test_custom_origin_type, "Custom Origin Type");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
 
@@ -423,6 +453,166 @@ int main() {
     return 0;
 }
 
+void test_anonymous_origin_block() {
+    std::string source = R"(
+        body {
+            [Origin] @Html {
+                <p>Anonymous HTML</p>
+            }
+            style {
+                [Origin] @Style {
+                    .anon-style { color: purple; }
+                }
+            }
+            script {
+                [Origin] @JavaScript {
+                    console.log("Anonymous JS");
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<p>Anonymous HTML</p>") != std::string::npos);
+    assert(result.css_content.find(".anon-style { color: purple; }") != std::string::npos);
+    assert(result.js_content.find("console.log(\"Anonymous JS\");") != std::string::npos);
+}
+
+void test_multiple_style_template_inheritance() {
+    std::string source = R"(
+        [Template] @Style Base {
+            color: red;
+            font-size: 12px;
+        }
+        [Template] @Style Typography {
+            font-family: Arial;
+            font-size: 14px; // This should override Base
+        }
+        [Template] @Style Final {
+            inherit @Style Base;
+            inherit @Style Typography;
+            border: 1px solid black;
+        }
+        div {
+            style {
+                @Style Final;
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("color: red;") != std::string::npos);
+    assert(result.html_content.find("font-family: Arial;") != std::string::npos);
+    assert(result.html_content.find("font-size: 14px;") != std::string::npos);
+    assert(result.html_content.find("border: 1px solid black;") != std::string::npos);
+    assert(result.html_content.find("font-size: 12px;") == std::string::npos);
+}
+
+void test_multiple_element_template_inheritance() {
+    std::string source = R"(
+        [Template] @Element Part1 {
+            p { text: "Part 1"; }
+        }
+        [Template] @Element Part2 {
+            span { text: "Part 2"; }
+        }
+        [Template] @Element Combined {
+            inherit @Element Part1;
+            inherit @Element Part2;
+            div { text: "Combined"; }
+        }
+        body {
+            @Element Combined;
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<p>Part 1</p>") != std::string::npos);
+    assert(result.html_content.find("<span>Part 2</span>") != std::string::npos);
+    assert(result.html_content.find("<div>Combined</div>") != std::string::npos);
+}
+
+void test_var_template_specialization_and_inheritance() {
+    std::string source = R"(
+        [Template] @Var Colors {
+            primary: "blue";
+            secondary: "gray";
+        }
+        [Template] @Var Fonts {
+            main_font: "Arial";
+        }
+        [Custom] @Var Theme {
+            inherit @Var Colors;
+            inherit @Var Fonts;
+            main_font: "Helvetica"; // Override
+        }
+        div {
+            style {
+                color: Theme(primary);
+                background-color: Theme(secondary = "lightgray");
+                font-family: Theme(main_font);
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("color: blue;") != std::string::npos);
+    assert(result.html_content.find("background-color: lightgray;") != std::string::npos);
+    assert(result.html_content.find("font-family: Helvetica;") != std::string::npos);
+}
+
+void test_custom_style_valueless_property_error() {
+    std::string source = R"(
+        [Custom] @Style MyCustomStyle {
+            color; // Valueless property
+        }
+        div {
+            style {
+                @Style MyCustomStyle {
+                    // Missing value for 'color'
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    bool thrown = false;
+    try {
+        dispatcher.compile(source, "", true);
+    } catch (const std::runtime_error& e) {
+        thrown = true;
+        std::string error = e.what();
+        assert(error.find("was not assigned a value") != std::string::npos);
+    }
+    assert(thrown);
+}
+
+void test_wildcard_import() {
+    write_file("test_modules/wildcard.chtl", R"(
+        [Template] @Element Elem1 { p { text: "Elem1"; } }
+        [Template] @Style Style1 { color: red; }
+        [Custom] @Element Elem2 { span { text: "Elem2"; } }
+    )");
+    std::string source = R"(
+        [Import] [Template] from "./wildcard.chtl";
+        [Import] [Custom] from "./wildcard.chtl";
+        body {
+            @Element Elem1;
+            @Element Elem2;
+            div {
+                style {
+                    @Style Style1;
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "test_modules/main.chtl", true);
+    assert(result.html_content.find("<p>Elem1</p>") != std::string::npos);
+    assert(result.html_content.find("<span>Elem2</span>") != std::string::npos);
+    assert(result.html_content.find("color: red;") != std::string::npos);
+}
+
+
 // Dummy definitions for tests that are not yet refactored to dispatcher
 void test_lexer_configuration_keyword() {}
 void test_namespace_template_access() {}
@@ -431,7 +621,6 @@ void test_attribute_expression() {}
 void test_conditional_attribute() {}
 void test_delete_style_property() {}
 void test_var_template_usage() {}
-void test_var_template_specialization() {}
 void test_style_auto_add_class() {}
 void test_except_clause_extended() {}
 void test_ampersand_selector_order() {}

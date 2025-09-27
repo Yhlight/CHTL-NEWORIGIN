@@ -9,6 +9,8 @@
 #include <stdexcept>
 #include <sstream>
 
+#include "StatementState.h" // Forward declare to use parseOriginDefinition
+
 std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
     if (!parser.contextNode) {
         throw std::runtime_error("StyleBlockState requires a context node.");
@@ -22,7 +24,17 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
             parseClassOrIdSelector(parser);
         } else if (parser.currentToken.type == TokenType::Ampersand) {
             parseAmpersandSelector(parser);
-        } else if (parser.currentToken.type == TokenType::Identifier) {
+        } else if (parser.currentToken.type == TokenType::OpenBracket && parser.peekToken.value == "Origin") {
+            StatementState tempState;
+            std::unique_ptr<BaseNode> baseNode = tempState.parseOriginDefinition(parser);
+            OriginNode* originNode = static_cast<OriginNode*>(baseNode.get());
+
+            if (originNode->type != "Style") {
+                throw std::runtime_error("Only [Origin] @Style blocks are allowed inside a style block.");
+            }
+            parser.globalStyleContent += originNode->content;
+        }
+        else if (parser.currentToken.type == TokenType::Identifier) {
             parseInlineProperty(parser);
         } else {
             throw std::runtime_error("Unexpected token in style block: " + parser.currentToken.value);
@@ -170,6 +182,7 @@ static bool isStyleValueTerminator(TokenType type) {
         case TokenType::NotEquals: case TokenType::GreaterThan: case TokenType::LessThan:
         case TokenType::GreaterThanEquals: case TokenType::LessThanEquals:
         case TokenType::Semicolon: case TokenType::Comma: case TokenType::CloseParen: case TokenType::CloseBrace:
+        case TokenType::Colon: // Added to correctly terminate values in ternary expressions
         case TokenType::EndOfFile:
             return true;
         default:
@@ -242,58 +255,31 @@ StyleValue StyleBlockState::parseReferencedProperty(Parser& parser) {
 }
 
 StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
+    // Check for local properties first
     if (parser.currentToken.type == TokenType::Identifier) {
         const std::string& key = parser.currentToken.value;
-        auto style_it = parser.contextNode->inlineStyles.find(key);
-        if (style_it != parser.contextNode->inlineStyles.end()) {
-            parser.advanceTokens();
-            return style_it->second;
-        }
-        auto attr_it = parser.contextNode->attributes.find(key);
-        if (attr_it != parser.contextNode->attributes.end()) {
-            parser.advanceTokens();
-            return attr_it->second;
+        if (parser.contextNode) {
+            auto style_it = parser.contextNode->inlineStyles.find(key);
+            if (style_it != parser.contextNode->inlineStyles.end()) {
+                parser.advanceTokens();
+                return style_it->second;
+            }
+            auto attr_it = parser.contextNode->attributes.find(key);
+            if (attr_it != parser.contextNode->attributes.end()) {
+                parser.advanceTokens();
+                return attr_it->second;
+            }
         }
     }
 
-    if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
-        return parseReferencedProperty(parser);
-    }
-    if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::Dot) {
-        if (parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()) {
+    // Check for referenced properties
+    if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash || (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::Dot)) {
+         if (parser.contextNode && parser.contextNode->inlineStyles.find(parser.currentToken.value) == parser.contextNode->inlineStyles.end()) {
             return parseReferencedProperty(parser);
         }
     }
 
-    if (parser.currentToken.type == TokenType::Number) {
-        std::string rawValue = parser.currentToken.value;
-        parser.advanceTokens();
-        size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
-        double value = std::stod(rawValue.substr(0, unit_pos));
-        std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
-        return StyleValue(value, unit);
-    }
-
-    if (parser.currentToken.type == TokenType::Dollar) {
-        parser.advanceTokens();
-        if (parser.currentToken.type != TokenType::Identifier) {
-            throw std::runtime_error("Expected identifier after '$' for responsive value.");
-        }
-        std::string varName = parser.currentToken.value;
-        parser.advanceTokens();
-        parser.expectToken(TokenType::Dollar);
-
-        StyleValue sv;
-        sv.type = StyleValue::RESPONSIVE;
-        sv.responsive_var_name = varName;
-
-        if (parser.currentToken.type == TokenType::Identifier) {
-            sv.unit = parser.currentToken.value;
-            parser.advanceTokens();
-        }
-        return sv;
-    }
-
+    // Check for parenthesized expressions for precedence
     if (parser.currentToken.type == TokenType::OpenParen) {
         parser.advanceTokens();
         auto result = parseStyleExpression(parser);
@@ -301,6 +287,7 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         return result;
     }
 
+    // Check for variable template usage
     if (parser.currentToken.type == TokenType::Identifier && parser.peekToken.type == TokenType::OpenParen) {
         std::string templateName = parser.currentToken.value;
         parser.advanceTokens();
@@ -349,16 +336,57 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         return StyleValue(it->second);
     }
 
-    if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
+    // Check for responsive values
+    if (parser.currentToken.type == TokenType::Dollar) {
+        parser.advanceTokens();
+        if (parser.currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected identifier after '$' for responsive value.");
+        }
+        std::string varName = parser.currentToken.value;
+        parser.advanceTokens();
+        parser.expectToken(TokenType::Dollar);
+
+        StyleValue sv;
+        sv.type = StyleValue::RESPONSIVE;
+        sv.responsive_var_name = varName;
+
+        if (parser.currentToken.type == TokenType::Identifier) {
+            sv.unit = parser.currentToken.value;
+            parser.advanceTokens();
+        }
+        return sv;
+    }
+
+    // This block handles numeric values, string literals, and unquoted multi-word literals.
+    if (parser.currentToken.type == TokenType::Number ||
+        parser.currentToken.type == TokenType::Identifier ||
+        parser.currentToken.type == TokenType::String)
+    {
+        // If it's a number AND it's followed by a math operator or a clear terminator, parse it as a standalone numeric value.
+        if (parser.currentToken.type == TokenType::Number &&
+           (parser.peekToken.type == TokenType::Plus ||
+            parser.peekToken.type == TokenType::Minus ||
+            parser.peekToken.type == TokenType::Asterisk ||
+            parser.peekToken.type == TokenType::Slash ||
+            parser.peekToken.type == TokenType::Percent ||
+            parser.peekToken.type == TokenType::DoubleAsterisk ||
+            isStyleValueTerminator(parser.peekToken.type)))
+        {
+            std::string rawValue = parser.currentToken.value;
+            parser.advanceTokens();
+            size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
+            double value = std::stod(rawValue.substr(0, unit_pos));
+            std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
+            return StyleValue(value, unit);
+        }
+
+        // Otherwise, it's a string-like literal, which could be multi-word (e.g., "1px solid black").
         std::stringstream ss;
         ss << parser.currentToken.value;
         parser.advanceTokens();
-        while (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::Number || parser.currentToken.type == TokenType::String) {
-             if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::CloseBrace) {
-                 break;
-             }
-             ss << " " << parser.currentToken.value;
-             parser.advanceTokens();
+        while (!isStyleValueTerminator(parser.currentToken.type)) {
+            ss << " " << parser.currentToken.value;
+            parser.advanceTokens();
         }
         return StyleValue(ss.str());
     }
