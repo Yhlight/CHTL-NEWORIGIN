@@ -63,6 +63,8 @@ void test_namespace_basic_declaration_and_usage();
 void test_namespace_prevents_global_access();
 void test_namespace_nested_access();
 void test_namespace_automatic_on_import();
+void test_use_html5_directive();
+void test_use_named_configuration();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -418,6 +420,11 @@ int main() {
     run_test(test_namespace_nested_access, "Namespace Nested Access");
     run_test(test_namespace_automatic_on_import, "Namespace Automatic on Import");
 
+    // --- Use Statement Tests ---
+    std::cout << "\n--- Running Use Statement Tests ---\n";
+    run_test(test_use_html5_directive, "Use HTML5 Directive");
+    run_test(test_use_named_configuration, "Use Named Configuration");
+
 
     run_test(test_text_block_literals, "Text Block Literals");
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
@@ -686,6 +693,43 @@ void test_namespace_nested_access() {
     assert(result.html_content.find("<span>Deeply nested</span>") != std::string::npos);
 }
 
+void test_use_html5_directive() {
+    std::string source = R"(
+        use html5;
+        html {}
+    )";
+    CompilerDispatcher dispatcher;
+    // The dispatcher's `compile` method needs to be called in a way that respects the `outputHtml5Doctype` flag.
+    // Assuming the dispatcher is correctly wired to the parser and generator, this should work.
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.rfind("<!DOCTYPE html>", 0) == 0);
+}
+
+void test_use_named_configuration() {
+    std::string source = R"(
+        [Configuration] @Config MyKeywords {
+            [Name] {
+                KEYWORD_DELETE = destroy;
+            }
+        }
+
+        use @Config MyKeywords;
+
+        [Custom] @Element Box {
+            span { text: "Hello"; }
+        }
+
+        body {
+            @Element Box {
+                destroy span;
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<span>Hello</span>") == std::string::npos);
+}
+
 void test_namespace_automatic_on_import() {
     write_file("test_modules/auto_namespaced.chtl", R"(
         [Template] @Element AutoComponent {
@@ -718,8 +762,6 @@ void test_ampersand_selector_order() {}
 void test_delete_element_inheritance() {}
 void test_calc_with_percentage() {}
 void test_implicit_style_template_inheritance() {}
-void test_use_html5_directive() {}
-void test_named_configuration() {}
 void test_precise_style_import() {}
 void test_precise_var_import() {}
 void test_precise_style_import_with_alias() {}
