@@ -68,6 +68,7 @@ void test_use_named_configuration();
 void test_static_conditional_rendering();
 void test_dynamic_conditional_rendering();
 void test_script_loader_dependency_resolution();
+void test_event_delegation();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -436,6 +437,7 @@ int main() {
     // --- CHTL JS Feature Tests ---
     std::cout << "\n--- Running CHTL JS Feature Tests ---\n";
     run_test(test_script_loader_dependency_resolution, "ScriptLoader Dependency Resolution");
+    run_test(test_event_delegation, "Event Delegation");
 
 
     run_test(test_text_block_literals, "Text Block Literals");
@@ -736,6 +738,31 @@ void test_static_conditional_rendering() {
     assert(result.html_content.find("Case 1") == std::string::npos);
     assert(result.html_content.find("Case 2: Should appear") != std::string::npos);
     assert(result.html_content.find("Case 3") == std::string::npos);
+}
+
+void test_event_delegation() {
+    std::string source = R"(
+        div {
+            id: "parent-div",
+            script {
+                {{#parent-div}}->Delegate {
+                    target: {{.child-button}},
+                    click: (event) => {
+                        event.target.textContent = "Delegated Click!";
+                    }
+                }
+            }
+        }
+    )";
+
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "test.chtl", true);
+
+    // Check for the key parts of the delegation logic
+    assert(result.js_content.find("document.querySelector('#parent-div')") != std::string::npos);
+    assert(result.js_content.find(".addEventListener('click', (event) => {") != std::string::npos);
+    assert(result.js_content.find("target.matches('.child-button')") != std::string::npos);
+    assert(result.js_content.find("event.target.textContent = \"Delegated Click!\";") != std::string::npos);
 }
 
 void test_script_loader_dependency_resolution() {
