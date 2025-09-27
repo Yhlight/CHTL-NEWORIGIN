@@ -9,30 +9,31 @@ enum class NodeType {
     Element,
     Text,
     Comment,
+    Fragment,
+    Origin,
+    Script,
+    Conditional,
 
-    // Template Definitions
+    // Top-level directives
+    Namespace,
+    Config,
+    Info,
+    Import,
+    Use,
+
+    // Template and Customization Definitions
     StyleTemplate,
     ElementTemplate,
     VarTemplate,
-
-    // Utility Nodes
-    Fragment,
-
-    // Raw Content
-    Origin,
-
-    // Behavior Blocks
-    Script,
-
-    // Control Flow
-    Conditional,
+    Custom, // Placeholder for [Custom] blocks
 
     // CHTL JS Specific
     EnhancedSelector,
     RawScript,
     ResponsiveValue,
-    Info
-    // More types will be added as more CHTL features are implemented.
+
+    // Misc
+    Constraint
 };
 
 // Base class for all nodes in the Abstract Syntax Tree (AST).

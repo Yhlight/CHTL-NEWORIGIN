@@ -46,12 +46,14 @@ set(CHTL_SOURCES
     src/CHTL/CHTLNode/ScriptNode.cpp
     src/CHTL/CHTLNode/TextNode.cpp
     src/CHTL/CHTLNode/StyleValue.cpp
+    src/CHTL/CHTLNode/NamespaceNode.cpp
     src/CHTL/CHTLParser/Parser.cpp
     src/CHTL/CHTLState/ConfigurationState.cpp
     src/CHTL/CHTLState/StatementState.cpp
     src/CHTL/CHTLState/StyleBlockState.cpp
     src/CHTL/CHTLState/UseState.cpp
     src/CHTL/CHTLState/InfoState.cpp
+    src/CHTL/CHTLState/NamespaceState.cpp
     src/Dispatcher/CompilerDispatcher.cpp
     src/Scanner/UnifiedScanner.cpp
     src/CodeMerger/CodeMerger.cpp

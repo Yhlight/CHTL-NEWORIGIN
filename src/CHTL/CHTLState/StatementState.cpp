@@ -29,6 +29,7 @@ class UseState;
 #include "ConfigurationState.h"
 #include "UseState.h"
 #include "InfoState.h"
+#include "NamespaceState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -133,7 +134,10 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return parseOriginDefinition(parser);
         }
         if (config.isKeyword(nextValue, "KEYWORD_NAMESPACE", "Namespace")) {
-            parseNamespaceDefinition(parser);
+            parser.advanceTokens(); // Consume '['
+            parser.advanceTokens(); // Consume 'Namespace'
+            parser.expectToken(TokenType::CloseBracket);
+            parser.setState(std::make_unique<NamespaceState>());
             return nullptr;
         }
         if (config.isKeyword(nextValue, "KEYWORD_CONFIGURATION", "Configuration")) {
@@ -911,29 +915,8 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
     }
 }
 
-void StatementState::parseNamespaceDefinition(Parser& parser) {
-    // 1. Expect [Namespace] name
-    parser.expectToken(TokenType::OpenBracket);
-    parser.expectToken(TokenType::Namespace);
-    parser.expectToken(TokenType::CloseBracket);
-    std::string ns_name = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-
-    // 2. Push namespace onto stack
-    parser.namespaceStack.push_back(ns_name);
-
-    // 3. Parse body
-    parser.expectToken(TokenType::OpenBrace);
-    while(parser.currentToken.type != TokenType::CloseBrace) {
-        // A namespace can contain template definitions, other namespaces, etc.
-        // We can just recursively call the main handle method.
-        handle(parser);
-    }
-    parser.expectToken(TokenType::CloseBrace);
-
-    // 4. Pop namespace from stack
-    parser.namespaceStack.pop_back();
-}
+// The old parseNamespaceDefinition function is now obsolete and has been removed.
+// This functionality is now handled by the dedicated NamespaceState.
 
 void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::OpenBracket);

@@ -92,6 +92,9 @@ void Generator::generateNode(BaseNode* node) {
         case NodeType::Conditional:
             generateConditional(static_cast<ConditionalNode*>(node));
             break;
+        case NodeType::Namespace:
+            generateNamespace(static_cast<NamespaceNode*>(node));
+            break;
         default:
             break;
     }
@@ -241,6 +244,14 @@ void Generator::generateComment(const CommentNode* node) {
 void Generator::generateScript(const ScriptNode* node) {
     // This is now handled by the dispatcher, which passes the combined script
     // to the generate method. This function is effectively deprecated.
+}
+
+void Generator::generateNamespace(NamespaceNode* node) {
+    // Namespaces are for organization and don't produce output themselves,
+    // so we just generate their children.
+    for (auto& child : node->children) {
+        generateNode(child.get());
+    }
 }
 
 void Generator::generateRuntimeScript(const SharedContext& context) {
