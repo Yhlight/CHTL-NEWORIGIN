@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BaseNode.h"
+#include "StyleValue.h" // Include StyleValue definition
 #include <string>
 #include <vector>
 #include <map>
@@ -15,10 +16,9 @@ public:
 
     bool isCustom = false;
 
-    // The styles are stored as key-value pairs. The value is a raw
-    // string because it might contain an expression that needs to be
-    // evaluated later in the context where the template is used.
-    std::map<std::string, std::string> styles;
+    // The styles are stored as key-value pairs, using StyleValue to
+    // hold rich information about expressions.
+    std::map<std::string, StyleValue> styles;
 
     // For custom templates, stores properties defined without a value.
     std::vector<std::string> valuelessProperties;

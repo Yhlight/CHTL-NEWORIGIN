@@ -579,7 +579,7 @@ void StyleBlockState::applyStyleTemplateRecursive(
     Parser& parser,
     const std::string& ns,
     const std::string& templateName,
-    std::map<std::string, std::string>& finalStyles,
+    std::map<std::string, StyleValue>& finalStyles, // Changed to StyleValue
     const std::vector<std::string>& deletedTemplates,
     std::vector<std::string>& visitedTemplates)
 {
@@ -610,6 +610,7 @@ void StyleBlockState::applyStyleTemplateRecursive(
         finalStyles.erase(propToDelete);
     }
 
+    // Now copies StyleValue objects directly
     for (const auto& pair : tmpl->styles) {
         finalStyles[pair.first] = pair.second;
     }
@@ -642,7 +643,7 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     StyleTemplateNode* tmpl = parser.templateManager.getStyleTemplate(ns, templateName);
     if (!tmpl) throw std::runtime_error("Style template not found: " + templateName);
 
-    std::map<std::string, std::string> finalStyles;
+    std::map<std::string, StyleValue> finalStyles;
     std::vector<std::string> deletedTemplates;
     std::map<std::string, StyleValue> specializedStyles;
     std::vector<std::string> completedProperties;
@@ -694,7 +695,7 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
         if (pair.second.type == StyleValue::DELETED) {
             finalStyles.erase(pair.first);
         } else {
-            finalStyles[pair.first] = styleValueToString(pair.second);
+            finalStyles[pair.first] = pair.second;
         }
     }
 
@@ -712,9 +713,6 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     }
 
     for (const auto& pair : finalStyles) {
-        StyleValue sv;
-        sv.type = StyleValue::STRING;
-        sv.string_val = pair.second;
-        parser.contextNode->inlineStyles[pair.first] = sv;
+        parser.contextNode->inlineStyles[pair.first] = pair.second;
     }
 }

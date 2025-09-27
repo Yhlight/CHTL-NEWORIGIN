@@ -46,7 +46,7 @@ private:
         Parser& parser,
         const std::string& ns,
         const std::string& templateName,
-        std::map<std::string, std::string>& finalStyles,
+        std::map<std::string, StyleValue>& finalStyles,
         const std::vector<std::string>& deletedTemplates,
         std::vector<std::string>& visitedTemplates
     );

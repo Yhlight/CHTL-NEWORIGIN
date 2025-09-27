@@ -508,13 +508,17 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 }
 
                 parser.expectToken(TokenType::Colon);
-                std::string value;
-                while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
-                    value += parser.currentToken.value + " ";
-                    parser.advanceTokens();
-                }
-                if (!value.empty()) value.pop_back();
-                styleNode->styles[key] = value;
+
+                // Use the powerful expression parser from StyleBlockState to handle
+                // complex values like calculations and variable references.
+                // We must provide a temporary context node because the expression
+                // parser may try to look up local properties.
+                StyleBlockState tempStyleState;
+                ElementNode tempContextNode(""); // Create a temporary, empty context.
+                parser.contextNode = &tempContextNode;
+                styleNode->styles[key] = tempStyleState.parseStyleExpression(parser);
+                parser.contextNode = nullptr; // Reset the context.
+
                 if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
             }
         }

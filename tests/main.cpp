@@ -130,6 +130,8 @@ void test_import_export_enforcement_pass();
 void test_import_export_enforcement_fail();
 void test_import_custom_template();
 void test_custom_style_definition_delete();
+void test_style_template_with_calculation();
+void test_style_template_with_var_reference();
 
 
 void test_text_block_literals() {
@@ -338,6 +340,20 @@ void test_custom_style_definition_delete() {
     assert(result.html_content.find("background-color") == std::string::npos);
 }
 
+void test_style_template_with_calculation() {
+    std::string source = R"([Template] @Style MyBox { width: 100px + 50px; } div { style { @Style MyBox; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("width: 150px;") != std::string::npos);
+}
+
+void test_style_template_with_var_reference() {
+    std::string source = R"([Template] @Var MyTheme { primary_color: "blue"; } [Template] @Style MyBox { color: MyTheme(primary_color); } div { style { @Style MyBox; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("color: blue;") != std::string::npos);
+}
+
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
@@ -369,6 +385,8 @@ int main() {
     run_test(test_import_export_enforcement_fail, "Import: Export Enforcement Fail");
     run_test(test_import_custom_template, "Import: Custom Template");
     run_test(test_custom_style_definition_delete, "Custom Style Definition Delete");
+    run_test(test_style_template_with_calculation, "Style Template with Calculation");
+    run_test(test_style_template_with_var_reference, "Style Template with Var Reference");
 
     cleanup_test_environment();
 
