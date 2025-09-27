@@ -42,7 +42,8 @@ StyleValue::StyleValue(StyleValue&& other) noexcept
       string_val(std::move(other.string_val)),
       bool_val(other.bool_val),
       responsive_var_name(std::move(other.responsive_var_name)),
-      dynamic_expr(std::move(other.dynamic_expr)) {
+      dynamic_expr(std::move(other.dynamic_expr)),
+      dynamic_expression_str(std::move(other.dynamic_expression_str)) {
     other.type = EMPTY;
     other.numeric_val = 0.0;
     other.bool_val = false;
@@ -57,6 +58,7 @@ StyleValue& StyleValue::operator=(StyleValue&& other) noexcept {
         bool_val = other.bool_val;
         responsive_var_name = std::move(other.responsive_var_name);
         dynamic_expr = std::move(other.dynamic_expr);
+        dynamic_expression_str = std::move(other.dynamic_expression_str);
 
         other.type = EMPTY;
         other.numeric_val = 0.0;
@@ -94,6 +96,9 @@ StyleValue::StyleValue(const StyleValue& other) : type(other.type) {
                 dynamic_expr = std::make_shared<DynamicConditionalExpression>(*other.dynamic_expr);
             }
             break;
+        case DYNAMIC_EXPRESSION:
+            dynamic_expression_str = other.dynamic_expression_str;
+            break;
         case EMPTY:
         case DELETED:
             // No data to copy
@@ -126,6 +131,9 @@ StyleValue& StyleValue::operator=(const StyleValue& other) {
                 if (other.dynamic_expr) {
                     dynamic_expr = std::make_shared<DynamicConditionalExpression>(*other.dynamic_expr);
                 }
+            break;
+        case DYNAMIC_EXPRESSION:
+            dynamic_expression_str = other.dynamic_expression_str;
                 break;
             case EMPTY:
             case DELETED:

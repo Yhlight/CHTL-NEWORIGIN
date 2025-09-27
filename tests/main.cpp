@@ -59,8 +59,15 @@ void run_test(void (*test_func)(), const std::string& test_name) {
 }
 
 // --- Test Cases ---
+void test_basic_element_and_text_attribute();
+void test_element_with_id_attribute();
+void test_nested_elements();
+void test_single_line_comment_is_ignored();
+void test_local_inline_style_block();
+void test_style_template_definition_and_usage();
+void test_element_template_definition_and_usage();
 void test_namespace_basic_declaration_and_usage();
-void test_namespace_prevents_global_access();
+void test_namespace_ambiguity_requires_from();
 void test_namespace_nested_access();
 void test_namespace_automatic_on_import();
 void test_use_html5_directive();
@@ -419,10 +426,20 @@ int main() {
 
     setup_test_environment();
 
+    // --- Core Feature Tests ---
+    std::cout << "\n--- Running Core Feature Tests ---\n";
+    run_test(test_basic_element_and_text_attribute, "Basic Element and Text Attribute");
+    run_test(test_element_with_id_attribute, "Element with ID Attribute");
+    run_test(test_nested_elements, "Nested Elements");
+    run_test(test_single_line_comment_is_ignored, "Single-Line Comment Is Ignored");
+    run_test(test_local_inline_style_block, "Local Inline Style Block");
+    run_test(test_style_template_definition_and_usage, "Style Template Definition and Usage");
+    run_test(test_element_template_definition_and_usage, "Element Template Definition and Usage");
+
     // --- Namespace Tests ---
     std::cout << "\n--- Running Namespace Tests ---\n";
     run_test(test_namespace_basic_declaration_and_usage, "Namespace Basic Declaration and Usage");
-    run_test(test_namespace_prevents_global_access, "Namespace Prevents Global Access");
+    run_test(test_namespace_ambiguity_requires_from, "Namespace Ambiguity Requires From");
     run_test(test_namespace_nested_access, "Namespace Nested Access");
     run_test(test_namespace_automatic_on_import, "Namespace Automatic on Import");
 
@@ -667,15 +684,16 @@ void test_namespace_basic_declaration_and_usage() {
     assert(result.html_content.find("<p>Hello from namespace</p>") != std::string::npos);
 }
 
-void test_namespace_prevents_global_access() {
+void test_namespace_ambiguity_requires_from() {
     std::string source = R"(
-        [Namespace] my_space {
-            [Template] @Element MyComponent {
-                p { text: "This should not be found"; }
-            }
+        [Namespace] space1 {
+            [Template] @Element AmbiguousComponent { p { text: "Version 1"; } }
+        }
+        [Namespace] space2 {
+            [Template] @Element AmbiguousComponent { p { text: "Version 2"; } }
         }
         body {
-            @Element MyComponent;
+            @Element AmbiguousComponent;
         }
     )";
     CompilerDispatcher dispatcher;
@@ -685,9 +703,7 @@ void test_namespace_prevents_global_access() {
     } catch (const std::runtime_error& e) {
         thrown = true;
         std::string error = e.what();
-        // The implementation throws "Element template not found: ...".
-        // We check for this to confirm the lookup failed as expected.
-        assert(error.find("Element template not found") != std::string::npos);
+        assert(error.find("Ambiguous template reference") != std::string::npos);
     }
     assert(thrown);
 }
@@ -902,8 +918,10 @@ void test_dynamic_conditional_rendering() {
     assert(result.html_content.find("<span>Dynamic Content</span>") != std::string::npos);
 
     // Check that the JS runtime script contains the binding logic
-    assert(result.js_content.find("__chtl.registerDynamicRendering") != std::string::npos);
-    assert(result.js_content.find("{{show}} == true") != std::string::npos);
+    std::string js_no_space = remove_whitespace(result.js_content);
+    assert(js_no_space.find(remove_whitespace("__chtl.registerDynamicRendering")) != std::string::npos);
+    // The expression in JS should have the '{{...}}' removed.
+    assert(js_no_space.find(remove_whitespace("return show == true;")) != std::string::npos);
 }
 
 void test_use_named_configuration() {

@@ -199,10 +199,9 @@ std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
         parser.expectToken(TokenType::Colon);
 
         StyleBlockState tempStyleState;
-        ifCase.condition = tempStyleState.parseStyleExpression(parser);
-        if (parser.currentToken.type == TokenType::Semicolon) {
-            parser.advanceTokens();
-        }
+        ifCase.condition = tempStyleState.parseConditionalExpr(parser);
+        // Per the CHTL specification, a comma must follow the condition.
+        parser.expectToken(TokenType::Comma);
 
 
         while (parser.currentToken.type != TokenType::CloseBrace) {
@@ -227,10 +226,9 @@ std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
             parser.expectToken(TokenType::Colon);
 
             StyleBlockState tempStyleState;
-            elseIfCase.condition = tempStyleState.parseStyleExpression(parser);
-            if (parser.currentToken.type == TokenType::Semicolon) {
-                 parser.advanceTokens();
-            }
+            elseIfCase.condition = tempStyleState.parseConditionalExpr(parser);
+            // Per the CHTL specification, a comma must follow the condition.
+            parser.expectToken(TokenType::Comma);
 
             while (parser.currentToken.type != TokenType::CloseBrace) {
                 auto childNode = handle(parser);

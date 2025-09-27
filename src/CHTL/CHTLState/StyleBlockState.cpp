@@ -558,6 +558,22 @@ StyleValue StyleBlockState::parseDynamicConditionalExpression(Parser& parser) {
 }
 
 StyleValue StyleBlockState::parseConditionalExpr(Parser& parser) {
+    // Handle dynamic conditions for `if` statements
+    if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
+        std::stringstream expr_ss;
+        while(parser.currentToken.type != TokenType::Comma && parser.currentToken.type != TokenType::EndOfFile) {
+            expr_ss << parser.currentToken.value;
+            if (parser.peekToken.type != TokenType::Comma && parser.peekToken.type != TokenType::EndOfFile) {
+                expr_ss << " ";
+            }
+            parser.advanceTokens();
+        }
+        StyleValue sv;
+        sv.type = StyleValue::DYNAMIC_EXPRESSION;
+        sv.dynamic_expression_str = expr_ss.str();
+        return sv;
+    }
+
     StyleValue condition = parseBooleanOrExpr(parser);
     if (parser.currentToken.type == TokenType::QuestionMark) {
         if (condition.type != StyleValue::BOOL) {

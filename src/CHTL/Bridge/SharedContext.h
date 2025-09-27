@@ -25,7 +25,7 @@ struct DynamicConditionalBinding {
 // Represents a binding for a block of content whose rendering is controlled by a dynamic condition.
 struct DynamicRenderingBinding {
     std::string elementId; // The ID of the wrapper div for the conditional content.
-    std::shared_ptr<DynamicConditionalExpression> expression;
+    std::string expression_str; // The raw string of the boolean expression to evaluate.
 };
 
 // The "Salt Bridge": A shared context to pass data between compilers.

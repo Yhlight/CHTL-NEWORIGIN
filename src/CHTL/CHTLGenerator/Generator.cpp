@@ -92,11 +92,8 @@ std::string Generator::generate(
 
         if (!globalJsToInject.empty()) {
              if (inlineMode) {
-                appendLine("<script>");
-                indent();
-                append(globalJsToInject);
-                outdent();
-                appendLine("</script>");
+                // The dispatcher will handle wrapping this in a script tag if needed.
+                appendLine(globalJsToInject);
             } else {
                 appendLine("<script src=\"" + jsOutputFilename + "\"></script>");
             }
@@ -157,38 +154,47 @@ void Generator::generateNode(BaseNode* node) {
 
 void Generator::generateConditional(ConditionalNode* node) {
     bool isDynamic = false;
+    // First, check if any case has a dynamic condition.
     for (const auto& conditionalCase : node->cases) {
-        if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
+        if (conditionalCase.condition.type == StyleValue::DYNAMIC_EXPRESSION) {
             isDynamic = true;
             break;
         }
     }
 
     if (isDynamic) {
+        // Handle dynamic rendering logic
         for (auto& conditionalCase : node->cases) {
-            if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
-                std::string wrapperId = "chtl-dyn-render-" + std::to_string(reinterpret_cast<uintptr_t>(&conditionalCase));
-                appendLine("<div id=\"" + wrapperId + "\">");
-                indent();
-                for (const auto& child : conditionalCase.children) {
-                    generateNode(child.get());
-                }
-                outdent();
-                appendLine("</div>");
+            // Create a unique ID for the wrapper div that will be shown/hidden.
+            std::string wrapperId = "chtl-dyn-render-" + std::to_string(reinterpret_cast<uintptr_t>(&conditionalCase));
 
-                DynamicRenderingBinding binding;
-                binding.elementId = wrapperId;
-                binding.expression = conditionalCase.condition.dynamic_expr;
-                mutableContext->dynamicRenderingBindings.push_back(binding);
+            appendLine("<div id=\"" + wrapperId + "\">");
+            indent();
+            for (const auto& child : conditionalCase.children) {
+                generateNode(child.get());
             }
+            outdent();
+            appendLine("</div>");
+
+            // Create a binding to be processed by the JS runtime generator.
+            DynamicRenderingBinding binding;
+            binding.elementId = wrapperId;
+            if (conditionalCase.condition.type == StyleValue::DYNAMIC_EXPRESSION) {
+                binding.expression_str = conditionalCase.condition.dynamic_expression_str;
+            } else {
+                // For static else/else-if branches in a dynamic chain, we can treat them as "true"
+                binding.expression_str = "true";
+            }
+            mutableContext->dynamicRenderingBindings.push_back(binding);
         }
     } else {
+        // Handle static rendering logic
         for (const auto& conditionalCase : node->cases) {
             if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
                 for (const auto& child : conditionalCase.children) {
                     generateNode(child.get());
                 }
-                break;
+                break; // Render only the first true case
             }
         }
     }
@@ -270,11 +276,8 @@ void Generator::generateElement(ElementNode* node) {
         if (node->tagName == "body") {
             if (!globalJsToInject.empty()) {
                 if (inlineMode) {
-                    appendLine("<script>");
-                    indent();
-                    append(globalJsToInject);
-                    outdent();
-                    appendLine("</script>");
+                    // The dispatcher will handle wrapping this in a script tag if needed.
+                    appendLine(globalJsToInject);
                 } else {
                     appendLine("<script src=\"" + jsOutputFilename + "\"></script>");
                 }

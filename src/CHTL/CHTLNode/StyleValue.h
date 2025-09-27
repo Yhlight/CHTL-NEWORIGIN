@@ -23,7 +23,7 @@ struct DynamicConditionalExpression {
 // Represents the value of a CSS property or an intermediate value in an expression.
 // Can hold a numeric value, a string, a boolean, or be empty.
 struct StyleValue {
-    enum ValueType { NUMERIC, STRING, BOOL, EMPTY, DELETED, RESPONSIVE, DYNAMIC_CONDITIONAL } type = EMPTY;
+    enum ValueType { NUMERIC, STRING, BOOL, EMPTY, DELETED, RESPONSIVE, DYNAMIC_CONDITIONAL, DYNAMIC_EXPRESSION } type = EMPTY;
 
     // For NUMERIC types
     double numeric_val = 0.0;
@@ -40,6 +40,9 @@ struct StyleValue {
 
     // For DYNAMIC_CONDITIONAL types
     std::shared_ptr<DynamicConditionalExpression> dynamic_expr;
+
+    // For DYNAMIC_EXPRESSION types
+    std::string dynamic_expression_str;
 
     StyleValue() = default;
     explicit StyleValue(ValueType t);

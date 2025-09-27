@@ -9,6 +9,7 @@ void TemplateManager::addStyleTemplate(const std::string& ns, const std::string&
 }
 
 StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, const std::string& name) {
+    // Phase 1: Search from the current namespace up to global.
     std::string current_ns = ns;
     do {
         auto ns_it = styleTemplates.find(current_ns);
@@ -29,7 +30,22 @@ StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, cons
         }
     } while (true);
 
-    return nullptr;
+    // Phase 2: If not found, search all other namespaces.
+    StyleTemplateNode* found_node = nullptr;
+    for (const auto& ns_pair : styleTemplates) {
+        if (ns.rfind(ns_pair.first, 0) == 0 || ns_pair.first == "_global") {
+            continue;
+        }
+        auto name_it = ns_pair.second.find(name);
+        if (name_it != ns_pair.second.end()) {
+            if (found_node != nullptr) {
+                throw std::runtime_error("Ambiguous style template reference for '" + name + "'.");
+            }
+            found_node = name_it->second.get();
+        }
+    }
+
+    return found_node;
 }
 
 // --- Named Origins ---
@@ -39,6 +55,7 @@ void TemplateManager::addNamedOrigin(const std::string& ns, const std::string& n
 }
 
 OriginNode* TemplateManager::getNamedOrigin(const std::string& ns, const std::string& name) {
+    // Phase 1: Search from the current namespace up to global.
     std::string current_ns = ns;
     do {
         auto ns_it = namedOrigins.find(current_ns);
@@ -59,7 +76,22 @@ OriginNode* TemplateManager::getNamedOrigin(const std::string& ns, const std::st
         }
     } while (true);
 
-    return nullptr;
+    // Phase 2: If not found, search all other namespaces.
+    OriginNode* found_node = nullptr;
+    for (const auto& ns_pair : namedOrigins) {
+        if (ns.rfind(ns_pair.first, 0) == 0 || ns_pair.first == "_global") {
+            continue;
+        }
+        auto name_it = ns_pair.second.find(name);
+        if (name_it != ns_pair.second.end()) {
+            if (found_node != nullptr) {
+                throw std::runtime_error("Ambiguous named origin reference for '" + name + "'.");
+            }
+            found_node = name_it->second.get();
+        }
+    }
+
+    return found_node;
 }
 
 void TemplateManager::merge(const TemplateManager& other) {
@@ -228,6 +260,7 @@ void TemplateManager::addElementTemplate(const std::string& ns, const std::strin
 }
 
 ElementTemplateNode* TemplateManager::getElementTemplate(const std::string& ns, const std::string& name) {
+    // Phase 1: Search from the current namespace up to global.
     std::string current_ns = ns;
     do {
         auto ns_it = elementTemplates.find(current_ns);
@@ -248,7 +281,26 @@ ElementTemplateNode* TemplateManager::getElementTemplate(const std::string& ns, 
         }
     } while (true);
 
-    return nullptr;
+    // Phase 2: If not found, search all other namespaces to simulate a shared context.
+    ElementTemplateNode* found_node = nullptr;
+    for (const auto& ns_pair : elementTemplates) {
+        // Skip the namespaces we already checked. A simple check is if the original `ns` starts with the key.
+        // Also skip _global as it was the last one checked in the loop above.
+        if (ns.rfind(ns_pair.first, 0) == 0 || ns_pair.first == "_global") {
+            continue;
+        }
+
+        auto name_it = ns_pair.second.find(name);
+        if (name_it != ns_pair.second.end()) {
+            if (found_node != nullptr) {
+                // Ambiguity detected. The user must use 'from' to specify the namespace.
+                throw std::runtime_error("Ambiguous template reference for '" + name + "'. It exists in multiple imported namespaces. Please use 'from' to specify.");
+            }
+            found_node = name_it->second.get();
+        }
+    }
+
+    return found_node;
 }
 
 // --- Variable Templates ---
@@ -258,6 +310,7 @@ void TemplateManager::addVarTemplate(const std::string& ns, const std::string& n
 }
 
 VarTemplateNode* TemplateManager::getVarTemplate(const std::string& ns, const std::string& name) {
+    // Phase 1: Search from the current namespace up to global.
     std::string current_ns = ns;
     do {
         auto ns_it = varTemplates.find(current_ns);
@@ -278,5 +331,19 @@ VarTemplateNode* TemplateManager::getVarTemplate(const std::string& ns, const st
         }
     } while (true);
 
-    return nullptr;
+    // Phase 2: If not found, search all other namespaces.
+    VarTemplateNode* found_node = nullptr;
+    for (const auto& ns_pair : varTemplates) {
+        if (ns.rfind(ns_pair.first, 0) == 0 || ns_pair.first == "_global") {
+            continue;
+        }
+        auto name_it = ns_pair.second.find(name);
+        if (name_it != ns_pair.second.end()) {
+            if (found_node != nullptr) {
+                throw std::runtime_error("Ambiguous var template reference for '" + name + "'.");
+            }
+            found_node = name_it->second.get();
+        }
+    }
+    return found_node;
 }

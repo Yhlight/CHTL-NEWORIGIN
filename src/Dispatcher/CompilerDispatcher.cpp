@@ -23,11 +23,32 @@ std::string generateRuntimeScript(const SharedContext& context) {
     runtime_script << R"JS(
 const __chtl = {
     bindings: {},
+    dynamicRenderingBindings: [],
     registerBinding: function(varName, elementId, property, unit) {
         if (!this.bindings[varName]) {
             this.bindings[varName] = [];
         }
         this.bindings[varName].push({ elementId, property, unit });
+    },
+    registerDynamicRendering: function(elementId, evalFunc) {
+        this.dynamicRenderingBindings.push({ elementId, evalFunc });
+    },
+    evaluateDynamicRendering: function() {
+        this.dynamicRenderingBindings.forEach(binding => {
+            const element = document.getElementById(binding.elementId);
+            if (element) {
+                try {
+                    if (binding.evalFunc()) {
+                        element.style.display = '';
+                    } else {
+                        element.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error("Error evaluating dynamic rendering for " + binding.elementId, e);
+                    element.style.display = 'none';
+                }
+            }
+        });
     },
     updateDOM: function(varName, value) {
         if (this.bindings[varName]) {
@@ -43,10 +64,13 @@ const __chtl = {
                 }
             });
         }
+        this.evaluateDynamicRendering();
     }
 };
+document.addEventListener('DOMContentLoaded', () => __chtl.evaluateDynamicRendering());
 )JS";
 
+    // --- Handle Responsive Bindings ---
     for (const auto& pair : context.responsiveBindings) {
         const std::string& varName = pair.first;
         responsive_vars.insert(varName);
@@ -55,6 +79,18 @@ const __chtl = {
         }
     }
 
+    // --- Handle Dynamic Rendering Bindings ---
+    for (const auto& binding : context.dynamicRenderingBindings) {
+        // Use std::regex_replace for a simpler and more robust substitution.
+        std::string js_expr = std::regex_replace(
+            binding.expression_str,
+            std::regex(R"(\{\{([^}]+?)\}\})"),
+            "$1"
+        );
+        runtime_script << "__chtl.registerDynamicRendering('" << binding.elementId << "', () => { return " << js_expr << "; });\n";
+    }
+
+    // --- Create Setters/Getters for Responsive Variables ---
     for (const auto& varName : responsive_vars) {
         runtime_script << R"JS(
 Object.defineProperty(window, ')JS" << varName << R"JS(', {
@@ -164,22 +200,17 @@ CompilationResult CompilerDispatcher::compile(
     }
 
 
-    // 6. Prepend loaded scripts and generate runtime script
-    std::string final_js_content = loaded_scripts_stream.str() + js_content_stream.str();
-    std::string runtime_script = generateRuntimeScript(parser.sharedContext);
-    if (!runtime_script.empty()) {
-        final_js_content = runtime_script + final_js_content;
-    }
-
-    // 7. Add any CSS hoisted from local style blocks by the parser
+    // 6. Add any CSS hoisted from local style blocks by the parser
     css_content += parser.globalStyleContent;
 
-    // 8. Generate the HTML.
+    // 7. Generate the HTML with a placeholder for the scripts.
+    // This populates the shared context with dynamic bindings.
+    const std::string js_placeholder = "__CHTL_JS_RUNTIME_PLACEHOLDER__";
     Generator generator;
     std::string html_content = generator.generate(
         ast,
         css_content,
-        final_js_content,
+        js_placeholder, // Pass the placeholder
         parser.sharedContext,
         parser.outputHtml5Doctype,
         inline_mode,
@@ -188,7 +219,23 @@ CompilationResult CompilerDispatcher::compile(
         js_output_filename
     );
 
-    // 9. If inlining, merge the script placeholders back into the HTML.
+    // 8. Generate runtime script using the now-populated context, then combine all JS.
+    std::string runtime_script = generateRuntimeScript(parser.sharedContext);
+    std::string final_js_content = runtime_script + loaded_scripts_stream.str() + js_content_stream.str();
+
+    // 9. Replace the placeholder with the final combined script content, wrapped in a script tag if it's not empty.
+    size_t placeholder_pos = html_content.find(js_placeholder);
+    if (placeholder_pos != std::string::npos) {
+        if (!final_js_content.empty() && final_js_content.find_first_not_of(" \n\r\t") != std::string::npos) {
+            std::string script_tag = "<script>\n" + final_js_content + "\n</script>";
+            html_content.replace(placeholder_pos, js_placeholder.length(), script_tag);
+        } else {
+            // If there's no script content, just remove the placeholder.
+            html_content.replace(placeholder_pos, js_placeholder.length(), "");
+        }
+    }
+
+    // 10. If inlining, merge the other script fragments back into the HTML.
     if (inline_mode) {
          html_content = merger.merge(html_content, script_fragments_for_merging);
     }
