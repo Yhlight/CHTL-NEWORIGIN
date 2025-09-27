@@ -69,6 +69,7 @@ void test_static_conditional_rendering();
 void test_dynamic_conditional_rendering();
 void test_script_loader_dependency_resolution();
 void test_event_delegation();
+void test_animation_block();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -438,6 +439,7 @@ int main() {
     std::cout << "\n--- Running CHTL JS Feature Tests ---\n";
     run_test(test_script_loader_dependency_resolution, "ScriptLoader Dependency Resolution");
     run_test(test_event_delegation, "Event Delegation");
+    run_test(test_animation_block, "Animation Block");
 
 
     run_test(test_text_block_literals, "Text Block Literals");
@@ -738,6 +740,57 @@ void test_static_conditional_rendering() {
     assert(result.html_content.find("Case 1") == std::string::npos);
     assert(result.html_content.find("Case 2: Should appear") != std::string::npos);
     assert(result.html_content.find("Case 3") == std::string::npos);
+}
+
+void test_animation_block() {
+    std::string source = R"___(
+        script {
+            const myAnimation = Animate {
+                target: {{.my-element}},
+                duration: 500,
+                easing: "ease-in-out",
+                begin: {
+                    opacity: 0,
+                    transform: "scale(0.5)",
+                },
+                when: [
+                    {
+                        at: 0.5,
+                        opacity: 1,
+                        transform: "scale(1.2)",
+                    },
+                    {
+                        at: 1.0,
+                        opacity: 1,
+                        transform: "scale(1.0)",
+                    }
+                ],
+                end: {
+                    opacity: 1,
+                }
+            };
+        }
+    )___";
+
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "test.chtl", true);
+    std::string js_code = result.js_content;
+
+    // Remove whitespace to make assertions more robust
+    js_code.erase(std::remove_if(js_code.begin(), js_code.end(), ::isspace), js_code.end());
+
+    // Check for top-level properties
+    assert(js_code.find("duration:500") != std::string::npos);
+    assert(js_code.find("easing:'ease-in-out'") != std::string::npos);
+
+    // Check for begin block
+    assert(js_code.find("begin:{'opacity':'0','transform':'scale(0.5)'}") != std::string::npos);
+
+    // Check for when block (keyframes)
+    assert(js_code.find("when:[{at:0.5,'opacity':'1','transform':'scale(1.2)'},{at:1,'opacity':'1','transform':'scale(1.0)'}]") != std::string::npos);
+
+    // Check for end block
+    assert(js_code.find("end:{'opacity':'1'}") != std::string::npos);
 }
 
 void test_event_delegation() {

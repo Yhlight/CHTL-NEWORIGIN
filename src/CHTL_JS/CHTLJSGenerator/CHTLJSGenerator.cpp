@@ -261,30 +261,34 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             if (animateNode->callback) ss << "  callback: " << *animateNode->callback << ",\n";
 
             if (!animateNode->begin_styles.empty()) {
-                ss << "  begin: {\n";
-                for (const auto& pair : animateNode->begin_styles) {
-                    ss << "    '" << pair.first << "': '" << pair.second << "',\n";
+                ss << "  begin: {";
+                for (auto it = animateNode->begin_styles.begin(); it != animateNode->begin_styles.end(); ++it) {
+                    ss << "'" << it->first << "': '" << it->second << "'";
+                    if (std::next(it) != animateNode->begin_styles.end()) ss << ",";
                 }
-                ss << "  },\n";
+                ss << "},\n";
             }
             if (!animateNode->when_keyframes.empty()) {
-                ss << "  when: [\n";
-                for (const auto& keyframe : animateNode->when_keyframes) {
-                    ss << "    {\n";
-                    ss << "      at: " << keyframe.at << ",\n";
-                    for (const auto& pair : keyframe.styles) {
-                        ss << "      '" << pair.first << "': '" << pair.second << "',\n";
+                ss << "  when: [";
+                for (auto it = animateNode->when_keyframes.begin(); it != animateNode->when_keyframes.end(); ++it) {
+                    ss << "{at:" << it->at;
+                    if (!it->styles.empty()) ss << ",";
+                    for (auto style_it = it->styles.begin(); style_it != it->styles.end(); ++style_it) {
+                        ss << "'" << style_it->first << "':'" << style_it->second << "'";
+                        if (std::next(style_it) != it->styles.end()) ss << ",";
                     }
-                    ss << "    },\n";
+                    ss << "}";
+                    if (std::next(it) != animateNode->when_keyframes.end()) ss << ",";
                 }
-                ss << "  ],\n";
+                ss << "],\n";
             }
             if (!animateNode->end_styles.empty()) {
-                ss << "  end: {\n";
-                for (const auto& pair : animateNode->end_styles) {
-                    ss << "    '" << pair.first << "': '" << pair.second << "',\n";
+                ss << "  end: {";
+                 for (auto it = animateNode->end_styles.begin(); it != animateNode->end_styles.end(); ++it) {
+                    ss << "'" << it->first << "':'" << it->second << "'";
+                    if (std::next(it) != animateNode->end_styles.end()) ss << ",";
                 }
-                ss << "  },\n";
+                ss << "},\n";
             }
             ss << "}";
             return ss.str();

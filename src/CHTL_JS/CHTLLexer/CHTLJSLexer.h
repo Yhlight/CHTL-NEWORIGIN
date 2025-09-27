@@ -24,6 +24,8 @@ enum class CHTLJSTokenType {
     // Punctuation
     OpenBrace,        // {
     CloseBrace,       // }
+    OpenBracket,      // [
+    CloseBracket,     // ]
     Colon,            // :
     Comma,            // ,
     Semicolon,        // ;

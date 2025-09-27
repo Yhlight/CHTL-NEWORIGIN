@@ -318,6 +318,53 @@ std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
     return delegateNode;
 }
 
+std::map<std::string, std::string> CHTLJSParser::parseStyleMap() {
+    if (currentToken().type != CHTLJSTokenType::OpenBrace) throw std::runtime_error("Expected '{' to start a style map.");
+    advance();
+    std::map<std::string, std::string> styles;
+    while(currentToken().type != CHTLJSTokenType::CloseBrace) {
+        if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected style property name.");
+        std::string key = currentToken().value;
+        advance();
+        if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after style property name.");
+        advance();
+        styles[key] = currentToken().value; // Assume value is a single token for now (string or number)
+        advance();
+        if(currentToken().type == CHTLJSTokenType::Comma) advance();
+    }
+    advance(); // Consume '}'
+    return styles;
+}
+
+std::vector<AnimationKeyframe> CHTLJSParser::parseKeyframeArray() {
+    if (currentToken().type != CHTLJSTokenType::OpenBracket) throw std::runtime_error("Expected '[' to start a keyframe array.");
+    advance();
+    std::vector<AnimationKeyframe> keyframes;
+    while(currentToken().type != CHTLJSTokenType::CloseBracket) {
+        if (currentToken().type != CHTLJSTokenType::OpenBrace) throw std::runtime_error("Expected '{' for keyframe definition.");
+        advance();
+        AnimationKeyframe keyframe;
+        while(currentToken().type != CHTLJSTokenType::CloseBrace) {
+            std::string key = currentToken().value;
+            advance();
+            if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after keyframe property.");
+            advance();
+            if (key == "at") {
+                keyframe.at = std::stod(currentToken().value);
+            } else {
+                keyframe.styles[key] = currentToken().value;
+            }
+            advance();
+            if(currentToken().type == CHTLJSTokenType::Comma) advance();
+        }
+        advance(); // Consume '}'
+        keyframes.push_back(keyframe);
+        if(currentToken().type == CHTLJSTokenType::Comma) advance();
+    }
+    advance(); // Consume ']'
+    return keyframes;
+}
+
 std::unique_ptr<AnimateNode> CHTLJSParser::parseAnimateBlock() {
     advance(); // Consume 'Animate'
     if (currentToken().type != CHTLJSTokenType::OpenBrace) throw std::runtime_error("Expected '{' after 'Animate'.");
@@ -337,7 +384,14 @@ std::unique_ptr<AnimateNode> CHTLJSParser::parseAnimateBlock() {
             advance();
             if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) throw std::runtime_error("Unclosed '{{...}}' for animate target.");
             advance();
-        } else {
+        } else if (key == "begin") {
+            animateNode->begin_styles = parseStyleMap();
+        } else if (key == "end") {
+            animateNode->end_styles = parseStyleMap();
+        } else if (key == "when") {
+            animateNode->when_keyframes = parseKeyframeArray();
+        }
+        else {
             std::string value = parseJsCodeBlock();
             if (key == "duration") animateNode->duration = std::stoi(value);
             else if (key == "easing") animateNode->easing = value;
