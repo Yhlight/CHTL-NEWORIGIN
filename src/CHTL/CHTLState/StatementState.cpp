@@ -29,7 +29,6 @@ class UseState;
 #include "ConfigurationState.h"
 #include "UseState.h"
 #include "InfoState.h"
-#include "NamespaceState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -134,10 +133,7 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return parseOriginDefinition(parser);
         }
         if (config.isKeyword(nextValue, "KEYWORD_NAMESPACE", "Namespace")) {
-            parser.advanceTokens(); // Consume '['
-            parser.advanceTokens(); // Consume 'Namespace'
-            parser.expectToken(TokenType::CloseBracket);
-            parser.setState(std::make_unique<NamespaceState>());
+            parseNamespaceDefinition(parser);
             return nullptr;
         }
         if (config.isKeyword(nextValue, "KEYWORD_CONFIGURATION", "Configuration")) {
@@ -478,36 +474,24 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
 
-                // Handle valueless properties in custom templates (e.g., "color;")
-                if (isCustom && parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                // Correctly handle valueless properties for custom templates
+                if (isCustom && parser.currentToken.type != TokenType::Colon) {
                     styleNode->valuelessProperties.push_back(key);
-                    // A valueless property can be followed by a semicolon or a comma
                     if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
                         parser.advanceTokens();
                     }
                     continue;
                 }
 
-                // Handle properties with values (e.g., "color: red;")
-                if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
-                    throw std::runtime_error("Expected ':' or '=' after style property key '" + key + "'.");
-                }
-                parser.advanceTokens(); // Consume ':' or '='
-
+                parser.expectToken(TokenType::Colon);
                 std::string value;
-                // This logic seems fragile. A better approach would be to use the StyleExpression parser.
-                // For now, we'll keep it for consistency.
                 while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
                     value += parser.currentToken.value + " ";
                     parser.advanceTokens();
                 }
-                if (!value.empty()) value.pop_back(); // Trim trailing space
-
+                if (!value.empty()) value.pop_back();
                 styleNode->styles[key] = value;
-
-                if(parser.currentToken.type == TokenType::Semicolon) {
-                    parser.advanceTokens();
-                }
+                if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
             }
         }
         parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
@@ -927,8 +911,29 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
     }
 }
 
-// The old parseNamespaceDefinition function is now obsolete and has been removed.
-// This functionality is now handled by the dedicated NamespaceState.
+void StatementState::parseNamespaceDefinition(Parser& parser) {
+    // 1. Expect [Namespace] name
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectToken(TokenType::Namespace);
+    parser.expectToken(TokenType::CloseBracket);
+    std::string ns_name = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    // 2. Push namespace onto stack
+    parser.namespaceStack.push_back(ns_name);
+
+    // 3. Parse body
+    parser.expectToken(TokenType::OpenBrace);
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        // A namespace can contain template definitions, other namespaces, etc.
+        // We can just recursively call the main handle method.
+        handle(parser);
+    }
+    parser.expectToken(TokenType::CloseBrace);
+
+    // 4. Pop namespace from stack
+    parser.namespaceStack.pop_back();
+}
 
 void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::OpenBracket);
@@ -988,9 +993,12 @@ void StatementState::parseImportStatement(Parser& parser) {
 
     // --- Import Logic ---
     ModuleResolver resolver;
-    // TODO: The parser should be aware of the current file's path to resolve relative imports correctly.
-    // For now, we use the current working directory.
-    std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, std::filesystem::current_path());
+    std::filesystem::path current_file_path(parser.sourcePath);
+    std::filesystem::path base_path = !parser.sourcePath.empty() && current_file_path.has_parent_path()
+                                          ? current_file_path.parent_path()
+                                          : std::filesystem::current_path();
+    std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, base_path);
+
 
     if (resolved_paths.empty()) {
         throw std::runtime_error("Failed to resolve import: " + path);
@@ -1002,62 +1010,54 @@ void StatementState::parseImportStatement(Parser& parser) {
             try {
                 std::string fileContent = Loader::loadFile(p_str);
                 Lexer importLexer(fileContent);
-                Parser importParser(importLexer);
+                Parser importParser(importLexer, p_str);
                 importParser.parse();
+
+                // --- Export Enforcement ---
+                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
+                    bool isExported = false;
+                    bool checkTemplate = !isCustom; // If importer specifies [Custom], only check custom exports.
+                    bool checkCustom = !isTemplate; // If importer specifies [Template], only check template exports.
+
+                    if (checkTemplate) {
+                        std::string templateKey = "[Template] @" + importType;
+                        if (importParser.infoNode->exports.count(templateKey)) {
+                            const auto& symbols = importParser.infoNode->exports.at(templateKey);
+                            if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
+                                isExported = true;
+                            }
+                        }
+                    }
+
+                    if (!isExported && checkCustom) {
+                        std::string customKey = "[Custom] @" + importType;
+                        if (importParser.infoNode->exports.count(customKey)) {
+                            const auto& symbols = importParser.infoNode->exports.at(customKey);
+                            if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
+                                isExported = true;
+                            }
+                        }
+                    }
+
+                    if (!isExported) {
+                        throw std::runtime_error("Item '" + itemName + "' of type @" + importType + " is not exported by module " + p_str);
+                    }
+                }
+                // --- End Export Enforcement ---
 
                 std::string finalName = alias.empty() ? itemName : alias;
 
                 if (importType == "Element") {
-                // If the imported module has an export list, enforce it.
-                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
-                    bool found = false;
-                    std::string key = (isCustom ? "[Custom] " : "[Template] ") + std::string("@Element");
-                    if (importParser.infoNode->exports.count(key)) {
-                        const auto& exportedSymbols = importParser.infoNode->exports.at(key);
-                        if (std::find(exportedSymbols.begin(), exportedSymbols.end(), itemName) != exportedSymbols.end()) {
-                            found = true;
-                        }
-                    }
-                    if (!found) {
-                        throw std::runtime_error("Element '" + itemName + "' is not exported by module " + p_str);
-                    }
-                }
                     ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
                     if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + p_str);
                     auto cloned_node = NodeCloner::clone(nodeToImport);
                     parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
                 } else if (importType == "Style") {
-                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
-                    bool found = false;
-                    std::string key = (isCustom ? "[Custom] " : "[Template] ") + std::string("@Style");
-                    if (importParser.infoNode->exports.count(key)) {
-                        const auto& exportedSymbols = importParser.infoNode->exports.at(key);
-                        if (std::find(exportedSymbols.begin(), exportedSymbols.end(), itemName) != exportedSymbols.end()) {
-                            found = true;
-                        }
-                    }
-                    if (!found) {
-                        throw std::runtime_error("Style '" + itemName + "' is not exported by module " + p_str);
-                    }
-                }
                     StyleTemplateNode* nodeToImport = importParser.templateManager.getStyleTemplate("_global", itemName);
                     if (!nodeToImport) throw std::runtime_error("Style template '" + itemName + "' not found in " + p_str);
                     auto cloned_node = NodeCloner::clone(nodeToImport);
                     parser.templateManager.addStyleTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<StyleTemplateNode>(static_cast<StyleTemplateNode*>(cloned_node.release())));
                 } else if (importType == "Var") {
-                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
-                    bool found = false;
-                    std::string key = (isCustom ? "[Custom] " : "[Template] ") + std::string("@Var");
-                    if (importParser.infoNode->exports.count(key)) {
-                        const auto& exportedSymbols = importParser.infoNode->exports.at(key);
-                        if (std::find(exportedSymbols.begin(), exportedSymbols.end(), itemName) != exportedSymbols.end()) {
-                            found = true;
-                        }
-                    }
-                    if (!found) {
-                        throw std::runtime_error("Var '" + itemName + "' is not exported by module " + p_str);
-                    }
-                }
                     VarTemplateNode* nodeToImport = importParser.templateManager.getVarTemplate("_global", itemName);
                     if (!nodeToImport) throw std::runtime_error("Var template '" + itemName + "' not found in " + p_str);
                     auto cloned_node = NodeCloner::clone(nodeToImport);
@@ -1077,7 +1077,7 @@ void StatementState::parseImportStatement(Parser& parser) {
                         const std::string& content = pair.second;
                         if (filename.rfind("src/", 0) == 0 && filename.size() > 5 && filename.substr(filename.size() - 5) == ".chtl") {
                             Lexer importLexer(content);
-                            Parser importParser(importLexer);
+                            Parser importParser(importLexer, filename);
                             importParser.parse();
                             parser.templateManager.merge(importParser.templateManager);
                         }
@@ -1085,7 +1085,7 @@ void StatementState::parseImportStatement(Parser& parser) {
                 } else {
                     std::string fileContent = Loader::loadFile(p_str);
                     Lexer importLexer(fileContent);
-                    Parser importParser(importLexer);
+                    Parser importParser(importLexer, p_str);
                     importParser.parse();
                     parser.templateManager.merge(importParser.templateManager);
                 }

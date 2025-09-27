@@ -75,6 +75,7 @@ Object.defineProperty(window, ')JS" << varName << R"JS(', {
 
 CompilationResult CompilerDispatcher::compile(
     const std::string& source,
+    const std::string& source_path,
     bool inline_mode,
     const std::string& css_output_filename,
     const std::string& js_output_filename
@@ -90,7 +91,7 @@ CompilationResult CompilerDispatcher::compile(
 
     // 3. Compile the main CHTL content first to populate managers
     Lexer lexer(scanned_output.chtl_with_placeholders);
-    Parser parser(lexer);
+    Parser parser(lexer, source_path);
     auto ast = parser.parse();
 
     // 4. Post-process script fragments to resolve named origin blocks
@@ -107,7 +108,7 @@ CompilationResult CompilerDispatcher::compile(
                 final_content += match.prefix();
                 std::string origin_name = match[1];
 
-                OriginNode* origin_node = parser.templateManager.getNamedOrigin("", origin_name);
+                OriginNode* origin_node = parser.templateManager.getNamedOrigin("_global", origin_name);
 
                 if (origin_node) {
                     final_content += origin_node->content;

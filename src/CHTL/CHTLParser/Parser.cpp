@@ -4,19 +4,23 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <filesystem>
+
 // The constructor now initializes the token stream and sets the initial state.
-Parser::Parser(Lexer& lexer)
+Parser::Parser(Lexer& lexer, std::string source_path)
     : lexer(lexer),
       currentToken({TokenType::Unexpected, ""}),
       peekToken({TokenType::Unexpected, ""}),
       peekToken2({TokenType::Unexpected, ""}),
-      contextNode(nullptr) {
+      contextNode(nullptr),
+      sourcePath(source_path) {
     // Initialize the token stream to fill all three lookahead tokens.
     advanceTokens();
     advanceTokens();
     advanceTokens();
     // Set the initial state for parsing.
     currentState = std::make_unique<StatementState>();
+    namespaceStack.push_back("_global");
 }
 
 // The main parse loop now delegates to the current state's handle method.

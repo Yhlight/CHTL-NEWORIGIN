@@ -19,7 +19,7 @@ class ElementNode;
 // token stream.
 class Parser {
 public:
-    explicit Parser(Lexer& lexer);
+    explicit Parser(Lexer& lexer, std::string source_path = "");
     ~Parser(); // Add destructor declaration
 
     // The main entry point for parsing.
@@ -74,6 +74,8 @@ public:
 
     // A pointer to the parsed info node, if one exists.
     std::unique_ptr<InfoNode> infoNode = nullptr;
+    // The path of the source file being parsed.
+    std::string sourcePath;
     // --- End public interface for states ---
 
 public:

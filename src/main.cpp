@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
         CompilerDispatcher dispatcher;
         CompilationResult result = dispatcher.compile(
             chtlSource,
+            input_file,
             inline_mode,
             css_filename,
             js_filename
