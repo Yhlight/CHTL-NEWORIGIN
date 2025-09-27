@@ -14,6 +14,7 @@
 #include "../CHTLNode/EnhancedSelectorNode.h"
 #include "../Util/NodeCloner.h"
 #include "../CHTLLoader/Loader.h"
+#include "../CHTLLoader/ModuleResolver.h"
 #include <stdexcept>
 #include <string>
 #include <filesystem>
@@ -991,71 +992,123 @@ void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::Semicolon);
 
     // --- Import Logic ---
-    if (!itemName.empty()) { // This is a precise import
-        try {
-            std::string fileContent = Loader::loadFile(path);
-            Lexer importLexer(fileContent);
-            Parser importParser(importLexer);
-            importParser.parse();
+    ModuleResolver resolver;
+    // TODO: The parser should be aware of the current file's path to resolve relative imports correctly.
+    // For now, we use the current working directory.
+    std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, std::filesystem::current_path());
 
-            std::string finalName = alias.empty() ? itemName : alias;
+    if (resolved_paths.empty()) {
+        throw std::runtime_error("Failed to resolve import: " + path);
+    }
 
-            if (importType == "Element") {
-                ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
-                if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + path);
-                auto cloned_node = NodeCloner::clone(nodeToImport);
-                parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
-            } else if (importType == "Style") {
-                StyleTemplateNode* nodeToImport = importParser.templateManager.getStyleTemplate("_global", itemName);
-                if (!nodeToImport) throw std::runtime_error("Style template '" + itemName + "' not found in " + path);
-                auto cloned_node = NodeCloner::clone(nodeToImport);
-                parser.templateManager.addStyleTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<StyleTemplateNode>(static_cast<StyleTemplateNode*>(cloned_node.release())));
-            } else if (importType == "Var") {
-                VarTemplateNode* nodeToImport = importParser.templateManager.getVarTemplate("_global", itemName);
-                if (!nodeToImport) throw std::runtime_error("Var template '" + itemName + "' not found in " + path);
-                auto cloned_node = NodeCloner::clone(nodeToImport);
-                parser.templateManager.addVarTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<VarTemplateNode>(static_cast<VarTemplateNode*>(cloned_node.release())));
-            } else {
-                throw std::runtime_error("Precise import is only supported for @Element, @Style, and @Var.");
-            }
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import '" + itemName + "' from file '" + path + "': " + e.what());
-        }
-    } else if (importType == "Chtl") {
-        try {
-        if (path.length() >= 5 && path.rfind(".cmod") == path.length() - 5) {
-                auto cmod_contents = Loader::loadCmod(path);
-                for (const auto& pair : cmod_contents) {
-                    const std::string& filename = pair.first;
-                    const std::string& content = pair.second;
-                    if (filename.rfind("src/", 0) == 0 && filename.size() > 5 && filename.substr(filename.size() - 5) == ".chtl") {
-                        Lexer importLexer(content);
-                        Parser importParser(importLexer);
-                        importParser.parse();
-                        parser.templateManager.merge(importParser.templateManager);
-                    }
-                }
-            } else {
-                std::string fileContent = Loader::loadFile(path);
+    for (const auto& resolved_path : resolved_paths) {
+        std::string p_str = resolved_path.string();
+        if (!itemName.empty()) { // This is a precise import
+            try {
+                std::string fileContent = Loader::loadFile(p_str);
                 Lexer importLexer(fileContent);
                 Parser importParser(importLexer);
                 importParser.parse();
-                parser.templateManager.merge(importParser.templateManager);
+
+                std::string finalName = alias.empty() ? itemName : alias;
+
+                if (importType == "Element") {
+                // If the imported module has an export list, enforce it.
+                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
+                    bool found = false;
+                    std::string key = (isCustom ? "[Custom] " : "[Template] ") + std::string("@Element");
+                    if (importParser.infoNode->exports.count(key)) {
+                        const auto& exportedSymbols = importParser.infoNode->exports.at(key);
+                        if (std::find(exportedSymbols.begin(), exportedSymbols.end(), itemName) != exportedSymbols.end()) {
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        throw std::runtime_error("Element '" + itemName + "' is not exported by module " + p_str);
+                    }
+                }
+                    ElementTemplateNode* nodeToImport = importParser.templateManager.getElementTemplate("_global", itemName);
+                    if (!nodeToImport) throw std::runtime_error("Element template '" + itemName + "' not found in " + p_str);
+                    auto cloned_node = NodeCloner::clone(nodeToImport);
+                    parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<ElementTemplateNode>(static_cast<ElementTemplateNode*>(cloned_node.release())));
+                } else if (importType == "Style") {
+                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
+                    bool found = false;
+                    std::string key = (isCustom ? "[Custom] " : "[Template] ") + std::string("@Style");
+                    if (importParser.infoNode->exports.count(key)) {
+                        const auto& exportedSymbols = importParser.infoNode->exports.at(key);
+                        if (std::find(exportedSymbols.begin(), exportedSymbols.end(), itemName) != exportedSymbols.end()) {
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        throw std::runtime_error("Style '" + itemName + "' is not exported by module " + p_str);
+                    }
+                }
+                    StyleTemplateNode* nodeToImport = importParser.templateManager.getStyleTemplate("_global", itemName);
+                    if (!nodeToImport) throw std::runtime_error("Style template '" + itemName + "' not found in " + p_str);
+                    auto cloned_node = NodeCloner::clone(nodeToImport);
+                    parser.templateManager.addStyleTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<StyleTemplateNode>(static_cast<StyleTemplateNode*>(cloned_node.release())));
+                } else if (importType == "Var") {
+                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
+                    bool found = false;
+                    std::string key = (isCustom ? "[Custom] " : "[Template] ") + std::string("@Var");
+                    if (importParser.infoNode->exports.count(key)) {
+                        const auto& exportedSymbols = importParser.infoNode->exports.at(key);
+                        if (std::find(exportedSymbols.begin(), exportedSymbols.end(), itemName) != exportedSymbols.end()) {
+                            found = true;
+                        }
+                    }
+                    if (!found) {
+                        throw std::runtime_error("Var '" + itemName + "' is not exported by module " + p_str);
+                    }
+                }
+                    VarTemplateNode* nodeToImport = importParser.templateManager.getVarTemplate("_global", itemName);
+                    if (!nodeToImport) throw std::runtime_error("Var template '" + itemName + "' not found in " + p_str);
+                    auto cloned_node = NodeCloner::clone(nodeToImport);
+                    parser.templateManager.addVarTemplate(parser.getCurrentNamespace(), finalName, std::unique_ptr<VarTemplateNode>(static_cast<VarTemplateNode*>(cloned_node.release())));
+                } else {
+                    throw std::runtime_error("Precise import is only supported for @Element, @Style, and @Var.");
+                }
+            } catch (const std::runtime_error& e) {
+                throw std::runtime_error("Failed to import '" + itemName + "' from file '" + p_str + "': " + e.what());
             }
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import file '" + path + "': " + e.what());
+        } else if (importType == "Chtl") {
+            try {
+                if (resolved_path.extension() == ".cmod") {
+                    auto cmod_contents = Loader::loadCmod(p_str);
+                    for (const auto& pair : cmod_contents) {
+                        const std::string& filename = pair.first;
+                        const std::string& content = pair.second;
+                        if (filename.rfind("src/", 0) == 0 && filename.size() > 5 && filename.substr(filename.size() - 5) == ".chtl") {
+                            Lexer importLexer(content);
+                            Parser importParser(importLexer);
+                            importParser.parse();
+                            parser.templateManager.merge(importParser.templateManager);
+                        }
+                    }
+                } else {
+                    std::string fileContent = Loader::loadFile(p_str);
+                    Lexer importLexer(fileContent);
+                    Parser importParser(importLexer);
+                    importParser.parse();
+                    parser.templateManager.merge(importParser.templateManager);
+                }
+            } catch (const std::runtime_error& e) {
+                throw std::runtime_error("Failed to import file '" + p_str + "': " + e.what());
+            }
+        } else if (importType == "Html" || importType == "Style" || importType == "JavaScript") {
+            if (alias.empty()) throw std::runtime_error("Import for non-CHTL types must use 'as'.");
+            try {
+                std::string fileContent = Loader::loadFile(p_str);
+                auto originNode = std::make_unique<OriginNode>(importType, fileContent, alias);
+                parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), alias, std::move(originNode));
+            } catch (const std::runtime_error& e) {
+                throw std::runtime_error("Failed to import file '" + p_str + "' as origin block '" + alias + "': " + e.what());
+            }
+        } else {
+            throw std::runtime_error("Unsupported import type: @" + importType);
         }
-    } else if (importType == "Html" || importType == "Style" || importType == "JavaScript") {
-        if (alias.empty()) throw std::runtime_error("Import for non-CHTL types must use 'as'.");
-        try {
-            std::string fileContent = Loader::loadFile(path);
-            auto originNode = std::make_unique<OriginNode>(importType, fileContent, alias);
-            parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), alias, std::move(originNode));
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import file '" + path + "' as origin block '" + alias + "': " + e.what());
-        }
-    } else {
-        throw std::runtime_error("Unsupported import type: @" + importType);
     }
 }
 

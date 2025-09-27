@@ -8,7 +8,7 @@
 
 class CompilerDispatcher {
 public:
-    std::string compile(const std::string& source);
+    std::string compile(const std::string& source, bool inline_mode = false);
 
 private:
     UnifiedScanner scanner;

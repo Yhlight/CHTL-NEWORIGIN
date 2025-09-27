@@ -33,30 +33,39 @@ void Generator::appendLine(const std::string& str) {
     result += getIndent() + str + "\n";
 }
 
-std::string Generator::generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, const SharedContext& context, bool outputDoctype) {
+std::string Generator::generate(std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, SharedContext& context, bool outputDoctype, bool inlineCss) {
     result.clear();
     indentLevel = 0;
     this->globalCssToInject = globalCss;
+    this->inlineCss = inlineCss;
+    this->mutableContext = &context;
 
     if (outputDoctype) {
         result += "<!DOCTYPE html>\n";
     }
 
-    for (const auto& root : roots) {
+    for (auto& root : roots) {
         generateNode(root.get());
     }
 
     generateRuntimeScript(context);
 
+    if (!inlineCss && !globalCss.empty()) {
+        // In a real application, you would write this to a separate CSS file.
+        // For now, we can just append it as a comment to see the output.
+        result += "\n<!-- CSS would be written to a separate file:\n" + globalCss + "\n-->";
+    }
+
+
     return result;
 }
 
-void Generator::generateNode(const BaseNode* node) {
+void Generator::generateNode(BaseNode* node) {
     if (!node) return;
 
     switch (node->getType()) {
         case NodeType::Element:
-            generateElement(const_cast<ElementNode*>(static_cast<const ElementNode*>(node)));
+            generateElement(static_cast<ElementNode*>(node));
             break;
         case NodeType::Text:
             generateText(static_cast<const TextNode*>(node));
@@ -65,7 +74,7 @@ void Generator::generateNode(const BaseNode* node) {
             generateComment(static_cast<const CommentNode*>(node));
             break;
         case NodeType::Fragment:
-            for (const auto& child : static_cast<const FragmentNode*>(node)->children) {
+            for (auto& child : static_cast<FragmentNode*>(node)->children) {
                 generateNode(child.get());
             }
             break;
@@ -76,23 +85,52 @@ void Generator::generateNode(const BaseNode* node) {
             generateScript(static_cast<const ScriptNode*>(node));
             break;
         case NodeType::Conditional:
-            generateConditional(static_cast<const ConditionalNode*>(node));
+            generateConditional(static_cast<ConditionalNode*>(node));
             break;
         default:
             break;
     }
 }
 
-void Generator::generateConditional(const ConditionalNode* node) {
+void Generator::generateConditional(ConditionalNode* node) {
+    bool isDynamic = false;
     for (const auto& conditionalCase : node->cases) {
-        if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
-            for (const auto& child : conditionalCase.children) {
-                generateNode(child.get());
-            }
+        if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
+            isDynamic = true;
             break;
         }
     }
+
+    if (isDynamic) {
+        for (auto& conditionalCase : node->cases) {
+            if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
+                std::string wrapperId = "chtl-dyn-render-" + std::to_string(reinterpret_cast<uintptr_t>(&conditionalCase));
+                appendLine("<div id=\"" + wrapperId + "\">");
+                indent();
+                for (const auto& child : conditionalCase.children) {
+                    generateNode(child.get());
+                }
+                outdent();
+                appendLine("</div>");
+
+                DynamicRenderingBinding binding;
+                binding.elementId = wrapperId;
+                binding.expression = conditionalCase.condition.dynamic_expr;
+                mutableContext->dynamicRenderingBindings.push_back(binding);
+            }
+        }
+    } else {
+        for (const auto& conditionalCase : node->cases) {
+            if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
+                for (const auto& child : conditionalCase.children) {
+                    generateNode(child.get());
+                }
+                break;
+            }
+        }
+    }
 }
+
 
 void Generator::generateElement(ElementNode* node) {
     if (node->tagName.rfind("chtl_placeholder_", 0) == 0) {
@@ -108,7 +146,6 @@ void Generator::generateElement(ElementNode* node) {
     std::string styleString;
 
     for (const auto& stylePair : node->inlineStyles) {
-        // Dynamic conditionals are handled by the runtime script, not static CSS.
         if (stylePair.second.type != StyleValue::RESPONSIVE && stylePair.second.type != StyleValue::DYNAMIC_CONDITIONAL) {
             styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
         }
@@ -118,15 +155,12 @@ void Generator::generateElement(ElementNode* node) {
         if (finalAttributes.count("style")) {
             finalAttributes["style"].string_val = styleString + finalAttributes["style"].string_val;
         } else {
-            StyleValue style_val;
-            style_val.type = StyleValue::STRING;
-            style_val.string_val = styleString;
-            finalAttributes["style"] = style_val;
+            finalAttributes["style"] = StyleValue(styleString);
         }
     }
 
     for (auto it = finalAttributes.begin(); it != finalAttributes.end(); ) {
-        if (it->second.type == StyleValue::RESPONSIVE) {
+        if (it->second.type == StyleValue::RESPONSIVE || it->second.type == StyleValue::DYNAMIC_CONDITIONAL) {
             it = finalAttributes.erase(it);
         } else {
             ++it;
@@ -147,13 +181,13 @@ void Generator::generateElement(ElementNode* node) {
     if (node->children.size() == 1 && node->children.front()->getType() == NodeType::Text) {
         const auto* textNode = static_cast<const TextNode*>(node->children.front().get());
         append(textNode->text);
-    } else if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty())) {
+    } else if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty() && inlineCss)) {
         append("\n");
         indent();
-        for (const auto& child : node->children) {
+        for (auto& child : node->children) {
             generateNode(child.get());
         }
-        if (node->tagName == "head" && !globalCssToInject.empty()) {
+        if (node->tagName == "head" && !globalCssToInject.empty() && inlineCss) {
             appendLine("<style>");
             indent();
             append(globalCssToInject);
@@ -198,7 +232,7 @@ void Generator::generateScript(const ScriptNode* node) {
 }
 
 void Generator::generateRuntimeScript(const SharedContext& context) {
-    if (context.responsiveBindings.empty() && context.dynamicConditionalBindings.empty()) {
+    if (context.responsiveBindings.empty() && context.dynamicConditionalBindings.empty() && context.dynamicRenderingBindings.empty()) {
         return;
     }
 
@@ -208,6 +242,7 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
     indent();
     appendLine("bindings: {},");
     appendLine("dynamicBindings: [],");
+    appendLine("dynamicRenderingBindings: [],");
     appendLine("registerBinding(variable, elementId, property, unit) {");
     indent();
     appendLine("if (!this.bindings[variable]) { this.bindings[variable] = []; }");
@@ -215,6 +250,7 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
     outdent();
     appendLine("},");
     appendLine("registerDynamicBinding(binding) { this.dynamicBindings.push(binding); },");
+    appendLine("registerDynamicRenderingBinding(binding) { this.dynamicRenderingBindings.push(binding); },");
     appendLine("updateDOM(variable, value) {");
     indent();
     appendLine("if (!this.bindings[variable]) return;");
@@ -252,6 +288,16 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
     appendLine("targetEl.style[binding.targetProperty.substring(6)] = resultValue;");
     outdent();
     appendLine("});");
+    appendLine("this.dynamicRenderingBindings.forEach(binding => {");
+    indent();
+    appendLine("const sourceEl = document.querySelector(binding.expression.selector);");
+    appendLine("const targetEl = document.getElementById(binding.elementId);");
+    appendLine("if (!sourceEl || !targetEl) return;");
+    appendLine("let sourceValue = parseFloat(window.getComputedStyle(sourceEl).getPropertyValue(binding.expression.property));");
+    appendLine("let condition = eval(`${sourceValue} ${binding.expression.op} ${binding.expression.value_to_compare}`);");
+    appendLine("targetEl.style.display = condition ? '' : 'none';");
+    outdent();
+    appendLine("});");
     outdent();
     appendLine("}");
     outdent();
@@ -282,7 +328,6 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
         appendLine("});");
     }
 
-    // Register dynamic conditional bindings
     for (const auto& binding : context.dynamicConditionalBindings) {
         std::stringstream ss;
         ss << "__chtl.registerDynamicBinding({";
@@ -299,8 +344,20 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
         appendLine(ss.str());
     }
 
-    // Initial evaluation and observer setup
-    if (!context.dynamicConditionalBindings.empty()) {
+    for (const auto& binding : context.dynamicRenderingBindings) {
+        std::stringstream ss;
+        ss << "__chtl.registerDynamicRenderingBinding({";
+        ss << "elementId: '" << binding.elementId << "',";
+        ss << "expression: {";
+        ss << "selector: '" << binding.expression->selector << "',";
+        ss << "property: '" << binding.expression->property << "',";
+        ss << "op: '" << binding.expression->op << "',";
+        ss << "value_to_compare: " << binding.expression->value_to_compare << ",";
+        ss << "}});";
+        appendLine(ss.str());
+    }
+
+    if (!context.dynamicConditionalBindings.empty() || !context.dynamicRenderingBindings.empty()) {
         appendLine("document.addEventListener('DOMContentLoaded', () => {");
         indent();
         appendLine("__chtl.evaluateDynamicBindings();");

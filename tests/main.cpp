@@ -92,6 +92,9 @@ void test_chtl_js_virtual_object_usage();
 void test_chtl_js_router();
 void test_dynamic_conditional_expression();
 void test_dynamic_conditional_rendering();
+void test_module_resolver_path_searching();
+void test_cmod_export_enforcement();
+void test_cli_inline_flag();
 
 
 void test_text_block_literals() {
@@ -509,6 +512,9 @@ int main() {
     run_test(test_chtl_js_router, "CHTL JS Router");
     run_test(test_dynamic_conditional_expression, "Dynamic Conditional Expression");
     run_test(test_dynamic_conditional_rendering, "Dynamic Conditional Rendering");
+    run_test(test_module_resolver_path_searching, "Module Resolver Path Searching");
+    run_test(test_cmod_export_enforcement, "CMOD Export Enforcement");
+    run_test(test_cli_inline_flag, "CLI --inline Flag");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1666,6 +1672,96 @@ void test_dynamic_conditional_expression() {
     // Check that the runtime evaluation logic is present
     assert(result.find("evaluateDynamicBindings") != std::string::npos);
     assert(result.find("new MutationObserver") != std::string::npos);
+}
+
+void test_cli_inline_flag() {
+    std::string source = R"(
+        style {
+            body { color: purple; }
+        }
+        html {
+            head { title { text: "Inline Test"; } }
+            body { p { text: "Hello"; } }
+        }
+    )";
+
+    // Test 1: With inlining enabled
+    CompilerDispatcher dispatcher_inline;
+    std::string result_inline = dispatcher_inline.compile(source, true);
+    assert(result_inline.find("<style>") != std::string::npos);
+    assert(result_inline.find("body { color: purple; }") != std::string::npos);
+    assert(result_inline.find("</style>") != std::string::npos);
+
+    // Test 2: With inlining disabled (default)
+    CompilerDispatcher dispatcher_no_inline;
+    std::string result_no_inline = dispatcher_no_inline.compile(source, false);
+    assert(result_no_inline.find("<style>") == std::string::npos);
+    // When not inlined, the CSS is outputted as a comment for debugging.
+    assert(result_no_inline.find("<!-- CSS would be written to a separate file:") != std::string::npos);
+    assert(result_no_inline.find("body { color: purple; }") != std::string::npos);
+}
+
+void test_module_resolver_path_searching() {
+    // The test executable runs from the 'build' directory. The ModuleResolver currently
+    // uses the CWD to resolve paths. So we create the test module inside the build dir.
+    namespace fs = std::filesystem;
+    fs::path test_modules_dir = "modules";
+    fs::create_directory(test_modules_dir);
+    std::ofstream test_module_file(test_modules_dir / "MyModule.chtl");
+    test_module_file << "[Template] @Element MyModuleComponent { p { text: \"Hello from a resolved module!\"; } }";
+    test_module_file.close();
+
+    std::string source = R"(
+        [Import] @Chtl from "MyModule"; // Import by name, without path or extension
+        body {
+            @Element MyModuleComponent;
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Clean up
+    fs::remove_all(test_modules_dir);
+
+    assert(result.find("Hello from a resolved module!") != std::string::npos);
+}
+
+void test_cmod_export_enforcement() {
+    namespace fs = std::filesystem;
+    const std::string module_filename = "export_test_module.chtl";
+
+    // 1. Create a single module file with Info, Export, and definitions.
+    std::ofstream test_module_file(module_filename);
+    test_module_file << R"(
+        [Info] { name: "Export Test"; }
+        [Export] { [Template] @Element ExportedComponent; }
+
+        [Template] @Element ExportedComponent { p { text: "I am exported."; } }
+        [Template] @Element SecretComponent { p { text: "I am not exported."; } }
+    )";
+    test_module_file.close();
+
+    // 2. Test importing the exported component (should succeed)
+    std::string source_success = R"([Import] @Element ExportedComponent from ")" + module_filename + R"("; body { @Element ExportedComponent; })";
+    CompilerDispatcher dispatcher_success;
+    std::string result_success = dispatcher_success.compile(source_success);
+    assert(result_success.find("I am exported.") != std::string::npos);
+
+    // 3. Test importing the non-exported component (should fail)
+    std::string source_fail = R"([Import] @Element SecretComponent from ")" + module_filename + R"(";)";
+    bool exception_thrown = false;
+    try {
+        CompilerDispatcher dispatcher_fail;
+        dispatcher_fail.compile(source_fail);
+    } catch (const std::runtime_error& e) {
+        exception_thrown = true;
+        std::string msg = e.what();
+        assert(msg.find("is not exported by module") != std::string::npos);
+    }
+    assert(exception_thrown);
+
+    // 4. Cleanup
+    fs::remove(module_filename);
 }
 
 void test_dynamic_conditional_rendering() {

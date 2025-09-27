@@ -18,21 +18,23 @@ public:
     Generator();
 
     // The main entry point for the generation process.
-    std::string generate(const std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, const SharedContext& context, bool outputDoctype);
+    std::string generate(std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, SharedContext& context, bool outputDoctype, bool inlineCss = false);
 
 private:
     std::string result;
     int indentLevel;
     std::string globalCssToInject;
+    bool inlineCss = false;
+    SharedContext* mutableContext = nullptr;
 
 #include "../CHTLNode/ScriptNode.h"
     // Visitor-style methods to generate output for each node type.
-    void generateNode(const BaseNode* node);
+    void generateNode(BaseNode* node);
     void generateElement(ElementNode* node); // Needs to be non-const to add id
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
     void generateScript(const ScriptNode* node);
-    void generateConditional(const ConditionalNode* node);
+    void generateConditional(ConditionalNode* node);
     void generateRuntimeScript(const SharedContext& context);
 
     // Helper methods for managing indentation and building the result string.

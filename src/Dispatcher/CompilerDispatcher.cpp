@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 
-std::string CompilerDispatcher::compile(const std::string& source) {
+std::string CompilerDispatcher::compile(const std::string& source, bool inline_mode) {
     // 1. Scan the source to separate CHTL from other languages
     ScannedOutput scanned_output = scanner.scan(source);
 
@@ -43,7 +43,7 @@ std::string CompilerDispatcher::compile(const std::string& source) {
 
     // 6. Generate the initial HTML from the CHTL AST, passing the combined global CSS
     Generator generator;
-    std::string htmlOutput = generator.generate(ast, globalCss, parser.sharedContext, parser.outputHtml5Doctype);
+    std::string htmlOutput = generator.generate(ast, globalCss, parser.sharedContext, parser.outputHtml5Doctype, inline_mode);
 
     // 7. Use the CodeMerger to re-insert the compiled JavaScript fragments
     return merger.merge(htmlOutput, compiled_js_fragments);
