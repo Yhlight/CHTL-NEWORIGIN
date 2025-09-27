@@ -479,12 +479,9 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 // Instead of copying styles, just record the parent's name.
                 styleNode->parentNames.push_back(parentName);
             } else {
-                std::string key = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-
                 // Handle 'delete' keyword for custom styles
                 if (isCustom && parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
-                    while (parser.currentToken.type != TokenType::Semicolon) {
+                    while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
                         if (parser.currentToken.type != TokenType::Identifier) {
                              throw std::runtime_error("Expected property name after 'delete'.");
                         }
@@ -492,11 +489,16 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                         parser.advanceTokens();
                         if (parser.currentToken.type == TokenType::Comma) {
                             parser.advanceTokens();
+                        } else {
+                            break;
                         }
                     }
                     parser.expectToken(TokenType::Semicolon);
                     continue;
                 }
+
+                std::string key = parser.currentToken.value;
+                parser.expectToken(TokenType::Identifier);
 
                 // Correctly handle valueless properties for custom templates
                 if (isCustom && parser.currentToken.type != TokenType::Colon) {
@@ -509,15 +511,26 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
 
                 parser.expectToken(TokenType::Colon);
 
-                // Use the powerful expression parser from StyleBlockState to handle
-                // complex values like calculations and variable references.
-                // We must provide a temporary context node because the expression
-                // parser may try to look up local properties.
-                StyleBlockState tempStyleState;
-                ElementNode tempContextNode(""); // Create a temporary, empty context.
-                parser.contextNode = &tempContextNode;
-                styleNode->styles[key] = tempStyleState.parseStyleExpression(parser);
-                parser.contextNode = nullptr; // Reset the context.
+                if (isCustom) {
+                    // In a custom template definition, the value is treated as a literal string
+                    // until the semicolon, as it might be a multi-word value not meant for immediate evaluation.
+                    std::stringstream value_builder;
+                    while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
+                        if (value_builder.tellp() > 0) {
+                             value_builder << " ";
+                        }
+                        value_builder << parser.currentToken.value;
+                        parser.advanceTokens();
+                    }
+                    styleNode->styles[key] = StyleValue(value_builder.str());
+                } else {
+                    // In a regular template, parse the expression to handle calculations etc.
+                    StyleBlockState tempStyleState;
+                    ElementNode tempContextNode(""); // Create a temporary, empty context.
+                    parser.contextNode = &tempContextNode;
+                    styleNode->styles[key] = tempStyleState.parseStyleExpression(parser);
+                    parser.contextNode = nullptr; // Reset the context.
+                }
 
                 if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
             }
@@ -754,7 +767,7 @@ void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
     }
 }
 
-void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
+void StatementState::parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
     std::string tagName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
@@ -791,19 +804,14 @@ void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragme
         throw std::runtime_error("Could not find element '" + tagName + "' with index " + std::to_string(index) + " to modify.");
     }
 
-    // Parse the modification block
+    // Clear the original content of the node being specialized to allow for redefinition.
+    targetNode->children.clear();
+    targetNode->inlineStyles.clear();
+
+    // Now, parse the specialization block as if it were a normal element body.
+    // This allows for full redefinition of content (attributes, styles, children).
     parser.expectToken(TokenType::OpenBrace);
-    while(parser.currentToken.type != TokenType::CloseBrace) {
-        if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style") {
-            // Use the StyleBlockState to parse the style block, but with the targetNode as context.
-            parser.contextNode = targetNode;
-            StyleBlockState styleState;
-            styleState.handle(parser);
-            parser.contextNode = nullptr; // Reset context
-        } else {
-            throw std::runtime_error("Only 'style' blocks are allowed inside an element specialization.");
-        }
-    }
+    parseElementBody(parser, *targetNode);
     parser.expectToken(TokenType::CloseBrace);
 }
 
@@ -911,29 +919,37 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
         // --- Definition: [Origin] @Type name { ... } ---
         parser.advanceTokens(); // Consume '{'
 
-        std::stringstream rawContent;
+        size_t startPos = parser.currentToken.start_pos;
         int braceLevel = 1;
 
-        while (true) {
-            if (parser.currentToken.type == TokenType::EndOfFile) {
-                throw std::runtime_error("Unmatched braces in [Origin] block.");
-            }
+        while (braceLevel > 0 && parser.currentToken.type != TokenType::EndOfFile) {
             if (parser.currentToken.type == TokenType::OpenBrace) {
                 braceLevel++;
             } else if (parser.currentToken.type == TokenType::CloseBrace) {
                 braceLevel--;
-                if (braceLevel == 0) {
-                    break; // Found the end, do not include the closing brace in content.
-                }
             }
-            rawContent << parser.currentToken.value;
-            parser.advanceTokens();
+
+            if (braceLevel > 0) {
+                parser.advanceTokens();
+            }
         }
+
+        if (braceLevel != 0) {
+            throw std::runtime_error("Unmatched braces in [Origin] block.");
+        }
+
+        size_t endPos = parser.currentToken.start_pos;
+        std::string rawContent = parser.lexer.getSource().substr(startPos, endPos - startPos);
 
         // Consume the final '}'
         parser.expectToken(TokenType::CloseBrace);
 
-        auto originNode = std::make_unique<OriginNode>(type, rawContent.str(), name);
+        // Consume optional semicolon after the block
+        if (parser.currentToken.type == TokenType::Semicolon) {
+            parser.advanceTokens();
+        }
+
+        auto originNode = std::make_unique<OriginNode>(type, rawContent, name);
 
         // Store a clone in the manager for later use
         auto cloneForManager = NodeCloner::clone(originNode.get());

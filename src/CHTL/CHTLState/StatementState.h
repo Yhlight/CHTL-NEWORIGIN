@@ -32,6 +32,7 @@ private:
 
     // Helper for specializing an element template usage
     void parseElementSpecializationBlock(Parser& parser, FragmentNode& fragment);
+    void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment);
 
     // Helper for parsing an import statement
     void parseImportStatement(Parser& parser);
