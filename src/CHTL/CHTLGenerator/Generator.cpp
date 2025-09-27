@@ -117,7 +117,10 @@ void Generator::generateElement(ElementNode* node) {
         if (finalAttributes.count("style")) {
             finalAttributes["style"].string_val = styleString + finalAttributes["style"].string_val;
         } else {
-            finalAttributes["style"] = {StyleValue::STRING, 0.0, "", styleString};
+            StyleValue style_val;
+            style_val.type = StyleValue::STRING;
+            style_val.string_val = styleString;
+            finalAttributes["style"] = style_val;
         }
     }
 

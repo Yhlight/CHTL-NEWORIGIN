@@ -170,7 +170,7 @@ StyleValue parsePrimaryExpr(Parser& parser) {
         size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
         double value = std::stod(rawValue.substr(0, unit_pos));
         std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
-        return {StyleValue::NUMERIC, value, unit};
+        return StyleValue(value, unit);
     }
 
     if (parser.currentToken.type == TokenType::OpenParen) {
@@ -225,7 +225,7 @@ StyleValue parsePrimaryExpr(Parser& parser) {
         }
 
         if (isSpecialized) {
-            return {StyleValue::STRING, 0.0, "", specializedValue};
+            return StyleValue(specializedValue);
         }
 
         VarTemplateNode* varTmpl = parser.templateManager.getVarTemplate(ns, templateName);
@@ -234,7 +234,7 @@ StyleValue parsePrimaryExpr(Parser& parser) {
         auto it = varTmpl->variables.find(varName);
         if (it == varTmpl->variables.end()) throw std::runtime_error("Variable '" + varName + "' not found in template '" + templateName + "'.");
 
-        return {StyleValue::STRING, 0.0, "", it->second};
+        return StyleValue(it->second);
     }
 
     if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
@@ -250,7 +250,7 @@ StyleValue parsePrimaryExpr(Parser& parser) {
              parser.advanceTokens();
         }
 
-        return {StyleValue::STRING, 0.0, "", ss.str()};
+        return StyleValue(ss.str());
     }
 
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
@@ -296,7 +296,7 @@ StyleValue parseAdditiveExpr(Parser& parser) {
             std::string lhs_str = styleValueToString(result);
             std::string rhs_str = styleValueToString(rhs);
             std::string op_str = (op == TokenType::Plus) ? " + " : " - ";
-            result = {StyleValue::STRING, 0.0, "", "calc(" + lhs_str + op_str + rhs_str + ")"};
+            result = StyleValue("calc(" + lhs_str + op_str + rhs_str + ")");
         } else {
             if (op == TokenType::Plus) result.numeric_val += rhs.numeric_val;
             else result.numeric_val -= rhs.numeric_val;
@@ -385,7 +385,7 @@ StyleValue parseConditionalExpr(Parser& parser) {
             return condition.bool_val ? true_val : false_val;
         }
 
-        return condition.bool_val ? true_val : StyleValue{StyleValue::EMPTY};
+        return condition.bool_val ? true_val : StyleValue(StyleValue::EMPTY);
     }
 
     return condition;
@@ -397,7 +397,7 @@ StyleValue parseStyleExpression(Parser& parser) {
         return parseDynamicConditionalExpression(parser);
     }
 
-    StyleValue finalValue{StyleValue::EMPTY};
+    StyleValue finalValue(StyleValue::EMPTY);
     bool conditionMet = false;
 
     while (true) {

@@ -42,6 +42,12 @@ struct StyleValue {
     std::shared_ptr<DynamicConditionalExpression> dynamic_expr;
 
     StyleValue() = default;
+    explicit StyleValue(ValueType t);
+    explicit StyleValue(const std::string& s);
+    StyleValue(double val, const std::string& u);
+
     StyleValue(const StyleValue& other);
     StyleValue& operator=(const StyleValue& other);
+    StyleValue(StyleValue&& other) noexcept;
+    StyleValue& operator=(StyleValue&& other) noexcept;
 };

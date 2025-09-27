@@ -54,7 +54,7 @@ void StyleBlockState::parseInlineProperty(Parser& parser) {
     StyleValue value = parseStyleExpression(parser);
     if (value.type == StyleValue::RESPONSIVE) {
         if (parser.contextNode->attributes.find("id") == parser.contextNode->attributes.end()) {
-            parser.contextNode->attributes["id"] = {StyleValue::STRING, 0, "", "chtl-id-" + std::to_string(parser.elementIdCounter++)};
+            parser.contextNode->attributes["id"] = StyleValue("chtl-id-" + std::to_string(parser.elementIdCounter++));
         }
         std::string elementId = parser.contextNode->attributes["id"].string_val;
 
@@ -88,7 +88,7 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         selectorName = parser.currentToken.value;
         // Check config flag before automatically adding the class attribute
         if (!parser.configManager.getActiveConfig()->disableStyleAutoAddClass && !parser.contextNode->attributes.count("class")) {
-            parser.contextNode->attributes["class"] = {StyleValue::STRING, 0.0, "", selectorName};
+            parser.contextNode->attributes["class"] = StyleValue(selectorName);
         }
     } else if (parser.currentToken.type == TokenType::Hash) {
         selector += "#";
@@ -97,7 +97,7 @@ void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
         selectorName = parser.currentToken.value;
         // Check config flag before automatically adding the id attribute
         if (!parser.configManager.getActiveConfig()->disableStyleAutoAddId && !parser.contextNode->attributes.count("id")) {
-            parser.contextNode->attributes["id"] = {StyleValue::STRING, 0.0, "", selectorName};
+            parser.contextNode->attributes["id"] = StyleValue(selectorName);
         }
     }
     selector += selectorName;
@@ -305,7 +305,7 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
         double value = std::stod(rawValue.substr(0, unit_pos));
         std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";
-        return {StyleValue::NUMERIC, value, unit};
+        return StyleValue(value, unit);
     }
 
     if (parser.currentToken.type == TokenType::Dollar) {
@@ -385,7 +385,7 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         }
 
         if (isSpecialized) {
-            return {StyleValue::STRING, 0.0, "", specializedValue};
+            return StyleValue(specializedValue);
         }
 
         // Handle non-specialized case
@@ -395,7 +395,7 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
         auto it = varTmpl->variables.find(varName);
         if (it == varTmpl->variables.end()) throw std::runtime_error("Variable '" + varName + "' not found in template '" + templateName + "'.");
 
-        return {StyleValue::STRING, 0.0, "", it->second};
+        return StyleValue(it->second);
     }
 
     if (parser.currentToken.type == TokenType::Identifier || parser.currentToken.type == TokenType::String) {
@@ -414,7 +414,7 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
              parser.advanceTokens();
         }
 
-        return {StyleValue::STRING, 0.0, "", ss.str()};
+        return StyleValue(ss.str());
     }
 
     throw std::runtime_error("Unexpected token in expression: " + parser.currentToken.value);
@@ -485,7 +485,7 @@ StyleValue StyleBlockState::parseAdditiveExpr(Parser& parser) {
             std::string lhs_str = styleValueToString(result);
             std::string rhs_str = styleValueToString(rhs);
             std::string op_str = (op == TokenType::Plus) ? " + " : " - ";
-            result = {StyleValue::STRING, 0.0, "", "calc(" + lhs_str + op_str + rhs_str + ")"};
+            result = StyleValue("calc(" + lhs_str + op_str + rhs_str + ")");
         } else {
             // Otherwise, perform the calculation directly.
             if (op == TokenType::Plus) result.numeric_val += rhs.numeric_val;
@@ -576,7 +576,7 @@ StyleValue StyleBlockState::parseConditionalExpr(Parser& parser) {
             return condition.bool_val ? true_val : false_val;
         }
 
-        return condition.bool_val ? true_val : StyleValue{StyleValue::EMPTY};
+        return condition.bool_val ? true_val : StyleValue(StyleValue::EMPTY);
     }
 
     return condition; // Not a conditional, just return the value.
@@ -585,7 +585,7 @@ StyleValue StyleBlockState::parseConditionalExpr(Parser& parser) {
 StyleValue StyleBlockState::parseStyleExpression(Parser& parser) {
     // A property value is a chain of conditional expressions, separated by commas.
     // The first one that evaluates to true wins.
-    StyleValue finalValue{StyleValue::EMPTY};
+    StyleValue finalValue(StyleValue::EMPTY);
     bool conditionMet = false;
 
     while (true) {
@@ -704,7 +704,7 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
                         parser.advanceTokens();
                     } else {
                         // This is a property deletion, store it to apply later.
-                        specializedStyles[parser.currentToken.value] = { StyleValue::DELETED };
+                        specializedStyles[parser.currentToken.value] = StyleValue(StyleValue::DELETED);
                         parser.advanceTokens();
                     }
 

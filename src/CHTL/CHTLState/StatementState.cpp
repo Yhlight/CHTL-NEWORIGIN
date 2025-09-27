@@ -402,7 +402,10 @@ void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
 
     if (value.type == StyleValue::RESPONSIVE) {
         if (element.attributes.find("id") == element.attributes.end()) {
-            element.attributes["id"] = {StyleValue::STRING, 0, "", "chtl-id-" + std::to_string(parser.elementIdCounter++)};
+            StyleValue id_val;
+            id_val.type = StyleValue::STRING;
+            id_val.string_val = "chtl-id-" + std::to_string(parser.elementIdCounter++);
+            element.attributes["id"] = id_val;
         }
         std::string elementId = element.attributes["id"].string_val;
 

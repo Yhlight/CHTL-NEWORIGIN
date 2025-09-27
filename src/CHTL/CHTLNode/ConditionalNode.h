@@ -12,6 +12,14 @@ struct ConditionalCase {
 
     // The list of child nodes to include if the condition is met.
     std::vector<std::unique_ptr<BaseNode>> children;
+
+    // Default move operations to ensure vector reallocations are efficient and safe.
+    ConditionalCase() = default;
+    ConditionalCase(ConditionalCase&&) = default;
+    ConditionalCase& operator=(ConditionalCase&&) = default;
+    // Keep the copy operations deleted because of unique_ptr.
+    ConditionalCase(const ConditionalCase&) = delete;
+    ConditionalCase& operator=(const ConditionalCase&) = delete;
 };
 
 // Represents a full if-else if-else conditional block in the AST.
