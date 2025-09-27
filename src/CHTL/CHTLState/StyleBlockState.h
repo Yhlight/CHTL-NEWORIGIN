@@ -22,6 +22,7 @@ public:
 
     // --- Expression Parsing (public so other states can use it) ---
     StyleValue parseStyleExpression(Parser& parser);
+    StyleValue parseDynamicConditionalExpression(Parser& parser);
     StyleValue parseConditionalExpr(Parser& parser);
     StyleValue parseBooleanOrExpr(Parser& parser);
     StyleValue parseBooleanAndExpr(Parser& parser);

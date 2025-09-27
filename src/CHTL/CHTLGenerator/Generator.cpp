@@ -108,7 +108,8 @@ void Generator::generateElement(ElementNode* node) {
     std::string styleString;
 
     for (const auto& stylePair : node->inlineStyles) {
-        if (stylePair.second.type != StyleValue::RESPONSIVE) {
+        // Dynamic conditionals are handled by the runtime script, not static CSS.
+        if (stylePair.second.type != StyleValue::RESPONSIVE && stylePair.second.type != StyleValue::DYNAMIC_CONDITIONAL) {
             styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
         }
     }
@@ -197,7 +198,7 @@ void Generator::generateScript(const ScriptNode* node) {
 }
 
 void Generator::generateRuntimeScript(const SharedContext& context) {
-    if (context.responsiveBindings.empty()) {
+    if (context.responsiveBindings.empty() && context.dynamicConditionalBindings.empty()) {
         return;
     }
 
@@ -206,12 +207,14 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
     appendLine("const __chtl = {");
     indent();
     appendLine("bindings: {},");
+    appendLine("dynamicBindings: [],");
     appendLine("registerBinding(variable, elementId, property, unit) {");
     indent();
     appendLine("if (!this.bindings[variable]) { this.bindings[variable] = []; }");
     appendLine("this.bindings[variable].push({ elementId, property, unit });");
     outdent();
     appendLine("},");
+    appendLine("registerDynamicBinding(binding) { this.dynamicBindings.push(binding); },");
     appendLine("updateDOM(variable, value) {");
     indent();
     appendLine("if (!this.bindings[variable]) return;");
@@ -232,6 +235,21 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
     appendLine("}");
     outdent();
     appendLine("}");
+    outdent();
+    appendLine("});");
+    outdent();
+    appendLine("},");
+    appendLine("evaluateDynamicBindings() {");
+    indent();
+    appendLine("this.dynamicBindings.forEach(binding => {");
+    indent();
+    appendLine("const sourceEl = document.querySelector(binding.expression.selector);");
+    appendLine("const targetEl = document.getElementById(binding.targetElementId);");
+    appendLine("if (!sourceEl || !targetEl) return;");
+    appendLine("let sourceValue = parseFloat(window.getComputedStyle(sourceEl).getPropertyValue(binding.expression.property));");
+    appendLine("let condition = eval(`${sourceValue} ${binding.expression.op} ${binding.expression.value_to_compare}`);");
+    appendLine("let resultValue = condition ? binding.expression.true_branch : binding.expression.false_branch;");
+    appendLine("targetEl.style[binding.targetProperty.substring(6)] = resultValue;");
     outdent();
     appendLine("});");
     outdent();
@@ -260,6 +278,34 @@ void Generator::generateRuntimeScript(const SharedContext& context) {
         appendLine("__chtl.updateDOM('" + varName + "', newValue);");
         outdent();
         appendLine("}");
+        outdent();
+        appendLine("});");
+    }
+
+    // Register dynamic conditional bindings
+    for (const auto& binding : context.dynamicConditionalBindings) {
+        std::stringstream ss;
+        ss << "__chtl.registerDynamicBinding({";
+        ss << "targetElementId: '" << binding.targetElementId << "',";
+        ss << "targetProperty: '" << binding.targetProperty << "',";
+        ss << "expression: {";
+        ss << "selector: '" << binding.expression->selector << "',";
+        ss << "property: '" << binding.expression->property << "',";
+        ss << "op: '" << binding.expression->op << "',";
+        ss << "value_to_compare: " << binding.expression->value_to_compare << ",";
+        ss << "true_branch: '" << styleValueToString(*binding.expression->true_branch) << "',";
+        ss << "false_branch: '" << styleValueToString(*binding.expression->false_branch) << "'";
+        ss << "}});";
+        appendLine(ss.str());
+    }
+
+    // Initial evaluation and observer setup
+    if (!context.dynamicConditionalBindings.empty()) {
+        appendLine("document.addEventListener('DOMContentLoaded', () => {");
+        indent();
+        appendLine("__chtl.evaluateDynamicBindings();");
+        appendLine("const observer = new MutationObserver(() => __chtl.evaluateDynamicBindings());");
+        appendLine("document.querySelectorAll('*').forEach(el => observer.observe(el, { attributes: true, childList: true, subtree: true }));");
         outdent();
         appendLine("});");
     }

@@ -70,7 +70,7 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
         }
         else {
             if (!last_expression.empty()) {
-                final_code << last_expression << ";\n";
+                final_code << last_expression;
                 last_expression.clear();
             }
 

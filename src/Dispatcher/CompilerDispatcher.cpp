@@ -26,6 +26,10 @@ std::string CompilerDispatcher::compile(const std::string& source) {
             // Compile CHTL JS fragments and prepare them for merging
             std::string compiled_js = chtl_js_compiler.compile(fragment.content);
             compiled_js_fragments[placeholder] = "<script>" + compiled_js + "</script>";
+        } else if (fragment.type == FragmentType::JS) {
+            // For now, just wrap plain JS in script tags.
+            // In the future, this could be passed to a JS minifier/bundler.
+            compiled_js_fragments[placeholder] = "<script>" + fragment.content + "</script>";
         }
     }
 

@@ -61,6 +61,7 @@ void test_precise_var_import();
 void test_precise_style_import_with_alias();
 void test_precise_import_not_found();
 void test_unified_scanner_script_separation();
+void test_scanner_differentiates_js_and_chtl_js();
 void test_unified_scanner_style_separation();
 void test_scanner_ignores_nested_style();
 void test_scanner_handles_nested_braces_in_script();
@@ -89,6 +90,8 @@ void test_chtl_js_script_loader();
 void test_chtl_js_virtual_object_declaration();
 void test_chtl_js_virtual_object_usage();
 void test_chtl_js_router();
+void test_dynamic_conditional_expression();
+void test_dynamic_conditional_rendering();
 
 
 void test_text_block_literals() {
@@ -134,14 +137,15 @@ void test_enhanced_selector() {
             }
         }
     )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, parser.sharedContext, false);
-    // The generator will now preserve whitespace from the source.
-    std::string expected_script = "const myDiv = document.querySelector('#my-div');\n                myDiv.innerText = \"Hello CHTL JS\";";
-    assert(result.find(expected_script) != std::string::npos);
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // The CHTL JS compiler will generate the querySelector call.
+    std::string expected_js = "const myDiv = document.querySelector('#my-div'); myDiv.innerText = \"Hello CHTL JS\";";
+
+    // The final result should contain the script tag with the compiled JS.
+    // We use remove_whitespace to make the test less brittle.
+    assert(remove_whitespace(result).find(remove_whitespace(expected_js)) != std::string::npos);
 }
 
 void test_responsive_value() {
@@ -477,6 +481,7 @@ int main() {
     run_test(test_precise_style_import_with_alias, "Precise Style Import with Alias");
     run_test(test_precise_import_not_found, "Precise Import Not Found");
     run_test(test_unified_scanner_script_separation, "Unified Scanner Script Separation");
+    run_test(test_scanner_differentiates_js_and_chtl_js, "Scanner Differentiates JS and CHTL JS");
     run_test(test_unified_scanner_style_separation, "Unified Scanner Style Separation");
     run_test(test_scanner_ignores_nested_style, "Scanner Ignores Nested Style");
     run_test(test_scanner_handles_nested_braces_in_script, "Scanner Handles Nested Braces in Script");
@@ -493,11 +498,6 @@ int main() {
     run_test(test_cmod_import, "CMOD Module Import");
     run_test(test_compiler_dispatcher_full_workflow, "Compiler Dispatcher Full Workflow");
 
-    // --- CHTL JS Tests - Temporarily Disabled ---
-    // The following tests are for experimental CHTL JS features. They are
-    // being temporarily disabled to focus on stabilizing the core CHTL compiler,
-    // as per the user's request. These features can be fixed and re-enabled
-    // in a future task.
     run_test(test_chtl_js_lexer_and_parser, "CHTL JS Lexer and Parser");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
     run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
@@ -507,6 +507,8 @@ int main() {
     run_test(test_chtl_js_virtual_object_declaration, "CHTL JS Virtual Object Declaration");
     run_test(test_chtl_js_virtual_object_usage, "CHTL JS Virtual Object Usage");
     run_test(test_chtl_js_router, "CHTL JS Router");
+    run_test(test_dynamic_conditional_expression, "Dynamic Conditional Expression");
+    run_test(test_dynamic_conditional_rendering, "Dynamic Conditional Rendering");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -562,7 +564,7 @@ void test_scanner_handles_nested_braces_in_script() {
     auto output = scanner.scan(source);
     assert(output.fragments.size() == 1);
     const auto& fragment = output.fragments.begin()->second;
-    assert(fragment.type == FragmentType::CHTL_JS);
+    assert(fragment.type == FragmentType::JS);
     assert(fragment.content.find("console.log(\"nested\");") != std::string::npos);
     assert(output.chtl_with_placeholders.find("chtl_placeholder_0{}") != std::string::npos);
 }
@@ -616,10 +618,34 @@ void test_unified_scanner_script_separation() {
     auto output = scanner.scan(source);
     assert(output.fragments.size() == 1);
     const auto& fragment = output.fragments.begin()->second;
-    assert(fragment.type == FragmentType::CHTL_JS);
+    // This test now correctly asserts that plain JS is identified as JS.
+    assert(fragment.type == FragmentType::JS);
     assert(fragment.content.find("console.log(\"World\")") != std::string::npos);
     assert(output.chtl_with_placeholders.find("chtl_placeholder_0{}") != std::string::npos);
     assert(output.chtl_with_placeholders.find("p { text: \"Hello\"; }") != std::string::npos);
+}
+
+void test_scanner_differentiates_js_and_chtl_js() {
+    // Test 1: Plain JS should be identified as JS
+    std::string js_source = "script { const x = 1; }";
+    UnifiedScanner scanner_js;
+    auto output_js = scanner_js.scan(js_source);
+    assert(output_js.fragments.size() == 1);
+    assert(output_js.fragments.begin()->second.type == FragmentType::JS);
+
+    // Test 2: CHTL JS (with '->') should be identified as CHTL_JS
+    std::string chtl_js_source_1 = "script { {{sel}}->Listen{}; }";
+    UnifiedScanner scanner_chtl_js_1;
+    auto output_chtl_js_1 = scanner_chtl_js_1.scan(chtl_js_source_1);
+    assert(output_chtl_js_1.fragments.size() == 1);
+    assert(output_chtl_js_1.fragments.begin()->second.type == FragmentType::CHTL_JS);
+
+    // Test 3: CHTL JS (with '{{}}') should be identified as CHTL_JS
+    std::string chtl_js_source_2 = "script { const y = {{z}}; }";
+    UnifiedScanner scanner_chtl_js_2;
+    auto output_chtl_js_2 = scanner_chtl_js_2.scan(chtl_js_source_2);
+    assert(output_chtl_js_2.fragments.size() == 1);
+    assert(output_chtl_js_2.fragments.begin()->second.type == FragmentType::CHTL_JS);
 }
 
 void test_precise_import_not_found() {
@@ -1616,4 +1642,51 @@ void test_chtl_js_script_loader() {
     // Check for the load calls
     std::string expected_js = "ScriptLoader.load('./module1.js', 'module2.js', 'module3.js');";
     assert(result.find(expected_js) != std::string::npos);
+}
+
+void test_dynamic_conditional_expression() {
+    std::string source = R"(
+        div {
+            id: "source-box";
+            style { width: 200px; }
+        }
+        div {
+            style {
+                height: {{#source-box}}->width > 100px ? 50px : 20px;
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check that the dynamic binding was registered in the JS runtime
+    std::string binding_registration = "__chtl.registerDynamicBinding({targetElementId: 'chtl-id-0',targetProperty: 'style.height',expression: {selector: '#source-box',property: 'width',op: '>',value_to_compare: 100,true_branch: '50px',false_branch: '20px'}});";
+    assert(remove_whitespace(result).find(remove_whitespace(binding_registration)) != std::string::npos);
+
+    // Check that the runtime evaluation logic is present
+    assert(result.find("evaluateDynamicBindings") != std::string::npos);
+    assert(result.find("new MutationObserver") != std::string::npos);
+}
+
+void test_dynamic_conditional_rendering() {
+    std::string source = R"(
+        div {
+            id: "source-box";
+            style { width: 200px; }
+        }
+        if {
+            condition: {{#source-box}}->width > 100px;
+            p { text: "This should be rendered"; }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source);
+
+    // Check for the wrapper div with a unique ID
+    assert(result.find("<div id=\"chtl-dyn-render-") != std::string::npos);
+    // Check that the content is inside the wrapper
+    assert(result.find("<p>This should be rendered</p>") != std::string::npos);
+    // Check that the dynamic rendering logic is in the script
+    assert(result.find("dynamicRenderingBindings") != std::string::npos);
+    assert(result.find("targetEl.style.display = condition ? '' : 'none';") != std::string::npos);
 }

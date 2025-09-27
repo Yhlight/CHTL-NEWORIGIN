@@ -28,4 +28,5 @@ public:
 private:
     int placeholder_id_counter = 0;
     std::string generate_placeholder();
+    CodeFragment processScriptBlock(const std::string& content);
 };
