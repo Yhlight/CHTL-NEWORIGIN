@@ -25,4 +25,7 @@ public:
 
     // Stores the names of parent templates for inheritance.
     std::vector<std::string> parentNames;
+
+    // For custom style specialization, stores properties to be deleted.
+    std::vector<std::string> deletedProperties;
 };

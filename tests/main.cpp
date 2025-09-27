@@ -129,6 +129,7 @@ void test_import_with_alias();
 void test_import_export_enforcement_pass();
 void test_import_export_enforcement_fail();
 void test_import_custom_template();
+void test_custom_style_definition_delete();
 
 
 void test_text_block_literals() {
@@ -329,6 +330,14 @@ void test_import_custom_template() {
     assert(result.html_content.find("default") == std::string::npos);
 }
 
+void test_custom_style_definition_delete() {
+    std::string source = R"([Template] @Style Base { color: red; background-color: blue; } [Custom] @Style Child { inherit @Style Base; delete background-color; } div { style { @Style Child; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("color: red;") != std::string::npos);
+    assert(result.html_content.find("background-color") == std::string::npos);
+}
+
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
@@ -359,6 +368,7 @@ int main() {
     run_test(test_import_export_enforcement_pass, "Import: Export Enforcement Pass");
     run_test(test_import_export_enforcement_fail, "Import: Export Enforcement Fail");
     run_test(test_import_custom_template, "Import: Custom Template");
+    run_test(test_custom_style_definition_delete, "Custom Style Definition Delete");
 
     cleanup_test_environment();
 

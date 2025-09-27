@@ -605,6 +605,11 @@ void StyleBlockState::applyStyleTemplateRecursive(
         applyStyleTemplateRecursive(parser, ns, parentName, finalStyles, deletedTemplates, visitedTemplates);
     }
 
+    // Apply deletions defined in the template itself
+    for (const auto& propToDelete : tmpl->deletedProperties) {
+        finalStyles.erase(propToDelete);
+    }
+
     for (const auto& pair : tmpl->styles) {
         finalStyles[pair.first] = pair.second;
     }

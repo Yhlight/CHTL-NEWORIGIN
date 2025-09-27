@@ -41,4 +41,7 @@ private:
 
     // Helper for parsing an 'if' block
     std::unique_ptr<BaseNode> parseIfStatement(Parser& parser);
+
+    // Helper for parsing an '[Export]' block
+    void parseExportBlock(Parser& parser);
 };

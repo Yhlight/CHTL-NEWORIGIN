@@ -125,6 +125,14 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             parser.setState(std::make_unique<InfoState>());
             return nullptr;
         }
+        // Handle [Export] as a top-level statement
+        if (parser.peekToken.value == "Export") {
+            parser.advanceTokens(); // Consume '['
+            parser.advanceTokens(); // Consume 'Export'
+            parser.expectToken(TokenType::CloseBracket);
+            parseExportBlock(parser);
+            return nullptr;
+        }
         if (config.isKeyword(nextValue, "KEYWORD_IMPORT", "Import")) {
             parseImportStatement(parser);
             return nullptr;
@@ -473,6 +481,22 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
             } else {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
+
+                // Handle 'delete' keyword for custom styles
+                if (isCustom && parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
+                    while (parser.currentToken.type != TokenType::Semicolon) {
+                        if (parser.currentToken.type != TokenType::Identifier) {
+                             throw std::runtime_error("Expected property name after 'delete'.");
+                        }
+                        styleNode->deletedProperties.push_back(parser.currentToken.value);
+                        parser.advanceTokens();
+                        if (parser.currentToken.type == TokenType::Comma) {
+                            parser.advanceTokens();
+                        }
+                    }
+                    parser.expectToken(TokenType::Semicolon);
+                    continue;
+                }
 
                 // Correctly handle valueless properties for custom templates
                 if (isCustom && parser.currentToken.type != TokenType::Colon) {
@@ -1014,27 +1038,31 @@ void StatementState::parseImportStatement(Parser& parser) {
                 importParser.parse();
 
                 // --- Export Enforcement ---
-                if (importParser.infoNode && !importParser.infoNode->exports.empty()) {
+                // If a module has an [Info] block, export rules must be enforced.
+                if (importParser.infoNode) {
                     bool isExported = false;
-                    bool checkTemplate = !isCustom; // If importer specifies [Custom], only check custom exports.
-                    bool checkCustom = !isTemplate; // If importer specifies [Template], only check template exports.
+                    // If the [Export] block is missing or empty, nothing is exported.
+                    if (!importParser.infoNode->exports.empty()) {
+                        bool checkTemplate = !isCustom; // If importer specifies [Custom], only check custom exports.
+                        bool checkCustom = !isTemplate; // If importer specifies [Template], only check template exports.
 
-                    if (checkTemplate) {
-                        std::string templateKey = "[Template] @" + importType;
-                        if (importParser.infoNode->exports.count(templateKey)) {
-                            const auto& symbols = importParser.infoNode->exports.at(templateKey);
-                            if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
-                                isExported = true;
+                        if (checkTemplate) {
+                            std::string templateKey = "[Template] @" + importType;
+                            if (importParser.infoNode->exports.count(templateKey)) {
+                                const auto& symbols = importParser.infoNode->exports.at(templateKey);
+                                if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
+                                    isExported = true;
+                                }
                             }
                         }
-                    }
 
-                    if (!isExported && checkCustom) {
-                        std::string customKey = "[Custom] @" + importType;
-                        if (importParser.infoNode->exports.count(customKey)) {
-                            const auto& symbols = importParser.infoNode->exports.at(customKey);
-                            if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
-                                isExported = true;
+                        if (!isExported && checkCustom) {
+                            std::string customKey = "[Custom] @" + importType;
+                            if (importParser.infoNode->exports.count(customKey)) {
+                                const auto& symbols = importParser.infoNode->exports.at(customKey);
+                                if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
+                                    isExported = true;
+                                }
                             }
                         }
                     }
@@ -1147,5 +1175,51 @@ void parseScriptBlock(Parser& parser, ElementNode& element) {
 
     flushRawContent(parser.currentToken.start_pos);
     element.children.push_back(std::move(scriptNode));
+    parser.expectToken(TokenType::CloseBrace);
+}
+
+void StatementState::parseExportBlock(Parser& parser) {
+    // An [Export] block is only valid if an [Info] block has already been parsed.
+    if (!parser.infoNode) {
+        throw std::runtime_error("[Export] block found without a preceding [Info] block.");
+    }
+
+    parser.expectToken(TokenType::OpenBrace);
+
+    while (parser.currentToken.type != TokenType::CloseBrace) {
+        std::stringstream key_builder;
+        std::string full_qualifier;
+
+        // Check for meta qualifiers like [Custom] or [Template]
+        if (parser.currentToken.type == TokenType::OpenBracket) {
+            parser.advanceTokens(); // Consume '['
+            key_builder << "[" << parser.currentToken.value << "]";
+            full_qualifier = key_builder.str();
+            parser.advanceTokens(); // Consume 'Custom' or 'Template'
+            parser.expectToken(TokenType::CloseBracket);
+        }
+
+        parser.expectToken(TokenType::At);
+        key_builder << " @" << parser.currentToken.value; // e.g., @Element
+        parser.expectToken(TokenType::Identifier);
+
+        std::string key = key_builder.str();
+        std::vector<std::string> symbols;
+        while (parser.currentToken.type != TokenType::Semicolon) {
+            if (parser.currentToken.type != TokenType::Identifier) {
+                throw std::runtime_error("Expected identifier in export list, but got " + parser.currentToken.value);
+            }
+            symbols.push_back(parser.currentToken.value);
+            parser.advanceTokens();
+            if (parser.currentToken.type == TokenType::Comma) {
+                parser.advanceTokens();
+            }
+        }
+
+        // Use the full qualifier (e.g., "[Template] @Style") as the key
+        parser.infoNode->exports[key] = symbols;
+        parser.expectToken(TokenType::Semicolon);
+    }
+
     parser.expectToken(TokenType::CloseBrace);
 }
