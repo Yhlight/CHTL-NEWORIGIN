@@ -70,6 +70,7 @@ void test_dynamic_conditional_rendering();
 void test_script_loader_dependency_resolution();
 void test_event_delegation();
 void test_animation_block();
+void test_virtual_object_access();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -440,6 +441,7 @@ int main() {
     run_test(test_script_loader_dependency_resolution, "ScriptLoader Dependency Resolution");
     run_test(test_event_delegation, "Event Delegation");
     run_test(test_animation_block, "Animation Block");
+    run_test(test_virtual_object_access, "Virtual Object Access");
 
 
     run_test(test_text_block_literals, "Text Block Literals");
@@ -740,6 +742,32 @@ void test_static_conditional_rendering() {
     assert(result.html_content.find("Case 1") == std::string::npos);
     assert(result.html_content.find("Case 2: Should appear") != std::string::npos);
     assert(result.html_content.find("Case 3") == std::string::npos);
+}
+
+void test_virtual_object_access() {
+    std::string source = R"___(
+        script {
+            Vir myHandlers = Listen {
+                click: () => { console.log("Clicked!"); },
+                mouseover: () => { console.log("Mouse over!"); }
+            };
+
+            const clickHandler = myHandlers->click;
+        }
+    )___";
+
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "test.chtl", true);
+    std::string js_code = result.js_content;
+
+    // Remove whitespace to make assertions more robust
+    js_code.erase(std::remove_if(js_code.begin(), js_code.end(), ::isspace), js_code.end());
+
+    // Assert that the generated code contains the resolved function body
+    assert(js_code.find("constclickHandler=()=>{console.log(\"Clicked!\");}") != std::string::npos);
+
+    // Assert that the original access syntax is NOT present
+    assert(js_code.find("myHandlers->click") == std::string::npos);
 }
 
 void test_animation_block() {
