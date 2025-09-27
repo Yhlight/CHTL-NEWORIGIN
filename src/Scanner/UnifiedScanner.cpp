@@ -2,6 +2,13 @@
 #include <string>
 #include <cctype>
 
+// The UnifiedScanner performs a coarse-grained separation of a CHTL source file.
+// Its primary responsibility is to extract top-level 'style' blocks and all 'script'
+// blocks, replacing them with placeholders. This leaves a "pure" CHTL structure for
+// the main CHTL parser to handle. The fine-grained analysis of what's *inside*
+// the script blocks (i.e., separating CHTL JS from raw JS) is the responsibility
+// of the CHTL JS compiler pipeline, specifically the CHTLJSLexer.
+
 // Helper to check if a substring at a position is a keyword, ensuring it's a whole word.
 bool is_keyword_at(const std::string& s, size_t pos, const std::string& keyword) {
     if (pos + keyword.length() > s.length()) {

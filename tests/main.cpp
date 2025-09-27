@@ -370,6 +370,13 @@ void test_custom_origin_type() {
     assert(result.html_content.find("<div id=\"app\">{{ message }}</div>") != std::string::npos);
 }
 
+void test_use_html5_directive() {
+    std::string source = "use html5;";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.rfind("<!DOCTYPE html>", 0) == 0);
+}
+
 void test_chtl_js_listen_block() {
     std::string source = R"(button { id: my-btn; } script { {{#my-btn}}->Listen { click: () => { console.log("Clicked!"); }, mouseover: myMouseOverHandler, }; })";
     CompilerDispatcher dispatcher;
@@ -415,6 +422,9 @@ int main() {
     run_test(test_style_template_with_var_reference, "Style Template with Var Reference");
     run_test(test_keyword_aliasing, "Keyword Aliasing");
     run_test(test_custom_origin_type, "Custom Origin Type");
+    run_test(test_use_html5_directive, "Use HTML5 Directive");
+    run_test(test_style_property_power_operator, "Style Property Power Operator");
+    run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
 
     cleanup_test_environment();
@@ -438,7 +448,6 @@ void test_ampersand_selector_order() {}
 void test_delete_element_inheritance() {}
 void test_calc_with_percentage() {}
 void test_implicit_style_template_inheritance() {}
-void test_use_html5_directive() {}
 void test_named_configuration() {}
 void test_precise_style_import() {}
 void test_precise_var_import() {}
@@ -451,8 +460,18 @@ void test_ignored_comments() {}
 void test_colon_equal_equivalence_in_info() {}
 void test_colon_equal_equivalence_in_config() {}
 void test_colon_equal_equivalence_in_var_template() {}
-void test_style_property_power_operator() {}
-void test_style_property_modulo_operator() {}
+void test_style_property_power_operator() {
+    std::string source = R"(div { style { width: 2**8px; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("width: 256px;") != std::string::npos);
+}
+void test_style_property_modulo_operator() {
+    std::string source = R"(div { style { width: 10 % 3px; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("width: 1px;") != std::string::npos);
+}
 void test_conditional_rendering() {}
 void test_cmod_import() {}
 void test_compiler_dispatcher_full_workflow() {}

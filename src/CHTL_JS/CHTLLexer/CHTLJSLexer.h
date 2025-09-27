@@ -40,6 +40,10 @@ struct CHTLJSToken {
 };
 
 // The CHTL JS Lexer, responsible for tokenizing CHTL JS source code.
+// It performs a fine-grained separation of CHTL JS constructs (e.g., {{...}}, ->, Listen)
+// from raw JavaScript. It treats raw JS as a single token type, allowing the
+// CHTLJSParser to build a mixed AST of CHTL JS nodes and RawJavaScriptNodes.
+// This is the core of CHTL's "placeholder" mechanism for JS/CHTL JS separation.
 class CHTLJSLexer {
 public:
     explicit CHTLJSLexer(const std::string& source);

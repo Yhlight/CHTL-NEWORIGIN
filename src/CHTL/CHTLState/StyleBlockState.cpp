@@ -369,14 +369,20 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
 StyleValue StyleBlockState::parsePowerExpr(Parser& parser) {
     StyleValue result = parsePrimaryExpr(parser);
     while (parser.currentToken.type == TokenType::DoubleAsterisk) {
-        if (result.type != StyleValue::NUMERIC) throw std::runtime_error("LHS of ** must be numeric.");
+        if (result.type != StyleValue::NUMERIC) {
+            throw std::runtime_error("Base of ** operator must be numeric.");
+        }
+        if (!result.unit.empty()) {
+            throw std::runtime_error("Base of ** operator cannot have a unit.");
+        }
         parser.advanceTokens();
         StyleValue rhs = parsePrimaryExpr(parser);
-        if (rhs.type != StyleValue::NUMERIC) throw std::runtime_error("RHS of ** must be numeric.");
-        if (!rhs.unit.empty()) {
-            throw std::runtime_error("Exponent for ** operator cannot have a unit.");
+        if (rhs.type != StyleValue::NUMERIC) {
+            throw std::runtime_error("Exponent of ** operator must be numeric.");
         }
+
         result.numeric_val = pow(result.numeric_val, rhs.numeric_val);
+        result.unit = rhs.unit; // The unit is determined by the exponent's "unit" part.
     }
     return result;
 }
@@ -396,6 +402,9 @@ StyleValue StyleBlockState::parseMultiplicativeExpr(Parser& parser) {
             }
             if (rhs.numeric_val == 0) throw std::runtime_error("Modulo by zero.");
             result.numeric_val = fmod(result.numeric_val, rhs.numeric_val);
+            if (result.unit.empty()) {
+                result.unit = rhs.unit;
+            }
         } else {
             if (!result.unit.empty() && !rhs.unit.empty()) {
                 throw std::runtime_error("Cannot multiply or divide two values with units.");
