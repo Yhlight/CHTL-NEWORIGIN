@@ -11,3 +11,7 @@ VirtualObjectNode* VirtualObjectManager::getVirtualObject(const std::string& nam
     }
     return nullptr;
 }
+
+void VirtualObjectManager::clear() {
+    virtualObjects.clear();
+}

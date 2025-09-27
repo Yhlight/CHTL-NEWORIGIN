@@ -29,6 +29,7 @@ enum class CHTLJSTokenType {
     Colon,            // :
     Comma,            // ,
     Semicolon,        // ;
+    Equals,           // =
 
     // Special tokens
     EndOfFile,

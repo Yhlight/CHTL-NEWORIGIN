@@ -33,6 +33,7 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
     if (current_char == '{') { position++; return {CHTLJSTokenType::OpenBrace, "{"}; }
     if (current_char == '}') { position++; return {CHTLJSTokenType::CloseBrace, "}"}; }
     if (current_char == '[') { position++; return {CHTLJSTokenType::OpenBracket, "["}; }
+    if (current_char == '=') { position++; return {CHTLJSTokenType::Equals, "="}; }
     if (current_char == ']') { position++; return {CHTLJSTokenType::CloseBracket, "]"}; }
     if (current_char == ':') { position++; return {CHTLJSTokenType::Colon, ":"}; }
     if (current_char == ',') { position++; return {CHTLJSTokenType::Comma, ","}; }
@@ -81,7 +82,7 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
     size_t start = position;
     while (position < source.length()) {
         if (source.substr(position, 2) == "{{" || source.substr(position, 2) == "}}" || source.substr(position, 2) == "->" || source.substr(position, 3) == "&->" ||
-            source[position] == '{' || source[position] == '}' || source[position] == '[' || source[position] == ']' || source[position] == ':' || source[position] == ',') {
+            source[position] == '{' || source[position] == '}' || source[position] == '[' || source[position] == ']' || source[position] == ':' || source[position] == ',' || source[position] == '=') {
             break;
         }
 
