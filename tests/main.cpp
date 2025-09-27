@@ -370,6 +370,16 @@ void test_custom_origin_type() {
     assert(result.html_content.find("<div id=\"app\">{{ message }}</div>") != std::string::npos);
 }
 
+void test_chtl_js_listen_block() {
+    std::string source = R"(button { id: my-btn; } script { {{#my-btn}}->Listen { click: () => { console.log("Clicked!"); }, mouseover: myMouseOverHandler, }; })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    std::string expected_js1 = R"(document.querySelector('#my-btn').addEventListener('click', () => { console.log("Clicked!"); });)";
+    std::string expected_js2 = R"(document.querySelector('#my-btn').addEventListener('mouseover', myMouseOverHandler);)";
+    assert(remove_whitespace(result.js_content).find(remove_whitespace(expected_js1)) != std::string::npos);
+    assert(remove_whitespace(result.js_content).find(remove_whitespace(expected_js2)) != std::string::npos);
+}
+
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
@@ -405,6 +415,7 @@ int main() {
     run_test(test_style_template_with_var_reference, "Style Template with Var Reference");
     run_test(test_keyword_aliasing, "Keyword Aliasing");
     run_test(test_custom_origin_type, "Custom Origin Type");
+    run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
 
     cleanup_test_environment();
 
@@ -446,7 +457,6 @@ void test_conditional_rendering() {}
 void test_cmod_import() {}
 void test_compiler_dispatcher_full_workflow() {}
 void test_chtl_js_lexer_and_parser() {}
-void test_chtl_js_listen_block() {}
 void test_chtl_js_event_binding_operator() {}
 void test_chtl_js_delegate_block() {}
 void test_chtl_js_animate_block() {}
