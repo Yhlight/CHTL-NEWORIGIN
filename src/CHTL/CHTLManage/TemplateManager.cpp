@@ -9,12 +9,27 @@ void TemplateManager::addStyleTemplate(const std::string& ns, const std::string&
 }
 
 StyleTemplateNode* TemplateManager::getStyleTemplate(const std::string& ns, const std::string& name) {
-    auto ns_it = styleTemplates.find(ns);
-    if (ns_it == styleTemplates.end()) {
-        return nullptr;
-    }
-    auto name_it = ns_it->second.find(name);
-    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+    std::string current_ns = ns;
+    do {
+        auto ns_it = styleTemplates.find(current_ns);
+        if (ns_it != styleTemplates.end()) {
+            auto name_it = ns_it->second.find(name);
+            if (name_it != ns_it->second.end()) {
+                return name_it->second.get();
+            }
+        }
+
+        if (current_ns == "_global") break;
+
+        size_t last_dot = current_ns.find_last_of('.');
+        if (last_dot != std::string::npos) {
+            current_ns = current_ns.substr(0, last_dot);
+        } else {
+            current_ns = "_global";
+        }
+    } while (true);
+
+    return nullptr;
 }
 
 // --- Named Origins ---
@@ -24,12 +39,27 @@ void TemplateManager::addNamedOrigin(const std::string& ns, const std::string& n
 }
 
 OriginNode* TemplateManager::getNamedOrigin(const std::string& ns, const std::string& name) {
-    auto ns_it = namedOrigins.find(ns);
-    if (ns_it == namedOrigins.end()) {
-        return nullptr;
-    }
-    auto name_it = ns_it->second.find(name);
-    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+    std::string current_ns = ns;
+    do {
+        auto ns_it = namedOrigins.find(current_ns);
+        if (ns_it != namedOrigins.end()) {
+            auto name_it = ns_it->second.find(name);
+            if (name_it != ns_it->second.end()) {
+                return name_it->second.get();
+            }
+        }
+
+        if (current_ns == "_global") break;
+
+        size_t last_dot = current_ns.find_last_of('.');
+        if (last_dot != std::string::npos) {
+            current_ns = current_ns.substr(0, last_dot);
+        } else {
+            current_ns = "_global";
+        }
+    } while (true);
+
+    return nullptr;
 }
 
 void TemplateManager::merge(const TemplateManager& other) {
@@ -146,6 +176,51 @@ void TemplateManager::merge(const TemplateManager& other, const MergeOptions& op
     }
 }
 
+void TemplateManager::merge_with_default_namespace(const TemplateManager& other, const std::string& default_ns) {
+    // Check if the 'other' manager has any non-global namespaces.
+    bool has_explicit_namespaces = false;
+    if (other.styleTemplates.size() > 1 || (other.styleTemplates.count("_global") == 0 && !other.styleTemplates.empty())) has_explicit_namespaces = true;
+    if (other.elementTemplates.size() > 1 || (other.elementTemplates.count("_global") == 0 && !other.elementTemplates.empty())) has_explicit_namespaces = true;
+    if (other.varTemplates.size() > 1 || (other.varTemplates.count("_global") == 0 && !other.varTemplates.empty())) has_explicit_namespaces = true;
+    if (other.namedOrigins.size() > 1 || (other.namedOrigins.count("_global") == 0 && !other.namedOrigins.empty())) has_explicit_namespaces = true;
+
+    // If it has its own namespaces, merge them directly.
+    if (has_explicit_namespaces) {
+        merge(other);
+        return;
+    }
+
+    // Otherwise, merge all of its global content into the default_ns.
+    const auto& global_styles = other.styleTemplates.find("_global");
+    if (global_styles != other.styleTemplates.end()) {
+        for (const auto& pair : global_styles->second) {
+            addStyleTemplate(default_ns, pair.first, NodeCloner::clone_unique(pair.second.get()));
+        }
+    }
+
+    const auto& global_elements = other.elementTemplates.find("_global");
+    if (global_elements != other.elementTemplates.end()) {
+        for (const auto& pair : global_elements->second) {
+            addElementTemplate(default_ns, pair.first, NodeCloner::clone_unique(pair.second.get()));
+        }
+    }
+
+    const auto& global_vars = other.varTemplates.find("_global");
+    if (global_vars != other.varTemplates.end()) {
+        for (const auto& pair : global_vars->second) {
+            addVarTemplate(default_ns, pair.first, NodeCloner::clone_unique(pair.second.get()));
+        }
+    }
+
+    const auto& global_origins = other.namedOrigins.find("_global");
+    if (global_origins != other.namedOrigins.end()) {
+        for (const auto& pair : global_origins->second) {
+            addNamedOrigin(default_ns, pair.first, NodeCloner::clone_unique(pair.second.get()));
+        }
+    }
+}
+
+
 // --- Element Templates ---
 
 void TemplateManager::addElementTemplate(const std::string& ns, const std::string& name, std::unique_ptr<ElementTemplateNode> node) {
@@ -153,12 +228,27 @@ void TemplateManager::addElementTemplate(const std::string& ns, const std::strin
 }
 
 ElementTemplateNode* TemplateManager::getElementTemplate(const std::string& ns, const std::string& name) {
-    auto ns_it = elementTemplates.find(ns);
-    if (ns_it == elementTemplates.end()) {
-        return nullptr;
-    }
-    auto name_it = ns_it->second.find(name);
-    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+    std::string current_ns = ns;
+    do {
+        auto ns_it = elementTemplates.find(current_ns);
+        if (ns_it != elementTemplates.end()) {
+            auto name_it = ns_it->second.find(name);
+            if (name_it != ns_it->second.end()) {
+                return name_it->second.get();
+            }
+        }
+
+        if (current_ns == "_global") break;
+
+        size_t last_dot = current_ns.find_last_of('.');
+        if (last_dot != std::string::npos) {
+            current_ns = current_ns.substr(0, last_dot);
+        } else {
+            current_ns = "_global";
+        }
+    } while (true);
+
+    return nullptr;
 }
 
 // --- Variable Templates ---
@@ -168,10 +258,25 @@ void TemplateManager::addVarTemplate(const std::string& ns, const std::string& n
 }
 
 VarTemplateNode* TemplateManager::getVarTemplate(const std::string& ns, const std::string& name) {
-    auto ns_it = varTemplates.find(ns);
-    if (ns_it == varTemplates.end()) {
-        return nullptr;
-    }
-    auto name_it = ns_it->second.find(name);
-    return (name_it != ns_it->second.end()) ? name_it->second.get() : nullptr;
+    std::string current_ns = ns;
+    do {
+        auto ns_it = varTemplates.find(current_ns);
+        if (ns_it != varTemplates.end()) {
+            auto name_it = ns_it->second.find(name);
+            if (name_it != ns_it->second.end()) {
+                return name_it->second.get();
+            }
+        }
+
+        if (current_ns == "_global") break;
+
+        size_t last_dot = current_ns.find_last_of('.');
+        if (last_dot != std::string::npos) {
+            current_ns = current_ns.substr(0, last_dot);
+        } else {
+            current_ns = "_global";
+        }
+    } while (true);
+
+    return nullptr;
 }

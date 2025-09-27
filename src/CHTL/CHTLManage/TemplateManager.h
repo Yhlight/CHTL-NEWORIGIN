@@ -34,6 +34,9 @@ public:
     };
     void merge(const TemplateManager& other, const MergeOptions& options);
 
+    // Merges templates, applying a default namespace if the source has no explicit namespaces.
+    void merge_with_default_namespace(const TemplateManager& other, const std::string& default_ns);
+
 
 private:
     // Use type aliases for cleaner nested map declarations

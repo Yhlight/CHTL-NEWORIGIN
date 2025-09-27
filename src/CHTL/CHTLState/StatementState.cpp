@@ -29,6 +29,7 @@ class UseState;
 #include "ConfigurationState.h"
 #include "UseState.h"
 #include "InfoState.h"
+#include "NamespaceState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -141,7 +142,10 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return parseOriginDefinition(parser);
         }
         if (config.isKeyword(nextValue, "KEYWORD_NAMESPACE", "Namespace")) {
-            parseNamespaceDefinition(parser);
+            parser.advanceTokens(); // Consume '['
+            parser.advanceTokens(); // Consume 'Namespace'
+            parser.expectToken(TokenType::CloseBracket);
+            parser.setState(std::make_unique<NamespaceState>());
             return nullptr;
         }
         if (config.isKeyword(nextValue, "KEYWORD_CONFIGURATION", "Configuration")) {
@@ -967,30 +971,6 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
     }
 }
 
-void StatementState::parseNamespaceDefinition(Parser& parser) {
-    // 1. Expect [Namespace] name
-    parser.expectToken(TokenType::OpenBracket);
-    parser.expectToken(TokenType::Namespace);
-    parser.expectToken(TokenType::CloseBracket);
-    std::string ns_name = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-
-    // 2. Push namespace onto stack
-    parser.namespaceStack.push_back(ns_name);
-
-    // 3. Parse body
-    parser.expectToken(TokenType::OpenBrace);
-    while(parser.currentToken.type != TokenType::CloseBrace) {
-        // A namespace can contain template definitions, other namespaces, etc.
-        // We can just recursively call the main handle method.
-        handle(parser);
-    }
-    parser.expectToken(TokenType::CloseBrace);
-
-    // 4. Pop namespace from stack
-    parser.namespaceStack.pop_back();
-}
-
 void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::OpenBracket);
     parser.expectToken(TokenType::Import);
@@ -1092,7 +1072,16 @@ void StatementState::handleWildcardImport(Parser& parser, bool isTemplate, bool 
             else options.type = TemplateManager::ImportType::ALL;
 
             if (!importType.empty()) options.subType = importType;
-            parser.templateManager.merge(importParser.templateManager, options);
+
+            // If this is a full Chtl import ([Import] @Chtl from ...),
+            // use the logic that applies a default namespace.
+            if (options.type == TemplateManager::ImportType::ALL) {
+                std::string default_ns = resolved_path.stem().string();
+                parser.templateManager.merge_with_default_namespace(importParser.templateManager, default_ns);
+            } else {
+                // For other wildcard imports like [Import] [Template] from ..., merge directly.
+                parser.templateManager.merge(importParser.templateManager, options);
+            }
         } catch (const std::runtime_error& e) {
             throw std::runtime_error("Failed to process wildcard import from '" + p_str + "': " + e.what());
         }

@@ -116,17 +116,28 @@ void Parser::expectKeyword(TokenType type, const std::string& internalName, cons
 }
 
 std::string Parser::getCurrentNamespace() const {
-    if (namespaceStack.empty()) {
-        return "_global"; // Default namespace for top-level items
+    if (namespaceStack.size() <= 1) {
+        return "_global";
     }
+    // Join all namespaces after the first one (_global) with '.'
     std::string result;
-    for (size_t i = 0; i < namespaceStack.size(); ++i) {
+    for (size_t i = 1; i < namespaceStack.size(); ++i) {
         result += namespaceStack[i];
         if (i < namespaceStack.size() - 1) {
             result += ".";
         }
     }
     return result;
+}
+
+void Parser::pushNamespace(const std::string& ns) {
+    namespaceStack.push_back(ns);
+}
+
+void Parser::popNamespace() {
+    if (namespaceStack.size() > 1) {
+        namespaceStack.pop_back();
+    }
 }
 
 Parser::~Parser() = default;

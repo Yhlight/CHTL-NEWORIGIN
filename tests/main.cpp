@@ -59,6 +59,10 @@ void run_test(void (*test_func)(), const std::string& test_name) {
 }
 
 // --- Test Cases ---
+void test_namespace_basic_declaration_and_usage();
+void test_namespace_prevents_global_access();
+void test_namespace_nested_access();
+void test_namespace_automatic_on_import();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -407,6 +411,14 @@ int main() {
 
     setup_test_environment();
 
+    // --- Namespace Tests ---
+    std::cout << "\n--- Running Namespace Tests ---\n";
+    run_test(test_namespace_basic_declaration_and_usage, "Namespace Basic Declaration and Usage");
+    run_test(test_namespace_prevents_global_access, "Namespace Prevents Global Access");
+    run_test(test_namespace_nested_access, "Namespace Nested Access");
+    run_test(test_namespace_automatic_on_import, "Namespace Automatic on Import");
+
+
     run_test(test_text_block_literals, "Text Block Literals");
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
     run_test(test_enhanced_selector, "Enhanced Selector");
@@ -610,6 +622,85 @@ void test_wildcard_import() {
     assert(result.html_content.find("<p>Elem1</p>") != std::string::npos);
     assert(result.html_content.find("<span>Elem2</span>") != std::string::npos);
     assert(result.html_content.find("color: red;") != std::string::npos);
+}
+
+
+// --- Namespace Test Implementations ---
+
+void test_namespace_basic_declaration_and_usage() {
+    std::string source = R"(
+        [Namespace] my_space {
+            [Template] @Element MyComponent {
+                p { text: "Hello from namespace"; }
+            }
+        }
+        body {
+            @Element MyComponent from my_space;
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<p>Hello from namespace</p>") != std::string::npos);
+}
+
+void test_namespace_prevents_global_access() {
+    std::string source = R"(
+        [Namespace] my_space {
+            [Template] @Element MyComponent {
+                p { text: "This should not be found"; }
+            }
+        }
+        body {
+            @Element MyComponent;
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    bool thrown = false;
+    try {
+        dispatcher.compile(source, "", true);
+    } catch (const std::runtime_error& e) {
+        thrown = true;
+        std::string error = e.what();
+        // The implementation throws "Element template not found: ...".
+        // We check for this to confirm the lookup failed as expected.
+        assert(error.find("Element template not found") != std::string::npos);
+    }
+    assert(thrown);
+}
+
+void test_namespace_nested_access() {
+    std::string source = R"(
+        [Namespace] space {
+            [Namespace] room {
+                [Template] @Element NestedComponent {
+                    span { text: "Deeply nested"; }
+                }
+            }
+        }
+        body {
+            @Element NestedComponent from space.room;
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<span>Deeply nested</span>") != std::string::npos);
+}
+
+void test_namespace_automatic_on_import() {
+    write_file("test_modules/auto_namespaced.chtl", R"(
+        [Template] @Element AutoComponent {
+            div { text: "Auto-namespaced component"; }
+        }
+    )");
+    std::string source = R"(
+        [Import] @Chtl from "./auto_namespaced.chtl";
+        body {
+            @Element AutoComponent from auto_namespaced;
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "test_modules/main.chtl", true);
+    assert(result.html_content.find("Auto-namespaced component") != std::string::npos);
 }
 
 

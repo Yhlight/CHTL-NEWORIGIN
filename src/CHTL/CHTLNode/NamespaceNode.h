@@ -4,20 +4,17 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <iostream> // For debug printing if needed later
 
 class NamespaceNode : public BaseNode {
 public:
     std::string name;
     std::vector<std::unique_ptr<BaseNode>> children;
 
-    explicit NamespaceNode(std::string name)
-        : name(std::move(name)) {}
+    NamespaceNode(std::string name, std::vector<std::unique_ptr<BaseNode>> children)
+        : name(std::move(name)), children(std::move(children)) {}
 
     NodeType getType() const override {
         return NodeType::Namespace;
-    }
-
-    void addChild(std::unique_ptr<BaseNode> child) {
-        children.push_back(std::move(child));
     }
 };
