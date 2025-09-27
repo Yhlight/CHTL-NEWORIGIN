@@ -134,7 +134,99 @@ void test_style_template_with_calculation();
 void test_style_template_with_var_reference();
 void test_keyword_aliasing();
 void test_custom_origin_type();
+void test_scanner_local_style_block_extraction();
+void test_custom_element_indexed_style_modification();
+void test_custom_element_replace();
 
+
+void test_scanner_local_style_block_extraction() {
+    std::string source = R"(
+        div {
+            style {
+                color: blue;
+                .nested-class {
+                    padding: 10px;
+                }
+            }
+            text: "Hello Local Style";
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    // Test with inline_mode = false to check for hoisted CSS
+    CompilationResult result = dispatcher.compile(source, "local_style_test.chtl", false, "local_style_test.css", "local_style_test.js");
+
+    // Check for the inline style
+    assert(result.html_content.find("style=\"color: blue;\"") != std::string::npos);
+
+    // Check for the hoisted class style in the separate CSS content
+    assert(result.css_content.find(".nested-class") != std::string::npos);
+    assert(result.css_content.find("padding: 10px;") != std::string::npos);
+
+    // Check that the class was automatically added to the element
+    assert(result.html_content.find("class=\"nested-class\"") != std::string::npos);
+}
+
+void test_custom_element_indexed_style_modification() {
+    std::string source = R"(
+        [Custom] @Element MyComponent {
+            div { style { width: 100px; } }
+            div { style { width: 200px; } }
+        }
+
+        body {
+            @Element MyComponent {
+                div[1] {
+                    style {
+                        background-color: green;
+                    }
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "indexed_style_test.chtl", true);
+
+    // Find the first div
+    size_t first_div_pos = result.html_content.find("<div");
+    assert(first_div_pos != std::string::npos);
+
+    // Find the second div
+    size_t second_div_pos = result.html_content.find("<div", first_div_pos + 1);
+    assert(second_div_pos != std::string::npos);
+
+    // Check that the first div does NOT have the green background
+    size_t first_div_end = result.html_content.find(">", first_div_pos);
+    std::string first_div_tag = result.html_content.substr(first_div_pos, first_div_end - first_div_pos);
+    assert(first_div_tag.find("background-color") == std::string::npos);
+
+    // Check that the second div DOES have the green background
+    size_t second_div_end = result.html_content.find(">", second_div_pos);
+    std::string second_div_tag = result.html_content.substr(second_div_pos, second_div_end - second_div_pos);
+    assert(second_div_tag.find("background-color: green;") != std::string::npos);
+}
+
+void test_custom_element_replace() {
+    std::string source = R"(
+        [Custom] @Element Box {
+            div { text: "to be replaced"; }
+        }
+        body {
+            @Element Box {
+                insert replace div[0] {
+                    p { text: "replacement"; }
+                }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "replace_test.chtl", true);
+
+    // Check that the original div is gone
+    assert(result.html_content.find("<div>to be replaced</div>") == std::string::npos);
+
+    // Check that the replacement p tag is present
+    assert(result.html_content.find("<p>replacement</p>") != std::string::npos);
+}
 
 void test_text_block_literals() {
     std::string source = R"(div { text { This is unquoted } })";
@@ -188,7 +280,8 @@ void test_named_origin_and_import() {
     std::ofstream("imported_script.js") << "console.log('imported');";
     std::string source = R"([Import] @JavaScript from "imported_script.js" as my_script; [Origin] @Html my_html { <div>Hello</div> } body { [Origin] @Html my_html; script { [Origin] @JavaScript my_script; } })";
     CompilerDispatcher dispatcher;
-    CompilationResult result = dispatcher.compile(source, "main.chtl", true);
+    // Set both inline_css and inline_js to true to replicate the old `inline_mode = true`
+    CompilationResult result = dispatcher.compile(source, "main.chtl", true, true, false);
     assert(result.html_content.find("<div>Hello</div>") != std::string::npos);
     assert(result.html_content.find("console.log('imported');") != std::string::npos);
     remove("imported_script.js");
@@ -416,6 +509,9 @@ int main() {
     run_test(test_keyword_aliasing, "Keyword Aliasing");
     run_test(test_custom_origin_type, "Custom Origin Type");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
+    run_test(test_scanner_local_style_block_extraction, "Scanner Local Style Block Extraction");
+    run_test(test_custom_element_indexed_style_modification, "Custom Element Indexed Style Modification");
+    run_test(test_custom_element_replace, "Custom Element Replace Operation");
 
     cleanup_test_environment();
 

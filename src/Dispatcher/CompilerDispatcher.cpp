@@ -76,7 +76,9 @@ Object.defineProperty(window, ')JS" << varName << R"JS(', {
 CompilationResult CompilerDispatcher::compile(
     const std::string& source,
     const std::string& source_path,
-    bool inline_mode,
+    bool inline_css,
+    bool inline_js,
+    bool default_struct,
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
@@ -157,13 +159,18 @@ CompilationResult CompilerDispatcher::compile(
         js_content_stream.str(),
         parser.sharedContext,
         parser.outputHtml5Doctype,
-        inline_mode,
+        inline_css,
+        inline_js,
+        default_struct,
         css_output_filename,
         js_output_filename
     );
 
-    // 9. If inlining, merge the script placeholders back into the HTML.
-    if (inline_mode) {
+    // 9. If inlining JS, merge the script placeholders back into the HTML.
+    // The generator handles the actual inlining of the <script> tag content,
+    // but the merger is needed to put script content back into placeholders
+    // when using features like [Origin] @JavaScript inside other scripts.
+    if (inline_js) {
          html_content = merger.merge(html_content, script_fragments_for_merging);
     }
 

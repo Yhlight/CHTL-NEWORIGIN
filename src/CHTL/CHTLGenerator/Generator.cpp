@@ -39,7 +39,9 @@ std::string Generator::generate(
     const std::string& globalJs,
     SharedContext& context,
     bool outputDoctype,
-    bool inline_mode,
+    bool inline_css,
+    bool inline_js,
+    bool default_struct,
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
@@ -47,17 +49,59 @@ std::string Generator::generate(
     indentLevel = 0;
     this->globalCssToInject = globalCss;
     this->globalJsToInject = globalJs;
-    this->inlineMode = inline_mode;
+    this->inlineCss = inline_css;
+    this->inlineJs = inline_js;
+    this->defaultStruct = default_struct;
     this->cssOutputFilename = css_output_filename;
     this->jsOutputFilename = js_output_filename;
     this->mutableContext = &context;
 
-    if (outputDoctype) {
+    if (outputDoctype || defaultStruct) {
         result += "<!DOCTYPE html>\n";
+    }
+
+    if (defaultStruct) {
+        appendLine("<html>");
+        indent();
+        appendLine("<head>");
+        indent();
+        if (!globalCssToInject.empty()) {
+            if (inlineCss) {
+                appendLine("<style>");
+                indent();
+                append(globalCssToInject);
+                outdent();
+                appendLine("</style>");
+            } else {
+                appendLine("<link rel=\"stylesheet\" href=\"" + cssOutputFilename + "\">");
+            }
+        }
+        outdent();
+        appendLine("</head>");
+        appendLine("<body>");
+        indent();
     }
 
     for (auto& root : roots) {
         generateNode(root.get());
+    }
+
+    if (defaultStruct) {
+        if (!globalJsToInject.empty()) {
+            if (inlineJs) {
+                appendLine("<script>");
+                indent();
+                append(globalJsToInject);
+                outdent();
+                appendLine("</script>");
+            } else {
+                appendLine("<script src=\"" + jsOutputFilename + "\"></script>");
+            }
+        }
+        outdent();
+        appendLine("</body>");
+        outdent();
+        appendLine("</html>");
     }
 
     generateRuntimeScript(context); // This will now be part of the global JS.
@@ -153,22 +197,30 @@ void Generator::generateElement(ElementNode* node) {
     append(getIndent() + "<" + node->tagName);
 
     auto finalAttributes = node->attributes;
-    std::string styleString;
+    std::string finalStyleString;
 
+    // First, process the inlineStyles map from the style {} block
     for (const auto& stylePair : node->inlineStyles) {
         if (stylePair.second.type != StyleValue::RESPONSIVE && stylePair.second.type != StyleValue::DYNAMIC_CONDITIONAL) {
-            styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
+            finalStyleString += stylePair.first + ": " + styleValueToString(stylePair.second) + ";";
         }
     }
 
-    if (!styleString.empty()) {
-        if (finalAttributes.count("style")) {
-            finalAttributes["style"].string_val = styleString + finalAttributes["style"].string_val;
-        } else {
-            finalAttributes["style"] = StyleValue(styleString);
+    // Then, append any existing style attribute from the element's direct attributes
+    if (finalAttributes.count("style")) {
+        if (!finalStyleString.empty()) {
+            finalStyleString += " ";
         }
+        finalStyleString += styleValueToString(finalAttributes.at("style"));
+        finalAttributes.erase("style");
     }
 
+    // Print the combined style attribute
+    if (!finalStyleString.empty()) {
+        append(" style=\"" + finalStyleString + "\"");
+    }
+
+    // Remove responsive attributes before printing the rest
     for (auto it = finalAttributes.begin(); it != finalAttributes.end(); ) {
         if (it->second.type == StyleValue::RESPONSIVE || it->second.type == StyleValue::DYNAMIC_CONDITIONAL) {
             it = finalAttributes.erase(it);
@@ -177,6 +229,7 @@ void Generator::generateElement(ElementNode* node) {
         }
     }
 
+    // Print the remaining attributes
     for (auto const& [key, val] : finalAttributes) {
         append(" " + key + "=\"" + styleValueToString(val) + "\"");
     }
@@ -194,9 +247,9 @@ void Generator::generateElement(ElementNode* node) {
     } else if (!node->children.empty() || node->tagName == "head" || node->tagName == "body") {
         append("\n");
         indent();
-        if (node->tagName == "head") {
+        if (node->tagName == "head" && !defaultStruct) {
             if (!globalCssToInject.empty()) {
-                if (inlineMode) {
+                if (inlineCss) {
                     appendLine("<style>");
                     indent();
                     append(globalCssToInject);
@@ -212,9 +265,9 @@ void Generator::generateElement(ElementNode* node) {
             generateNode(child.get());
         }
 
-        if (node->tagName == "body") {
+        if (node->tagName == "body" && !defaultStruct) {
             if (!globalJsToInject.empty()) {
-                if (inlineMode) {
+                if (inlineJs) {
                     appendLine("<script>");
                     indent();
                     append(globalJsToInject);

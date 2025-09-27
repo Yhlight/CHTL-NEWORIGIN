@@ -2,6 +2,11 @@
 #include <string>
 #include <cctype>
 
+// Helper to check if a character is part of a valid identifier.
+bool is_word_character(char c) {
+    return isalnum(c) || c == '_';
+}
+
 // Helper to check if a substring at a position is a keyword, ensuring it's a whole word.
 bool is_keyword_at(const std::string& s, size_t pos, const std::string& keyword) {
     if (pos + keyword.length() > s.length()) {
@@ -10,30 +15,84 @@ bool is_keyword_at(const std::string& s, size_t pos, const std::string& keyword)
     if (s.substr(pos, keyword.length()) != keyword) {
         return false;
     }
-    if (pos > 0 && isalnum(s[pos - 1])) {
-        return false; // The character before is alphanumeric, so it's part of a larger word.
+    if (pos > 0 && is_word_character(s[pos - 1])) {
+        return false; // The character before is part of a larger word.
     }
-    if (pos + keyword.length() < s.length() && isalnum(s[pos + keyword.length()])) {
-        return false; // The character after is alphanumeric, so it's part of a larger word.
+    if (pos + keyword.length() < s.length() && is_word_character(s[pos + keyword.length()])) {
+        return false; // The character after is part of a larger word.
     }
     return true;
 }
 
+#include <vector>
+
 // New method to analyze script content
 CodeFragment UnifiedScanner::processScriptBlock(const std::string& content) {
-    // Heuristic to differentiate CHTL JS from plain JS.
-    // Look for CHTL JS-specific syntax.
-    if (content.find("{{") != std::string::npos ||
-        content.find("}}") != std::string::npos ||
-        content.find("->") != std::string::npos ||
-        content.find("Listen") != std::string::npos ||
-        content.find("Delegate") != std::string::npos ||
-        content.find("Animate") != std::string::npos ||
-        content.find("Router") != std::string::npos ||
-        content.find("Vir") != std::string::npos ||
-        content.find("ScriptLoader") != std::string::npos) {
+    // A more robust, state-aware heuristic to differentiate CHTL JS from plain JS.
+    enum class ScanState {
+        NORMAL,
+        IN_SINGLE_LINE_COMMENT,
+        IN_MULTI_LINE_COMMENT,
+        IN_STRING
+    };
+
+    ScanState state = ScanState::NORMAL;
+    char string_char = 0;
+
+    // Quick check for the most obvious CHTL JS tokens that can't be mistaken in JS.
+    // These are unlikely to appear in comments/strings in a way that would fool the parser.
+    if (content.find("{{") != std::string::npos || content.find("}}") != std::string::npos || content.find("->") != std::string::npos) {
         return {FragmentType::CHTL_JS, content};
     }
+
+    // More careful check for keywords that could appear in strings/comments.
+    const std::vector<std::string> keywords = {"Listen", "Delegate", "Animate", "Router", "Vir", "ScriptLoader"};
+
+    for (size_t i = 0; i < content.length(); ++i) {
+        switch (state) {
+            case ScanState::NORMAL:
+                if (content[i] == '/' && i + 1 < content.length()) {
+                    if (content[i+1] == '/') {
+                        state = ScanState::IN_SINGLE_LINE_COMMENT;
+                        i++;
+                    } else if (content[i+1] == '*') {
+                        state = ScanState::IN_MULTI_LINE_COMMENT;
+                        i++;
+                    }
+                } else if (content[i] == '\'' || content[i] == '"' || content[i] == '`') {
+                    state = ScanState::IN_STRING;
+                    string_char = content[i];
+                } else {
+                    // Check for CHTL JS keywords only when not in a comment or string.
+                    for (const auto& keyword : keywords) {
+                        if (is_keyword_at(content, i, keyword)) {
+                            return {FragmentType::CHTL_JS, content};
+                        }
+                    }
+                }
+                break;
+            case ScanState::IN_SINGLE_LINE_COMMENT:
+                if (content[i] == '\n') {
+                    state = ScanState::NORMAL;
+                }
+                break;
+            case ScanState::IN_MULTI_LINE_COMMENT:
+                if (content[i] == '*' && i + 1 < content.length() && content[i+1] == '/') {
+                    state = ScanState::NORMAL;
+                    i++;
+                }
+                break;
+            case ScanState::IN_STRING:
+                if (content[i] == '\\' && i + 1 < content.length()) {
+                    i++; // skip escaped character
+                } else if (content[i] == string_char) {
+                    state = ScanState::NORMAL;
+                }
+                break;
+        }
+    }
+
+    // If we get through the whole string without finding a valid CHTL JS keyword, it's plain JS.
     return {FragmentType::JS, content};
 }
 

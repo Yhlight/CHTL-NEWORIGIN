@@ -102,3 +102,18 @@ target_link_libraries(chtl_tests PRIVATE chtl_lib)
 
 # Add a test to CTest
 add_test(NAME RunCHTLTests COMMAND chtl_tests)
+
+# --- Scanner Test Suite ---
+add_executable(scanner_tests tests/scanner_test.cpp)
+target_link_libraries(scanner_tests PRIVATE chtl_lib)
+add_test(NAME RunScannerTests COMMAND scanner_tests)
+
+# --- CLI Test Suite ---
+add_executable(cli_tests tests/cli_test.cpp)
+# The CLI tests run the chtl_compiler executable, so we need to make sure it's built first.
+add_dependencies(cli_tests chtl_compiler)
+add_test(
+    NAME RunCLITests
+    COMMAND cli_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)

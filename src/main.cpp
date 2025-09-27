@@ -20,18 +20,41 @@ std::string get_base_filename(const std::string& input_path) {
 // This main function serves as the entry point for the CHTL compiler.
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_file.chtl> [--inline]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <input_file.chtl> [--inline] [--inline-css] [--inline-js] [--default-struct]" << std::endl;
         return 1;
     }
 
-    std::vector<std::string> args(argv + 1, argv + argc);
-    bool inline_mode = false;
+    std::vector<std::string> args;
+    for (int i = 1; i < argc; ++i) {
+        args.push_back(argv[i]);
+    }
+
+    bool inline_css = false;
+    bool inline_js = false;
+    bool default_struct = false;
     std::string input_file;
 
-    auto it = std::find(args.begin(), args.end(), "--inline");
-    if (it != args.end()) {
-        inline_mode = true;
-        args.erase(it);
+    auto find_and_erase = [&](const std::string& flag) {
+        auto it = std::find(args.begin(), args.end(), flag);
+        if (it != args.end()) {
+            args.erase(it);
+            return true;
+        }
+        return false;
+    };
+
+    if (find_and_erase("--inline")) {
+        inline_css = true;
+        inline_js = true;
+    }
+    if (find_and_erase("--inline-css")) {
+        inline_css = true;
+    }
+    if (find_and_erase("--inline-js")) {
+        inline_js = true;
+    }
+    if (find_and_erase("--default-struct")) {
+        default_struct = true;
     }
 
     if (args.empty()) {
@@ -60,7 +83,9 @@ int main(int argc, char* argv[]) {
         CompilationResult result = dispatcher.compile(
             chtlSource,
             input_file,
-            inline_mode,
+            inline_css,
+            inline_js,
+            default_struct,
             css_filename,
             js_filename
         );
@@ -72,19 +97,17 @@ int main(int argc, char* argv[]) {
         std::cout << "Generated " << html_filename << std::endl;
 
         // Write CSS and JS files if not inlining
-        if (!inline_mode) {
-            if (!result.css_content.empty()) {
-                std::ofstream css_file(css_filename);
-                css_file << result.css_content;
-                css_file.close();
-                std::cout << "Generated " << css_filename << std::endl;
-            }
-            if (!result.js_content.empty()) {
-                std::ofstream js_file(js_filename);
-                js_file << result.js_content;
-                js_file.close();
-                std::cout << "Generated " << js_filename << std::endl;
-            }
+        if (!inline_css && !result.css_content.empty()) {
+            std::ofstream css_file(css_filename);
+            css_file << result.css_content;
+            css_file.close();
+            std::cout << "Generated " << css_filename << std::endl;
+        }
+        if (!inline_js && !result.js_content.empty()) {
+            std::ofstream js_file(js_filename);
+            js_file << result.js_content;
+            js_file.close();
+            std::cout << "Generated " << js_filename << std::endl;
         }
 
     } catch (const std::runtime_error& e) {

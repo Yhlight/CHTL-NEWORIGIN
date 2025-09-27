@@ -25,7 +25,9 @@ public:
         const std::string& globalJs,
         SharedContext& context,
         bool outputDoctype,
-        bool inline_mode,
+        bool inline_css,
+        bool inline_js,
+        bool default_struct,
         const std::string& css_output_filename,
         const std::string& js_output_filename
     );
@@ -35,7 +37,9 @@ private:
     int indentLevel;
     std::string globalCssToInject;
     std::string globalJsToInject;
-    bool inlineMode = false;
+    bool inlineCss = false;
+    bool inlineJs = false;
+    bool defaultStruct = false;
     std::string cssOutputFilename;
     std::string jsOutputFilename;
     SharedContext* mutableContext = nullptr;
