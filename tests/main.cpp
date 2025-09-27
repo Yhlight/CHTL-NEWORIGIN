@@ -340,16 +340,29 @@ void test_conditional_expression_false() {
 
 void test_custom_style_specialization() {
     std::string source = R"(
-        [Custom] @Style Base { color; border: 1px solid black; }
-        div { style { @Style Base { color: green; delete border; } } }
+        [Custom] @Style Base {
+            color; // Valueless property
+            border: 1px solid black;
+            font-size: 16px;
+        }
+        div {
+            style {
+                @Style Base {
+                    color: green; // Provide value
+                    delete border; // Delete property
+                }
+            }
+        }
     )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, "", parser.sharedContext, false, true, "", "");
-    assert(result.find("color: green;") != std::string::npos);
-    assert(result.find("border:") == std::string::npos);
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, true);
+
+    // Check that the specialized style is applied
+    assert(result.html_content.find("color: green;") != std::string::npos);
+    // Check that the deleted property is not present
+    assert(result.html_content.find("border:") == std::string::npos);
+    // Check that the non-specialized property is still present
+    assert(result.html_content.find("font-size: 16px;") != std::string::npos);
 }
 
 void test_custom_element_delete() {
@@ -357,41 +370,65 @@ void test_custom_element_delete() {
         [Custom] @Element Box {
             span { text: "hello"; }
             div { text: "world"; }
+            p { text: "paragraph"; }
         }
         body {
             @Element Box {
-                delete span;
+                delete span; // Delete by tag
+                delete p[0];   // Delete by tag and index
             }
         }
     )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, "", parser.sharedContext, false, true, "", "");
-    assert(result.find("<span>") == std::string::npos);
-    assert(result.find("<div>") != std::string::npos);
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, true);
+
+    assert(result.html_content.find("<span>hello</span>") == std::string::npos);
+    assert(result.html_content.find("<p>paragraph</p>") == std::string::npos);
+    assert(result.html_content.find("<div>world</div>") != std::string::npos);
 }
 
 void test_custom_element_insert() {
     std::string source = R"(
         [Custom] @Element Box {
-            div { text: "world"; }
+            div { text: "middle"; }
         }
         body {
             @Element Box {
+                insert at top {
+                    header { text: "top"; }
+                }
                 insert before div[0] {
-                    span { text: "hello"; }
+                    span { text: "before"; }
+                }
+                insert after div[0] {
+                    p { text: "after"; }
+                }
+                insert at bottom {
+                    footer { text: "bottom"; }
                 }
             }
         }
     )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, "", parser.sharedContext, false, true, "", "");
-    assert(result.find("<span>") < result.find("<div>"));
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, true);
+
+    // Check the final order of elements
+    size_t top_pos = result.html_content.find("top");
+    size_t before_pos = result.html_content.find("before");
+    size_t middle_pos = result.html_content.find("middle");
+    size_t after_pos = result.html_content.find("after");
+    size_t bottom_pos = result.html_content.find("bottom");
+
+    assert(top_pos != std::string::npos);
+    assert(before_pos != std::string::npos);
+    assert(middle_pos != std::string::npos);
+    assert(after_pos != std::string::npos);
+    assert(bottom_pos != std::string::npos);
+
+    assert(top_pos < before_pos);
+    assert(before_pos < middle_pos);
+    assert(middle_pos < after_pos);
+    assert(after_pos < bottom_pos);
 }
 
 void test_custom_element_insert_at_top_bottom() {
@@ -910,21 +947,22 @@ void test_style_auto_add_class() {
 
 void test_var_template_specialization() {
     std::string source = R"(
-        [Template] @Var MyTheme {
-            primary-color: "blue";
+        [Custom] @Var MyTheme {
+            primaryColor: "blue";
+            secondaryColor: "red";
         }
         div {
             style {
-                color: MyTheme(primary-color = "green");
+                background-color: MyTheme(primaryColor = "green");
+                border-color: MyTheme(secondaryColor);
             }
         }
     )";
-    Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    Generator generator;
-    std::string result = generator.generate(nodes, parser.globalStyleContent, "", parser.sharedContext, false, true, "", "");
-    assert(result.find("color: green;") != std::string::npos);
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, true);
+
+    assert(result.html_content.find("background-color: green;") != std::string::npos);
+    assert(result.html_content.find("border-color: red;") != std::string::npos);
 }
 
 void test_var_template_usage() {

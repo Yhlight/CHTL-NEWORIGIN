@@ -478,24 +478,36 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string key = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
 
-                // Correctly handle valueless properties for custom templates
-                if (isCustom && parser.currentToken.type != TokenType::Colon) {
+                // Handle valueless properties in custom templates (e.g., "color;")
+                if (isCustom && parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
                     styleNode->valuelessProperties.push_back(key);
+                    // A valueless property can be followed by a semicolon or a comma
                     if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
                         parser.advanceTokens();
                     }
                     continue;
                 }
 
-                parser.expectToken(TokenType::Colon);
+                // Handle properties with values (e.g., "color: red;")
+                if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
+                    throw std::runtime_error("Expected ':' or '=' after style property key '" + key + "'.");
+                }
+                parser.advanceTokens(); // Consume ':' or '='
+
                 std::string value;
+                // This logic seems fragile. A better approach would be to use the StyleExpression parser.
+                // For now, we'll keep it for consistency.
                 while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::CloseBrace) {
                     value += parser.currentToken.value + " ";
                     parser.advanceTokens();
                 }
-                if (!value.empty()) value.pop_back();
+                if (!value.empty()) value.pop_back(); // Trim trailing space
+
                 styleNode->styles[key] = value;
-                if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
+
+                if(parser.currentToken.type == TokenType::Semicolon) {
+                    parser.advanceTokens();
+                }
             }
         }
         parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
