@@ -132,6 +132,8 @@ void test_import_custom_template();
 void test_custom_style_definition_delete();
 void test_style_template_with_calculation();
 void test_style_template_with_var_reference();
+void test_keyword_aliasing();
+void test_custom_origin_type();
 
 
 void test_text_block_literals() {
@@ -354,6 +356,20 @@ void test_style_template_with_var_reference() {
     assert(result.html_content.find("color: blue;") != std::string::npos);
 }
 
+void test_keyword_aliasing() {
+    std::string source = R"([Configuration] { [Name] { KEYWORD_DELETE = remove; } } [Custom] @Element Box { span { text: "content"; } } body { @Element Box { remove span; } })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<span>content</span>") == std::string::npos);
+}
+
+void test_custom_origin_type() {
+    std::string source = R"([Configuration] { [OriginType] { ORIGINTYPE_VUE = @Vue; } } body { [Origin] @Vue my_vue { <div id="app">{{ message }}</div> }; })";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("<div id=\"app\">{{ message }}</div>") != std::string::npos);
+}
+
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
 
@@ -387,6 +403,8 @@ int main() {
     run_test(test_custom_style_definition_delete, "Custom Style Definition Delete");
     run_test(test_style_template_with_calculation, "Style Template with Calculation");
     run_test(test_style_template_with_var_reference, "Style Template with Var Reference");
+    run_test(test_keyword_aliasing, "Keyword Aliasing");
+    run_test(test_custom_origin_type, "Custom Origin Type");
 
     cleanup_test_environment();
 
@@ -397,7 +415,6 @@ int main() {
 // Dummy definitions for tests that are not yet refactored to dispatcher
 void test_lexer_configuration_keyword() {}
 void test_namespace_template_access() {}
-void test_keyword_aliasing() {}
 void test_hyphenated_property() {}
 void test_attribute_expression() {}
 void test_conditional_attribute() {}

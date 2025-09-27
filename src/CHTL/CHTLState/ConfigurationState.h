@@ -11,4 +11,7 @@ public:
 private:
     // Helper to parse the nested [Name] block for keyword re-definitions.
     void parseNameBlock(Parser& parser, ConfigSet& configSet);
+
+    // Helper to parse the nested [OriginType] block.
+    void parseOriginTypeBlock(Parser& parser, ConfigSet& configSet);
 };

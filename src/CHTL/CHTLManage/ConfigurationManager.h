@@ -20,6 +20,9 @@ struct ConfigSet {
 
     // --- Keyword Customization ---
     std::map<std::string, std::vector<std::string>> keywordMap;
+
+    // --- Custom Origin Types ---
+    std::vector<std::string> customOriginTypes;
 };
 
 // This class manages multiple named configurations and tracks the active one.

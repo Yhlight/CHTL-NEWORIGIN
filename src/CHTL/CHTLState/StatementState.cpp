@@ -666,9 +666,9 @@ void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNod
     parser.expectToken(TokenType::OpenBrace);
 
     while(parser.currentToken.type != TokenType::CloseBrace) {
-        if (parser.currentToken.type == TokenType::Delete) {
+        if (parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
             parseDeleteInSpecialization(parser, fragment);
-        } else if (parser.currentToken.type == TokenType::Insert) {
+        } else if (parser.tryExpectKeyword(TokenType::Insert, "KEYWORD_INSERT", "insert")) {
             parseInsertInSpecialization(parser, fragment);
         } else if (parser.currentToken.type == TokenType::Identifier) {
             parseStyleModificationInSpecialization(parser, fragment);
@@ -682,7 +682,7 @@ void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNod
 }
 
 void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
-    parser.expectKeyword(TokenType::Insert, "KEYWORD_INSERT", "insert");
+    // The "insert" keyword has already been consumed by the caller.
 
     // 1. Parse position
     TokenType posToken = TokenType::Unexpected;
@@ -808,8 +808,7 @@ void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragme
 }
 
 void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
-    parser.expectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete");
-
+    // The "delete" keyword has already been consumed by the caller.
     while (parser.currentToken.type != TokenType::Semicolon) {
         if (parser.currentToken.type == TokenType::At) {
             parser.advanceTokens(); // consume '@'
@@ -884,6 +883,25 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
 
     std::string type = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
+
+    // --- Origin Type Validation ---
+    bool isBuiltIn = (type == "Html" || type == "Style" || type == "JavaScript");
+    bool isValid = isBuiltIn;
+
+    if (!isBuiltIn) {
+        ConfigSet* config = parser.configManager.getActiveConfig();
+        if (!config->disableCustomOriginType) {
+            const auto& customTypes = config->customOriginTypes;
+            if (std::find(customTypes.begin(), customTypes.end(), type) != customTypes.end()) {
+                isValid = true;
+            }
+        }
+    }
+
+    if (!isValid) {
+        throw std::runtime_error("Unknown or disabled [Origin] type: @" + type);
+    }
+    // --- End Validation ---
 
     std::string name = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
