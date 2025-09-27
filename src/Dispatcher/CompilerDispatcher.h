@@ -5,10 +5,16 @@
 #include "../Scanner/UnifiedScanner.h"
 #include "../CodeMerger/CodeMerger.h"
 #include "CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.h"
+#include "CompilationResult.h"
 
 class CompilerDispatcher {
 public:
-    std::string compile(const std::string& source, bool inline_mode = false);
+    CompilationResult compile(
+        const std::string& source,
+        bool inline_mode = false,
+        const std::string& css_output_filename = "style.css",
+        const std::string& js_output_filename = "script.js"
+    );
 
 private:
     UnifiedScanner scanner;

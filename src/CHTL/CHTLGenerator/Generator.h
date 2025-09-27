@@ -18,19 +18,31 @@ public:
     Generator();
 
     // The main entry point for the generation process.
-    std::string generate(std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, SharedContext& context, bool outputDoctype, bool inlineCss = false);
+    std::string generate(
+        std::vector<std::unique_ptr<BaseNode>>& roots,
+        const std::string& globalCss,
+        const std::string& globalJs,
+        SharedContext& context,
+        bool outputDoctype,
+        bool inline_mode,
+        const std::string& css_output_filename,
+        const std::string& js_output_filename
+    );
 
 private:
     std::string result;
     int indentLevel;
     std::string globalCssToInject;
-    bool inlineCss = false;
+    std::string globalJsToInject;
+    bool inlineMode = false;
+    std::string cssOutputFilename;
+    std::string jsOutputFilename;
     SharedContext* mutableContext = nullptr;
 
 #include "../CHTLNode/ScriptNode.h"
     // Visitor-style methods to generate output for each node type.
     void generateNode(BaseNode* node);
-    void generateElement(ElementNode* node); // Needs to be non-const to add id
+    void generateElement(ElementNode* node);
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
     void generateScript(const ScriptNode* node);

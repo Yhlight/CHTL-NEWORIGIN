@@ -5,10 +5,17 @@
 #include <stdexcept>
 #include <fstream>
 #include <sstream>
-
+#include <filesystem>
 #include "Dispatcher/CompilerDispatcher.h"
-
 #include <algorithm>
+
+namespace fs = std::filesystem;
+
+// Helper function to derive output filenames from the input path.
+std::string get_base_filename(const std::string& input_path) {
+    fs::path path(input_path);
+    return path.stem().string();
+}
 
 // This main function serves as the entry point for the CHTL compiler.
 int main(int argc, char* argv[]) {
@@ -44,14 +51,40 @@ int main(int argc, char* argv[]) {
     std::string chtlSource = buffer.str();
 
     try {
-        CompilerDispatcher dispatcher;
-        // The dispatcher will handle the full compilation and inlining.
-        // For now, we will just pass a dummy flag.
-        // In the next steps, we will update the dispatcher and generator.
-        std::string htmlOutput = dispatcher.compile(chtlSource);
+        std::string base_filename = get_base_filename(input_file);
+        std::string html_filename = base_filename + ".html";
+        std::string css_filename = base_filename + ".css";
+        std::string js_filename = base_filename + ".js";
 
-        // For now, we just print the output. In a real CLI, we'd write to files.
-        std::cout << htmlOutput << std::endl;
+        CompilerDispatcher dispatcher;
+        CompilationResult result = dispatcher.compile(
+            chtlSource,
+            inline_mode,
+            css_filename,
+            js_filename
+        );
+
+        // Write the HTML file
+        std::ofstream html_file(html_filename);
+        html_file << result.html_content;
+        html_file.close();
+        std::cout << "Generated " << html_filename << std::endl;
+
+        // Write CSS and JS files if not inlining
+        if (!inline_mode) {
+            if (!result.css_content.empty()) {
+                std::ofstream css_file(css_filename);
+                css_file << result.css_content;
+                css_file.close();
+                std::cout << "Generated " << css_filename << std::endl;
+            }
+            if (!result.js_content.empty()) {
+                std::ofstream js_file(js_filename);
+                js_file << result.js_content;
+                js_file.close();
+                std::cout << "Generated " << js_filename << std::endl;
+            }
+        }
 
     } catch (const std::runtime_error& e) {
         std::cerr << "Compilation Error: " << e.what() << std::endl;

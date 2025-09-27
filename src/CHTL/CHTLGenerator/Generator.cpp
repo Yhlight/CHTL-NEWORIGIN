@@ -33,11 +33,23 @@ void Generator::appendLine(const std::string& str) {
     result += getIndent() + str + "\n";
 }
 
-std::string Generator::generate(std::vector<std::unique_ptr<BaseNode>>& roots, const std::string& globalCss, SharedContext& context, bool outputDoctype, bool inlineCss) {
+std::string Generator::generate(
+    std::vector<std::unique_ptr<BaseNode>>& roots,
+    const std::string& globalCss,
+    const std::string& globalJs,
+    SharedContext& context,
+    bool outputDoctype,
+    bool inline_mode,
+    const std::string& css_output_filename,
+    const std::string& js_output_filename
+) {
     result.clear();
     indentLevel = 0;
     this->globalCssToInject = globalCss;
-    this->inlineCss = inlineCss;
+    this->globalJsToInject = globalJs;
+    this->inlineMode = inline_mode;
+    this->cssOutputFilename = css_output_filename;
+    this->jsOutputFilename = js_output_filename;
     this->mutableContext = &context;
 
     if (outputDoctype) {
@@ -48,14 +60,7 @@ std::string Generator::generate(std::vector<std::unique_ptr<BaseNode>>& roots, c
         generateNode(root.get());
     }
 
-    generateRuntimeScript(context);
-
-    if (!inlineCss && !globalCss.empty()) {
-        // In a real application, you would write this to a separate CSS file.
-        // For now, we can just append it as a comment to see the output.
-        result += "\n<!-- CSS would be written to a separate file:\n" + globalCss + "\n-->";
-    }
-
+    generateRuntimeScript(context); // This will now be part of the global JS.
 
     return result;
 }
@@ -82,7 +87,7 @@ void Generator::generateNode(BaseNode* node) {
             append(static_cast<const OriginNode*>(node)->content);
             break;
         case NodeType::Script:
-            generateScript(static_cast<const ScriptNode*>(node));
+            // Script content is now handled by the dispatcher and passed in globalJs
             break;
         case NodeType::Conditional:
             generateConditional(static_cast<ConditionalNode*>(node));
@@ -134,6 +139,8 @@ void Generator::generateConditional(ConditionalNode* node) {
 
 void Generator::generateElement(ElementNode* node) {
     if (node->tagName.rfind("chtl_placeholder_", 0) == 0) {
+        // Placeholders are handled by the dispatcher's merger now.
+        // We just need to make sure they are present in the output.
         append(node->tagName + "{}");
         return;
     }
@@ -181,19 +188,41 @@ void Generator::generateElement(ElementNode* node) {
     if (node->children.size() == 1 && node->children.front()->getType() == NodeType::Text) {
         const auto* textNode = static_cast<const TextNode*>(node->children.front().get());
         append(textNode->text);
-    } else if (!node->children.empty() || (node->tagName == "head" && !globalCssToInject.empty() && inlineCss)) {
+    } else if (!node->children.empty() || node->tagName == "head" || node->tagName == "body") {
         append("\n");
         indent();
+        if (node->tagName == "head") {
+            if (!globalCssToInject.empty()) {
+                if (inlineMode) {
+                    appendLine("<style>");
+                    indent();
+                    append(globalCssToInject);
+                    outdent();
+                    appendLine("</style>");
+                } else {
+                    appendLine("<link rel=\"stylesheet\" href=\"" + cssOutputFilename + "\">");
+                }
+            }
+        }
+
         for (auto& child : node->children) {
             generateNode(child.get());
         }
-        if (node->tagName == "head" && !globalCssToInject.empty() && inlineCss) {
-            appendLine("<style>");
-            indent();
-            append(globalCssToInject);
-            outdent();
-            appendLine("</style>");
+
+        if (node->tagName == "body") {
+            if (!globalJsToInject.empty()) {
+                if (inlineMode) {
+                    appendLine("<script>");
+                    indent();
+                    append(globalJsToInject);
+                    outdent();
+                    appendLine("</script>");
+                } else {
+                    appendLine("<script src=\"" + jsOutputFilename + "\"></script>");
+                }
+            }
         }
+
         outdent();
         append(getIndent());
     }
@@ -210,163 +239,11 @@ void Generator::generateComment(const CommentNode* node) {
 }
 
 void Generator::generateScript(const ScriptNode* node) {
-    append(getIndent() + "<script>");
-    std::string scriptContent;
-    for (const auto& child : node->children) {
-        switch(child->getType()) {
-            case NodeType::RawScript:
-                scriptContent += static_cast<const RawScriptNode*>(child.get())->content;
-                break;
-            case NodeType::EnhancedSelector:
-                scriptContent += "document.querySelector('" + static_cast<const EnhancedSelectorNode*>(child.get())->selector + "')";
-                break;
-            case NodeType::Origin:
-                 scriptContent += static_cast<const OriginNode*>(child.get())->content;
-                 break;
-            default:
-                break;
-        }
-    }
-    append(scriptContent);
-    append("</script>\n");
+    // This is now handled by the dispatcher, which passes the combined script
+    // to the generate method. This function is effectively deprecated.
 }
 
 void Generator::generateRuntimeScript(const SharedContext& context) {
-    if (context.responsiveBindings.empty() && context.dynamicConditionalBindings.empty() && context.dynamicRenderingBindings.empty()) {
-        return;
-    }
-
-    appendLine("<script>");
-    indent();
-    appendLine("const __chtl = {");
-    indent();
-    appendLine("bindings: {},");
-    appendLine("dynamicBindings: [],");
-    appendLine("dynamicRenderingBindings: [],");
-    appendLine("registerBinding(variable, elementId, property, unit) {");
-    indent();
-    appendLine("if (!this.bindings[variable]) { this.bindings[variable] = []; }");
-    appendLine("this.bindings[variable].push({ elementId, property, unit });");
-    outdent();
-    appendLine("},");
-    appendLine("registerDynamicBinding(binding) { this.dynamicBindings.push(binding); },");
-    appendLine("registerDynamicRenderingBinding(binding) { this.dynamicRenderingBindings.push(binding); },");
-    appendLine("updateDOM(variable, value) {");
-    indent();
-    appendLine("if (!this.bindings[variable]) return;");
-    appendLine("this.bindings[variable].forEach(binding => {");
-    indent();
-    appendLine("const element = document.getElementById(binding.elementId);");
-    appendLine("if (element) {");
-    indent();
-    appendLine("const finalValue = typeof value === 'number' ? value + binding.unit : value;");
-    appendLine("if (binding.property.startsWith('style.')) {");
-    indent();
-    appendLine("element.style[binding.property.substring(6)] = finalValue;");
-    outdent();
-    appendLine("} else {");
-    indent();
-    appendLine("element.setAttribute(binding.property, finalValue);");
-    outdent();
-    appendLine("}");
-    outdent();
-    appendLine("}");
-    outdent();
-    appendLine("});");
-    outdent();
-    appendLine("},");
-    appendLine("evaluateDynamicBindings() {");
-    indent();
-    appendLine("this.dynamicBindings.forEach(binding => {");
-    indent();
-    appendLine("const sourceEl = document.querySelector(binding.expression.selector);");
-    appendLine("const targetEl = document.getElementById(binding.targetElementId);");
-    appendLine("if (!sourceEl || !targetEl) return;");
-    appendLine("let sourceValue = parseFloat(window.getComputedStyle(sourceEl).getPropertyValue(binding.expression.property));");
-    appendLine("let condition = eval(`${sourceValue} ${binding.expression.op} ${binding.expression.value_to_compare}`);");
-    appendLine("let resultValue = condition ? binding.expression.true_branch : binding.expression.false_branch;");
-    appendLine("targetEl.style[binding.targetProperty.substring(6)] = resultValue;");
-    outdent();
-    appendLine("});");
-    appendLine("this.dynamicRenderingBindings.forEach(binding => {");
-    indent();
-    appendLine("const sourceEl = document.querySelector(binding.expression.selector);");
-    appendLine("const targetEl = document.getElementById(binding.elementId);");
-    appendLine("if (!sourceEl || !targetEl) return;");
-    appendLine("let sourceValue = parseFloat(window.getComputedStyle(sourceEl).getPropertyValue(binding.expression.property));");
-    appendLine("let condition = eval(`${sourceValue} ${binding.expression.op} ${binding.expression.value_to_compare}`);");
-    appendLine("targetEl.style.display = condition ? '' : 'none';");
-    outdent();
-    appendLine("});");
-    outdent();
-    appendLine("}");
-    outdent();
-    appendLine("};");
-
-    std::set<std::string> uniqueVarNames;
-    for(const auto& pair : context.responsiveBindings) {
-        uniqueVarNames.insert(pair.first);
-        for(const auto& binding : pair.second) {
-            std::stringstream ss;
-            ss << "__chtl.registerBinding('" << pair.first << "', '" << binding.elementId << "', '" << binding.property << "', '" << binding.unit << "');";
-            appendLine(ss.str());
-        }
-    }
-
-    for (const auto& varName : uniqueVarNames) {
-        appendLine("let " + varName + "_val;");
-        appendLine("Object.defineProperty(window, '" + varName + "', {");
-        indent();
-        appendLine("get() { return " + varName + "_val; },");
-        appendLine("set(newValue) {");
-        indent();
-        appendLine(varName + "_val = newValue;");
-        appendLine("__chtl.updateDOM('" + varName + "', newValue);");
-        outdent();
-        appendLine("}");
-        outdent();
-        appendLine("});");
-    }
-
-    for (const auto& binding : context.dynamicConditionalBindings) {
-        std::stringstream ss;
-        ss << "__chtl.registerDynamicBinding({";
-        ss << "targetElementId: '" << binding.targetElementId << "',";
-        ss << "targetProperty: '" << binding.targetProperty << "',";
-        ss << "expression: {";
-        ss << "selector: '" << binding.expression->selector << "',";
-        ss << "property: '" << binding.expression->property << "',";
-        ss << "op: '" << binding.expression->op << "',";
-        ss << "value_to_compare: " << binding.expression->value_to_compare << ",";
-        ss << "true_branch: '" << styleValueToString(*binding.expression->true_branch) << "',";
-        ss << "false_branch: '" << styleValueToString(*binding.expression->false_branch) << "'";
-        ss << "}});";
-        appendLine(ss.str());
-    }
-
-    for (const auto& binding : context.dynamicRenderingBindings) {
-        std::stringstream ss;
-        ss << "__chtl.registerDynamicRenderingBinding({";
-        ss << "elementId: '" << binding.elementId << "',";
-        ss << "expression: {";
-        ss << "selector: '" << binding.expression->selector << "',";
-        ss << "property: '" << binding.expression->property << "',";
-        ss << "op: '" << binding.expression->op << "',";
-        ss << "value_to_compare: " << binding.expression->value_to_compare << ",";
-        ss << "}});";
-        appendLine(ss.str());
-    }
-
-    if (!context.dynamicConditionalBindings.empty() || !context.dynamicRenderingBindings.empty()) {
-        appendLine("document.addEventListener('DOMContentLoaded', () => {");
-        indent();
-        appendLine("__chtl.evaluateDynamicBindings();");
-        appendLine("const observer = new MutationObserver(() => __chtl.evaluateDynamicBindings());");
-        appendLine("document.querySelectorAll('*').forEach(el => observer.observe(el, { attributes: true, childList: true, subtree: true }));");
-        outdent();
-        appendLine("});");
-    }
-
-    outdent();
-    appendLine("</script>");
+    // This logic is now part of the global JS content passed to the main generate method.
+    // The dispatcher will concatenate this with other script content.
 }

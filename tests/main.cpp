@@ -95,6 +95,7 @@ void test_dynamic_conditional_rendering();
 void test_module_resolver_path_searching();
 void test_cmod_export_enforcement();
 void test_cli_inline_flag();
+void test_comprehensive_file();
 
 
 void test_text_block_literals() {
@@ -515,6 +516,7 @@ int main() {
     run_test(test_module_resolver_path_searching, "Module Resolver Path Searching");
     run_test(test_cmod_export_enforcement, "CMOD Export Enforcement");
     run_test(test_cli_inline_flag, "CLI --inline Flag");
+    run_test(test_comprehensive_file, "Comprehensive Integration Test");
 
     std::cout << "Tests finished." << std::endl;
     return 0;
@@ -1699,6 +1701,52 @@ void test_cli_inline_flag() {
     // When not inlined, the CSS is outputted as a comment for debugging.
     assert(result_no_inline.find("<!-- CSS would be written to a separate file:") != std::string::npos);
     assert(result_no_inline.find("body { color: purple; }") != std::string::npos);
+}
+
+void test_comprehensive_file() {
+    std::ifstream file_stream("comprehensive.chtl");
+    if (!file_stream) {
+        throw std::runtime_error("Could not open comprehensive.chtl for testing.");
+    }
+    std::stringstream buffer;
+    buffer << file_stream.rdbuf();
+    std::string source = buffer.str();
+
+    CompilerDispatcher dispatcher;
+    std::string result = dispatcher.compile(source, true); // Inline everything for easier testing
+
+    // --- Assertions ---
+
+    // 1. Static content and structure
+    assert(result.find("<title>Comprehensive Test</title>") != std::string::npos);
+    assert(result.find("<h1>CHTL Comprehensive Test Page</h1>") != std::string::npos);
+
+    // 2. Static conditional rendering
+    assert(result.find("This static condition is true.") != std::string::npos);
+
+    // 3. Dynamic conditional rendering
+    assert(result.find("<div id=\"chtl-dyn-render-") != std::string::npos);
+    assert(result.find("This content appears on wide screens.") != std::string::npos);
+    assert(result.find("dynamicRenderingBindings") != std::string::npos);
+
+    // 4. Template usage and specialization
+    assert(result.find("<h2 class=\"card-title\" style=\"color: blue;\">Specialized Card Title</h2>") != std::string::npos);
+    assert(result.find("<div class=\"special-insert\">This was inserted!</div>") != std::string::npos);
+    assert(remove_whitespace(result).find(remove_whitespace(".card {box-shadow: 0 2px 4px rgba(0,0,0,0.1);}")) != std::string::npos);
+
+    // 5. Responsive values and dynamic styles
+    assert(result.find("id=\"responsive-div\"") != std::string::npos);
+    assert(result.find("__chtl.registerBinding(\"boxClass\", \"responsive-div\", \"class\", \"\");") != std::string::npos);
+    assert(result.find("__chtl.registerBinding(\"boxWidth\", \"responsive-div\", \"style.width\", \"px\");") != std::string::npos);
+    assert(result.find("height: calc(100px / 2);") != std::string::npos);
+    assert(result.find("border-color: red;") != std::string::npos);
+    assert(result.find("targetProperty: 'style.border-color'") != std::string::npos);
+
+    // 6. CHTL JS features
+    assert(result.find("{{#my-button}} -> Listen") == std::string::npos); // Should be compiled away
+    assert(result.find("document.querySelector('#my-button').addEventListener('click'") != std::string::npos);
+    assert(result.find("boxWidth = boxWidth + 50;") != std::string::npos);
+    assert(result.find("document.querySelector('#main-container').addEventListener('mousemove'") != std::string::npos);
 }
 
 void test_module_resolver_path_searching() {
