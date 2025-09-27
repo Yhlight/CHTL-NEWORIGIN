@@ -40,6 +40,7 @@ std::string Generator::generate(
     SharedContext& context,
     bool outputDoctype,
     bool inline_mode,
+    bool default_struct,
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
@@ -52,15 +53,69 @@ std::string Generator::generate(
     this->jsOutputFilename = js_output_filename;
     this->mutableContext = &context;
 
-    if (outputDoctype) {
-        result += "<!DOCTYPE html>\n";
+    bool has_html_tag = false;
+    if (default_struct) {
+        for (const auto& root : roots) {
+            if (root->getType() == NodeType::Element) {
+                if (static_cast<ElementNode*>(root.get())->tagName == "html") {
+                    has_html_tag = true;
+                    break;
+                }
+            }
+        }
     }
 
-    for (auto& root : roots) {
-        generateNode(root.get());
+    if (default_struct && !has_html_tag) {
+        appendLine("<!DOCTYPE html>");
+        appendLine("<html>");
+        indent();
+        appendLine("<head>");
+        indent();
+        if (!globalCssToInject.empty()) {
+            if (inlineMode) {
+                appendLine("<style>");
+                indent();
+                append(globalCssToInject);
+                outdent();
+                appendLine("</style>");
+            } else {
+                appendLine("<link rel=\"stylesheet\" href=\"" + cssOutputFilename + "\">");
+            }
+        }
+        outdent();
+        appendLine("</head>");
+        appendLine("<body>");
+        indent();
+        for (auto& root : roots) {
+            generateNode(root.get());
+        }
+
+        if (!globalJsToInject.empty()) {
+             if (inlineMode) {
+                appendLine("<script>");
+                indent();
+                append(globalJsToInject);
+                outdent();
+                appendLine("</script>");
+            } else {
+                appendLine("<script src=\"" + jsOutputFilename + "\"></script>");
+            }
+        }
+        outdent();
+        appendLine("</body>");
+        outdent();
+        appendLine("</html>");
+
+    } else {
+        if (outputDoctype) {
+            result += "<!DOCTYPE html>\n";
+        }
+        for (auto& root : roots) {
+            generateNode(root.get());
+        }
     }
 
-    generateRuntimeScript(context); // This will now be part of the global JS.
+    generateRuntimeScript(context);
 
     return result;
 }

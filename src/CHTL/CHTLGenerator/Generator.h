@@ -26,6 +26,7 @@ public:
         SharedContext& context,
         bool outputDoctype,
         bool inline_mode,
+        bool default_struct,
         const std::string& css_output_filename,
         const std::string& js_output_filename
     );

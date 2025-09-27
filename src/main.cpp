@@ -11,27 +11,28 @@
 
 namespace fs = std::filesystem;
 
-// Helper function to derive output filenames from the input path.
-std::string get_base_filename(const std::string& input_path) {
-    fs::path path(input_path);
-    return path.stem().string();
-}
-
 // This main function serves as the entry point for the CHTL compiler.
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_file.chtl> [--inline]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <input_file.chtl> [--inline] [--default-struct]" << std::endl;
         return 1;
     }
 
     std::vector<std::string> args(argv + 1, argv + argc);
     bool inline_mode = false;
+    bool default_struct_mode = false;
     std::string input_file;
 
-    auto it = std::find(args.begin(), args.end(), "--inline");
-    if (it != args.end()) {
+    auto inline_it = std::find(args.begin(), args.end(), "--inline");
+    if (inline_it != args.end()) {
         inline_mode = true;
-        args.erase(it);
+        args.erase(inline_it);
+    }
+
+    auto struct_it = std::find(args.begin(), args.end(), "--default-struct");
+    if (struct_it != args.end()) {
+        default_struct_mode = true;
+        args.erase(struct_it);
     }
 
     if (args.empty()) {
@@ -51,39 +52,43 @@ int main(int argc, char* argv[]) {
     std::string chtlSource = buffer.str();
 
     try {
-        std::string base_filename = get_base_filename(input_file);
-        std::string html_filename = base_filename + ".html";
-        std::string css_filename = base_filename + ".css";
-        std::string js_filename = base_filename + ".js";
+        fs::path input_path_obj(input_file);
+        fs::path output_dir = input_path_obj.has_parent_path() ? input_path_obj.parent_path() : fs::current_path();
+        std::string base_filename = input_path_obj.stem().string();
+
+        fs::path html_filepath = output_dir / (base_filename + ".html");
+        fs::path css_filepath = output_dir / (base_filename + ".css");
+        fs::path js_filepath = output_dir / (base_filename + ".js");
 
         CompilerDispatcher dispatcher;
         CompilationResult result = dispatcher.compile(
             chtlSource,
             input_file,
             inline_mode,
-            css_filename,
-            js_filename
+            default_struct_mode,
+            css_filepath.filename().string(),
+            js_filepath.filename().string()
         );
 
         // Write the HTML file
-        std::ofstream html_file(html_filename);
+        std::ofstream html_file(html_filepath);
         html_file << result.html_content;
         html_file.close();
-        std::cout << "Generated " << html_filename << std::endl;
+        std::cout << "Generated " << html_filepath.string() << std::endl;
 
         // Write CSS and JS files if not inlining
         if (!inline_mode) {
             if (!result.css_content.empty()) {
-                std::ofstream css_file(css_filename);
+                std::ofstream css_file(css_filepath);
                 css_file << result.css_content;
                 css_file.close();
-                std::cout << "Generated " << css_filename << std::endl;
+                std::cout << "Generated " << css_filepath.string() << std::endl;
             }
             if (!result.js_content.empty()) {
-                std::ofstream js_file(js_filename);
+                std::ofstream js_file(js_filepath);
                 js_file << result.js_content;
                 js_file.close();
-                std::cout << "Generated " << js_filename << std::endl;
+                std::cout << "Generated " << js_filepath.string() << std::endl;
             }
         }
 

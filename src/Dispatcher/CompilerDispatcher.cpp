@@ -77,6 +77,7 @@ CompilationResult CompilerDispatcher::compile(
     const std::string& source,
     const std::string& source_path,
     bool inline_mode,
+    bool default_struct,
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
@@ -182,6 +183,7 @@ CompilationResult CompilerDispatcher::compile(
         parser.sharedContext,
         parser.outputHtml5Doctype,
         inline_mode,
+        default_struct,
         css_output_filename,
         js_output_filename
     );

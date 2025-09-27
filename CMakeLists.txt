@@ -101,5 +101,8 @@ add_executable(chtl_tests tests/main.cpp)
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)
 
+# Pass the build directory to the test executable as a preprocessor definition
+target_compile_definitions(chtl_tests PRIVATE CMAKE_BINARY_DIR="${CMAKE_BINARY_DIR}")
+
 # Add a test to CTest
 add_test(NAME RunCHTLTests COMMAND chtl_tests)

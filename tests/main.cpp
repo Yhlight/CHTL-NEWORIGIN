@@ -443,7 +443,6 @@ int main() {
     run_test(test_animation_block, "Animation Block");
     run_test(test_virtual_object_access, "Virtual Object Access");
 
-
     run_test(test_text_block_literals, "Text Block Literals");
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
     run_test(test_enhanced_selector, "Enhanced Selector");
@@ -990,6 +989,5 @@ void test_chtl_js_router() {}
 void test_dynamic_conditional_expression() {}
 void test_module_resolver_path_searching() {}
 void test_cmod_export_enforcement() {}
-void test_cli_inline_flag() {}
 void test_comprehensive_file() {}
 void test_precise_import_with_alias() {}
