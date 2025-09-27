@@ -29,6 +29,7 @@ class UseState;
 #include "ConfigurationState.h"
 #include "UseState.h"
 #include "InfoState.h"
+#include "CHTL/CHTLStrategy/ElementParsingStrategy.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -166,7 +167,8 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return parseTextElement(parser);
         }
         // Any other identifier is assumed to be an element tag.
-        return parseElement(parser);
+        ElementParsingStrategy strategy;
+        return strategy.parse(parser);
     } else if (parser.currentToken.type == TokenType::If) {
         return parseIfStatement(parser);
     } else if (parser.currentToken.type == TokenType::HashComment) {
@@ -254,117 +256,6 @@ std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
     return conditionalNode;
 }
 
-void StatementState::parseExceptClause(Parser& parser, ElementNode& element) {
-    // The 'except' keyword has already been consumed.
-
-    while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
-        Constraint constraint;
-
-        // Check for meta qualifiers like [Custom] or [Template]
-        if (parser.currentToken.type == TokenType::OpenBracket) {
-            std::stringstream ss;
-            ss << parser.currentToken.value; // Append '['
-            parser.advanceTokens();
-            ss << parser.currentToken.value; // Append 'Custom' or 'Template'
-            parser.advanceTokens();
-            ss << parser.currentToken.value; // Append ']'
-            parser.expectToken(TokenType::CloseBracket);
-            constraint.meta_qualifier = ss.str();
-        }
-
-        // Check for type qualifiers like @Html or @Element
-        if (parser.currentToken.type == TokenType::At) {
-            parser.advanceTokens(); // Consume '@'
-            constraint.type_qualifier = "@" + parser.currentToken.value;
-            parser.expectToken(TokenType::Identifier);
-
-            if (constraint.meta_qualifier.empty()) {
-                // This is a category constraint like `except @Html`
-                if (constraint.type_qualifier == "@Html") {
-                    constraint.type = ConstraintTargetType::HTML_CATEGORY;
-                } else {
-                    throw std::runtime_error("Category constraint with '@' must be '@Html'. Found '" + constraint.type_qualifier + "'.");
-                }
-            } else {
-                // This is a more specific category or a qualified name.
-                if (constraint.type_qualifier == "@Var" && constraint.meta_qualifier == "[Template]") {
-                    constraint.type = ConstraintTargetType::TEMPLATE_VAR_CATEGORY;
-                } else if (constraint.type_qualifier == "@Element" || constraint.type_qualifier == "@Style") {
-                    constraint.type = ConstraintTargetType::QUALIFIED_NAME;
-                    constraint.name = parser.currentToken.value; // The name of the element/style
-                    parser.expectToken(TokenType::Identifier);
-                } else {
-                    throw std::runtime_error("Unsupported type qualifier '" + constraint.type_qualifier + "' for constraint.");
-                }
-            }
-        } else if (!constraint.meta_qualifier.empty()) {
-            // This is a category constraint like `except [Template]`
-            if (constraint.meta_qualifier == "[Template]") {
-                constraint.type = ConstraintTargetType::TEMPLATE_CATEGORY;
-            } else if (constraint.meta_qualifier == "[Custom]") {
-                constraint.type = ConstraintTargetType::CUSTOM_CATEGORY;
-            } else {
-                 throw std::runtime_error("Unsupported meta qualifier '" + constraint.meta_qualifier + "' for constraint.");
-            }
-        } else if (parser.currentToken.type == TokenType::Identifier) {
-            // This is a simple tag name constraint
-            constraint.type = ConstraintTargetType::TAG_NAME;
-            constraint.name = parser.currentToken.value;
-            parser.advanceTokens();
-        } else {
-            throw std::runtime_error("Invalid token in 'except' clause: " + parser.currentToken.value);
-        }
-
-        element.constraints.push_back(constraint);
-
-        if (parser.currentToken.type == TokenType::Comma) {
-            parser.advanceTokens();
-        } else {
-            break; // End of list
-        }
-    }
-    parser.expectToken(TokenType::Semicolon);
-}
-
-
-// Parses a full element, including its body.
-std::unique_ptr<BaseNode> StatementState::parseElement(Parser& parser) {
-    auto element = std::make_unique<ElementNode>(parser.currentToken.value);
-    parser.expectToken(TokenType::Identifier);
-    parser.expectToken(TokenType::OpenBrace);
-
-    parseElementBody(parser, *element);
-
-    parser.expectToken(TokenType::CloseBrace);
-    return element;
-}
-
-// Parses the body of an element, dispatching to helpers for attributes, styles, or child nodes.
-void StatementState::parseElementBody(Parser& parser, ElementNode& element) {
-    // Set the context node so that child parsing can be aware of the parent.
-    parser.contextNode = &element;
-
-    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-        if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style" && parser.peekToken.type == TokenType::OpenBrace) {
-            StyleBlockState styleState;
-            styleState.handle(parser); // This will parse the entire style block.
-        } else if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "script" && parser.peekToken.type == TokenType::OpenBrace) {
-            parseScriptBlock(parser, element);
-        } else if (parser.tryExpectKeyword(TokenType::Except, "KEYWORD_EXCEPT", "except")) {
-            parseExceptClause(parser, element);
-        }
-        else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
-            parseAttribute(parser, element);
-        } else {
-            auto childNode = handle(parser);
-            if (childNode) {
-                 element.children.push_back(std::move(childNode));
-            }
-        }
-    }
-    // Reset the context node after parsing the body.
-    parser.contextNode = nullptr;
-}
 
 // Parses a 'text { ... }' block, allowing unquoted literals.
 std::unique_ptr<BaseNode> StatementState::parseTextElement(Parser& parser) {
@@ -393,45 +284,6 @@ std::unique_ptr<BaseNode> StatementState::parseComment(Parser& parser) {
     return comment;
 }
 
-// Parses an attribute 'key: value;'. The value is parsed as a style expression.
-void StatementState::parseAttribute(Parser& parser, ElementNode& element) {
-    std::string key = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-
-    if (parser.currentToken.type != TokenType::Colon && parser.currentToken.type != TokenType::Equals) {
-        throw std::runtime_error("Expected ':' or '=' after attribute key '" + key + "'.");
-    }
-    parser.advanceTokens(); // Consume ':' or '='
-
-    // Use the expression parser from StyleBlockState to ensure consistent parsing.
-    StyleBlockState tempStyleState;
-    StyleValue value = tempStyleState.parseStyleExpression(parser);
-
-    parser.expectToken(TokenType::Semicolon);
-
-    if (value.type == StyleValue::RESPONSIVE) {
-        if (element.attributes.find("id") == element.attributes.end()) {
-            StyleValue id_val;
-            id_val.type = StyleValue::STRING;
-            id_val.string_val = "chtl-id-" + std::to_string(parser.elementIdCounter++);
-            element.attributes["id"] = id_val;
-        }
-        std::string elementId = element.attributes["id"].string_val;
-
-        ResponsiveBinding binding;
-        binding.elementId = elementId;
-        binding.property = key;
-        binding.unit = value.unit;
-
-        parser.sharedContext.responsiveBindings[value.responsive_var_name].push_back(binding);
-    } else if (key == "text") {
-        // For the special 'text' attribute, convert the value to a string and create a TextNode.
-        element.children.push_back(std::make_unique<TextNode>(styleValueToString(value)));
-    } else {
-        // For all other attributes, store the parsed StyleValue.
-        element.attributes[key] = value;
-    }
-}
 
 void StatementState::parseTemplateDefinition(Parser& parser) {
     // 1. Expect [Template] or [Custom]
@@ -467,8 +319,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
         auto styleNode = std::make_unique<StyleTemplateNode>();
         styleNode->isCustom = isCustom;
         while (parser.currentToken.type != TokenType::CloseBrace) {
-            if (parser.currentToken.type == TokenType::Inherit || parser.currentToken.type == TokenType::At) {
-                // ... (inheritance logic remains the same)
+            if (parser.currentToken.type == TokenType::Inherit || (parser.currentToken.type == TokenType::At && parser.peekToken.value == "Style")) {
                 if (parser.currentToken.type == TokenType::Inherit) parser.advanceTokens();
                 parser.expectToken(TokenType::At);
                 if (parser.currentToken.value != "Style") throw std::runtime_error("Can only inherit from an @Style template.");
@@ -476,29 +327,23 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
                 std::string parentName = parser.currentToken.value;
                 parser.expectToken(TokenType::Identifier);
                 parser.expectToken(TokenType::Semicolon);
-                // Instead of copying styles, just record the parent's name.
                 styleNode->parentNames.push_back(parentName);
-            } else {
-                std::string key = parser.currentToken.value;
-                parser.expectToken(TokenType::Identifier);
-
-                // Handle 'delete' keyword for custom styles
-                if (isCustom && parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
-                    while (parser.currentToken.type != TokenType::Semicolon) {
-                        if (parser.currentToken.type != TokenType::Identifier) {
-                             throw std::runtime_error("Expected property name after 'delete'.");
-                        }
-                        styleNode->deletedProperties.push_back(parser.currentToken.value);
-                        parser.advanceTokens();
-                        if (parser.currentToken.type == TokenType::Comma) {
-                            parser.advanceTokens();
-                        }
+            } else if (isCustom && parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
+                while (parser.currentToken.type != TokenType::Semicolon) {
+                    if (parser.currentToken.type != TokenType::Identifier) {
+                            throw std::runtime_error("Expected property name after 'delete'.");
                     }
-                    parser.expectToken(TokenType::Semicolon);
-                    continue;
+                    styleNode->deletedProperties.push_back(parser.currentToken.value);
+                    parser.advanceTokens();
+                    if (parser.currentToken.type == TokenType::Comma) {
+                        parser.advanceTokens();
+                    }
                 }
+                parser.expectToken(TokenType::Semicolon);
+            } else if (parser.currentToken.type == TokenType::Identifier) {
+                std::string key = parser.currentToken.value;
+                parser.advanceTokens();
 
-                // Correctly handle valueless properties for custom templates
                 if (isCustom && parser.currentToken.type != TokenType::Colon) {
                     styleNode->valuelessProperties.push_back(key);
                     if (parser.currentToken.type == TokenType::Semicolon || parser.currentToken.type == TokenType::Comma) {
@@ -509,17 +354,20 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
 
                 parser.expectToken(TokenType::Colon);
 
-                // Use the powerful expression parser from StyleBlockState to handle
-                // complex values like calculations and variable references.
-                // We must provide a temporary context node because the expression
-                // parser may try to look up local properties.
                 StyleBlockState tempStyleState;
-                ElementNode tempContextNode(""); // Create a temporary, empty context.
+                ElementNode tempContextNode("");
+                auto* oldContext = parser.contextNode;
                 parser.contextNode = &tempContextNode;
-                styleNode->styles[key] = tempStyleState.parseStyleExpression(parser);
-                parser.contextNode = nullptr; // Reset the context.
 
-                if(parser.currentToken.type == TokenType::Semicolon) parser.advanceTokens();
+                styleNode->styles[key] = tempStyleState.parseStyleExpression(parser);
+
+                parser.contextNode = oldContext;
+
+                parser.expectToken(TokenType::Semicolon);
+            } else {
+                if (parser.currentToken.type != TokenType::CloseBrace) {
+                    throw std::runtime_error("Unexpected token in @Style definition: " + parser.currentToken.value);
+                }
             }
         }
         parser.templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
@@ -658,7 +506,7 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
 
 // Forward declarations for helpers
 void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment);
-void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment);
+void parseElementModificationInSpecialization(Parser& parser, FragmentNode& fragment);
 void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment);
 
 
@@ -671,7 +519,7 @@ void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNod
         } else if (parser.tryExpectKeyword(TokenType::Insert, "KEYWORD_INSERT", "insert")) {
             parseInsertInSpecialization(parser, fragment);
         } else if (parser.currentToken.type == TokenType::Identifier) {
-            parseStyleModificationInSpecialization(parser, fragment);
+            parseElementModificationInSpecialization(parser, fragment);
         } else {
             // To prevent infinite loops on unexpected tokens
             parser.advanceTokens();
@@ -681,7 +529,7 @@ void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNod
     parser.expectToken(TokenType::CloseBrace);
 }
 
-void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
+void StatementState::parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
     // The "insert" keyword has already been consumed by the caller.
 
     // 1. Parse position
@@ -754,14 +602,12 @@ void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
     }
 }
 
-void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
+void StatementState::parseElementModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
     std::string tagName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
 
     int index = 0; // Default to first element if no index provided
-    bool indexProvided = false;
     if (parser.currentToken.type == TokenType::OpenBracket) {
-        indexProvided = true;
         parser.advanceTokens();
         if (parser.currentToken.type != TokenType::Number) {
             throw std::runtime_error("Expected index number inside [].");
@@ -791,23 +637,23 @@ void parseStyleModificationInSpecialization(Parser& parser, FragmentNode& fragme
         throw std::runtime_error("Could not find element '" + tagName + "' with index " + std::to_string(index) + " to modify.");
     }
 
-    // Parse the modification block
+    // The block is a complete re-definition of the element's body.
     parser.expectToken(TokenType::OpenBrace);
-    while(parser.currentToken.type != TokenType::CloseBrace) {
-        if (parser.currentToken.type == TokenType::Identifier && parser.currentToken.value == "style") {
-            // Use the StyleBlockState to parse the style block, but with the targetNode as context.
-            parser.contextNode = targetNode;
-            StyleBlockState styleState;
-            styleState.handle(parser);
-            parser.contextNode = nullptr; // Reset context
-        } else {
-            throw std::runtime_error("Only 'style' blocks are allowed inside an element specialization.");
-        }
-    }
+
+    // Clear the original content of the node being specialized.
+    targetNode->attributes.clear();
+    targetNode->inlineStyles.clear();
+    targetNode->children.clear();
+    targetNode->constraints.clear();
+
+    // Parse the new body into the target node.
+    ElementParsingStrategy strategy;
+    strategy.parseElementBody(parser, *targetNode);
+
     parser.expectToken(TokenType::CloseBrace);
 }
 
-void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
+void StatementState::parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
     // The "delete" keyword has already been consumed by the caller.
     while (parser.currentToken.type != TokenType::Semicolon) {
         if (parser.currentToken.type == TokenType::At) {
@@ -911,10 +757,11 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
         // --- Definition: [Origin] @Type name { ... } ---
         parser.advanceTokens(); // Consume '{'
 
-        std::stringstream rawContent;
+        size_t contentStartPos = parser.currentToken.start_pos;
+        size_t contentEndPos = contentStartPos;
         int braceLevel = 1;
 
-        while (true) {
+        while (braceLevel > 0) {
             if (parser.currentToken.type == TokenType::EndOfFile) {
                 throw std::runtime_error("Unmatched braces in [Origin] block.");
             }
@@ -922,18 +769,20 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
                 braceLevel++;
             } else if (parser.currentToken.type == TokenType::CloseBrace) {
                 braceLevel--;
-                if (braceLevel == 0) {
-                    break; // Found the end, do not include the closing brace in content.
-                }
             }
-            rawContent << parser.currentToken.value;
-            parser.advanceTokens();
+
+            if (braceLevel > 0) {
+                parser.advanceTokens();
+            }
         }
+
+        contentEndPos = parser.currentToken.start_pos;
+        std::string rawContent = parser.lexer.getSource().substr(contentStartPos, contentEndPos - contentStartPos);
 
         // Consume the final '}'
         parser.expectToken(TokenType::CloseBrace);
 
-        auto originNode = std::make_unique<OriginNode>(type, rawContent.str(), name);
+        auto originNode = std::make_unique<OriginNode>(type, rawContent, name);
 
         // Store a clone in the manager for later use
         auto cloneForManager = NodeCloner::clone(originNode.get());

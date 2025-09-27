@@ -268,6 +268,17 @@ StyleValue StyleBlockState::parsePrimaryExpr(Parser& parser) {
     if (parser.currentToken.type == TokenType::Number) {
         std::string rawValue = parser.currentToken.value;
         parser.advanceTokens();
+
+        if (!isStyleValueTerminator(parser.currentToken.type)) {
+            std::stringstream ss;
+            ss << rawValue;
+            while(!isStyleValueTerminator(parser.currentToken.type)) {
+                ss << " " << parser.currentToken.value;
+                parser.advanceTokens();
+            }
+            return StyleValue(ss.str());
+        }
+
         size_t unit_pos = rawValue.find_first_not_of("-.0123456789");
         double value = std::stod(rawValue.substr(0, unit_pos));
         std::string unit = (unit_pos != std::string::npos) ? rawValue.substr(unit_pos) : "";

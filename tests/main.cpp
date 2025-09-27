@@ -364,7 +364,7 @@ void test_keyword_aliasing() {
 }
 
 void test_custom_origin_type() {
-    std::string source = R"([Configuration] { [OriginType] { ORIGINTYPE_VUE = @Vue; } } body { [Origin] @Vue my_vue { <div id="app">{{ message }}</div> }; })";
+    std::string source = R"([Configuration] { [OriginType] { ORIGINTYPE_VUE = @Vue; } } body { [Origin] @Vue my_vue { <div id="app">{{ message }}</div> } })";
     CompilerDispatcher dispatcher;
     CompilationResult result = dispatcher.compile(source, "", true);
     assert(result.html_content.find("<div id=\"app\">{{ message }}</div>") != std::string::npos);

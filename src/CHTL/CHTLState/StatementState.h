@@ -16,7 +16,6 @@ public:
 private:
     // Helper methods to parse specific types of statements.
     // These contain logic moved from the original Parser class.
-    std::unique_ptr<BaseNode> parseElement(Parser& parser);
     std::unique_ptr<BaseNode> parseTextElement(Parser& parser);
     std::unique_ptr<BaseNode> parseComment(Parser& parser);
     void parseTemplateDefinition(Parser& parser);
@@ -26,18 +25,14 @@ private:
 
     std::unique_ptr<BaseNode> parseElementTemplateUsage(Parser& parser);
 
-    // Helpers for parsing content within an element.
-    void parseElementBody(Parser& parser, ElementNode& element);
-    void parseAttribute(Parser& parser, ElementNode& element);
-
     // Helper for specializing an element template usage
     void parseElementSpecializationBlock(Parser& parser, FragmentNode& fragment);
+    void parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment);
+    void parseElementModificationInSpecialization(Parser& parser, FragmentNode& fragment);
+    void parseInsertInSpecialization(Parser& parser, FragmentNode& fragment);
 
     // Helper for parsing an import statement
     void parseImportStatement(Parser& parser);
-
-    // Helper for parsing an 'except' clause
-    void parseExceptClause(Parser& parser, ElementNode& element);
 
     // Helper for parsing an 'if' block
     std::unique_ptr<BaseNode> parseIfStatement(Parser& parser);
