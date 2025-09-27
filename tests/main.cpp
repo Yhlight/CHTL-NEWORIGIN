@@ -65,6 +65,8 @@ void test_namespace_nested_access();
 void test_namespace_automatic_on_import();
 void test_use_html5_directive();
 void test_use_named_configuration();
+void test_static_conditional_rendering();
+void test_dynamic_conditional_rendering();
 void test_text_block_literals();
 void test_unquoted_literal_support();
 void test_enhanced_selector();
@@ -425,6 +427,11 @@ int main() {
     run_test(test_use_html5_directive, "Use HTML5 Directive");
     run_test(test_use_named_configuration, "Use Named Configuration");
 
+    // --- Conditional Rendering Tests ---
+    std::cout << "\n--- Running Conditional Rendering Tests ---\n";
+    run_test(test_static_conditional_rendering, "Static Conditional Rendering");
+    run_test(test_dynamic_conditional_rendering, "Dynamic Conditional Rendering");
+
 
     run_test(test_text_block_literals, "Text Block Literals");
     run_test(test_unquoted_literal_support, "Unquoted Literal Support");
@@ -705,6 +712,49 @@ void test_use_html5_directive() {
     assert(result.html_content.rfind("<!DOCTYPE html>", 0) == 0);
 }
 
+void test_static_conditional_rendering() {
+    std::string source = R"(
+        div {
+            if {
+                condition: 5 > 10,
+                p { text: "Case 1: Should not appear"; }
+            } else if {
+                condition: 100 == 100,
+                p { text: "Case 2: Should appear"; }
+            } else {
+                p { text: "Case 3: Should not appear"; }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    assert(result.html_content.find("Case 1") == std::string::npos);
+    assert(result.html_content.find("Case 2: Should appear") != std::string::npos);
+    assert(result.html_content.find("Case 3") == std::string::npos);
+}
+
+void test_dynamic_conditional_rendering() {
+    std::string source = R"(
+        div {
+            script { let show = true; }
+            if {
+                condition: {{show}} == true,
+                span { text: "Dynamic Content"; }
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+
+    // Check that the wrapper div was created for the dynamic content
+    assert(result.html_content.find("<div id=\"chtl-dyn-render-") != std::string::npos);
+    assert(result.html_content.find("<span>Dynamic Content</span>") != std::string::npos);
+
+    // Check that the JS runtime script contains the binding logic
+    assert(result.js_content.find("__chtl.registerDynamicRendering") != std::string::npos);
+    assert(result.js_content.find("{{show}} == true") != std::string::npos);
+}
+
 void test_use_named_configuration() {
     std::string source = R"(
         [Configuration] @Config MyKeywords {
@@ -775,7 +825,6 @@ void test_colon_equal_equivalence_in_config() {}
 void test_colon_equal_equivalence_in_var_template() {}
 void test_style_property_power_operator() {}
 void test_style_property_modulo_operator() {}
-void test_conditional_rendering() {}
 void test_cmod_import() {}
 void test_compiler_dispatcher_full_workflow() {}
 void test_chtl_js_lexer_and_parser() {}
@@ -787,7 +836,6 @@ void test_chtl_js_virtual_object_declaration() {}
 void test_chtl_js_virtual_object_usage() {}
 void test_chtl_js_router() {}
 void test_dynamic_conditional_expression() {}
-void test_dynamic_conditional_rendering() {}
 void test_module_resolver_path_searching() {}
 void test_cmod_export_enforcement() {}
 void test_cli_inline_flag() {}
