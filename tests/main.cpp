@@ -426,6 +426,8 @@ int main() {
     run_test(test_style_property_power_operator, "Style Property Power Operator");
     run_test(test_style_property_modulo_operator, "Style Property Modulo Operator");
     run_test(test_chtl_js_listen_block, "CHTL JS Listen Block");
+    run_test(test_conditional_rendering, "Conditional Rendering");
+    run_test(test_chtl_js_event_binding_operator, "CHTL JS Event Binding Operator");
 
     cleanup_test_environment();
 
@@ -472,11 +474,52 @@ void test_style_property_modulo_operator() {
     CompilationResult result = dispatcher.compile(source, "", true);
     assert(result.html_content.find("width: 1px;") != std::string::npos);
 }
-void test_conditional_rendering() {}
+void test_conditional_rendering() {
+    // Test case where the condition is true
+    std::string source_true = R"(
+        div {
+            width: 200px;
+            if {
+                condition: width > 100px,
+                height: 150px,
+                display: block
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher_true;
+    CompilationResult result_true = dispatcher_true.compile(source_true, "", true);
+    assert(result_true.html_content.find("height: 150px;") != std::string::npos);
+    assert(result_true.html_content.find("display: block;") != std::string::npos);
+
+    // Test case where the condition is false
+    std::string source_false = R"(
+        div {
+            width: 50px;
+            if {
+                condition: width > 100px,
+                height: 150px
+            }
+        }
+    )";
+    CompilerDispatcher dispatcher_false;
+    CompilationResult result_false = dispatcher_false.compile(source_false, "", true);
+    assert(result_false.html_content.find("height: 150px;") == std::string::npos);
+}
 void test_cmod_import() {}
 void test_compiler_dispatcher_full_workflow() {}
 void test_chtl_js_lexer_and_parser() {}
-void test_chtl_js_event_binding_operator() {}
+void test_chtl_js_event_binding_operator() {
+    std::string source = R"(
+        button { id: my-btn; }
+        script {
+            {{#my-btn}} &-> click: () => { console.log("Bound!"); };
+        }
+    )";
+    CompilerDispatcher dispatcher;
+    CompilationResult result = dispatcher.compile(source, "", true);
+    std::string expected_js = R"(document.querySelector('#my-btn').addEventListener('click', () => { console.log("Bound!"); });)";
+    assert(remove_whitespace(result.js_content).find(remove_whitespace(expected_js)) != std::string::npos);
+}
 void test_chtl_js_delegate_block() {}
 void test_chtl_js_animate_block() {}
 void test_chtl_js_script_loader() {}

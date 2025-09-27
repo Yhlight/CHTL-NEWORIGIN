@@ -21,8 +21,17 @@ public:
     std::unique_ptr<BaseNode> handle(Parser& parser) override;
 
     // --- Expression Parsing (public so other states can use it) ---
+
+    // Parses a full style expression, which may include comma-separated fallbacks.
+    // This is the "greedy" top-level parsing function for a style property's value.
+    // Example: `width: 100px` or `background: width > 100px ? "green", red`
     StyleValue parseStyleExpression(Parser& parser);
     StyleValue parseDynamicConditionalExpression(Parser& parser);
+
+    // Parses a single conditional expression (e.g., `width > 100px ? "red" : "blue"`)
+    // or a simple boolean expression (`width > 100px`). This is NOT greedy and will
+    // stop at the first comma it encounters outside of parentheses. This is the correct
+    // function to use for parsing conditions in `if` blocks.
     StyleValue parseConditionalExpr(Parser& parser);
     StyleValue parseBooleanOrExpr(Parser& parser);
     StyleValue parseBooleanAndExpr(Parser& parser);

@@ -7,6 +7,7 @@
 #include <memory>
 #include "StyleValue.h"
 #include "Constraint.h"
+#include "ConditionalNode.h"
 
 // Represents an element node in the AST, e.g., html, body, div.
 class ElementNode : public BaseNode {
@@ -26,6 +27,9 @@ public:
 
     // A vector of child nodes. Using unique_ptr for memory management.
     std::vector<std::unique_ptr<BaseNode>> children;
+
+    // A vector of conditional blocks to be evaluated against this element.
+    std::vector<std::unique_ptr<ConditionalNode>> conditionalBlocks;
 
     // A list of constraints defining which child types are not allowed.
     std::vector<Constraint> constraints;

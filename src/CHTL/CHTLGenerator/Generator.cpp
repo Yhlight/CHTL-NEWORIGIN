@@ -89,53 +89,11 @@ void Generator::generateNode(BaseNode* node) {
         case NodeType::Script:
             // Script content is now handled by the dispatcher and passed in globalJs
             break;
-        case NodeType::Conditional:
-            generateConditional(static_cast<ConditionalNode*>(node));
-            break;
         case NodeType::Namespace:
             generateNamespace(static_cast<NamespaceNode*>(node));
             break;
         default:
             break;
-    }
-}
-
-void Generator::generateConditional(ConditionalNode* node) {
-    bool isDynamic = false;
-    for (const auto& conditionalCase : node->cases) {
-        if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
-            isDynamic = true;
-            break;
-        }
-    }
-
-    if (isDynamic) {
-        for (auto& conditionalCase : node->cases) {
-            if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
-                std::string wrapperId = "chtl-dyn-render-" + std::to_string(reinterpret_cast<uintptr_t>(&conditionalCase));
-                appendLine("<div id=\"" + wrapperId + "\">");
-                indent();
-                for (const auto& child : conditionalCase.children) {
-                    generateNode(child.get());
-                }
-                outdent();
-                appendLine("</div>");
-
-                DynamicRenderingBinding binding;
-                binding.elementId = wrapperId;
-                binding.expression = conditionalCase.condition.dynamic_expr;
-                mutableContext->dynamicRenderingBindings.push_back(binding);
-            }
-        }
-    } else {
-        for (const auto& conditionalCase : node->cases) {
-            if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
-                for (const auto& child : conditionalCase.children) {
-                    generateNode(child.get());
-                }
-                break;
-            }
-        }
     }
 }
 
@@ -147,6 +105,16 @@ void Generator::generateElement(ElementNode* node) {
         append(node->tagName + "{}");
         return;
     }
+
+    // Evaluate conditional blocks before generating styles
+    for (const auto& conditionalBlock : node->conditionalBlocks) {
+        if (conditionalBlock->condition && conditionalBlock->condition->type == StyleValue::BOOL && conditionalBlock->condition->bool_val) {
+            for (const auto& stylePair : conditionalBlock->styles) {
+                node->inlineStyles[stylePair.first] = stylePair.second;
+            }
+        }
+    }
+
     const std::vector<std::string> selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
     bool isSelfClosing = std::find(selfClosingTags.begin(), selfClosingTags.end(), node->tagName) != selfClosingTags.end();
 

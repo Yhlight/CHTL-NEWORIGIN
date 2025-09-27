@@ -47,7 +47,6 @@ private:
     void generateText(const TextNode* node);
     void generateComment(const CommentNode* node);
     void generateScript(const ScriptNode* node);
-    void generateConditional(ConditionalNode* node);
     void generateNamespace(NamespaceNode* node);
     void generateRuntimeScript(const SharedContext& context);
 
