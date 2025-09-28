@@ -1,27 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CHTL JS Test</title>
+    <title>CHTL JS Router Test</title>
 </head>
 <body>
-    <div class="box">Click me</div>
+    <nav>
+        <a href="#/">Home</a>
+        <a href="#/about">About</a>
+    </nav>
+
+    <main>
+        <div id="home-page">
+            <h1>Home Page</h1>
+            <p>Welcome to the home page!</p>
+        </div>
+        <div id="about-page" style="display: none;">
+            <h1>About Page</h1>
+            <p>This is the about page.</p>
+        </div>
+    </main>
 
     <script>
-// This is standard JavaScript
-const button = document.querySelector('#myButton');
-
-// Here comes some CHTL JS
-{{.box}}->Listen {
-    click: () => {
-        console.log('Box clicked via CHTL JS!');
-    },
-    mouseenter: mouseEnterHandler
+// CHTL JS Router block
+Router {
+    mode: 'hash',
+    url: '/',
+    page: {{#home-page}},
+    url: '/about',
+    page: {{#about-page}}
 };
 
-// Some more standard JS
-function mouseEnterHandler() {
-    console.log('Mouse entered the box!');
-}
+// Standard JS
+console.log('Router script loaded.');
     </script>
 </body>
 </html>

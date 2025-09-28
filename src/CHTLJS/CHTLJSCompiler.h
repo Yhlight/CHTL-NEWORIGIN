@@ -9,4 +9,7 @@ public:
 private:
     std::string compileSelectors(std::string source);
     std::string compileListenFunctions(std::string source);
+    std::string compileAnimateFunctions(std::string source);
+    std::string compileDelegateFunctions(std::string source);
+    std::string compileRouterFunctions(std::string source);
 };
