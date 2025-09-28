@@ -9,8 +9,9 @@ std::string UnifiedScanner::scan(const std::string& source) {
     std::string result = "";
     size_t current_pos = 0;
 
+    // `Vir` is separated from the lookahead group so it's matched as a standalone keyword.
     std::regex chtljs_regex(
-        R"(\{\{|\b(ScriptLoader|Listen|Delegate|Animate|Vir|Router|iNeverAway|util)\b(?=\s*\{)|&->|->)"
+        R"(\{\{|\b(ScriptLoader|Listen|Delegate|Animate|Router|iNeverAway|util)\b(?=\s*\{)|\bVir\b|&->|->)"
     );
     std::smatch match;
 

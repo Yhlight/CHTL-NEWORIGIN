@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CHTL JS Router Test</title>
+    <title>Mature CHTL JS Showcase</title>
+    <style>
+        body { font-family: sans-serif; }
+        nav a { margin-right: 10px; }
+        .page { display: none; }
+        .animated-box { width: 50px; height: 50px; background: steelblue; }
+        #home-page button { margin-top: 10px; }
+    </style>
 </head>
 <body>
     <nav>
@@ -10,28 +17,53 @@
     </nav>
 
     <main>
-        <div id="home-page">
-            <h1>Home Page</h1>
-            <p>Welcome to the home page!</p>
+        <div id="home-page" class="page">
+            <h1>Home</h1>
+            <p>Click the box to see it animate.</p>
+            <div class="animated-box"></div>
         </div>
-        <div id="about-page" style="display: none;">
-            <h1>About Page</h1>
-            <p>This is the about page.</p>
+        <div id="about-page" class="page">
+            <h1>About</h1>
+            <p>This is a showcase of the mature CHTL JS compiler.</p>
         </div>
     </main>
 
     <script>
-// CHTL JS Router block
-Router {
-    mode: 'hash',
-    url: '/',
-    page: {{#home-page}},
-    url: '/about',
-    page: {{#about-page}}
+// Load an external script
+ScriptLoader {
+    load: './utils.js';
 };
 
-// Standard JS
-console.log('Router script loaded.');
+// Define a reusable virtual configuration object
+Vir animConfig = {
+    duration: 1500,
+    easing: 'ease-in-out'
+};
+
+// Define an event handler
+function handleBoxClick(event) {
+    console.log('Animation started on:', event.target);
+    Animate {
+        target: {{.animated-box}},
+        duration: animConfig->duration, // Use the virtual object
+        easing: animConfig->easing,
+        begin: { transform: 'scale(1) rotate(0deg)' },
+        end: { transform: 'scale(1.5) rotate(270deg)' }
+    };
+}
+
+// Set up the router
+Router {
+    mode: 'hash',
+    url: '/',       page: {{#home-page}},
+    url: '/about',  page: {{#about-page}}
+};
+
+// Use event delegation on the home page
+{{#home-page}}->Delegate {
+    target: '.animated-box',
+    click: handleBoxClick
+};
     </script>
 </body>
 </html>

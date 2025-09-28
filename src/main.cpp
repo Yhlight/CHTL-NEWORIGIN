@@ -1,6 +1,7 @@
 #include "Scanner/UnifiedScanner.h"
 #include "CHTLJS/CHTLJSCompiler.h"
 #include "Core/CodeMerger.h"
+#include "Core/CHTLJSPreprocessor.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -47,8 +48,9 @@ int main() {
     UnifiedScanner scanner;
     CHTLJSCompiler compiler;
     CodeMerger merger;
+    CHTLJSPreprocessor preprocessor;
 
-    // 1. Scan the code
+    // 1. Scan the code to separate CHTL JS from standard JS
     std::string scanned_output = scanner.scan(source_code);
 
     // 2. Compile the CHTL JS parts
@@ -56,11 +58,14 @@ int main() {
 
     // 3. Merge the compiled parts with the original JS
     const auto& placeholders = scanner.getPlaceholders();
-    std::string final_code = merger.merge(compiled_output, placeholders);
+    std::string merged_code = merger.merge(compiled_output, placeholders);
 
-    std::cout << "\n--- Final Merged Code ---" << '\n';
-    std::cout << final_code << '\n';
-    std::cout << "-------------------------" << '\n';
+    // 4. Preprocess the final merged code for Vir objects
+    preprocessor.process(merged_code);
+
+    std::cout << "\n--- Final Processed Code ---" << '\n';
+    std::cout << merged_code << '\n';
+    std::cout << "--------------------------" << '\n';
 
     return 0;
 }

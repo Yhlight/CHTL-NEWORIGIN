@@ -2,6 +2,7 @@
 #include "../catch.hpp"
 #include "../src/CHTLJS/CHTLJSCompiler.h"
 #include <string>
+#include <algorithm>
 
 // Helper to remove whitespace for easier comparison
 std::string remove_whitespace(std::string str) {
@@ -15,23 +16,24 @@ std::string remove_whitespace(std::string str) {
 TEST_CASE("CHTLJSCompiler tests", "[compiler]") {
     CHTLJSCompiler compiler;
 
-    SECTION("Animate function compilation") {
+    SECTION("Enhanced Animate function compilation") {
         std::string source = R"RAW(
             Animate {
                 target: {{.my-div}},
-                duration: 500,
+                duration: 1000,
+                easing: 'ease-out',
+                loop: -1,
+                when: [ {at: 0.5, transform: 'scale(1.1)'} ],
                 end: { opacity: '0' }
             };
         )RAW";
         std::string result = compiler.compile(source);
         std::string expected = R"JS(
-            (function() {
-                const target_elem = document.querySelector('.my-div');
-                if (!target_elem) return;
-                setTimeout(() => {
-                    target_elem.style.opacity = '0';
-                }, 500);
-            })();
+            const target_elem = document.querySelector('.my-div');
+            if (target_elem) {
+                const keyframes = [ { offset: 0.5, transform: 'scale(1.1)' }, { opacity: '0' } ];
+                const animation = target_elem.animate(keyframes, { duration: 1000, easing: 'ease-out', iterations: Infinity });
+            }
         )JS";
         REQUIRE(remove_whitespace(result) == remove_whitespace(expected));
     }
@@ -85,6 +87,26 @@ TEST_CASE("CHTLJSCompiler tests", "[compiler]") {
             }
             window.addEventListener('hashchange', navigate);
             navigate(); // Initial navigation
+        )JS";
+        REQUIRE(remove_whitespace(result) == remove_whitespace(expected));
+    }
+
+    SECTION("ScriptLoader function compilation") {
+        std::string source = R"RAW(
+            ScriptLoader {
+                load: './a.js', ./b.js;
+            };
+        )RAW";
+        std::string result = compiler.compile(source);
+        std::string expected = R"JS(
+            (function() {
+              const script0 = document.createElement('script');
+              script0.src = './a.js';
+              document.head.appendChild(script0);
+              const script1 = document.createElement('script');
+              script1.src = './b.js';
+              document.head.appendChild(script1);
+            })();
         )JS";
         REQUIRE(remove_whitespace(result) == remove_whitespace(expected));
     }
