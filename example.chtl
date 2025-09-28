@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CHTL JS Test</title>
+</head>
+<body>
+    <div class="box">Click me</div>
+
+    <script>
+// This is standard JavaScript
+const button = document.querySelector('#myButton');
+
+// Here comes some CHTL JS
+{{.box}}->Listen {
+    click: () => {
+        console.log('Box clicked via CHTL JS!');
+    },
+    mouseenter: mouseEnterHandler
+};
+
+// Some more standard JS
+function mouseEnterHandler() {
+    console.log('Mouse entered the box!');
+}
+    </script>
+</body>
+</html>
