@@ -27,6 +27,7 @@ set(CHTL_SOURCES
     src/CHTL_JS/CHTLJSNode/EventBindingNode.cpp
     src/CHTL_JS/CHTLJSNode/DelegateNode.cpp
     src/CHTL_JS/CHTLJSNode/AnimateNode.cpp
+    src/CHTL_JS/CHTLJSNode/CHTLJSPlaceholderNode.cpp
     src/CHTL_JS/CHTLJSNode/ScriptLoaderNode.cpp
     src/CHTL_JS/CHTLJSNode/VirtualObjectNode.cpp
     src/CHTL_JS/CHTLJSNode/VirtualObjectAccessNode.cpp

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 class DelegateNode : public CHTLJSNode {
 public:
@@ -14,6 +15,6 @@ public:
     std::vector<std::string> target_selectors;
 
     // A map where the key is the event name (e.g., "click")
-    // and the value is the raw string of the handler function.
-    std::map<std::string, std::string> event_handlers;
+    // and the value is a vector of nodes representing the handler's body.
+    std::map<std::string, std::vector<std::unique_ptr<CHTLJSNode>>> event_handlers;
 };

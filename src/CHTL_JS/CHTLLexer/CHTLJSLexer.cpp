@@ -80,6 +80,7 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
 
         std::string word = source.substr(start, position - start);
 
+        if (word == "_JS_CODE_PLACEHOLDER_") return {CHTLJSTokenType::Placeholder, word};
         if (word == "ScriptLoader") return {CHTLJSTokenType::ScriptLoader, word};
         if (word == "Vir") return {CHTLJSTokenType::Vir, word};
         if (word == "Router") return {CHTLJSTokenType::Router, word};

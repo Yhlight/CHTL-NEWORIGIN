@@ -10,6 +10,7 @@
 #include "../CHTLJSNode/VirtualObjectNode.h"
 #include "../CHTLJSNode/VirtualObjectAccessNode.h"
 #include "../CHTLJSNode/RouterNode.h"
+#include "../CHTLJSNode/CHTLJSPlaceholderNode.h"
 #include <vector>
 #include <memory>
 
@@ -25,6 +26,8 @@ private:
 
     CHTLJSToken currentToken() const;
     void advance();
+    std::unique_ptr<CHTLJSNode> parseNode();
+    std::vector<std::unique_ptr<CHTLJSNode>> parseBlock(CHTLJSTokenType closing_token);
     std::map<std::string, std::string> parseStyleMap();
     std::vector<AnimationKeyframe> parseKeyframeArray();
 

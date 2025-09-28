@@ -15,6 +15,7 @@ enum class CHTLJSTokenType {
     ScriptLoader,     // ScriptLoader keyword
     Vir,              // Vir keyword for virtual objects
     Router,           // Router keyword
+    Placeholder,      // A block of raw JavaScript code
     ReservedPlaceholder, // __CHTL_RESERVED_PLACEHOLDER__{...}__
 
     // General tokens

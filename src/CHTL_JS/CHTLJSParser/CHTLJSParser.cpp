@@ -28,75 +28,86 @@ void CHTLJSParser::advance() {
 
 std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
     std::vector<std::unique_ptr<CHTLJSNode>> nodes;
-
     while (currentToken().type != CHTLJSTokenType::EndOfFile) {
-        const auto& token = currentToken();
-        switch (token.type) {
-            case CHTLJSTokenType::Router:
-                nodes.push_back(parseRouterBlock());
-                break;
-            case CHTLJSTokenType::Vir:
-                nodes.push_back(parseVirtualObjectDeclaration());
-                break;
-            case CHTLJSTokenType::ScriptLoader:
-                nodes.push_back(parseScriptLoaderBlock());
-                break;
-            case CHTLJSTokenType::OpenDoubleBrace: {
+        nodes.push_back(parseNode());
+    }
+    return nodes;
+}
+
+std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parseBlock(CHTLJSTokenType closing_token) {
+    std::vector<std::unique_ptr<CHTLJSNode>> nodes;
+    while (currentToken().type != closing_token && currentToken().type != CHTLJSTokenType::EndOfFile) {
+        nodes.push_back(parseNode());
+    }
+    return nodes;
+}
+
+std::unique_ptr<CHTLJSNode> CHTLJSParser::parseNode() {
+    const auto& token = currentToken();
+    switch (token.type) {
+        case CHTLJSTokenType::Placeholder:
+        case CHTLJSTokenType::ReservedPlaceholder: {
+            auto node = std::make_unique<CHTLJSPlaceholderNode>(token.value);
+            advance();
+            return node;
+        }
+        case CHTLJSTokenType::Router:
+            return parseRouterBlock();
+        case CHTLJSTokenType::Vir:
+            return parseVirtualObjectDeclaration();
+        case CHTLJSTokenType::ScriptLoader:
+            return parseScriptLoaderBlock();
+        case CHTLJSTokenType::OpenDoubleBrace: {
+            advance();
+            if (currentToken().type != CHTLJSTokenType::Identifier) {
+                throw std::runtime_error("Expected identifier inside enhanced selector.");
+            }
+            auto node = std::make_unique<CHTLJSEnhancedSelectorNode>(currentToken().value);
+            advance();
+            if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) {
+                throw std::runtime_error("Unclosed enhanced selector.");
+            }
+            advance();
+            return node;
+        }
+        case CHTLJSTokenType::Arrow: {
+             advance();
+             if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Listen") {
+                return parseListenBlock();
+             } else if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Delegate") {
+                return parseDelegateBlock();
+             } else {
+                throw std::runtime_error("Unexpected token after '->'");
+             }
+        }
+        case CHTLJSTokenType::EventBindingOperator: {
+            auto node = parseEventBinding();
+            if (currentToken().type == CHTLJSTokenType::Semicolon) {
+                advance();
+            }
+            return node;
+        }
+        case CHTLJSTokenType::Identifier: {
+             if (position + 1 < tokens.size() && tokens[position + 1].type == CHTLJSTokenType::Arrow) {
+                std::string objectName = currentToken().value;
+                advance();
                 advance();
                 if (currentToken().type != CHTLJSTokenType::Identifier) {
-                    throw std::runtime_error("Expected identifier inside enhanced selector.");
+                    throw std::runtime_error("Expected identifier after '->' for virtual object access.");
                 }
-                nodes.push_back(std::make_unique<CHTLJSEnhancedSelectorNode>(currentToken().value));
+                std::string propertyName = currentToken().value;
                 advance();
-                if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) {
-                    throw std::runtime_error("Unclosed enhanced selector.");
-                }
-                advance();
-                break;
+                return std::make_unique<VirtualObjectAccessNode>(objectName, propertyName);
             }
-            case CHTLJSTokenType::Arrow: {
-                 advance();
-                 if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Listen") {
-                    nodes.push_back(parseListenBlock());
-                 } else if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Delegate") {
-                    nodes.push_back(parseDelegateBlock());
-                 } else {
-                    throw std::runtime_error("Unexpected token after '->'");
-                 }
-                 break;
+            else if (currentToken().value == "Animate") {
+                return parseAnimateBlock();
+            } else {
+                throw std::runtime_error("Unexpected identifier: " + currentToken().value);
             }
-            case CHTLJSTokenType::EventBindingOperator: {
-                nodes.push_back(parseEventBinding());
-                if (currentToken().type == CHTLJSTokenType::Semicolon) {
-                    advance();
-                }
-                break;
-            }
-            case CHTLJSTokenType::Identifier: {
-                 if (position + 1 < tokens.size() && tokens[position + 1].type == CHTLJSTokenType::Arrow) {
-                    std::string objectName = currentToken().value;
-                    advance();
-                    advance();
-                    if (currentToken().type != CHTLJSTokenType::Identifier) {
-                        throw std::runtime_error("Expected identifier after '->' for virtual object access.");
-                    }
-                    std::string propertyName = currentToken().value;
-                    advance();
-                    nodes.push_back(std::make_unique<VirtualObjectAccessNode>(objectName, propertyName));
-                }
-                else if (currentToken().value == "Animate") {
-                    nodes.push_back(parseAnimateBlock());
-                } else {
-                    throw std::runtime_error("Unexpected identifier: " + currentToken().value);
-                }
-                break;
-            }
-            default:
-                throw std::runtime_error("Unexpected token: " + token.value);
         }
+        default:
+            throw std::runtime_error("Unexpected token: " + token.value);
     }
-
-    return nodes;
 }
 
 std::unique_ptr<RouterNode> CHTLJSParser::parseRouterBlock() {
@@ -242,11 +253,12 @@ std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {
     if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after event name(s) in event binding.");
     advance();
 
-    if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder) throw std::runtime_error("Expected a reserved placeholder for the event handler.");
-    std::string handler_code = currentToken().value;
-    advance();
+    std::vector<std::unique_ptr<CHTLJSNode>> handler_body;
+    while (currentToken().type != CHTLJSTokenType::Semicolon && currentToken().type != CHTLJSTokenType::EndOfFile) {
+        handler_body.push_back(parseNode());
+    }
 
-    return std::make_unique<EventBindingNode>(event_names, handler_code);
+    return std::make_unique<EventBindingNode>(event_names, std::move(handler_body));
 }
 
 std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {
@@ -263,9 +275,11 @@ std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {
         if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after event name in Listen block.");
         advance();
 
-        if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder) throw std::runtime_error("Expected a reserved placeholder for the event handler.");
-        listenNode->event_handlers[eventName] = currentToken().value;
-        advance();
+        std::vector<std::unique_ptr<CHTLJSNode>> handler_body;
+        while (currentToken().type != CHTLJSTokenType::Comma && currentToken().type != CHTLJSTokenType::CloseBrace) {
+            handler_body.push_back(parseNode());
+        }
+        listenNode->event_handlers[eventName] = std::move(handler_body);
 
         if (currentToken().type == CHTLJSTokenType::Comma) advance();
     }
@@ -312,9 +326,11 @@ std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
                 parse_single_target();
             }
         } else {
-            if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder) throw std::runtime_error("Expected a reserved placeholder for the event handler.");
-            delegateNode->event_handlers[key] = currentToken().value;
-            advance();
+            std::vector<std::unique_ptr<CHTLJSNode>> handler_body;
+            while (currentToken().type != CHTLJSTokenType::Comma && currentToken().type != CHTLJSTokenType::CloseBrace) {
+                handler_body.push_back(parseNode());
+            }
+            delegateNode->event_handlers[key] = std::move(handler_body);
         }
     };
 
@@ -416,14 +432,21 @@ std::unique_ptr<AnimateNode> CHTLJSParser::parseAnimateBlock() {
             if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder && currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::StringLiteral) {
                  throw std::runtime_error("Expected a placeholder, identifier, or string for animate property value.");
             }
-            std::string value = currentToken().value;
-            advance();
-            if (key == "duration") animateNode->duration = std::stoi(value);
-            else if (key == "easing") animateNode->easing = value;
-            else if (key == "loop") animateNode->loop = std::stoi(value);
-            else if (key == "direction") animateNode->direction = value;
-            else if (key == "delay") animateNode->delay = std::stoi(value);
-            else if (key == "callback") animateNode->callback = value;
+            if (key == "callback") {
+                std::vector<std::unique_ptr<CHTLJSNode>> callback_body;
+                while (currentToken().type != CHTLJSTokenType::Comma && currentToken().type != CHTLJSTokenType::CloseBrace) {
+                    callback_body.push_back(parseNode());
+                }
+                animateNode->callback = std::move(callback_body);
+            } else {
+                std::string value = currentToken().value;
+                advance();
+                if (key == "duration") animateNode->duration = std::stoi(value);
+                else if (key == "easing") animateNode->easing = value;
+                else if (key == "loop") animateNode->loop = std::stoi(value);
+                else if (key == "direction") animateNode->direction = value;
+                else if (key == "delay") animateNode->delay = std::stoi(value);
+            }
         }
 
         if (currentToken().type == CHTLJSTokenType::Comma) advance();

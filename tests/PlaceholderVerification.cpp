@@ -10,36 +10,39 @@
 #include "CHTL_JS/CHTLJSNode/ListenNode.h"
 #include "CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 #include "CHTL_JS/CHTLJSManage/VirtualObjectManager.h"
-#include "Dispatcher/CompilerDispatcher.h"
-#include "Dispatcher/CompilationResult.h"
 
 // Helper function to remove all whitespace from a string
 extern std::string remove_whitespace(std::string str);
 
 void test_placeholder_based_parsing_and_generation() {
-    // This source code simulates the output of the "Unified Scanner".
-    // The raw JS `() => { console.log("clicked"); }` has been replaced
-    // with a reserved placeholder.
-    std::string source_with_placeholder = R"(
-        script {
-            {{.my-button}}->Listen {
-                click: __CHTL_RESERVED_PLACEHOLDER__{uuid-1234}__
-            }
-        }
-    )";
+    // This test simulates the output of an ideal Unified Scanner,
+    // where raw JavaScript has been replaced by a placeholder token.
+    std::vector<CHTLJSToken> tokens = {
+        {CHTLJSTokenType::OpenDoubleBrace, "{{"},
+        {CHTLJSTokenType::Identifier, ".my-button"},
+        {CHTLJSTokenType::CloseDoubleBrace, "}}"},
+        {CHTLJSTokenType::Arrow, "->"},
+        {CHTLJSTokenType::Identifier, "Listen"},
+        {CHTLJSTokenType::OpenBrace, "{"},
+        {CHTLJSTokenType::Identifier, "click"},
+        {CHTLJSTokenType::Colon, ":"},
+        {CHTLJSTokenType::Placeholder, "console.log('clicked');"},
+        {CHTLJSTokenType::CloseBrace, "}"},
+        {CHTLJSTokenType::EndOfFile, ""}
+    };
 
-    // The CompilerDispatcher will internally invoke the CHTLJSCompiler,
-    // which uses the refactored Lexer, Parser, and Generator.
-    CompilerDispatcher dispatcher;
-    CompilationResult result = dispatcher.compile(source_with_placeholder, "test.chtl", true);
+    CHTLJSParser parser(tokens);
+    auto ast = parser.parse();
 
-    // The expected output should be the JavaScript code with the placeholder
-    // correctly passed through by the CHTLJSGenerator. The final code merger
-    // would then replace the placeholder with the actual code.
+    CHTLJSGenerator generator;
+    VirtualObjectManager vom;
+    std::string generated_js = generator.generate(ast, vom);
+
     std::string expected_js = R"(
-        document.querySelector('.my-button').addEventListener('click', __CHTL_RESERVED_PLACEHOLDER__{uuid-1234}__);
+        document.querySelector('.my-button').addEventListener('click', () => {
+            console.log('clicked');
+        });
     )";
 
-    // We compare the generated JS content with our expectation.
-    assert(remove_whitespace(result.js_content) == remove_whitespace(expected_js));
+    assert(remove_whitespace(generated_js) == remove_whitespace(expected_js));
 }

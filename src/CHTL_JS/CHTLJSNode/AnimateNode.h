@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <optional>
+#include <memory>
 
 // Represents a single keyframe in an animation's 'when' block.
 struct AnimationKeyframe {
@@ -25,7 +26,7 @@ public:
     std::optional<int> loop;
     std::optional<std::string> direction;
     std::optional<int> delay;
-    std::optional<std::string> callback;
+    std::optional<std::vector<std::unique_ptr<CHTLJSNode>>> callback;
 
     // Style blocks
     std::map<std::string, std::string> begin_styles;
