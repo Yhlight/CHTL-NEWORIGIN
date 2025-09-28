@@ -9,83 +9,95 @@
 #include "../CHTLJSNode/VirtualObjectAccessNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
 #include "../CHTLJSNode/RouterNode.h"
+#include "../CHTLJSNode/ReservedPlaceholderNode.h"
 #include <sstream>
 #include <stdexcept>
 
-std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNode>>& ast, const VirtualObjectManager& vom) {
+// This is the new private member function to resolve placeholders.
+std::string CHTLJSGenerator::resolve_handler(const std::string& handler_code) const {
+    if (handler_code.rfind("_JS_CODE_PLACEHOLDER_", 0) == 0) {
+        try {
+            return this->placeholder_manager->getContent(handler_code);
+        } catch (const std::runtime_error&) {
+            return "\"" + handler_code + "_NOT_FOUND\"";
+        }
+    }
+    return handler_code;
+}
+
+std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNode>>& ast, const VirtualObjectManager& vom, const Placeholder& placeholder_manager) {
     this->vom = &vom;
+    this->placeholder_manager = &placeholder_manager;
     std::stringstream final_code;
-    std::string last_expression;
+    std::string last_selector;
 
     scriptLoaderInjected = false;
     routerInjected = false;
 
     for (const auto& node : ast) {
         if (node->getType() == CHTLJSNodeType::Listen) {
-            if (last_expression.empty()) {
+            if (last_selector.empty()) {
                 throw std::runtime_error("Listen block must be preceded by an enhanced selector.");
             }
             const auto* listenNode = static_cast<const ListenNode*>(node.get());
-            for (const auto& pair : listenNode->event_handlers) {
-                final_code << last_expression << ".addEventListener('" << pair.first << "', " << pair.second << ");\n";
+            if (listenNode->event_handlers.empty()) {
+                 // Correctly handle empty blocks by doing nothing and consuming the selector.
+            } else {
+                for (const auto& pair : listenNode->event_handlers) {
+                    final_code << last_selector << ".addEventListener('" << pair.first << "', " << resolve_handler(pair.second) << ");\n";
+                }
             }
-            last_expression.clear();
+            last_selector.clear();
         } else if (node->getType() == CHTLJSNodeType::EventBinding) {
-            if (last_expression.empty()) {
-                throw std::runtime_error("Event binding operator must be preceded by an enhanced selector.");
+            if (last_selector.empty()) {
+                throw std::runtime_error("Event binding must be preceded by an enhanced selector.");
             }
             const auto* bindingNode = static_cast<const EventBindingNode*>(node.get());
             for (const auto& event_name : bindingNode->event_names) {
-                final_code << last_expression << ".addEventListener('" << event_name << "', " << bindingNode->handler_code << ");\n";
+                final_code << last_selector << ".addEventListener('" << event_name << "', " << resolve_handler(bindingNode->handler_code) << ");\n";
             }
-            last_expression.clear();
+            last_selector.clear();
         } else if (node->getType() == CHTLJSNodeType::Delegate) {
-            if (last_expression.empty()) {
+            if (last_selector.empty()) {
                 throw std::runtime_error("Delegate block must be preceded by an enhanced selector.");
             }
             const auto* delegateNode = static_cast<const DelegateNode*>(node.get());
             std::string parent_element_var = "parent_for_delegation_" + std::to_string(reinterpret_cast<uintptr_t>(delegateNode));
-            final_code << "const " << parent_element_var << " = " << last_expression << ";\n";
-
+            final_code << "const " << parent_element_var << " = " << last_selector << ";\n";
             for (const auto& pair : delegateNode->event_handlers) {
-                final_code << parent_element_var << ".addEventListener('" << pair.first << "', (event) => {\n";
-                final_code << "  let target = event.target;\n";
-                final_code << "  while (target && target !== " << parent_element_var << ") {\n";
-
-                std::string condition;
-                for(size_t i = 0; i < delegateNode->target_selectors.size(); ++i) {
-                    if (i > 0) condition += " || ";
-                    condition += "target.matches('" + delegateNode->target_selectors[i] + "')";
-                }
-
-                final_code << "    if (" << condition << ") {\n";
-                final_code << "      (" << pair.second << ").call(target, event);\n";
-                final_code << "      break;\n";
-                final_code << "    }\n";
-                final_code << "    target = target.parentNode;\n";
-                final_code << "  }\n";
-                final_code << "});\n";
+                 final_code << parent_element_var << ".addEventListener('" << pair.first << "', (event) => {\n";
+                 final_code << "  let target = event.target;\n";
+                 final_code << "  while (target && target !== " << parent_element_var << ") {\n";
+                 std::string condition;
+                 for(size_t i = 0; i < delegateNode->target_selectors.size(); ++i) {
+                     if (i > 0) condition += " || ";
+                     condition += "target.matches('" + delegateNode->target_selectors[i] + "')";
+                 }
+                 final_code << "    if (" << condition << ") {\n";
+                 final_code << "      (" << resolve_handler(pair.second) << ").call(target, event);\n";
+                 final_code << "      break;\n";
+                 final_code << "    }\n";
+                 final_code << "    target = target.parentNode;\n";
+                 final_code << "  }\n";
+                 final_code << "});\n";
             }
-            last_expression.clear();
-        }
-        else {
-            if (!last_expression.empty()) {
-                final_code << last_expression;
-                last_expression.clear();
+            last_selector.clear();
+        } else {
+            if (!last_selector.empty()) {
+                final_code << last_selector << ";\n";
+                last_selector.clear();
             }
-
-            std::string current_code = generateNode(node.get());
 
             if (node->getType() == CHTLJSNodeType::EnhancedSelector) {
-                last_expression = current_code;
+                last_selector = generateNode(node.get());
             } else {
-                final_code << current_code;
+                final_code << generateNode(node.get());
             }
         }
     }
 
-    if (!last_expression.empty()) {
-        final_code << last_expression << ";\n";
+    if (!last_selector.empty()) {
+        final_code << last_selector << ";\n";
     }
 
     return final_code.str();
@@ -221,6 +233,10 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
     if (!node) return "";
 
     switch (node->getType()) {
+        case CHTLJSNodeType::ReservedPlaceholder: {
+            const auto* placeholderNode = static_cast<const ReservedPlaceholderNode*>(node);
+            return placeholder_manager->getContent(placeholderNode->placeholder);
+        }
         case CHTLJSNodeType::Router:
             return generateRouter(static_cast<const RouterNode*>(node));
         case CHTLJSNodeType::ScriptLoader:
@@ -229,7 +245,8 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             return static_cast<const RawJavaScriptNode*>(node)->js_code;
         }
         case CHTLJSNodeType::EnhancedSelector: {
-            return "document.querySelector('" + static_cast<const CHTLJSEnhancedSelectorNode*>(node)->selector_text + "')";
+            const auto* selectorNode = static_cast<const CHTLJSEnhancedSelectorNode*>(node);
+            return "document.querySelector('" + selectorNode->selector_text + "')";
         }
         case CHTLJSNodeType::VirtualObjectAccess: {
             const auto* accessNode = static_cast<const VirtualObjectAccessNode*>(node);
@@ -243,7 +260,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
                 const auto* listenNode = static_cast<const ListenNode*>(valueNode);
                 auto it = listenNode->event_handlers.find(accessNode->propertyName);
                 if (it != listenNode->event_handlers.end()) {
-                    return it->second;
+                    return resolve_handler(it->second);
                 }
             }
             throw std::runtime_error("Property '" + accessNode->propertyName + "' not found in virtual object '" + accessNode->objectName + "'.");
@@ -254,16 +271,16 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             ss << "{\n";
             if (animateNode->target) ss << "  target: document.querySelector('" << *animateNode->target << "'),\n";
             if (animateNode->duration) ss << "  duration: " << *animateNode->duration << ",\n";
-            if (animateNode->easing) ss << "  easing: '" << *animateNode->easing << "',\n";
+            if (animateNode->easing) ss << "  easing: '" << resolve_handler(*animateNode->easing) << "',\n";
             if (animateNode->loop) ss << "  loop: " << *animateNode->loop << ",\n";
-            if (animateNode->direction) ss << "  direction: '" << *animateNode->direction << "',\n";
+            if (animateNode->direction) ss << "  direction: '" << resolve_handler(*animateNode->direction) << "',\n";
             if (animateNode->delay) ss << "  delay: " << *animateNode->delay << ",\n";
-            if (animateNode->callback) ss << "  callback: " << *animateNode->callback << ",\n";
+            if (animateNode->callback) ss << "  callback: " << resolve_handler(*animateNode->callback) << ",\n";
 
             if (!animateNode->begin_styles.empty()) {
                 ss << "  begin: {";
                 for (auto it = animateNode->begin_styles.begin(); it != animateNode->begin_styles.end(); ++it) {
-                    ss << "'" << it->first << "': '" << it->second << "'";
+                    ss << "'" << it->first << "': '" << resolve_handler(it->second) << "'";
                     if (std::next(it) != animateNode->begin_styles.end()) ss << ",";
                 }
                 ss << "},\n";
@@ -274,7 +291,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
                     ss << "{at:" << it->at;
                     if (!it->styles.empty()) ss << ",";
                     for (auto style_it = it->styles.begin(); style_it != it->styles.end(); ++style_it) {
-                        ss << "'" << style_it->first << "':'" << style_it->second << "'";
+                        ss << "'" << style_it->first << "':'" << resolve_handler(style_it->second) << "'";
                         if (std::next(style_it) != it->styles.end()) ss << ",";
                     }
                     ss << "}";
@@ -285,7 +302,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             if (!animateNode->end_styles.empty()) {
                 ss << "  end: {";
                  for (auto it = animateNode->end_styles.begin(); it != animateNode->end_styles.end(); ++it) {
-                    ss << "'" << it->first << "':'" << it->second << "'";
+                    ss << "'" << it->first << "':'" << resolve_handler(it->second) << "'";
                     if (std::next(it) != animateNode->end_styles.end()) ss << ",";
                 }
                 ss << "},\n";

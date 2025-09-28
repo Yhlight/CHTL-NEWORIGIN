@@ -10,17 +10,21 @@
 #include "../CHTLJSNode/VirtualObjectNode.h"
 #include "../CHTLJSNode/VirtualObjectAccessNode.h"
 #include "../CHTLJSNode/RouterNode.h"
+#include "../CHTLJSNode/ReservedPlaceholderNode.h"
+#include "../Util/Placeholder.h" // Include Placeholder
 #include <vector>
 #include <memory>
 
 // The CHTL JS Parser, responsible for building an AST from a token stream.
 class CHTLJSParser {
 public:
-    explicit CHTLJSParser(std::vector<CHTLJSToken> tokens);
+    // The constructor now accepts the placeholder manager to resolve placeholders during parsing.
+    explicit CHTLJSParser(std::vector<CHTLJSToken> tokens, const Placeholder& placeholder_manager);
     std::vector<std::unique_ptr<CHTLJSNode>> parse();
 
 private:
     std::vector<CHTLJSToken> tokens;
+    const Placeholder* placeholder_manager; // Pointer to the placeholder manager
     size_t position = 0;
 
     CHTLJSToken currentToken() const;
@@ -36,4 +40,5 @@ private:
     std::unique_ptr<ScriptLoaderNode> parseScriptLoaderBlock();
     std::unique_ptr<VirtualObjectNode> parseVirtualObjectDeclaration();
     std::unique_ptr<RouterNode> parseRouterBlock();
+    std::unique_ptr<ReservedPlaceholderNode> parseReservedPlaceholder();
 };

@@ -61,6 +61,7 @@ set(CHTL_SOURCES
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/Util/StyleUtil.cpp
     src/CHTL_JS/Util/DependencyResolver.cpp
+    src/CHTL_JS/Util/Placeholder.cpp
 )
 
 # Add a library for the CHTL compiler components
@@ -96,7 +97,7 @@ target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp tests/CoreFeatures.cpp)
+add_executable(chtl_tests tests/main.cpp tests/CHTLJSCompiler.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)

@@ -28,6 +28,8 @@ enum class CHTLJSNodeType {
     Router,
     // Represents raw, plain JavaScript code that is not processed by the CHTL JS compiler.
     RawJavaScript,
+    // Represents a placeholder for pure JS code, to be replaced during generation.
+    ReservedPlaceholder,
     // More types will be added as the compiler is developed.
 };
 
