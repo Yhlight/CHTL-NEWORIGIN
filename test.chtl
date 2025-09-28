@@ -1,0 +1,10 @@
+div
+{
+    script
+    {
+        let v = "Test";
+        console.log("this is pure js");
+        {{v}}->foo();
+        let x = 10;
+    }
+}
