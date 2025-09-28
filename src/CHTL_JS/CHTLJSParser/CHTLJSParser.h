@@ -25,7 +25,6 @@ private:
 
     CHTLJSToken currentToken() const;
     void advance();
-    std::string parseJsCodeBlock();
     std::map<std::string, std::string> parseStyleMap();
     std::vector<AnimationKeyframe> parseKeyframeArray();
 

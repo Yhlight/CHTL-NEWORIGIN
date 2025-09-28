@@ -52,59 +52,45 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
         return {CHTLJSTokenType::StringLiteral, value};
     }
 
-    // Keywords
-    if (isalpha(source[position])) {
+    // Reserved Placeholders
+    const std::string placeholder_prefix = "__CHTL_RESERVED_PLACEHOLDER__{";
+    if (source.substr(position, placeholder_prefix.length()) == placeholder_prefix) {
+        size_t start_pos = position;
+        size_t end_pos = source.find("}__", start_pos);
+        if (end_pos != std::string::npos) {
+            end_pos += 3; // include the "}__" in the token
+            std::string placeholder_value = source.substr(start_pos, end_pos - start_pos);
+            position = end_pos;
+            return {CHTLJSTokenType::ReservedPlaceholder, placeholder_value};
+        }
+    }
+
+    // Identifiers and Keywords
+    if (isalpha(source[position]) || source[position] == '_' || source[position] == '.' || source[position] == '#' || source[position] == '&') {
         size_t start = position;
-        size_t end = start;
-        while (end < source.length() && isalnum(source[end])) {
-            end++;
+        // More selective character inclusion for identifiers/selectors.
+        // It consumes until it hits a character that cannot be part of an identifier or selector.
+        while (position < source.length()) {
+            char c = source[position];
+            if (!isalnum(c) && c != '_' && c != '-' && c != '.' && c != '#' && c != '&') {
+                break; // Break on characters that are definitive separators
+            }
+            position++;
         }
-        std::string word = source.substr(start, end - start);
-        if (word == "ScriptLoader") {
-            position = end;
-            return {CHTLJSTokenType::ScriptLoader, word};
-        }
-        if (word == "Vir") {
-            position = end;
-            return {CHTLJSTokenType::Vir, word};
-        }
-        if (word == "Router") {
-            position = end;
-            return {CHTLJSTokenType::Router, word};
-        }
-        if (word == "Listen" || word == "Delegate" || word == "Animate") {
-            position = end;
+
+        std::string word = source.substr(start, position - start);
+
+        if (word == "ScriptLoader") return {CHTLJSTokenType::ScriptLoader, word};
+        if (word == "Vir") return {CHTLJSTokenType::Vir, word};
+        if (word == "Router") return {CHTLJSTokenType::Router, word};
+
+        // All other words, including selectors like ".my-button", are treated as identifiers.
+        if (!word.empty()) {
             return {CHTLJSTokenType::Identifier, word};
         }
     }
 
-    // Fallback for raw JS
-    size_t start = position;
-    while (position < source.length()) {
-        if (source.substr(position, 2) == "{{" || source.substr(position, 2) == "}}" || source.substr(position, 2) == "->" || source.substr(position, 3) == "&->" ||
-            source[position] == '{' || source[position] == '}' || source[position] == '[' || source[position] == ']' || source[position] == ':' || source[position] == ',' || source[position] == '=') {
-            break;
-        }
-
-        if (isalpha(source[position])) {
-            size_t end = position;
-            while(end < source.length() && isalnum(source[end])) {
-                end++;
-            }
-            std::string word = source.substr(position, end - position);
-            if(word == "ScriptLoader" || word == "Listen" || word == "Delegate" || word == "Animate") {
-                break;
-            }
-        }
-        position++;
-    }
-
-    std::string value = source.substr(start, position - start);
-    if (!value.empty()) {
-        return {CHTLJSTokenType::RawJS, value};
-    }
-
-    // This should not be reached if the logic is correct, but as a safeguard
+    // If no token was matched, it's unexpected
     if (position < source.length()) {
         position++;
         return {CHTLJSTokenType::Unexpected, source.substr(position - 1, 1)};

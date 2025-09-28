@@ -40,7 +40,6 @@ void write_file(const std::string& path, const std::string& content) {
 #include "Dispatcher/CompilerDispatcher.h"
 #include "CHTL_JS/CHTLLexer/CHTLJSLexer.h"
 #include "CHTL_JS/CHTLJSParser/CHTLJSParser.h"
-#include "CHTL_JS/CHTLJSNode/RawJavaScriptNode.h"
 #include "CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 #include "Dispatcher/CompilationResult.h"
 #include "CHTL_JS/CHTLJSNode/VirtualObjectNode.h"
@@ -160,6 +159,7 @@ void test_multiple_style_template_inheritance();
 void test_multiple_element_template_inheritance();
 void test_custom_style_valueless_property_error();
 void test_wildcard_import();
+void test_placeholder_based_parsing_and_generation();
 
 
 void test_text_block_literals() {
@@ -482,6 +482,10 @@ int main() {
     run_test(test_var_template_specialization_and_inheritance, "Variable Template Specialization and Inheritance");
     run_test(test_custom_style_valueless_property_error, "Custom Style Valueless Property Error");
     run_test(test_wildcard_import, "Wildcard Import");
+
+    // --- Placeholder Verification Test ---
+    std::cout << "\n--- Running Placeholder Verification Test ---\n";
+    run_test(test_placeholder_based_parsing_and_generation, "Placeholder-Based Parsing and Generation");
 
     std::cout << "\n--- Running Import/Export Tests ---\n";
     run_test(test_import_basic_element, "Import: Basic Element");

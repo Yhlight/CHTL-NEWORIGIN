@@ -23,7 +23,6 @@ set(CHTL_SOURCES
     src/CHTL_JS/CHTLLexer/CHTLJSLexer.cpp
     src/CHTL_JS/CHTLJSParser/CHTLJSParser.cpp
     src/CHTL_JS/CHTLJSNode/CHTLJSEnhancedSelectorNode.cpp
-    src/CHTL_JS/CHTLJSNode/RawJavaScriptNode.cpp
     src/CHTL_JS/CHTLJSNode/ListenNode.cpp
     src/CHTL_JS/CHTLJSNode/EventBindingNode.cpp
     src/CHTL_JS/CHTLJSNode/DelegateNode.cpp
@@ -96,7 +95,7 @@ target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp tests/CoreFeatures.cpp)
+add_executable(chtl_tests tests/main.cpp tests/CoreFeatures.cpp tests/PlaceholderVerification.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)

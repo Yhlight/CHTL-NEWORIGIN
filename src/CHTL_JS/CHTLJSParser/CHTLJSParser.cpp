@@ -1,6 +1,5 @@
 #include "CHTLJSParser.h"
 #include "../CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
-#include "../CHTLJSNode/RawJavaScriptNode.h"
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
 #include "../CHTLJSNode/DelegateNode.h"
@@ -27,32 +26,12 @@ void CHTLJSParser::advance() {
     }
 }
 
-std::string CHTLJSParser::parseJsCodeBlock() {
-    std::stringstream code_stream;
-    int brace_level = 0;
-
-    while (currentToken().type != CHTLJSTokenType::EndOfFile) {
-        const auto& token = currentToken();
-
-        if (brace_level == 0 && (token.type == CHTLJSTokenType::Comma || token.type == CHTLJSTokenType::CloseBrace || token.type == CHTLJSTokenType::Semicolon)) {
-            break;
-        }
-
-        if (token.type == CHTLJSTokenType::OpenBrace) brace_level++;
-        else if (token.type == CHTLJSTokenType::CloseBrace) brace_level--;
-
-        code_stream << token.value;
-        advance();
-    }
-    return code_stream.str();
-}
-
-
 std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
     std::vector<std::unique_ptr<CHTLJSNode>> nodes;
 
     while (currentToken().type != CHTLJSTokenType::EndOfFile) {
-        switch (currentToken().type) {
+        const auto& token = currentToken();
+        switch (token.type) {
             case CHTLJSTokenType::Router:
                 nodes.push_back(parseRouterBlock());
                 break;
@@ -64,8 +43,8 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 break;
             case CHTLJSTokenType::OpenDoubleBrace: {
                 advance();
-                if (currentToken().type != CHTLJSTokenType::RawJS) {
-                    throw std::runtime_error("Expected raw text inside enhanced selector.");
+                if (currentToken().type != CHTLJSTokenType::Identifier) {
+                    throw std::runtime_error("Expected identifier inside enhanced selector.");
                 }
                 nodes.push_back(std::make_unique<CHTLJSEnhancedSelectorNode>(currentToken().value));
                 advance();
@@ -76,15 +55,15 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 break;
             }
             case CHTLJSTokenType::Arrow: {
-                advance();
-                if ((currentToken().type == CHTLJSTokenType::Identifier || currentToken().type == CHTLJSTokenType::RawJS) && currentToken().value == "Listen") {
+                 advance();
+                 if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Listen") {
                     nodes.push_back(parseListenBlock());
-                } else if ((currentToken().type == CHTLJSTokenType::Identifier || currentToken().type == CHTLJSTokenType::RawJS) && currentToken().value == "Delegate") {
+                 } else if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "Delegate") {
                     nodes.push_back(parseDelegateBlock());
-                } else {
-                    nodes.push_back(std::make_unique<RawJavaScriptNode>("->"));
-                }
-                break;
+                 } else {
+                    throw std::runtime_error("Unexpected token after '->'");
+                 }
+                 break;
             }
             case CHTLJSTokenType::EventBindingOperator: {
                 nodes.push_back(parseEventBinding());
@@ -94,7 +73,7 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 break;
             }
             case CHTLJSTokenType::Identifier: {
-                if (position + 1 < tokens.size() && tokens[position + 1].type == CHTLJSTokenType::Arrow) {
+                 if (position + 1 < tokens.size() && tokens[position + 1].type == CHTLJSTokenType::Arrow) {
                     std::string objectName = currentToken().value;
                     advance();
                     advance();
@@ -108,15 +87,12 @@ std::vector<std::unique_ptr<CHTLJSNode>> CHTLJSParser::parse() {
                 else if (currentToken().value == "Animate") {
                     nodes.push_back(parseAnimateBlock());
                 } else {
-                    nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));
-                    advance();
+                    throw std::runtime_error("Unexpected identifier: " + currentToken().value);
                 }
                 break;
             }
             default:
-                nodes.push_back(std::make_unique<RawJavaScriptNode>(currentToken().value));
-                advance();
-                break;
+                throw std::runtime_error("Unexpected token: " + token.value);
         }
     }
 
@@ -131,7 +107,7 @@ std::unique_ptr<RouterNode> CHTLJSParser::parseRouterBlock() {
     auto routerNode = std::make_unique<RouterNode>();
 
     while(currentToken().type != CHTLJSTokenType::CloseBrace) {
-        if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected identifier (e.g., 'url', 'page', 'mode', 'root') in Router block.");
+        if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected identifier in Router block.");
         std::string key = currentToken().value;
         advance();
 
@@ -151,7 +127,7 @@ std::unique_ptr<RouterNode> CHTLJSParser::parseRouterBlock() {
                 if (currentToken().type == CHTLJSTokenType::Comma) advance();
                 if (currentToken().type != CHTLJSTokenType::OpenDoubleBrace) throw std::runtime_error("Expected '{{' for router page selector.");
                 advance();
-                if (currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected selector inside '{{...}}'.");
+                if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected selector inside '{{...}}'.");
 
                 if(route_it != routerNode->routes.end()) {
                     route_it->second = currentToken().value;
@@ -171,7 +147,7 @@ std::unique_ptr<RouterNode> CHTLJSParser::parseRouterBlock() {
                  advance();
             } else if (currentToken().type == CHTLJSTokenType::OpenDoubleBrace) {
                 advance();
-                if (currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected selector inside '{{...}}'.");
+                if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected selector inside '{{...}}'.");
                 routerNode->rootContainer = currentToken().value;
                 advance();
                 if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) throw std::runtime_error("Unclosed '{{...}}' for router root container.");
@@ -189,7 +165,7 @@ std::unique_ptr<RouterNode> CHTLJSParser::parseRouterBlock() {
 std::unique_ptr<VirtualObjectNode> CHTLJSParser::parseVirtualObjectDeclaration() {
     advance(); // Consume 'Vir'
 
-    if (currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) {
+    if (currentToken().type != CHTLJSTokenType::Identifier) {
         throw std::runtime_error("Expected identifier after 'Vir'.");
     }
     std::string name = currentToken().value;
@@ -223,7 +199,7 @@ std::unique_ptr<ScriptLoaderNode> CHTLJSParser::parseScriptLoaderBlock() {
     auto scriptLoaderNode = std::make_unique<ScriptLoaderNode>();
 
     while (currentToken().type != CHTLJSTokenType::CloseBrace && currentToken().type != CHTLJSTokenType::EndOfFile) {
-        if ((currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) || currentToken().value != "load") {
+        if (currentToken().type != CHTLJSTokenType::Identifier || currentToken().value != "load") {
             throw std::runtime_error("Expected 'load' keyword in ScriptLoader block.");
         }
         advance();
@@ -235,7 +211,7 @@ std::unique_ptr<ScriptLoaderNode> CHTLJSParser::parseScriptLoaderBlock() {
             if (currentToken().type == CHTLJSTokenType::CloseBrace) break;
             if (currentToken().type == CHTLJSTokenType::Identifier && currentToken().value == "load") break;
 
-            if (currentToken().type == CHTLJSTokenType::StringLiteral || currentToken().type == CHTLJSTokenType::RawJS || currentToken().type == CHTLJSTokenType::Identifier) {
+            if (currentToken().type == CHTLJSTokenType::StringLiteral || currentToken().type == CHTLJSTokenType::Identifier) {
                 scriptLoaderNode->paths.push_back(currentToken().value);
                 advance();
             } else {
@@ -257,7 +233,7 @@ std::unique_ptr<ScriptLoaderNode> CHTLJSParser::parseScriptLoaderBlock() {
 std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {
     advance(); // Consume '&->'
     std::vector<std::string> event_names;
-    while (currentToken().type == CHTLJSTokenType::Identifier || currentToken().type == CHTLJSTokenType::RawJS) {
+    while (currentToken().type == CHTLJSTokenType::Identifier) {
         event_names.push_back(currentToken().value);
         advance();
         if (currentToken().type == CHTLJSTokenType::Comma) advance();
@@ -266,7 +242,9 @@ std::unique_ptr<EventBindingNode> CHTLJSParser::parseEventBinding() {
     if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after event name(s) in event binding.");
     advance();
 
-    std::string handler_code = parseJsCodeBlock();
+    if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder) throw std::runtime_error("Expected a reserved placeholder for the event handler.");
+    std::string handler_code = currentToken().value;
+    advance();
 
     return std::make_unique<EventBindingNode>(event_names, handler_code);
 }
@@ -277,7 +255,7 @@ std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {
     advance(); // Consume '{'
     auto listenNode = std::make_unique<ListenNode>();
     while (currentToken().type != CHTLJSTokenType::CloseBrace) {
-        if (currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) {
+        if (currentToken().type != CHTLJSTokenType::Identifier) {
             throw std::runtime_error("Expected event name identifier in Listen block.");
         }
         std::string eventName = currentToken().value;
@@ -285,7 +263,9 @@ std::unique_ptr<ListenNode> CHTLJSParser::parseListenBlock() {
         if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after event name in Listen block.");
         advance();
 
-        listenNode->event_handlers[eventName] = parseJsCodeBlock();
+        if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder) throw std::runtime_error("Expected a reserved placeholder for the event handler.");
+        listenNode->event_handlers[eventName] = currentToken().value;
+        advance();
 
         if (currentToken().type == CHTLJSTokenType::Comma) advance();
     }
@@ -300,7 +280,7 @@ std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
     auto delegateNode = std::make_unique<DelegateNode>();
 
     auto parse_property = [&]() {
-        if(currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected property name in Delegate block.");
+        if(currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected property name in Delegate block.");
         std::string key = currentToken().value;
         advance();
         if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after property name in Delegate block.");
@@ -310,7 +290,7 @@ std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
             auto parse_single_target = [&]() {
                 if (currentToken().type != CHTLJSTokenType::OpenDoubleBrace) throw std::runtime_error("Expected '{{' for delegate target.");
                 advance();
-                if (currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected selector inside '{{...}}'.");
+                if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected selector inside '{{...}}'.");
                 delegateNode->target_selectors.push_back(currentToken().value);
                 advance();
                 if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) throw std::runtime_error("Unclosed '{{...}}' for delegate target.");
@@ -332,7 +312,9 @@ std::unique_ptr<DelegateNode> CHTLJSParser::parseDelegateBlock() {
                 parse_single_target();
             }
         } else {
-            delegateNode->event_handlers[key] = parseJsCodeBlock();
+            if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder) throw std::runtime_error("Expected a reserved placeholder for the event handler.");
+            delegateNode->event_handlers[key] = currentToken().value;
+            advance();
         }
     };
 
@@ -355,12 +337,16 @@ std::map<std::string, std::string> CHTLJSParser::parseStyleMap() {
     advance();
     std::map<std::string, std::string> styles;
     while(currentToken().type != CHTLJSTokenType::CloseBrace) {
-        if (currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected style property name.");
+        if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected style property name.");
         std::string key = currentToken().value;
         advance();
         if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after style property name.");
         advance();
-        styles[key] = parseJsCodeBlock();
+        if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder && currentToken().type != CHTLJSTokenType::StringLiteral && currentToken().type != CHTLJSTokenType::Identifier) {
+             throw std::runtime_error("Expected a placeholder, string, or identifier for the style value.");
+        }
+        styles[key] = currentToken().value;
+        advance();
         if(currentToken().type == CHTLJSTokenType::Comma) advance();
     }
     advance(); // Consume '}'
@@ -376,7 +362,7 @@ std::vector<AnimationKeyframe> CHTLJSParser::parseKeyframeArray() {
         advance();
         AnimationKeyframe keyframe;
         while(currentToken().type != CHTLJSTokenType::CloseBrace) {
-            if (currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected style property name in keyframe.");
+            if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected style property name in keyframe.");
             std::string key = currentToken().value;
             advance();
             if (currentToken().type != CHTLJSTokenType::Colon) throw std::runtime_error("Expected ':' after keyframe property.");
@@ -385,7 +371,11 @@ std::vector<AnimationKeyframe> CHTLJSParser::parseKeyframeArray() {
                 keyframe.at = std::stod(currentToken().value);
                 advance();
             } else {
-                keyframe.styles[key] = parseJsCodeBlock();
+                 if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder && currentToken().type != CHTLJSTokenType::StringLiteral && currentToken().type != CHTLJSTokenType::Identifier) {
+                    throw std::runtime_error("Expected a placeholder, string, or identifier for the style value.");
+                 }
+                keyframe.styles[key] = currentToken().value;
+                advance();
             }
             if(currentToken().type == CHTLJSTokenType::Comma) advance();
         }
@@ -411,7 +401,7 @@ std::unique_ptr<AnimateNode> CHTLJSParser::parseAnimateBlock() {
         if (key == "target") {
             if (currentToken().type != CHTLJSTokenType::OpenDoubleBrace) throw std::runtime_error("Expected '{{' for animate target.");
             advance();
-            if (currentToken().type != CHTLJSTokenType::RawJS) throw std::runtime_error("Expected selector inside '{{...}}'.");
+            if (currentToken().type != CHTLJSTokenType::Identifier) throw std::runtime_error("Expected selector inside '{{...}}'.");
             animateNode->target = currentToken().value;
             advance();
             if (currentToken().type != CHTLJSTokenType::CloseDoubleBrace) throw std::runtime_error("Unclosed '{{...}}' for animate target.");
@@ -423,8 +413,11 @@ std::unique_ptr<AnimateNode> CHTLJSParser::parseAnimateBlock() {
         } else if (key == "when") {
             animateNode->when_keyframes = parseKeyframeArray();
         } else {
-            // Use parseJsCodeBlock to handle potentially multi-token values
-            std::string value = parseJsCodeBlock();
+            if (currentToken().type != CHTLJSTokenType::ReservedPlaceholder && currentToken().type != CHTLJSTokenType::Identifier && currentToken().type != CHTLJSTokenType::StringLiteral) {
+                 throw std::runtime_error("Expected a placeholder, identifier, or string for animate property value.");
+            }
+            std::string value = currentToken().value;
+            advance();
             if (key == "duration") animateNode->duration = std::stoi(value);
             else if (key == "easing") animateNode->easing = value;
             else if (key == "loop") animateNode->loop = std::stoi(value);

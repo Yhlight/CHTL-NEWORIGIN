@@ -1,5 +1,4 @@
 #include "CHTLJSGenerator.h"
-#include "../CHTLJSNode/RawJavaScriptNode.h"
 #include "../CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
@@ -225,9 +224,6 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             return generateRouter(static_cast<const RouterNode*>(node));
         case CHTLJSNodeType::ScriptLoader:
             return generateScriptLoader(static_cast<const ScriptLoaderNode*>(node));
-        case CHTLJSNodeType::RawJavaScript: {
-            return static_cast<const RawJavaScriptNode*>(node)->js_code;
-        }
         case CHTLJSNodeType::EnhancedSelector: {
             return "document.querySelector('" + static_cast<const CHTLJSEnhancedSelectorNode*>(node)->selector_text + "')";
         }
