@@ -1,88 +1,151 @@
 #include "CHTLJSPreprocessor.h"
-#include "../Util/StringUtils.h" // For findMatchingBrace
-#include <regex>
+#include "../Util/TokenUtils.h"
+#include <iostream>
 
-void CHTLJSPreprocessor::findDeclarations(std::string& source) {
-    size_t pos = 0;
-    while ((pos = source.find("Vir ", pos)) != std::string::npos) {
-        size_t var_start = pos + 4;
-        var_start = source.find_first_not_of(" \t\n\r", var_start);
-        if (var_start == std::string::npos) break;
+// This pass finds iNeverAway declarations, stores them, and removes them from the token stream.
+void CHTLJSPreprocessor::findDeclarations(std::vector<Token>& tokens) {
+    std::vector<Token> processed_tokens;
+    size_t i = 0;
+    while (i < tokens.size()) {
+        bool vir_block_processed = false;
+        if (tokens[i].type == TokenType::VIR_KEYWORD) {
+            size_t var_name_idx = nextMeaningfulToken(tokens, i);
+            size_t equals_idx = nextMeaningfulToken(tokens, var_name_idx);
+            size_t value_idx = nextMeaningfulToken(tokens, equals_idx);
 
-        size_t var_end = source.find_first_of(" \t\n\r=", var_start);
-        if (var_end == std::string::npos) break;
-        std::string var_name = source.substr(var_start, var_end - var_start);
+            if (value_idx != std::string::npos && tokens[var_name_idx].type == TokenType::IDENTIFIER && tokens[equals_idx].text == "=") {
+                std::string var_name = tokens[var_name_idx].text;
 
-        size_t equals_pos = source.find('=', var_end);
-        if (equals_pos == std::string::npos) break;
+                if (tokens[value_idx].text == "iNeverAway") {
+                    size_t open_brace_idx = nextMeaningfulToken(tokens, value_idx);
+                    if (open_brace_idx != std::string::npos && tokens[open_brace_idx].text == "{") {
+                        size_t close_brace_idx = findMatchingBraceToken(tokens, open_brace_idx);
+                        if (close_brace_idx != std::string::npos) {
 
-        size_t value_start = source.find_first_not_of(" \t\n\r", equals_pos + 1);
-        if (value_start == std::string::npos) break;
+                            size_t content_pos = open_brace_idx + 1;
+                            while (content_pos < close_brace_idx) {
+                                size_t sig_start = nextMeaningfulToken(tokens, content_pos - 1);
+                                if (sig_start >= close_brace_idx) break;
 
-        size_t open_brace_pos = source.find('{', value_start);
-        if (open_brace_pos == std::string::npos) break;
+                                size_t sig_end = sig_start;
+                                // Consume tokens until we hit the colon
+                                while(sig_end < close_brace_idx && tokens[sig_end].text != ":") sig_end++;
+                                if(sig_end >= close_brace_idx) break;
 
-        size_t close_brace_pos = findMatchingBrace(source, open_brace_pos);
-        if (close_brace_pos == std::string::npos) break;
+                                std::string signature;
+                                for(size_t k = sig_start; k < sig_end; k++) {
+                                    if(tokens[k].type != TokenType::WHITESPACE) signature += tokens[k].text;
+                                }
 
-        size_t semi_pos = source.find(';', close_brace_pos);
-        if (semi_pos == std::string::npos) break;
+                                size_t func_start = nextMeaningfulToken(tokens, sig_end);
+                                if (func_start >= close_brace_idx) break;
 
-        std::string func_block = source.substr(value_start, close_brace_pos - value_start + 1);
-        vir_map[var_name] = func_block;
+                                size_t func_end = func_start;
+                                int brace_balance = 0;
+                                int paren_balance = 0;
+                                for (size_t k = func_start; k < close_brace_idx; ++k) {
+                                    if (tokens[k].text == "{") brace_balance++;
+                                    else if (tokens[k].text == "}") brace_balance--;
+                                    else if (tokens[k].text == "(") paren_balance++;
+                                    else if (tokens[k].text == ")") paren_balance--;
 
-        source.erase(pos, semi_pos - pos + 1);
-    }
-}
+                                    if (brace_balance == 0 && paren_balance == 0 && tokens[k].text == ",") {
+                                        func_end = k - 1;
+                                        break;
+                                    }
+                                    func_end = k;
+                                }
 
-void CHTLJSPreprocessor::substituteAccesses(std::string& source) {
-    std::regex access_regex(R"(([\w\d_]+)\s*->\s*([\w\d_]+))");
-    std::string result;
-    size_t last_pos = 0;
-    auto it = std::sregex_iterator(source.begin(), source.end(), access_regex);
-    auto end = std::sregex_iterator();
+                                std::vector<Token> func_tokens(tokens.begin() + func_start, tokens.begin() + func_end + 1);
+                                ineveraway_map[var_name][signature] = func_tokens;
+                                content_pos = func_end + 2;
+                            }
 
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result.append(source, last_pos, match.position() - last_pos);
-
-        std::string var_name = match[1].str();
-        std::string prop_name = match[2].str();
-
-        if (vir_map.count(var_name)) {
-            std::string func_body = vir_map.at(var_name);
-            std::string content = func_body.substr(func_body.find('{') + 1);
-            content.pop_back();
-
-            size_t prop_pos = content.find(prop_name);
-            if (prop_pos != std::string::npos) {
-                size_t colon_pos = content.find(':', prop_pos);
-                size_t value_start = content.find_first_not_of(" \t\n\r", colon_pos + 1);
-                if (value_start != std::string::npos) {
-                    size_t value_end = value_start;
-                    int brace_balance = 0;
-                    for (; value_end < content.length(); ++value_end) {
-                        char c = content[value_end];
-                        if (c == '{') brace_balance++;
-                        else if (c == '}') brace_balance--;
-                        else if (c == ',' && brace_balance == 0) break;
+                            i = close_brace_idx;
+                            size_t next = nextMeaningfulToken(tokens, i);
+                            if(next != std::string::npos && tokens[next].text == ";") i = next;
+                            vir_block_processed = true;
+                        }
                     }
-                    std::string value = content.substr(value_start, value_end - value_start);
-                    value.erase(value.find_last_not_of(" \t\n\r,") + 1);
-                    result.append(value);
                 }
             }
-        } else {
-            result.append(match.str(0));
         }
-        last_pos = match.position() + match.length();
+
+        if (!vir_block_processed) {
+            processed_tokens.push_back(tokens[i]);
+        }
+        i++;
     }
-    result.append(source, last_pos, std::string::npos);
-    source = result;
+    tokens = processed_tokens;
 }
 
-void CHTLJSPreprocessor::process(std::string& source) {
-    vir_map.clear();
-    findDeclarations(source);
-    substituteAccesses(source);
+// This pass finds accesses to iNeverAway objects and replaces them with function calls.
+void CHTLJSPreprocessor::substituteAccesses(std::vector<Token>& tokens, CHTLJSCompiler& compiler) {
+    std::vector<Token> final_tokens;
+    std::string functions_to_inject;
+    size_t i = 0;
+    while(i < tokens.size()) {
+        if (i + 1 < tokens.size() && tokens[i].type == TokenType::IDENTIFIER &&
+            tokens[i+1].type == TokenType::CHTL_OPERATOR) {
+
+            std::string var_name = tokens[i].text;
+            size_t sig_start = nextMeaningfulToken(tokens, i + 1);
+            if(sig_start == std::string::npos) {
+                final_tokens.push_back(tokens[i]);
+                i++;
+                continue;
+            }
+
+            size_t sig_end = sig_start;
+            // Consume a sequence of IDENTIFIER and < > symbols
+            while(sig_end < tokens.size() &&
+                  (tokens[sig_end].type == TokenType::IDENTIFIER ||
+                   (tokens[sig_end].type == TokenType::SYMBOL && (tokens[sig_end].text == "<" || tokens[sig_end].text == ">"))))
+            {
+                sig_end++;
+            }
+
+            std::string signature;
+            for(size_t k = sig_start; k < sig_end; ++k) signature += tokens[k].text;
+
+            if (ineveraway_map.count(var_name) && ineveraway_map.at(var_name).count(signature)) {
+                auto func_tokens = ineveraway_map.at(var_name).at(signature);
+                std::string global_func_name = "__chtl_global_func_" + std::to_string(global_func_counter++);
+
+                // Recursively compile the body of the iNeverAway function
+                std::string compiled_body = compiler.compile(func_tokens);
+
+                std::string func_def = "function " + global_func_name;
+                // Simplified body extraction, assuming "function(...) { ... }"
+                size_t first_paren = compiled_body.find('(');
+                if (first_paren != std::string::npos) {
+                    func_def += compiled_body.substr(first_paren);
+                } else {
+                    func_def += "() " + compiled_body; // Failsafe
+                }
+                functions_to_inject += func_def + "\n";
+
+                final_tokens.push_back({TokenType::IDENTIFIER, global_func_name});
+                i = sig_end;
+            } else {
+                final_tokens.push_back(tokens[i]);
+                i++;
+            }
+        } else {
+            final_tokens.push_back(tokens[i]);
+            i++;
+        }
+    }
+
+    if (!functions_to_inject.empty()) {
+        final_tokens.insert(final_tokens.begin(), {TokenType::JS_BLOCK, functions_to_inject});
+    }
+    tokens = final_tokens;
+}
+
+void CHTLJSPreprocessor::process(std::vector<Token>& tokens, CHTLJSCompiler& compiler) {
+    ineveraway_map.clear();
+    global_func_counter = 0;
+    findDeclarations(tokens);
+    substituteAccesses(tokens, compiler);
 }

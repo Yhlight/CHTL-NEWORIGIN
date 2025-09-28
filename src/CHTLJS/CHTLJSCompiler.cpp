@@ -1,501 +1,311 @@
 #include "CHTLJSCompiler.h"
-#include "Util/StringUtils.h"
-#include <regex>
+#include "../Util/TokenUtils.h"
 #include <iostream>
-#include <string>
+#include <map>
 #include <vector>
 #include <cctype>
 
-// A simplified helper to convert a CHTL JS selector to a JS querySelector
-std::string convertSelector(const std::string& chtl_selector) {
-    if (chtl_selector.empty()) {
-        return "";
-    }
-    if (chtl_selector[0] == '.' || chtl_selector[0] == '#') {
-        return "document.querySelector('" + chtl_selector + "')";
-    }
-    return "document.querySelector('" + chtl_selector + "')";
-}
+// Forward declarations for all token-based parsers
+std::string compileRouterBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out);
+std::string compileAnimateBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out);
+std::string compileDelegateBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out);
+std::string compileListenBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out);
+std::string compileScriptLoaderBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out);
+std::string compileSelector(const Token& token);
+std::string parseKeyframeObject(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out);
 
-// Helper to parse a CHTL JS keyframe block like "{ at: 0.5, ... }" into a JS object string.
-std::string parseKeyframeObject(const std::string& block) {
-    std::string js_object = "{ ";
-    std::string content = block.substr(1, block.length() - 2); // remove braces
+// Main compile method with robust lookahead logic
+std::string CHTLJSCompiler::compile(std::vector<Token>& tokens) {
+    std::vector<Token> compiled_tokens;
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        size_t end_index = i;
+        std::string compiled_js;
 
-    std::regex prop_regex(R"(([\w-]+)\s*:\s*([\d.]+|'[^']+'))");
-    auto it = std::sregex_iterator(content.begin(), content.end(), prop_regex);
-    auto end = std::sregex_iterator();
-
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        std::string key = match[1].str();
-        std::string value = match[2].str();
-
-        if (key == "at") {
-            key = "offset";
-        } else {
-            size_t hyphen_pos = key.find('-');
-            while (hyphen_pos != std::string::npos) {
-                key.erase(hyphen_pos, 1);
-                if (hyphen_pos < key.length()) {
-                    key[hyphen_pos] = toupper(key[hyphen_pos]);
+        if (tokens[i].type == TokenType::CHTL_KEYWORD) {
+            if (tokens[i].text == "Router") compiled_js = compileRouterBlock(tokens, i, end_index);
+            else if (tokens[i].text == "Animate") compiled_js = compileAnimateBlock(tokens, i, end_index);
+            else if (tokens[i].text == "ScriptLoader") compiled_js = compileScriptLoaderBlock(tokens, i, end_index);
+        }
+        else if (tokens[i].type == TokenType::CHTL_SELECTOR || tokens[i].type == TokenType::IDENTIFIER) {
+            size_t next_idx = nextMeaningfulToken(tokens, i);
+            if (next_idx != std::string::npos && tokens[next_idx].type == TokenType::CHTL_OPERATOR) {
+                size_t keyword_idx = nextMeaningfulToken(tokens, next_idx);
+                if (keyword_idx != std::string::npos && tokens[keyword_idx].type == TokenType::CHTL_KEYWORD) {
+                    if (tokens[keyword_idx].text == "Delegate") compiled_js = compileDelegateBlock(tokens, i, end_index);
+                    else if (tokens[keyword_idx].text == "Listen") compiled_js = compileListenBlock(tokens, i, end_index);
                 }
-                hyphen_pos = key.find('-');
+            } else if (tokens[i].type == TokenType::CHTL_SELECTOR) {
+                 compiled_js = compileSelector(tokens[i]);
             }
         }
-        js_object += key + ": " + value + ", ";
+
+        if (!compiled_js.empty()) {
+            compiled_tokens.push_back({TokenType::JS_BLOCK, compiled_js});
+            i = end_index;
+        } else {
+            compiled_tokens.push_back(tokens[i]);
+        }
     }
 
-    if (js_object.length() > 2) {
-        js_object.pop_back();
-        js_object.pop_back();
+    std::string final_code;
+    for (const auto& token : compiled_tokens) {
+        final_code += token.text;
     }
+    return final_code;
+}
 
-    js_object += " }";
+// --- HELPER IMPLEMENTATIONS ---
+
+std::string getTokenValue(const Token& token) {
+    if (token.type == TokenType::STRING_LITERAL) {
+        if (token.text.length() >= 2) return token.text.substr(1, token.text.length() - 2);
+    }
+    return token.text;
+}
+
+std::string compileSelector(const Token& token) {
+    if (token.type != TokenType::CHTL_SELECTOR) return token.text;
+    std::string inner = token.text.substr(2, token.text.length() - 4);
+    if (inner[0] == '.' || inner[0] == '#') return "document.querySelector('" + inner + "')";
+    return "document.querySelector('" + inner + "')";
+}
+
+std::string parseKeyframeObject(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out) {
+    if (start_index >= tokens.size() || tokens[start_index].text != "{") return "{}";
+    size_t close_brace_idx = findMatchingBraceToken(tokens, start_index);
+    if(close_brace_idx == std::string::npos) return "{}";
+
+    std::string js_object = "{";
+    for(size_t i = start_index + 1; i < close_brace_idx; ++i) {
+        i = nextMeaningfulToken(tokens, i-1);
+        if(i >= close_brace_idx) break;
+        if(tokens[i].type == TokenType::IDENTIFIER) {
+            std::string key = tokens[i].text;
+            size_t colon_idx = nextMeaningfulToken(tokens, i);
+            size_t value_idx = nextMeaningfulToken(tokens, colon_idx);
+            if(value_idx < close_brace_idx && tokens[colon_idx].text == ":") {
+                if(key == "at") js_object += "offset:" + getTokenValue(tokens[value_idx]) + ",";
+                else {
+                    size_t hyphen_pos = key.find('-');
+                    while (hyphen_pos != std::string::npos) {
+                        key.erase(hyphen_pos, 1);
+                        if (hyphen_pos < key.length()) key[hyphen_pos] = toupper(key[hyphen_pos]);
+                        hyphen_pos = key.find('-');
+                    }
+                    js_object += key + ":" + tokens[value_idx].text + ",";
+                }
+                i = value_idx;
+            }
+        }
+    }
+    js_object += "}";
+    end_index_out = close_brace_idx;
     return js_object;
 }
 
-std::string CHTLJSCompiler::compileSelectors(std::string source) {
-    std::regex selector_regex(R"(\{\{([^}]+)\}\})");
-    auto it = std::sregex_iterator(source.begin(), source.end(), selector_regex);
-    auto end = std::sregex_iterator();
+std::string compileAnimateBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out) {
+    size_t open_brace_idx = nextMeaningfulToken(tokens, start_index);
+    if (open_brace_idx == std::string::npos || tokens[open_brace_idx].text != "{") return "";
+    size_t close_brace_idx = findMatchingBraceToken(tokens, open_brace_idx);
+    if (close_brace_idx == std::string::npos) return "";
 
-    if (it == end) {
-        return source;
-    }
-
-    std::string result;
-    size_t last_pos = 0;
-
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result.append(source, last_pos, match.position() - last_pos);
-        std::string inner_selector = match[1].str();
-        result.append(convertSelector(inner_selector));
-        last_pos = match.position() + match.length();
-    }
-
-    result.append(source, last_pos, std::string::npos);
-    return result;
-}
-
-std::string CHTLJSCompiler::compileListenFunctions(std::string source) {
-    std::string result;
-    size_t last_pos = 0;
-    std::regex listen_start_regex(R"((\{\{[^}]+\}\}|[\w\d_.]+)\s*->\s*Listen)");
-    auto it = std::sregex_iterator(source.begin(), source.end(), listen_start_regex);
-    auto end = std::sregex_iterator();
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result += source.substr(last_pos, match.position() - last_pos);
-        std::string selector_str = match[1].str();
-        size_t open_brace_pos = source.find('{', match.position() + match.length());
-        if (open_brace_pos == std::string::npos) continue;
-        size_t close_brace_pos = findMatchingBrace(source, open_brace_pos);
-        if (close_brace_pos == std::string::npos) continue;
-        std::string events_str = source.substr(open_brace_pos + 1, close_brace_pos - open_brace_pos - 1);
-        std::string compiled_selector = selector_str;
-        if (selector_str.rfind("{{", 0) == 0) {
-            std::string inner_selector = selector_str.substr(2, selector_str.length() - 4);
-            compiled_selector = convertSelector(inner_selector);
-        }
-        size_t current_pos = 0;
-        while (current_pos < events_str.length()) {
-            size_t colon_pos = events_str.find(':', current_pos);
-            if (colon_pos == std::string::npos) break;
-            std::string event_name = events_str.substr(current_pos, colon_pos - current_pos);
-            event_name.erase(0, event_name.find_first_not_of(" \t\n\r"));
-            event_name.erase(event_name.find_last_not_of(" \t\n\r") + 1);
-            if (event_name.empty()) {
-                current_pos = colon_pos + 1;
-                continue;
-            }
-            size_t value_start = events_str.find_first_not_of(" \t\n\r", colon_pos + 1);
-            if (value_start == std::string::npos) break;
-            size_t value_end = value_start;
-            int brace_balance = 0;
-            for (; value_end < events_str.length(); ++value_end) {
-                char c = events_str[value_end];
-                if (c == '{') brace_balance++;
-                else if (c == '}') brace_balance--;
-                else if (c == ',' && brace_balance == 0) break;
-            }
-            std::string handler = events_str.substr(value_start, value_end - value_start);
-            handler.erase(handler.find_last_not_of(" \t\n\r") + 1);
-            if (!handler.empty()) {
-                 result += compiled_selector + ".addEventListener('" + event_name + "', " + handler + ");\n";
-            }
-            current_pos = value_end + 1;
-        }
-        last_pos = close_brace_pos + 1;
-    }
-    result += source.substr(last_pos);
-    return result;
-}
-
-std::string parseAnimateBlock(const std::string& block_content);
-std::string CHTLJSCompiler::compileAnimateFunctions(std::string source) {
-    std::string result;
-    size_t last_pos = 0;
-    std::regex animate_start_regex(R"(Animate\b(?=\s*\{))");
-    auto it = std::sregex_iterator(source.begin(), source.end(), animate_start_regex);
-    auto end = std::sregex_iterator();
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result += source.substr(last_pos, match.position() - last_pos);
-        size_t open_brace_pos = source.find('{', match.position() + match.length());
-        if (open_brace_pos == std::string::npos) continue;
-        size_t close_brace_pos = findMatchingBrace(source, open_brace_pos);
-        if (close_brace_pos == std::string::npos) continue;
-        std::string block_content = source.substr(open_brace_pos + 1, close_brace_pos - open_brace_pos - 1);
-        result += parseAnimateBlock(block_content);
-        last_pos = close_brace_pos + 1;
-        if (last_pos < source.length() && source[last_pos] == ';') {
-            last_pos++;
-        }
-    }
-    result += source.substr(last_pos);
-    return result;
-}
-
-std::string parseDelegateBlock(const std::string& parent_selector, const std::string& block_content);
-std::string CHTLJSCompiler::compileDelegateFunctions(std::string source) {
-    std::string result;
-    size_t last_pos = 0;
-    std::regex delegate_start_regex(R"((\{\{[^}]+\}\}|[\w\d_.]+)\s*->\s*Delegate)");
-    auto it = std::sregex_iterator(source.begin(), source.end(), delegate_start_regex);
-    auto end = std::sregex_iterator();
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result += source.substr(last_pos, match.position() - last_pos);
-        std::string parent_selector = match[1].str();
-        size_t open_brace_pos = source.find('{', match.position() + match.length());
-        if (open_brace_pos == std::string::npos) continue;
-        size_t close_brace_pos = findMatchingBrace(source, open_brace_pos);
-        if (close_brace_pos == std::string::npos) continue;
-        std::string block_content = source.substr(open_brace_pos + 1, close_brace_pos - open_brace_pos - 1);
-        result += parseDelegateBlock(parent_selector, block_content);
-        last_pos = close_brace_pos + 1;
-        if (last_pos < source.length() && source[last_pos] == ';') {
-            last_pos++;
-        }
-    }
-    result += source.substr(last_pos);
-    return result;
-}
-
-std::string parseRouterBlock(const std::string& block_content);
-std::string CHTLJSCompiler::compileRouterFunctions(std::string source) {
-    std::string result;
-    size_t last_pos = 0;
-    std::regex router_start_regex(R"(Router\b(?=\s*\{))");
-    auto it = std::sregex_iterator(source.begin(), source.end(), router_start_regex);
-    auto end = std::sregex_iterator();
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result += source.substr(last_pos, match.position() - last_pos);
-        size_t open_brace_pos = source.find('{', match.position() + match.length());
-        if (open_brace_pos == std::string::npos) continue;
-        size_t close_brace_pos = findMatchingBrace(source, open_brace_pos);
-        if (close_brace_pos == std::string::npos) continue;
-        std::string block_content = source.substr(open_brace_pos + 1, close_brace_pos - open_brace_pos - 1);
-        result += parseRouterBlock(block_content);
-        last_pos = close_brace_pos + 1;
-        if (last_pos < source.length() && source[last_pos] == ';') {
-            last_pos++;
-        }
-    }
-    result += source.substr(last_pos);
-    return result;
-}
-
-std::string parseScriptLoaderBlock(const std::string& block_content);
-std::string CHTLJSCompiler::compileScriptLoaderFunctions(std::string source) {
-    std::string result;
-    size_t last_pos = 0;
-    std::regex loader_start_regex(R"(ScriptLoader\b(?=\s*\{))");
-    auto it = std::sregex_iterator(source.begin(), source.end(), loader_start_regex);
-    auto end = std::sregex_iterator();
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        result += source.substr(last_pos, match.position() - last_pos);
-        size_t open_brace_pos = source.find('{', match.position() + match.length());
-        if (open_brace_pos == std::string::npos) continue;
-        size_t close_brace_pos = findMatchingBrace(source, open_brace_pos);
-        if (close_brace_pos == std::string::npos) continue;
-        std::string block_content = source.substr(open_brace_pos + 1, close_brace_pos - open_brace_pos - 1);
-        result += parseScriptLoaderBlock(block_content);
-        last_pos = close_brace_pos + 1;
-        if (last_pos < source.length() && source[last_pos] == ';') {
-            last_pos++;
-        }
-    }
-    result += source.substr(last_pos);
-    return result;
-}
-
-std::string CHTLJSCompiler::compile(const std::string& scanned_source) {
-    std::string result = scanned_source;
-    result = compileScriptLoaderFunctions(result);
-    result = compileListenFunctions(result);
-    result = compileAnimateFunctions(result);
-    result = compileDelegateFunctions(result);
-    result = compileRouterFunctions(result);
-    result = compileSelectors(result);
-    return result;
-}
-
-// --- PARSER IMPLEMENTATIONS WITH ERROR HANDLING ---
-
-std::string parseAnimateBlock(const std::string& block_content) {
-    std::string js_code;
     std::string target, duration, callback;
+    std::string options_js = "{";
     std::vector<std::string> keyframes_js;
-    std::string options_js = "{ ";
 
-    size_t pos = 0;
-    while (pos < block_content.length()) {
-        size_t key_start = block_content.find_first_not_of(" \t\n\r,", pos);
-        if (key_start == std::string::npos) break;
-        size_t colon_pos = block_content.find(':', key_start);
-        if (colon_pos == std::string::npos) break;
-        std::string key = block_content.substr(key_start, colon_pos - key_start);
-        key.erase(key.find_last_not_of(" \t\n\r") + 1);
-        size_t value_start = block_content.find_first_not_of(" \t\n\r", colon_pos + 1);
-        if (value_start == std::string::npos) break;
-        size_t value_end;
-        char first_char = block_content[value_start];
-        if (first_char == '{') value_end = findMatchingBrace(block_content, value_start) + 1;
-        else if (first_char == '[') {
-            int balance = 1;
-            value_end = value_start + 1;
-            while(value_end < block_content.length() && balance > 0) {
-                if(block_content[value_end] == '[') balance++;
-                if(block_content[value_end] == ']') balance--;
-                value_end++;
-            }
-        } else {
-            value_end = block_content.find_first_of(",\n", value_start);
-            if (value_end == std::string::npos) value_end = block_content.length();
-        }
-        std::string value = block_content.substr(value_start, value_end - value_start);
-        value.erase(value.find_last_not_of(" \t\n\r,") + 1);
-        std::string raw_value = value;
-        if ((value.front() == '\'' && value.back() == '\'') || (value.front() == '"' && value.back() == '"')) {
-            raw_value = value.substr(1, value.length() - 2);
-        }
-        if (key == "target") target = value;
-        else if (key == "duration") {
-            duration = raw_value;
-            options_js += key + ": " + raw_value + ", ";
-        }
-        else if (key == "delay") options_js += key + ": " + raw_value + ", ";
-        else if (key == "easing" || key == "direction") options_js += key + ": '" + raw_value + "', ";
-        else if (key == "loop") {
-            if (raw_value == "-1") options_js += "iterations: Infinity, ";
-            else options_js += "iterations: " + raw_value + ", ";
-        }
-        else if (key == "callback") callback = raw_value;
-        else if (key == "begin") keyframes_js.insert(keyframes_js.begin(), parseKeyframeObject(value));
-        else if (key == "end") keyframes_js.push_back(parseKeyframeObject(value));
-        else if (key == "when") {
-            std::string when_content = value.substr(1, value.length() - 2);
-            size_t when_pos = 0;
-            while(when_pos < when_content.length()) {
-                size_t frame_start = when_content.find('{', when_pos);
-                if (frame_start == std::string::npos) break;
-                size_t frame_end = findMatchingBrace(when_content, frame_start);
-                if (frame_end == std::string::npos) break;
-                keyframes_js.push_back(parseKeyframeObject(when_content.substr(frame_start, frame_end - frame_start + 1)));
-                when_pos = frame_end + 1;
+    for (size_t i = open_brace_idx + 1; i < close_brace_idx; ++i) {
+        i = nextMeaningfulToken(tokens, i - 1);
+        if (i >= close_brace_idx) break;
+
+        if (tokens[i].type == TokenType::IDENTIFIER) {
+            std::string key = tokens[i].text;
+            size_t colon_idx = nextMeaningfulToken(tokens, i);
+            size_t value_idx = nextMeaningfulToken(tokens, colon_idx);
+
+            if (value_idx < close_brace_idx && tokens[colon_idx].text == ":") {
+                const auto& value_token = tokens[value_idx];
+                std::string value = getTokenValue(value_token);
+                if (key == "target") target = value_token.type == TokenType::CHTL_SELECTOR ? compileSelector(value_token) : value;
+                else if (key == "duration") { duration = value; options_js += "duration:" + value + ","; }
+                else if (key == "callback") callback = value;
+                else if (key == "easing" || key == "direction") options_js += key + ":'" + value + "',";
+                else if (key == "loop") {
+                    if (value == "-1") options_js += "iterations:Infinity,";
+                    else options_js += "iterations:" + value + ",";
+                }
+                else if (key == "begin") { size_t frame_end; keyframes_js.insert(keyframes_js.begin(), parseKeyframeObject(tokens, value_idx, frame_end)); i = frame_end; }
+                else if (key == "end") { size_t frame_end; keyframes_js.push_back(parseKeyframeObject(tokens, value_idx, frame_end)); i = frame_end; }
+                else if (key == "when") {
+                    size_t array_end = std::string::npos;
+                    int balance = 0;
+                    for(size_t k=value_idx; k<close_brace_idx; ++k){
+                        if(tokens[k].text == "[") balance++; if(tokens[k].text == "]") balance--;
+                        if(balance == 0) { array_end = k; break; }
+                    }
+                    if(array_end != std::string::npos) {
+                        for(size_t k=value_idx+1; k<array_end; ++k){
+                             k = nextMeaningfulToken(tokens, k-1); if(k >= array_end) break;
+                             if(tokens[k].text == "{") { size_t frame_end; keyframes_js.push_back(parseKeyframeObject(tokens, k, frame_end)); k = frame_end; }
+                        }
+                        i = array_end;
+                    }
+                }
             }
         }
-        pos = value_end;
     }
+    options_js += "}";
+    if(target.empty() || duration.empty()) return "console.error('CHTL Animate: target and duration required');";
 
-    if (target.empty()) return "console.error(\"CHTL JS Animate Error: 'target' property is required.\");\n";
-    if (duration.empty()) return "console.error(\"CHTL JS Animate Error: 'duration' property is required.\");\n";
+    std::string js_code = "const target_elem=" + target + ";if(target_elem){const anim=target_elem.animate([";
+    for(size_t i=0; i<keyframes_js.size(); ++i) js_code += keyframes_js[i] + (i == keyframes_js.size() - 1 ? "" : ",");
+    js_code += "], " + options_js + ");";
+    if(!callback.empty()) js_code += "anim.finished.then(" + callback + ");";
+    js_code += "}";
 
-    if (options_js.length() > 2) {
-        options_js.pop_back();
-        options_js.pop_back();
-    }
-    options_js += " }";
-    if (target.rfind("{{", 0) == 0) {
-        target = convertSelector(target.substr(2, target.length() - 4));
-    }
-    js_code += "const target_elem = " + target + ";\n";
-    js_code += "if (target_elem) {\n";
-    js_code += "  const keyframes = [ ";
-    for(size_t i = 0; i < keyframes_js.size(); ++i) {
-        js_code += keyframes_js[i] + (i == keyframes_js.size() - 1 ? "" : ", ");
-    }
-    js_code += " ];\n";
-    js_code += "  const animation = target_elem.animate(keyframes, " + options_js + ");\n";
-    if (!callback.empty()) {
-        js_code += "  animation.finished.then(" + callback + ");\n";
-    }
-    js_code += "}\n";
+    end_index_out = close_brace_idx;
+    size_t next_token = nextMeaningfulToken(tokens, close_brace_idx);
+    if(next_token != std::string::npos && tokens[next_token].text == ";") end_index_out = next_token;
     return js_code;
 }
 
-std::string parseDelegateBlock(const std::string& parent_selector, const std::string& block_content) {
-    std::string js_code;
+std::string compileDelegateBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out) {
+    std::string parent_selector = tokens[start_index].type == TokenType::CHTL_SELECTOR ? compileSelector(tokens[start_index]) : tokens[start_index].text;
+    size_t keyword_idx = nextMeaningfulToken(tokens, start_index + 1);
+    size_t open_brace_idx = nextMeaningfulToken(tokens, keyword_idx);
+    if (open_brace_idx == std::string::npos || tokens[open_brace_idx].text != "{") return "";
+    size_t close_brace_idx = findMatchingBraceToken(tokens, open_brace_idx);
+    if (close_brace_idx == std::string::npos) return "";
+
     std::string target_selector;
     std::map<std::string, std::string> event_handlers;
-    std::regex prop_regex(R"((\w+)\s*:\s*('[\w\d_.-]*'|[\w\d_.-]+))");
-    auto it = std::sregex_iterator(block_content.begin(), block_content.end(), prop_regex);
-    auto end = std::sregex_iterator();
-    for (; it != end; ++it) {
-        std::smatch match = *it;
-        std::string key = match[1].str();
-        std::string value = match[2].str();
-        if (key == "target") {
-            if (value.front() == '\'' && value.back() == '\'') {
-                target_selector = value.substr(1, value.length() - 2);
-            } else {
-                target_selector = value;
+
+    for (size_t i = open_brace_idx + 1; i < close_brace_idx; ++i) {
+        i = nextMeaningfulToken(tokens, i - 1);
+        if (i >= close_brace_idx) break;
+        if (tokens[i].type == TokenType::IDENTIFIER) {
+            std::string key = tokens[i].text;
+            size_t colon_idx = nextMeaningfulToken(tokens, i);
+            size_t value_idx = nextMeaningfulToken(tokens, colon_idx);
+            if (value_idx < close_brace_idx && tokens[colon_idx].text == ":") {
+                if (key == "target") target_selector = getTokenValue(tokens[value_idx]);
+                else {
+                    size_t handler_end = value_idx;
+                    int balance = 0;
+                    for(size_t k=value_idx; k < close_brace_idx; ++k) {
+                        if(tokens[k].text == "{") balance++;
+                        if(tokens[k].text == "}") balance--;
+                        if(balance == 0 && (tokens[k].text == "," || k == close_brace_idx -1)) { handler_end = k; break; }
+                        handler_end = k;
+                    }
+                    std::string handler_code;
+                    bool is_inline_func = false;
+                    for(size_t k=value_idx; k <= handler_end; ++k) {
+                        if (tokens[k].text == "function") is_inline_func = true;
+                        handler_code += tokens[k].text;
+                    }
+
+                    if (is_inline_func) {
+                        event_handlers[key] = "(" + handler_code + ")(e)";
+                    } else {
+                        event_handlers[key] = handler_code + "(e)";
+                    }
+                    i = handler_end;
+                }
             }
-        } else {
-            event_handlers[key] = value;
         }
     }
 
-    if (parent_selector.empty()) return "console.error(\"CHTL JS Delegate Error: A parent selector is required.\");\n";
-    if (target_selector.empty()) return "console.error(\"CHTL JS Delegate Error: 'target' property is required.\");\n";
+    if (target_selector.empty()) return "console.error('CHTL Delegate Error: target is required');";
 
-    std::string compiled_parent = parent_selector;
-    if (parent_selector.rfind("{{", 0) == 0) {
-        std::string inner = parent_selector.substr(2, parent_selector.length() - 4);
-        compiled_parent = convertSelector(inner);
+    std::string js_code = "const parent_elem=" + parent_selector + ";if(parent_elem){";
+    for(const auto& pair : event_handlers) {
+        js_code += "parent_elem.addEventListener('" + pair.first + "',(e)=>{if(e.target.matches(\"" + target_selector + "\")){" + pair.second + ";}});";
     }
-    js_code += "const parent_elem = " + compiled_parent + ";\n";
-    js_code += "if (parent_elem) {\n";
-    for (const auto& pair : event_handlers) {
-        const std::string& event_name = pair.first;
-        const std::string& handler_name = pair.second;
-        js_code += "  parent_elem.addEventListener('" + event_name + "', (event) => {\n";
-        js_code += "    if (event.target.matches('" + target_selector + "')) {\n";
-        js_code += "      " + handler_name + "(event);\n";
-        js_code += "    }\n";
-        js_code += "  });\n";
-    }
-    js_code += "}\n";
+    js_code += "}";
+
+    end_index_out = close_brace_idx;
+    size_t next_token = nextMeaningfulToken(tokens, close_brace_idx);
+    if(next_token != std::string::npos && tokens[next_token].text == ";") end_index_out = next_token;
     return js_code;
 }
 
-std::string parseRouterBlock(const std::string& block_content) {
-    std::string js_code;
-    std::map<std::string, std::string> routes;
+std::string compileListenBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out) {
+    return compileDelegateBlock(tokens, start_index, end_index_out);
+}
+
+std::string compileRouterBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out) {
+    size_t open_brace_idx = nextMeaningfulToken(tokens, start_index);
+    if (open_brace_idx == std::string::npos || tokens[open_brace_idx].text != "{") return "";
+    size_t close_brace_idx = findMatchingBraceToken(tokens, open_brace_idx);
+    if (close_brace_idx == std::string::npos) return "";
+
+    std::map<std::string, Token> routes;
     std::string mode = "hash";
     std::string current_url;
-    size_t pos = 0;
-    while (pos < block_content.length()) {
-        size_t key_start = block_content.find_first_not_of(" \t\n\r,", pos);
-        if (key_start == std::string::npos) break;
-        size_t colon_pos = block_content.find(':', key_start);
-        if (colon_pos == std::string::npos) break;
-        std::string key = block_content.substr(key_start, colon_pos - key_start);
-        key.erase(key.find_last_not_of(" \t\n\r") + 1);
-        size_t value_start = block_content.find_first_not_of(" \t\n\r", colon_pos + 1);
-        if (value_start == std::string::npos) break;
-        size_t value_end;
-        char first_char = block_content[value_start];
-        if (first_char == '\'' || first_char == '"') {
-            value_end = block_content.find(first_char, value_start + 1);
-            if (value_end != std::string::npos) {
-                value_end++;
+
+    for (size_t i = open_brace_idx + 1; i < close_brace_idx; ++i) {
+        i = nextMeaningfulToken(tokens, i - 1);
+        if (i >= close_brace_idx) break;
+        if (tokens[i].type == TokenType::IDENTIFIER) {
+            std::string key = tokens[i].text;
+            size_t colon_idx = nextMeaningfulToken(tokens, i);
+            size_t value_idx = nextMeaningfulToken(tokens, colon_idx);
+            if (value_idx < close_brace_idx && tokens[colon_idx].text == ":") {
+                const Token& value_token = tokens[value_idx];
+                if (key == "mode") mode = getTokenValue(value_token);
+                else if (key == "url") current_url = getTokenValue(value_token);
+                else if (key == "page" && value_token.type == TokenType::CHTL_SELECTOR && !current_url.empty()) {
+                    routes[current_url] = value_token;
+                    current_url.clear();
+                }
+                i = value_idx;
             }
-        } else if (block_content.substr(value_start, 2) == "{{") {
-            value_end = block_content.find("}}", value_start);
-             if (value_end != std::string::npos) {
-                value_end += 2;
-            }
-        } else {
-            value_end = block_content.find_first_of(", \t\n\r", value_start);
         }
-        if (value_end == std::string::npos) {
-            value_end = block_content.length();
-        }
-        std::string value = block_content.substr(value_start, value_end - value_start);
-        value.erase(value.find_last_not_of(" \t\n\r,") + 1);
-        if ((value.front() == '\'' && value.back() == '\'') || (value.front() == '"' && value.back() == '"')) {
-            value = value.substr(1, value.length() - 2);
-        }
-        if (key == "url") {
-            current_url = value;
-        } else if (key == "page" && !current_url.empty()) {
-            routes[current_url] = value;
-            current_url.clear();
-        } else if (key == "mode") {
-            mode = value;
-        }
-        pos = value_end;
     }
 
-    if (routes.empty()) return "console.error(\"CHTL JS Router Error: No routes were defined.\");\n";
-    if (mode != "hash") return "console.error(\"CHTL JS Router Error: Only 'hash' mode is currently supported.\");\n";
+    std::string js_code;
+    if (routes.empty()) js_code = "console.error(\"CHTL JS Router Error: No routes were defined.\");";
+    else {
+        js_code += "const routes = {";
+        for(const auto& route : routes) js_code += "  '" + route.first + "': " + compileSelector(route.second) + ",";
+        js_code += "};";
+        if (mode == "history") js_code += R"JS(const navigate = (path) => { window.history.pushState({ path }, '', path); const page = routes[path]; Object.values(routes).forEach(p => { if(p) p.style.display = 'none'; }); if (page) page.style.display = 'block'; }; window.addEventListener('popstate', (e) => { const path = e.state ? e.state.path : '/'; const page = routes[path]; Object.values(routes).forEach(p => { if(p) p.style.display = 'none'; }); if (page) page.style.display = 'block'; }); document.addEventListener('click', (e) => { const anchor = e.target.closest('a'); if (anchor) { const href = anchor.getAttribute('href'); if (href && href.startsWith('/')) { e.preventDefault(); navigate(href); } } }); navigate(window.location.pathname);)JS";
+        else js_code += R"JS(function navigate() { const path = window.location.hash.slice(1) || '/'; const page = routes[path]; for (const key in routes) { if (routes[key]) routes[key].style.display = 'none'; } if (page) { page.style.display = 'block'; } } window.addEventListener('hashchange', navigate); navigate();)JS";
+    }
 
-    js_code += "const routes = {\n";
-    for(const auto& route : routes) {
-        std::string page_selector = route.second;
-        if (page_selector.rfind("{{", 0) == 0) {
-            page_selector = convertSelector(page_selector.substr(2, page_selector.length() - 4));
-        }
-        js_code += "  '" + route.first + "': " + page_selector + ",\n";
-    }
-    js_code += "};\n\n";
-    js_code += R"JS(
-function navigate() {
-    const path = window.location.hash.slice(1) || '/';
-    const page = routes[path];
-    // Hide all pages
-    for (const key in routes) {
-        if (routes[key]) routes[key].style.display = 'none';
-    }
-    // Show the current page
-    if (page) {
-        page.style.display = 'block';
-    }
-}
-window.addEventListener('hashchange', navigate);
-navigate(); // Initial navigation
-)JS";
+    end_index_out = close_brace_idx;
+    size_t next_token = nextMeaningfulToken(tokens, close_brace_idx);
+    if(next_token != std::string::npos && tokens[next_token].text == ";") end_index_out = next_token;
     return js_code;
 }
 
-std::string parseScriptLoaderBlock(const std::string& block_content) {
-    std::string js_code = "(function() {\n";
-    size_t pos = 0;
+std::string compileScriptLoaderBlock(const std::vector<Token>& tokens, size_t start_index, size_t& end_index_out) {
+    size_t open_brace_idx = nextMeaningfulToken(tokens, start_index);
+    if (open_brace_idx == std::string::npos || tokens[open_brace_idx].text != "{") return "";
+    size_t close_brace_idx = findMatchingBraceToken(tokens, open_brace_idx);
+    if (close_brace_idx == std::string::npos) return "";
+
+    std::string js_code = "(function() {";
     int script_counter = 0;
-    while ((pos = block_content.find("load:", pos)) != std::string::npos) {
-        size_t value_start = block_content.find_first_not_of(" \t\n\r", pos + 5);
-        if (value_start == std::string::npos) break;
-        size_t value_end = block_content.find_first_of(";\n", value_start);
-        if (value_end == std::string::npos) {
-            value_end = block_content.length();
-        }
-        std::string path_list_str = block_content.substr(value_start, value_end - value_start);
-        size_t path_pos = 0;
-        while (path_pos < path_list_str.length()) {
-            size_t path_start = path_list_str.find_first_not_of(" \t\n\r,", path_pos);
-            if (path_start == std::string::npos) break;
-            size_t path_end = path_list_str.find_first_of(" \t\n\r,", path_start);
-            if (path_end == std::string::npos) {
-                path_end = path_list_str.length();
+    for (size_t i = open_brace_idx + 1; i < close_brace_idx; ++i) {
+        if (tokens[i].type == TokenType::IDENTIFIER && tokens[i].text == "load") {
+            size_t colon_idx = nextMeaningfulToken(tokens, i);
+            if(colon_idx >= close_brace_idx || tokens[colon_idx].text != ":") continue;
+            size_t value_idx = nextMeaningfulToken(tokens, colon_idx);
+            while(value_idx < close_brace_idx) {
+                std::string path = getTokenValue(tokens[value_idx]);
+                js_code += "const script" + std::to_string(script_counter) + "=document.createElement('script');";
+                js_code += "script" + std::to_string(script_counter) + ".src='" + path + "';";
+                js_code += "document.head.appendChild(script" + std::to_string(script_counter++) + ");";
+                size_t next_val_idx = nextMeaningfulToken(tokens, value_idx);
+                if(next_val_idx >= close_brace_idx || tokens[next_val_idx].text != ",") break;
+                value_idx = nextMeaningfulToken(tokens, next_val_idx);
             }
-            std::string script_path = path_list_str.substr(path_start, path_end - path_start);
-            if ((script_path.front() == '\'' && script_path.back() == '\'') || (script_path.front() == '"' && script_path.back() == '"')) {
-                script_path = script_path.substr(1, script_path.length() - 2);
-            }
-            js_code += "  const script" + std::to_string(script_counter) + " = document.createElement('script');\n";
-            js_code += "  script" + std::to_string(script_counter) + ".src = '" + script_path + "';\n";
-            js_code += "  document.head.appendChild(script" + std::to_string(script_counter) + ");\n";
-            script_counter++;
-            path_pos = path_end;
         }
-        pos = value_end;
     }
-    js_code += "})();\n";
+    js_code += "})();";
+    end_index_out = close_brace_idx;
+    size_t next_token = nextMeaningfulToken(tokens, close_brace_idx);
+    if(next_token != std::string::npos && tokens[next_token].text == ";") end_index_out = next_token;
     return js_code;
 }

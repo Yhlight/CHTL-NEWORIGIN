@@ -1,18 +1,17 @@
 #pragma once
 
+#include "Scanner/Tokenizer.h" // Include the Token definition
 #include <string>
+#include <vector>
 #include <map>
-#include <vector> // For parseAnimateBlock
 
 class CHTLJSCompiler {
 public:
-    std::string compile(const std::string& scanned_source);
+    // The main compile method now takes a vector of tokens.
+    std::string compile(std::vector<Token>& tokens);
 
 private:
-    std::string compileSelectors(std::string source);
-    std::string compileListenFunctions(std::string source);
-    std::string compileAnimateFunctions(std::string source);
-    std::string compileDelegateFunctions(std::string source);
-    std::string compileRouterFunctions(std::string source);
-    std::string compileScriptLoaderFunctions(std::string source);
+    // Helper methods will also be updated to work with tokens,
+    // but their signatures can remain private for now.
+    // We will refactor them in the .cpp file.
 };

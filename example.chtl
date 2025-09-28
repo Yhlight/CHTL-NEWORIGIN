@@ -3,66 +3,70 @@
 <head>
     <title>Mature CHTL JS Showcase</title>
     <style>
-        body { font-family: sans-serif; }
-        nav a { margin-right: 10px; }
-        .page { display: none; }
-        .animated-box { width: 50px; height: 50px; background: steelblue; }
-        #home-page button { margin-top: 10px; }
+        body { font-family: sans-serif; padding: 20px; }
+        nav a { margin-right: 15px; text-decoration: none; color: blue; }
+        .page { display: none; border: 1px solid #ccc; padding: 20px; margin-top: 15px; }
+        .box { width: 50px; height: 50px; background: steelblue; margin-top: 10px; }
     </style>
 </head>
 <body>
     <nav>
-        <a href="#/">Home</a>
-        <a href="#/about">About</a>
+        <a href="/">Home</a>
+        <a href="/about">About</a>
     </nav>
 
     <main>
         <div id="home-page" class="page">
-            <h1>Home</h1>
-            <p>Click the box to see it animate.</p>
-            <div class="animated-box"></div>
+            <h1>Home Page</h1>
+            <p>Message: <b>$message$</b></p>
+            <button id="animate-btn">Animate the Box</button>
+            <div class="box"></div>
         </div>
         <div id="about-page" class="page">
-            <h1>About</h1>
+            <h1>About Page</h1>
             <p>This is a showcase of the mature CHTL JS compiler.</p>
         </div>
     </main>
 
     <script>
-// Load an external script
+// 1. Load external scripts
 ScriptLoader {
     load: './utils.js';
 };
 
-// Define a reusable virtual configuration object
-Vir animConfig = {
-    duration: 1500,
-    easing: 'ease-in-out'
+// 2. Define a reusable virtual function with iNeverAway
+Vir MyAnimations = iNeverAway {
+    Pulse<Blue>: function(target) {
+        Animate {
+            target: target,
+            duration: 800,
+            easing: 'ease-in-out',
+            direction: 'alternate',
+            loop: 2,
+            begin: { transform: 'scale(1)', background: 'steelblue' },
+            end: { transform: 'scale(1.2)', background: 'royalblue' }
+        };
+    }
 };
 
-// Define an event handler
-function handleBoxClick(event) {
-    console.log('Animation started on:', event.target);
-    Animate {
-        target: {{.animated-box}},
-        duration: animConfig->duration, // Use the virtual object
-        easing: animConfig->easing,
-        begin: { transform: 'scale(1) rotate(0deg)' },
-        end: { transform: 'scale(1.5) rotate(270deg)' }
-    };
-}
+// 3. Define a responsive variable
+let message = 'Welcome to the CHTL JS Showcase!';
 
-// Set up the router
+// 4. Set up the router
 Router {
-    mode: 'hash',
+    mode: 'history',
     url: '/',       page: {{#home-page}},
     url: '/about',  page: {{#about-page}}
 };
 
-// Use event delegation on the home page
+// 5. Use event delegation to handle clicks
 {{#home-page}}->Delegate {
-    target: '.animated-box',
-    click: handleBoxClick
+    target: '#animate-btn',
+    click: function(event) {
+        const box = document.querySelector('.box');
+        MyAnimations->Pulse<Blue>(box);
+        message = 'Animation triggered!';
+    }
 };
     </script>
 </body>
