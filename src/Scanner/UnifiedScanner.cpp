@@ -1,6 +1,7 @@
 #include "UnifiedScanner.h"
 #include <string>
 #include <cctype>
+#include <regex>
 
 // Helper to check if a substring at a position is a keyword, ensuring it's a whole word.
 bool is_keyword_at(const std::string& s, size_t pos, const std::string& keyword) {
@@ -107,7 +108,6 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
     size_t last_pos = 0;
 
     for (size_t i = 0; i < source.length(); ++i) {
-        // Find potential keywords for blocks that need processing
         bool is_style = is_keyword_at(source, i, "style");
         bool is_script = is_keyword_at(source, i, "script");
         bool is_listen = is_keyword_at(source, i, "Listen");
@@ -116,7 +116,6 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
             size_t keyword_len = is_listen ? 6 : (is_style ? 5 : 6);
             size_t block_start_pos = i + keyword_len;
 
-            // Skip whitespace to find the opening brace
             while (block_start_pos < source.length() && isspace(source[block_start_pos])) {
                 block_start_pos++;
             }
@@ -125,35 +124,68 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
                 size_t block_end_pos = find_matching_brace(source, block_start_pos);
 
                 if (block_end_pos != std::string::npos) {
-                    // Append the source code before the block
                     result_source.append(source, last_pos, i - last_pos);
 
-                    // Generate a unique placeholder
-                    std::string placeholder = placeholder_template + std::to_string(placeholder_id_counter++);
-
-                    // Extract the content inside the braces
                     std::string content = source.substr(block_start_pos + 1, block_end_pos - block_start_pos - 1);
 
-                    // Determine the fragment type and store it
                     if (is_style) {
-                        output.fragments[placeholder] = {FragmentType::CSS, content};
-                    } else if (is_script) {
-                        output.fragments[placeholder] = processScriptBlock(content);
-                    } else { // is_listen
-                         // The "Listen" block itself is CHTL_JS, including the keyword
-                        std::string listen_content = source.substr(i, block_end_pos - i + 1);
-                        output.fragments[placeholder] = {FragmentType::CHTL_JS, listen_content};
-                    }
+                        // For style blocks, parse the content for CHTL features.
+                        std::string processed_content;
+                        auto current_pos_in_content = content.cbegin();
 
-                    // In the main source, replace the block with a placeholder
-                    if (is_listen) {
-                         result_source += placeholder;
+                        std::regex chtl_in_css_regex(
+                            // Group 1: @Style MyTemplate;
+                            R"((@Style\s+[a-zA-Z0-9_]+;))"
+                            "|"
+                            // Group 2: Full property, Group 3: name, Group 4: value with arithmetic
+                            R"((([\w-]+)\s*:\s*([^;]*[+\-*/][^;]*));)"
+                        );
+
+                        auto it_begin = std::sregex_iterator(content.begin(), content.end(), chtl_in_css_regex);
+                        auto it_end = std::sregex_iterator();
+
+                        for (std::sregex_iterator it = it_begin; it != it_end; ++it) {
+                            const std::smatch& match = *it;
+                            processed_content += match.prefix();
+                            std::string placeholder = placeholder_template + std::to_string(placeholder_id_counter++);
+
+                            if (match[1].matched) { // Matched @Style usage
+                                output.fragments[placeholder] = {FragmentType::CHTL, match[1].str()};
+                                processed_content += placeholder;
+                            } else if (match[2].matched) { // Matched arithmetic property
+                                std::string property_name = match[3].str();
+                                std::string value = match[4].str();
+
+                                // Trim leading/trailing whitespace from the captured value
+                                value.erase(0, value.find_first_not_of(" \t\n\r"));
+                                value.erase(value.find_last_not_of(" \t\n\r") + 1);
+
+                                output.fragments[placeholder] = {FragmentType::CHTL, value};
+                                processed_content += property_name + ": " + placeholder + ";";
+                            }
+                            current_pos_in_content = match.suffix().first;
+                        }
+                        processed_content += std::string(current_pos_in_content, content.cend());
+                        result_source += "style {" + processed_content + "}";
+
                     } else {
-                        result_source += source.substr(i, keyword_len);
-                        result_source += " " + placeholder + "{}";
+                        // For script/listen blocks, extract the whole block.
+                        std::string placeholder = placeholder_template + std::to_string(placeholder_id_counter++);
+                        if (is_script) {
+                            output.fragments[placeholder] = processScriptBlock(content);
+                        } else { // is_listen
+                            std::string listen_content = source.substr(i, block_end_pos - i + 1);
+                            output.fragments[placeholder] = {FragmentType::CHTL_JS, listen_content};
+                        }
+
+                        if (is_listen) {
+                            result_source += placeholder;
+                        } else {
+                            result_source += source.substr(i, keyword_len);
+                            result_source += " " + placeholder + "{}";
+                        }
                     }
 
-                    // Move the main loop's cursor past the processed block
                     last_pos = block_end_pos + 1;
                     i = block_end_pos;
                 }
@@ -161,7 +193,6 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
         }
     }
 
-    // Append any remaining part of the source
     if (last_pos < source.length()) {
         result_source.append(source, last_pos, source.length() - last_pos);
     }

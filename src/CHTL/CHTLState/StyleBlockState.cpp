@@ -30,7 +30,10 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
     while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
         if (parser.currentToken.type == TokenType::Identifier) {
             parseInlineProperty(parser);
-        } else {
+        } else if (parser.currentToken.type == TokenType::At) {
+            parseStyleTemplateUsage(parser);
+        }
+        else {
             throw std::runtime_error("Unexpected token in style block: " + parser.currentToken.value);
         }
     }
@@ -136,17 +139,26 @@ void StyleBlockState::parseAmpersandSelector(Parser& parser) {
 std::string StyleBlockState::parseCssRuleBlock(Parser& parser) { return ""; }
 
 void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
-    parser.advanceTokens(); // @
-    parser.advanceTokens(); // Style
-    parser.advanceTokens(); // templateName
-    if (parser.currentToken.type == TokenType::Semicolon) {
-        parser.advanceTokens();
-    } else if (parser.currentToken.type == TokenType::OpenBrace) {
-        parser.advanceTokens();
-        while(parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-            parser.advanceTokens();
-        }
-        parser.expectToken(TokenType::CloseBrace);
+    parser.expectToken(TokenType::At);
+    if (parser.currentToken.value != "Style") {
+        throw std::runtime_error("Expected '@Style' for template usage.");
+    }
+    parser.advanceTokens(); // Consume 'Style'
+
+    std::string templateName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+    parser.expectToken(TokenType::Semicolon);
+
+    // Get the template from the manager
+    const StyleTemplateNode* styleTemplate = parser.templateManager.getStyleTemplate(parser.getCurrentNamespace(), templateName);
+
+    if (!styleTemplate) {
+        throw std::runtime_error("Style template '" + templateName + "' not found in namespace '" + parser.getCurrentNamespace() + "'.");
+    }
+
+    // Apply the styles to the context node
+    for (const auto& pair : styleTemplate->styles) {
+        parser.contextNode->inlineStyles[pair.first] = pair.second->clone();
     }
 }
 

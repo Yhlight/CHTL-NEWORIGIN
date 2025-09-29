@@ -252,28 +252,66 @@ TEST_CASE("CHTLJS Parser and Generator for Listen block", "[CHTLJS]") {
 }
 
 TEST_CASE("CHTLJS Parser and Generator for Enhanced Selector", "[CHTLJS]") {
-    // 1. Define the CHTL JS source code
-    std::string source = "{{.my-class}}->someFunction();";
-
-    // 2. Parse the source code
     CHTLJSParser parser;
-    std::unique_ptr<CHTLJSBaseNode> ast = parser.parse(source);
-
-    // Ensure the parser returned a valid AST
-    REQUIRE(ast != nullptr);
-    auto* selector_node = dynamic_cast<EnhancedSelectorNode*>(ast.get());
-    REQUIRE(selector_node != nullptr);
-
-    // Check the content of the parsed node
-    REQUIRE(selector_node->getSelector() == ".my-class");
-    REQUIRE(selector_node->getExpression() == "someFunction()");
-
-    // 3. Generate the JavaScript code
     CHTLJSGenerator generator;
-    std::string generated_js = generator.generate(*ast);
 
-    // 4. Assert the generated code is correct
-    std::string expected_js = "document.querySelector('.my-class').someFunction();\n";
+    SECTION("Class Selector") {
+        std::string source = "{{.my-class}}->someFunction();";
+        auto ast = parser.parse(source);
+        REQUIRE(ast != nullptr);
+        auto* selector_node = dynamic_cast<EnhancedSelectorNode*>(ast.get());
+        REQUIRE(selector_node != nullptr);
+        REQUIRE(selector_node->getSelector() == ".my-class");
+        REQUIRE(selector_node->getExpression() == "someFunction()");
+        std::string generated_js = generator.generate(*ast);
+        REQUIRE(generated_js == "document.querySelector('.my-class').someFunction();\n");
+    }
 
-    REQUIRE(generated_js == expected_js);
+    SECTION("ID Selector") {
+        std::string source = "{{#my-id}}->style.display = 'none';";
+        auto ast = parser.parse(source);
+        REQUIRE(ast != nullptr);
+        auto* selector_node = dynamic_cast<EnhancedSelectorNode*>(ast.get());
+        REQUIRE(selector_node != nullptr);
+        REQUIRE(selector_node->getSelector() == "#my-id");
+        REQUIRE(selector_node->getExpression() == "style.display = 'none'");
+        std::string generated_js = generator.generate(*ast);
+        REQUIRE(generated_js == "document.querySelector('#my-id').style.display = 'none';\n");
+    }
+
+    SECTION("Tag Selector") {
+        std::string source = "{{div}}->innerHTML = 'new content';";
+        auto ast = parser.parse(source);
+        REQUIRE(ast != nullptr);
+        auto* selector_node = dynamic_cast<EnhancedSelectorNode*>(ast.get());
+        REQUIRE(selector_node != nullptr);
+        REQUIRE(selector_node->getSelector() == "div");
+        REQUIRE(selector_node->getExpression() == "innerHTML = 'new content'");
+        std::string generated_js = generator.generate(*ast);
+        REQUIRE(generated_js == "document.querySelector('div').innerHTML = 'new content';\n");
+    }
+
+    SECTION("Descendant Selector") {
+        std::string source = "{{.parent .child}}->classList.add('active');";
+        auto ast = parser.parse(source);
+        REQUIRE(ast != nullptr);
+        auto* selector_node = dynamic_cast<EnhancedSelectorNode*>(ast.get());
+        REQUIRE(selector_node != nullptr);
+        REQUIRE(selector_node->getSelector() == ".parent .child");
+        REQUIRE(selector_node->getExpression() == "classList.add('active')");
+        std::string generated_js = generator.generate(*ast);
+        REQUIRE(generated_js == "document.querySelector('.parent .child').classList.add('active');\n");
+    }
+
+    SECTION("Indexed Selector") {
+        std::string source = "{{button[1]}}->click();";
+        auto ast = parser.parse(source);
+        REQUIRE(ast != nullptr);
+        auto* selector_node = dynamic_cast<EnhancedSelectorNode*>(ast.get());
+        REQUIRE(selector_node != nullptr);
+        REQUIRE(selector_node->getSelector() == "button[1]");
+        REQUIRE(selector_node->getExpression() == "click()");
+        std::string generated_js = generator.generate(*ast);
+        REQUIRE(generated_js == "document.querySelectorAll('button')[1].click();\n");
+    }
 }
