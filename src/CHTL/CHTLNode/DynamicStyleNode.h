@@ -21,4 +21,8 @@ public:
     virtual StyleValueType getType() const override {
         return StyleValueType::Dynamic;
     }
+
+    virtual std::unique_ptr<StyleValue> clone() const override {
+        return std::make_unique<DynamicStyleNode>(expression);
+    }
 };

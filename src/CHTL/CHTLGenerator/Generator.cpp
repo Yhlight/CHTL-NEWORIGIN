@@ -1,5 +1,4 @@
 #include "Generator.h"
-#include "../Util/StyleUtil.h"
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/ScriptNode.h"

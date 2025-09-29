@@ -17,4 +17,8 @@ public:
     virtual std::string toString() const override {
         return value;
     }
+
+    virtual std::unique_ptr<StyleValue> clone() const override {
+        return std::make_unique<StaticStyleNode>(value);
+    }
 };

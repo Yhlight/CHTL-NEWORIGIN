@@ -4,15 +4,12 @@
 #include "CHTL/CHTLNode/TextNode.h"
 #include "CHTL/CHTLNode/Constraint.h"
 #include "CHTL/CHTLState/StyleBlockState.h"
-#include "CHTL/Util/StyleUtil.h"
 #include "CHTL/CHTLState/ParserState.h"
+#include "CHTL/CHTLNode/StaticStyleNode.h"
+#include "CHTL/CHTLNode/ResponsiveValueNode.h"
 
 #include <stdexcept>
 #include <sstream>
-
-// Forward declaration for a helper from another strategy (to be created)
-// void parseScriptBlock(Parser& parser, ElementNode& element);
-
 
 std::unique_ptr<BaseNode> ElementParsingStrategy::parse(Parser& parser) {
     auto element = std::make_unique<ElementNode>(parser.currentToken.value);
@@ -37,7 +34,6 @@ void ElementParsingStrategy::parseElementBody(Parser& parser, ElementNode& eleme
         } else if (parser.currentToken.type == TokenType::Identifier && (parser.peekToken.type == TokenType::Colon || parser.peekToken.type == TokenType::Equals)) {
             parseAttribute(parser, element);
         } else {
-            // Delegate back to the parser to handle the nested statement.
             auto childNode = parser.currentState->handle(parser);
             if(childNode) {
                 element.children.push_back(std::move(childNode));
@@ -57,30 +53,57 @@ void ElementParsingStrategy::parseAttribute(Parser& parser, ElementNode& element
     }
     parser.advanceTokens();
 
-    StyleBlockState tempStyleState;
-    StyleValue value = tempStyleState.parseStyleExpression(parser);
-
-    parser.expectToken(TokenType::Semicolon);
-
-    if (value.type == StyleValue::RESPONSIVE) {
-        if (element.attributes.find("id") == element.attributes.end()) {
-            StyleValue id_val;
-            id_val.type = StyleValue::STRING;
-            id_val.string_val = "chtl-id-" + std::to_string(parser.elementIdCounter++);
-            element.attributes["id"] = id_val;
+    if (parser.currentToken.type == TokenType::Dollar) {
+        parser.advanceTokens(); // consume opening $
+        if (parser.currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected identifier after '$' for responsive value.");
         }
-        std::string elementId = element.attributes["id"].string_val;
+        std::string varName = parser.currentToken.value;
+        parser.advanceTokens();
+        parser.expectToken(TokenType::Dollar);
+
+        // Create the responsive node
+        auto responsiveNode = std::make_unique<ResponsiveValueNode>(varName);
+
+        // Register binding in SharedContext
+        if (element.attributes.find("id") == element.attributes.end()) {
+             element.attributes["id"] = std::make_unique<StaticStyleNode>("chtl-id-" + std::to_string(parser.elementIdCounter++));
+        }
+        std::string elementId = element.attributes.at("id")->toString();
 
         ResponsiveBinding binding;
         binding.elementId = elementId;
         binding.property = key;
-        binding.unit = value.unit;
+        binding.unit = ""; // No units for attributes
+        parser.sharedContext.responsiveBindings[varName].push_back(binding);
 
-        parser.sharedContext.responsiveBindings[value.responsive_var_name].push_back(binding);
-    } else if (key == "text") {
-        element.children.push_back(std::make_unique<TextNode>(styleValueToString(value)));
+        element.attributes[key] = std::move(responsiveNode);
+        parser.expectToken(TokenType::Semicolon);
+        return;
+    }
+
+    // Default to static string parsing if not a responsive value
+    std::stringstream value_ss;
+    while(parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
+        value_ss << parser.currentToken.value;
+        parser.advanceTokens();
+        if (parser.currentToken.type != TokenType::Semicolon) {
+             value_ss << " ";
+        }
+    }
+
+    std::string value_str = value_ss.str();
+
+    if (value_str.length() >= 2 && value_str.front() == '"' && value_str.back() == '"') {
+        value_str = value_str.substr(1, value_str.length() - 2);
+    }
+
+    parser.expectToken(TokenType::Semicolon);
+
+    if (key == "text") {
+        element.children.push_back(std::make_unique<TextNode>(value_str));
     } else {
-        element.attributes[key] = value;
+        element.attributes[key] = std::make_unique<StaticStyleNode>(value_str);
     }
 }
 

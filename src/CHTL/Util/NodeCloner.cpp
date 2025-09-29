@@ -21,7 +21,18 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
             const auto* source = static_cast<const ElementNode*>(node);
             auto cloned = std::make_unique<ElementNode>(source->tagName);
             cloned->sourceTemplateName = source->sourceTemplateName;
-            cloned->attributes = source->attributes;
+            // Deep copy attributes
+            for (const auto& pair : source->attributes) {
+                if (pair.second) {
+                    cloned->attributes[pair.first] = pair.second->clone();
+                }
+            }
+            // Deep copy inlineStyles
+            for (const auto& pair : source->inlineStyles) {
+                if (pair.second) {
+                    cloned->inlineStyles[pair.first] = pair.second->clone();
+                }
+            }
             for (const auto& child : source->children) {
                 cloned->children.push_back(clone(child.get()));
             }
@@ -58,7 +69,11 @@ std::unique_ptr<BaseNode> NodeCloner::clone(const BaseNode* node) {
             const auto* source = static_cast<const StyleTemplateNode*>(node);
             auto cloned = std::make_unique<StyleTemplateNode>();
             cloned->isCustom = source->isCustom;
-            cloned->styles = source->styles;
+            for (const auto& pair : source->styles) {
+                if (pair.second) {
+                    cloned->styles[pair.first] = pair.second->clone();
+                }
+            }
             cloned->valuelessProperties = source->valuelessProperties;
             return cloned;
         }

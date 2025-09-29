@@ -37,10 +37,8 @@ set(CHTL_SOURCES
     src/CHTL/CHTLNode/EnhancedSelectorNode.cpp
     src/CHTL/CHTLNode/InfoNode.cpp
     src/CHTL/CHTLNode/RawScriptNode.cpp
-    src/CHTL/CHTLNode/ResponsiveValueNode.cpp
     src/CHTL/CHTLNode/ScriptNode.cpp
     src/CHTL/CHTLNode/TextNode.cpp
-    src/CHTL/CHTLNode/StyleValue.cpp
     src/CHTL/CHTLNode/NamespaceNode.cpp
     src/CHTL/CHTLParser/Parser.cpp
     src/CHTL/CHTLState/ConfigurationState.cpp
@@ -55,7 +53,6 @@ set(CHTL_SOURCES
     src/CodeMerger/CodeMerger.cpp
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
-    src/CHTL/Util/StyleUtil.cpp
 )
 
 # Add a library for the CHTL compiler components

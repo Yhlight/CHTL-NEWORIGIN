@@ -7,22 +7,13 @@
 #include "../CHTLJSNode/AnimateNode.h"
 #include "../CHTLJSNode/VirtualObjectNode.h"
 #include "../CHTLJSNode/RouterNode.h"
+#include "../../CHTL/Util/StringUtil.h"
 #include <vector>
 #include <string>
 #include <sstream>
 #include <algorithm>
 #include <cctype>
 #include <regex>
-
-// Basic string trim utility
-void trim(std::string& s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
 
 
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parse(const std::string& source) {

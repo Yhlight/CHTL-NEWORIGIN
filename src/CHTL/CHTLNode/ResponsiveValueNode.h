@@ -1,16 +1,35 @@
 #pragma once
 
-#include "BaseNode.h"
+#include "StyleValue.h"
 #include <string>
 
-// Represents a responsive value, e.g., $myVar$
-class ResponsiveValueNode : public BaseNode {
+class ResponsiveValueNode : public StyleValue {
+private:
+    std::string variable_name;
+    std::string unit;
+
 public:
-    std::string variableName;
+    ResponsiveValueNode(const std::string& var_name, const std::string& u = "")
+        : variable_name(var_name), unit(u) {}
 
-    explicit ResponsiveValueNode(std::string variableName);
+    const std::string& getVariableName() const {
+        return variable_name;
+    }
 
-    NodeType getType() const override {
-        return NodeType::ResponsiveValue;
+    const std::string& getUnit() const {
+        return unit;
+    }
+
+    virtual StyleValueType getType() const override {
+        // This node type can be considered a form of dynamic value.
+        return StyleValueType::Dynamic;
+    }
+
+    virtual std::string toString() const override {
+        return "$" + variable_name + "$" + unit;
+    }
+
+    virtual std::unique_ptr<StyleValue> clone() const override {
+        return std::make_unique<ResponsiveValueNode>(variable_name, unit);
     }
 };

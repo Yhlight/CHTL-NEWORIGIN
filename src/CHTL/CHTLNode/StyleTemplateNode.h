@@ -16,9 +16,8 @@ public:
 
     bool isCustom = false;
 
-    // The styles are stored as key-value pairs, using StyleValue to
-    // hold rich information about expressions.
-    std::map<std::string, StyleValue> styles;
+    // The styles are stored as key-value pairs, using unique_ptr to support polymorphism.
+    std::map<std::string, std::unique_ptr<StyleValue>> styles;
 
     // For custom templates, stores properties defined without a value.
     std::vector<std::string> valuelessProperties;

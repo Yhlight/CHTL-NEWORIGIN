@@ -12,13 +12,13 @@ bool elementMatchesPart(const ElementNode* element, const SelectorPart& part) {
     }
     if (!part.id.empty()) {
         auto it = element->attributes.find("id");
-        if (it == element->attributes.end() || it->second.string_val != part.id) {
+        if (it == element->attributes.end() || !it->second || it->second->toString() != part.id) {
             return false;
         }
     }
     if (!part.className.empty()) {
         auto it = element->attributes.find("class");
-        if (it == element->attributes.end() || it->second.string_val.find(part.className) == std::string::npos) {
+        if (it == element->attributes.end() || !it->second || it->second->toString().find(part.className) == std::string::npos) {
             // Basic check, doesn't handle whole-word matching perfectly but is an improvement.
             return false;
         }
