@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <utility> // For std::pair
 #include <sstream>
+#include <regex>
 
 // Forward declare to resolve circular dependency with StyleBlockState.h
 class StyleBlockState;
@@ -73,6 +74,9 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
     } else if (parser.currentToken.type == TokenType::Identifier) {
         if (parser.currentToken.value == "text") {
             return parseTextElement(parser);
+        }
+        if (parser.currentToken.value == "script") {
+            return parseScriptElement(parser);
         }
         ElementParsingStrategy strategy;
         return strategy.parse(parser);
@@ -377,6 +381,45 @@ void StatementState::parseNamespaceDefinition(Parser& parser) {
         parser.advanceTokens();
     }
     parser.advanceTokens();
+}
+
+std::unique_ptr<BaseNode> StatementState::parseScriptElement(Parser& parser) {
+    parser.expectToken(TokenType::Identifier); // script
+    parser.expectToken(TokenType::OpenBrace);
+
+    // 1. Capture the raw script content
+    std::stringstream content_ss;
+    size_t start_pos = parser.currentToken.start_pos;
+    size_t end_pos = start_pos;
+    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        end_pos = parser.currentToken.start_pos + parser.currentToken.value.length();
+        parser.advanceTokens();
+    }
+    std::string scriptContent = parser.lexer.getSource().substr(start_pos, end_pos - start_pos);
+
+    // 2. Scan for auto-injectable selectors
+    if (parser.contextNode) {
+        std::regex selector_regex(R"(\{\{\s*([.#])([a-zA-Z0-9_-]+)\s*\}\})");
+        std::smatch matches;
+        std::string::const_iterator search_start(scriptContent.cbegin());
+
+        while (std::regex_search(search_start, scriptContent.cend(), matches, selector_regex)) {
+            std::string type = matches[1];
+            std::string name = matches[2];
+
+            if (type == "." && parser.contextNode->attributes.find("class") == parser.contextNode->attributes.end()) {
+                // Auto-inject class attribute
+                parser.contextNode->attributes["class"] = std::make_unique<StaticStyleNode>(name);
+            } else if (type == "#" && parser.contextNode->attributes.find("id") == parser.contextNode->attributes.end()) {
+                // Auto-inject id attribute
+                parser.contextNode->attributes["id"] = std::make_unique<StaticStyleNode>(name);
+            }
+            search_start = matches.suffix().first;
+        }
+    }
+
+    parser.expectToken(TokenType::CloseBrace);
+    return std::make_unique<ScriptNode>(scriptContent);
 }
 
 void StatementState::parseExportBlock(Parser& parser) {

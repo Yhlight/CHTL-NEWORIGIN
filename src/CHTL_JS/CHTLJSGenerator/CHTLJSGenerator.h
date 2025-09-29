@@ -18,6 +18,9 @@ public:
     std::string generate(const CHTLJSBaseNode& node);
 
 private:
+    // Helper to generate the JS for a selector (e.g., document.querySelector(...))
+    std::string generateSelectorPart(const std::string& selector);
+
     std::string generateScriptLoader(const ScriptLoaderNode& node);
     std::string generateEnhancedSelector(const EnhancedSelectorNode& node);
     std::string generateListen(const ListenNode& node);
