@@ -9,6 +9,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Dependencies ---
+include(ExternalProject)
+
+# LibSass (does not have CMake support, so we build it manually)
+ExternalProject_Add(
+    libsass_project
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass
+    # No configure step needed for the default Makefile
+    CONFIGURE_COMMAND ""
+    # The command to build the library
+    BUILD_COMMAND ${MAKE}
+    # No install step needed, we will use it from the build tree
+    INSTALL_COMMAND ""
+    # Ensure the build happens in the source directory of libsass
+    BUILD_IN_SOURCE 1
+)
+
+# Define the location for the compiled libsass library and its includes
+set(LIBSASS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass/include)
+set(LIBSASS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass/lib/libsass.a)
+
+# Add the libzippp dependency
 add_subdirectory(third-party/libzippp)
 
 
@@ -58,12 +79,16 @@ set(CHTL_SOURCES
 # Add a library for the CHTL compiler components
 add_library(chtl_lib STATIC ${CHTL_SOURCES})
 
+# Make sure chtl_lib depends on the libsass project being built
+add_dependencies(chtl_lib libsass_project)
+
 # Add include directories for chtl_lib
 target_include_directories(chtl_lib PUBLIC src)
 target_include_directories(chtl_lib PUBLIC third-party/libzippp/src)
+target_include_directories(chtl_lib PUBLIC ${LIBSASS_INCLUDE_DIR})
 
 # Link chtl_lib against its dependencies
-target_link_libraries(chtl_lib PUBLIC libzippp)
+target_link_libraries(chtl_lib PUBLIC libzippp ${LIBSASS_LIBRARY})
 
 
 # --- Main Executable ---
@@ -88,7 +113,7 @@ target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp tests/ScannerTest.cpp tests/CHTLJSTest.cpp tests/CHTLParserTest.cpp)
+add_executable(chtl_tests tests/main.cpp tests/ScannerTest.cpp tests/CHTLJSTest.cpp tests/CHTLParserTest.cpp tests/CoreFeaturesTest.cpp tests/LibSassIntegrationTest.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)
