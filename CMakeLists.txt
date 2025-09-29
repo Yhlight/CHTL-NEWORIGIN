@@ -32,6 +32,9 @@ set(LIBSASS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass/lib/libsass.
 # Add the libzippp dependency
 add_subdirectory(third-party/libzippp)
 
+# Add the quickjs dependency
+add_subdirectory(third-party/quickjs)
+
 
 # --- Define CHTL Library ---
 # This makes it easy to link all CHTL source files to multiple executables.
@@ -88,7 +91,7 @@ target_include_directories(chtl_lib PUBLIC third-party/libzippp/src)
 target_include_directories(chtl_lib PUBLIC ${LIBSASS_INCLUDE_DIR})
 
 # Link chtl_lib against its dependencies
-target_link_libraries(chtl_lib PUBLIC libzippp ${LIBSASS_LIBRARY})
+target_link_libraries(chtl_lib PUBLIC libzippp ${LIBSASS_LIBRARY} qjs)
 
 
 # --- Main Executable ---
@@ -113,7 +116,7 @@ target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp tests/ScannerTest.cpp tests/CHTLJSTest.cpp tests/CHTLParserTest.cpp tests/CoreFeaturesTest.cpp tests/LibSassIntegrationTest.cpp)
+add_executable(chtl_tests tests/main.cpp tests/ScannerTest.cpp tests/CHTLJSTest.cpp tests/CHTLParserTest.cpp tests/CoreFeaturesTest.cpp tests/LibSassIntegrationTest.cpp tests/QuickJSIntegrationTest.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)
