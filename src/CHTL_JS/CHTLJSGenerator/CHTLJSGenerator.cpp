@@ -57,7 +57,17 @@ std::string CHTLJSGenerator::generateScriptLoader(const ScriptLoaderNode& node) 
 
 std::string CHTLJSGenerator::generateEnhancedSelector(const EnhancedSelectorNode& node) {
     std::stringstream ss;
-    ss << "document.querySelector('" << node.getSelector() << "')." << node.getExpression() << ";\n";
+    std::string selector = node.getSelector();
+    size_t bracket_pos = selector.find('[');
+    size_t end_bracket_pos = selector.find(']');
+
+    if (bracket_pos != std::string::npos && end_bracket_pos != std::string::npos && end_bracket_pos > bracket_pos) {
+        std::string base_selector = selector.substr(0, bracket_pos);
+        std::string index = selector.substr(bracket_pos + 1, end_bracket_pos - bracket_pos - 1);
+        ss << "document.querySelectorAll('" << base_selector << "')[" << index << "]." << node.getExpression() << ";\n";
+    } else {
+        ss << "document.querySelector('" << selector << "')." << node.getExpression() << ";\n";
+    }
     return ss.str();
 }
 

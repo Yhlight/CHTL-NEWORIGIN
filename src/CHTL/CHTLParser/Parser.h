@@ -78,6 +78,12 @@ public:
     std::string sourcePath;
     // --- End public interface for states ---
 
+    // --- End public interface for states ---
+
+private:
+    friend class StatementState; // Allow StatementState to call parseTemplateDefinition
+    void parseTemplateDefinition();
+
 public:
     std::unique_ptr<ParserState> currentState;
 };

@@ -1,9 +1,10 @@
 #include "Parser.h"
 #include "CHTL/CHTLState/StatementState.h" // Include the concrete state
 #include "CHTL/CHTLState/ParserState.h" // Include full definition for destructor
+#include "CHTL/CHTLNode/StyleTemplateNode.h"
+#include "CHTL/CHTLNode/StaticStyleNode.h"
 #include <stdexcept>
 #include <sstream>
-
 #include <filesystem>
 
 // The constructor now initializes the token stream and sets the initial state.
@@ -29,18 +30,70 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
     this->parsedNodes = &statements; // Point to the vector we are building.
 
     while (currentToken.type != TokenType::EndOfFile) {
+        // Handle top-level constructs that are not part of the regular state flow.
+        if (currentToken.type == TokenType::OpenBracket && peekToken.value == "Template") {
+            parseTemplateDefinition();
+            continue; // Template definitions do not produce a node in the main AST.
+        }
+
         if (!currentState) {
             throw std::runtime_error("Parser is not in a valid state.");
         }
-        // Delegate parsing to the current state.
+        // Delegate parsing to the current state for regular elements.
         auto node = currentState->handle(*this);
-        if (node) { // The state might not return a node (e.g., for a template definition)
+        if (node) {
              statements.push_back(std::move(node));
         }
     }
 
     this->parsedNodes = nullptr; // Clean up the pointer.
     return statements;
+}
+
+void Parser::parseTemplateDefinition() {
+    expectToken(TokenType::OpenBracket);
+    expectKeyword(TokenType::Identifier, "KEYWORD_TEMPLATE", "Template");
+    expectToken(TokenType::CloseBracket);
+
+    if (currentToken.type != TokenType::At) {
+        throw std::runtime_error("Expected '@' for template type definition.");
+    }
+    advanceTokens(); // Consume '@'
+
+    if (currentToken.value == "Style") {
+        advanceTokens(); // Consume 'Style'
+        std::string templateName = currentToken.value;
+        expectToken(TokenType::Identifier);
+        expectToken(TokenType::OpenBrace);
+
+        auto styleTemplate = std::make_unique<StyleTemplateNode>();
+
+        while (currentToken.type != TokenType::CloseBrace && currentToken.type != TokenType::EndOfFile) {
+            std::string propertyName = currentToken.value;
+            expectToken(TokenType::Identifier);
+            expectToken(TokenType::Colon);
+
+            // This is a simplified value parser. A more robust implementation
+            // would delegate to a state or a dedicated value-parsing function.
+            std::string propertyValue;
+            if (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::Number) {
+                propertyValue = currentToken.value;
+                advanceTokens();
+            } else {
+                throw std::runtime_error("Expected a simple literal value in style template definition.");
+            }
+
+            expectToken(TokenType::Semicolon);
+
+            styleTemplate->styles[propertyName] = std::make_unique<StaticStyleNode>(propertyValue);
+        }
+
+        expectToken(TokenType::CloseBrace);
+        templateManager.addStyleTemplate(getCurrentNamespace(), templateName, std::move(styleTemplate));
+
+    } else {
+        throw std::runtime_error("Unsupported template type: " + currentToken.value);
+    }
 }
 
 // Allows changing the parser's state.
