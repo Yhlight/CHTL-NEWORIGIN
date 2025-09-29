@@ -1,0 +1,28 @@
+# Build artifacts
+/build/
+/CMakeCache.txt
+/CTestTestfile.cmake
+/Makefile
+/cmake_install.cmake
+/compile_commands.json
+
+# Executables and libraries
+/chtl_compiler
+/chtl_tests
+/*.a
+/*.so
+/*.o
+
+# User-specific files
+.vscode/
+
+# CMake generated directory
+/CMakeFiles/
+
+# Test-generated files
+*.chtl
+*.js
+third-party/antlr4/
+third-party/libsass/
+third-party/libzippp/
+third-party/quickjs/
