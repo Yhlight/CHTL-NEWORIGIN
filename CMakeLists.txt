@@ -96,10 +96,13 @@ target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp)
+add_executable(chtl_tests tests/ScannerTest.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)
+
+# Add the project root directory to the include path for tests
+target_include_directories(chtl_tests PRIVATE ${CMAKE_SOURCE_DIR})
 
 # Add a test to CTest
 add_test(NAME RunCHTLTests COMMAND chtl_tests)
