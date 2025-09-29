@@ -4,6 +4,8 @@
 #include "../CHTLNode/DynamicStyleNode.h"
 #include "../CHTLNode/StaticStyleNode.h"
 #include "../CHTLNode/ResponsiveValueNode.h"
+#include "../ExpressionParser/ExpressionLexer.h"
+#include "../ExpressionParser/ExpressionParser.h"
 #include "../Util/StringUtil.h"
 #include <stdexcept>
 #include <sstream>
@@ -70,54 +72,38 @@ void StyleBlockState::parseInlineProperty(Parser& parser) {
 }
 
 std::unique_ptr<StyleValue> StyleBlockState::parseStyleExpression(Parser& parser) {
-    if (parser.currentToken.type == TokenType::OpenDoubleBrace) {
-        size_t start_pos = parser.currentToken.start_pos;
-        size_t end_pos = start_pos;
-
-        while (parser.currentToken.type != TokenType::Semicolon && parser.currentToken.type != TokenType::EndOfFile) {
-            end_pos = parser.currentToken.start_pos + parser.currentToken.value.length();
-            parser.advanceTokens();
-        }
-
-        std::string final_expr = parser.lexer.getSource().substr(start_pos, end_pos - start_pos);
-        trim(final_expr);
-
-        return std::make_unique<DynamicStyleNode>(final_expr);
-    }
-
-    if (parser.currentToken.type == TokenType::Dollar) {
-        parser.advanceTokens(); // consume opening $
-        if (parser.currentToken.type != TokenType::Identifier) {
-            throw std::runtime_error("Expected identifier after '$' for responsive value.");
-        }
-        std::string varName = parser.currentToken.value;
-        parser.advanceTokens();
-        parser.expectToken(TokenType::Dollar);
-
-        std::string unit;
-        if (parser.currentToken.type == TokenType::Identifier) {
-            unit = parser.currentToken.value;
-            parser.advanceTokens();
-        }
-
-        return std::make_unique<ResponsiveValueNode>(varName, unit);
-    }
-
-    return parsePrimaryExpr(parser);
-}
-
-std::unique_ptr<StyleValue> StyleBlockState::parsePrimaryExpr(Parser& parser) {
+    // 1. Collect the raw string for the expression.
+    // We read tokens from the main CHTL lexer until we hit a terminator.
     std::stringstream ss;
+    size_t start_pos = parser.currentToken.start_pos;
+    size_t end_pos = start_pos;
+
     while (!isStyleValueTerminator(parser.currentToken.type)) {
-        ss << parser.currentToken.value;
+        end_pos = parser.currentToken.start_pos + parser.currentToken.value.length();
         parser.advanceTokens();
-        if (!isStyleValueTerminator(parser.currentToken.type)) {
-            ss << " ";
-        }
     }
-    std::string value = ss.str();
-    trim(value);
-    return std::make_unique<StaticStyleNode>(value);
+    std::string expression_string = parser.lexer.getSource().substr(start_pos, end_pos - start_pos);
+    trim(expression_string);
+
+    // 2. Check for the simple case: a static value with no operators.
+    // This is a temporary optimization. A more robust solution might parse all values.
+    if (expression_string.find_first_of("+*-/<>?&|") == std::string::npos) {
+        // Also check for responsive values
+        if (expression_string.front() == '$' && expression_string.back() == '$') {
+            std::string varName = expression_string.substr(1, expression_string.length() - 2);
+            return std::make_unique<ResponsiveValueNode>(varName, ""); // Note: Unit handling needs refinement
+        }
+        return std::make_unique<StaticStyleNode>(expression_string);
+    }
+
+    // 3. If it's a complex expression, use the new ExpressionParser.
+    ExpressionLexer expressionLexer(expression_string);
+    std::vector<ExpressionToken> expressionTokens = expressionLexer.tokenize();
+
+    ExpressionParser expressionParser(expressionTokens);
+    std::unique_ptr<ExpressionBaseNode> expressionAst = expressionParser.parse();
+
+    return std::make_unique<DynamicStyleNode>(std::move(expressionAst));
 }
 
 // --- Placeholder functions for features not yet implemented/refactored ---
@@ -172,6 +158,3 @@ void StyleBlockState::applyStyleTemplateRecursive(
     ) {
         // Placeholder
 }
-
-std::unique_ptr<StyleValue> StyleBlockState::parseAdditiveExpr(Parser& parser) { return nullptr; }
-std::unique_ptr<StyleValue> StyleBlockState::parseConditionalExpr(Parser& parser) { return nullptr; }

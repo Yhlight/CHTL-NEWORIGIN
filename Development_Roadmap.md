@@ -1,97 +1,58 @@
-# CHTL Project: Strategic Development Roadmap
-
-**Date:** 2025-09-29
-**Author:** Jules, AI Software Engineer
+# CHTL Development Roadmap
 
 ## 1. Introduction
 
-This document outlines a strategic roadmap for the development of the CHTL compiler. It is based on the detailed gap analysis presented in the `Code_Review_Report.md` and is designed to guide the project from its current state to a feature-complete and stable release.
+This document outlines a strategic and prioritized roadmap for the continued development of the CHTL project. It is based on the findings of the `Code_Review_Report.md` and is designed to guide the project from its current architecturally-sound state to a feature-complete and robust implementation as envisioned in the `CHTL.md` specification.
 
-The roadmap is divided into four distinct phases, each with a clear focus. This phased approach ensures that foundational components are built first, providing a stable base for more advanced features.
+The roadmap is divided into four distinct stages, each with a clear focus. This staged approach will ensure that foundational components are completed first, providing a stable base for subsequent features.
 
-## 2. Development Phases
+## 2. Development Stages
 
-### Phase 1: Solidify the Core Architecture
+### Stage 1: Core Expression Engine & Dynamic Styling
 
-**Goal:** To implement the complete compilation pipeline as envisioned in the `CHTL.md` specification. This is the highest priority and is essential for the success of the entire project.
+**Goal:** Implement the runtime logic for all dynamic features. This is the most critical next step, as many advanced features depend on it.
 
-**Key Objectives:**
+| Priority | Task | Description |
+| :--- | :--- | :--- |
+| **1.1 (Critical)** | **Expression Parser & AST:** | Design and implement a dedicated parser and AST for style expressions (e.g., `100px + 50px`, `width > 50px ? "red" : "blue"`). This will replace the current method of storing expressions as raw strings in the `DynamicStyleNode`. |
+| **1.2 (Critical)** | **Expression Evaluator:** | Create an evaluation engine that can process the expression AST. This engine must handle property arithmetic, unit conversions, conditional logic (`? :`), and logical operators (`&&`, `||`). |
+| **1.3 (High)** | **Cross-Element Property References:** | Integrate the expression evaluator with the `parsedNodes` list in the parser to enable the resolution of property references (e.g., `width: .box.width / 2`). |
+| **1.4 (High)** | **Conditional Rendering Logic:** | Implement the evaluation logic for the conditions in `if`/`else` blocks, for both static and dynamic conditions. |
+| **1.5 (Medium)** | **"Salt Bridge" Integration:** | Fully integrate the expression engine with the `SharedContext` ("Salt Bridge") to enable dynamic updates based on CHTL JS variables (`$var$`). |
 
-1.  **Integrate Third-Party Compilers:**
-    - Choose and integrate a suitable CSS parsing library (e.g., `libsass`, `libcss`). Modify `CMakeLists.txt` to link against it.
-    - Choose and integrate a suitable JavaScript engine/parser (e.g., `QuickJS`, `V8`, or an ANTLR-based JS grammar). Modify `CMakeLists.txt` to link against it.
+### Stage 2: CHTL JS Feature Completion
 
-2.  **Implement the `UnifiedScanner`:**
-    - Develop the logic within `UnifiedScanner` to accurately identify and separate a `.chtl` source file into four distinct types of code blocks: CHTL, CHTL JS, standard CSS, and standard JS.
-    - Implement the "placeholder" mechanism described in the specification to isolate native code blocks while preserving the structure for the CHTL/CHTL JS compilers.
+**Goal:** Transition the CHTL JS compiler from a structural representation to a fully functional code generator.
 
-3.  **Implement the `CompilerDispatcher`:**
-    - Develop the logic to receive code fragments from the `UnifiedScanner`.
-    - Route CHTL fragments to the `CHTLCompiler`.
-    - Route CHTL JS fragments to the `CHTLJSCompiler`.
-    - Route CSS fragments to the integrated CSS compiler.
-    - Route JS fragments to the integrated JS compiler.
+| Priority | Task | Description |
+| :--- | :--- | :--- |
+| **2.1 (High)** | **Implement CHTL JS Generators:** | Complete the code generation logic for all CHTL JS AST nodes (`Animate`, `Listen`, `Router`, `Delegate`, etc.). The current generator is a skeleton; this task involves writing the actual JavaScript output for each feature. |
+| **2.2 (High)** | **Automatic Class/ID Injection:** | Implement the logic that automatically injects `class` or `id` attributes onto an element when a selector like `{{.box}}` or `{{#box}}` is used in a local `script` block. |
+| **2.3 (Medium)** | **`ScriptLoader` Implementation:** | Write the runtime JavaScript for the AMD-style `ScriptLoader` and ensure the generator correctly outputs the loader configuration. |
+| **2.4 (Medium)** | **Virtual Object (`Vir`) Logic:** | Implement the compile-time logic for `Vir` objects, ensuring they are correctly resolved to function references or other values during code generation. |
 
-4.  **Implement the `CodeMerger`:**
-    - Develop the logic to assemble the compiled outputs from all compilers into a final set of HTML, CSS, and JS files.
+### Stage 3: Module System Finalization
 
-### Phase 2: CHTL & CHTL JS Feature Completion
+**Goal:** Complete the CMOD and CJMOD module systems to enable code reuse and distribution.
 
-**Goal:** To build out the rich feature sets of both the CHTL and CHTL JS languages on top of the stable core architecture.
+| Priority | Task | Description |
+| :--- | :--- | :--- |
+| **3.1 (High)** | **CMOD Import Resolution:** | Implement the full file and module resolution logic for CMOD imports, including searching in the official and local `module` directories. |
+| **3.2 (High)** | **CMOD Packer Finalization:** | Finalize the `cmod_packer` tool to correctly bundle all module files and generate the `[Export]` table in the module's info file. |
+| **3.3 (Medium)** | **CJMOD API Implementation:** | Design and implement the C++ API (`Syntax`, `Arg`, `CJMODScanner`, etc.) that will allow developers to extend CHTL JS with their own syntax. |
+| **3.4 (Low)** | **CJMOD Packer:** | Create the packer tool for bundling CJMOD modules. |
 
-**Key Objectives:**
+### Stage 4: Tooling & Ecosystem
 
-1.  **Complete CHTL Core Features:**
-    - Ensure all basic elements, attributes, comments, and text nodes are parsed and generated correctly.
-    - Fully implement local and global `style` blocks, including attribute calculations and conditional expressions.
-    - Fully implement the `[Template]` and `[Custom]` systems, including inheritance and specialization (`delete`, `insert`).
-    - Implement the `[Import]`, `[Namespace]`, and `[Configuration]` systems.
+**Goal:** Build the developer tools that will make CHTL a productive and enjoyable language to use.
 
-2.  **Complete CHTL JS Core Features:**
-    - Solidify the enhanced selector (`{{...}}`) and its integration with the DOM.
-    - Implement the declarative `Listen` and `Delegate` event systems.
-    - Implement the `Animate` and `Router` functions.
-    - Fully develop the `Vir` virtual object system and the "salt bridge" mechanism for communication with the CHTL compiler.
-    - Implement responsive values (`$js_var$`) and dynamic conditional rendering.
+| Priority | Task | Description |
+| :--- | :--- | :--- |
+| **4.1 (High)** | **Robust CLI:** | Develop a full-featured command-line interface with support for all specified flags (`--inline`, `--default-struct`, etc.) and error reporting. |
+| **4.2 (Medium)** | **VSCode Extension - Core Features:** | Create a basic VSCode extension that provides syntax highlighting and code formatting for `.chtl` files. |
+| **4.3 (Low)** | **VSCode Extension - Advanced Features:** | Enhance the VSCode extension with advanced features like code completion (using the JSON query tables from module unpacking), real-time preview, and right-click compilation commands. |
+| **4.4 (Low)** | **Official Modules (`Chtholly`, `Yuigahama`):** | Begin development of the official component libraries once the core language and module systems are stable. |
 
-3.  **Develop a Comprehensive Test Suite:**
-    - For every feature implemented, create corresponding unit and integration tests in the `chtl_tests` executable to ensure correctness and prevent regressions.
+## 3. Conclusion
 
-### Phase 3: Build the Tooling and Ecosystem
-
-**Goal:** To create the tools that will make CHTL a productive and developer-friendly language.
-
-**Key Objectives:**
-
-1.  **Develop the Command-Line Interface (CLI):**
-    - Build a user-friendly CLI application that wraps the `chtl_compiler` executable.
-    - Implement the command-line flags specified in `CHTL.md`, such as `--inline`, `--inline-css`, `--inline-js`, and `--default-struct`.
-    - Add features for project initialization and module management.
-
-2.  **Develop the VSCode Extension:**
-    - Create a new repository or directory for the VSCode extension.
-    - Implement syntax highlighting for `.chtl` and `.cjjs` files.
-    - Implement code formatting.
-    - Provide intelligent code completion and suggestions by having the extension invoke the compiler in a "language server" mode. This includes using the `[Export]` block from CMOD modules to provide context-aware suggestions.
-    - Integrate the compiler to provide real-time error reporting and a live preview panel.
-
-### Phase 4: Create Official Modules
-
-**Goal:** To provide a rich set of pre-built components that showcase the power of CHTL and provide value to users out-of-the-box.
-
-**Key Objectives:**
-
-1.  **Implement the CMOD/CJMOD System:**
-    - Finalize the `cmod_packer` utility.
-    - Implement the full module resolution and import logic, including support for sub-modules and the `chtl::` official module prefix.
-    - Finalize the CJMOD API for extending the CHTL JS compiler.
-
-2.  **Develop the `Chtholly` Module:**
-    - Create the UI components specified in `CHTL.md` (Accordion, Photo Album, etc.) as CMODs.
-    - Implement the `printMylove` and `iNeverAway` utilities as CJMODs.
-
-3.  **Develop the `Yuigahama` Module:**
-    - Create the UI components specified for this module as CMODs.
-
-4.  **Establish a Module Repository/Registry:**
-    - Plan and create a central location for users to discover and share CHTL modules.
+This roadmap provides a clear path forward for the CHTL project. By focusing on the stages in the order presented, the development team can systematically address the current gaps in the implementation and build upon the project's strong architectural foundation. Successful completion of these stages will result in a powerful and feature-rich language that fulfills the ambitious vision of the `CHTL.md` specification.

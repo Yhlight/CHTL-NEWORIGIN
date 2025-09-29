@@ -19,10 +19,6 @@ public:
     std::unique_ptr<StyleValue> parseStyleExpression(Parser& parser);
 
 private:
-    std::unique_ptr<StyleValue> parsePrimaryExpr(Parser& parser);
-    std::unique_ptr<StyleValue> parseAdditiveExpr(Parser& parser);
-    std::unique_ptr<StyleValue> parseConditionalExpr(Parser& parser);
-
     void parseStyleTemplateUsage(Parser& parser);
     void parseClassOrIdSelector(Parser& parser);
     void parseAmpersandSelector(Parser& parser);
