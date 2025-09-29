@@ -38,7 +38,8 @@ std::string Generator::generate(
     const std::string& globalJs,
     SharedContext& context,
     bool outputDoctype,
-    bool inline_mode,
+    bool inline_css,
+    bool inline_js,
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
@@ -46,7 +47,8 @@ std::string Generator::generate(
     indentLevel = 0;
     this->globalCssToInject = globalCss;
     this->globalJsToInject = globalJs;
-    this->inlineMode = inline_mode;
+    this->inlineCss = inline_css;
+    this->inlineJs = inline_js;
     this->cssOutputFilename = css_output_filename;
     this->jsOutputFilename = js_output_filename;
     this->mutableContext = &context;
@@ -163,7 +165,7 @@ void Generator::generateElement(ElementNode* node) {
         indent();
         if (node->tagName == "head") {
             if (!globalCssToInject.empty()) {
-                if (inlineMode) {
+                if (inlineCss) {
                     appendLine("<style>");
                     indent();
                     append(globalCssToInject);
@@ -181,7 +183,7 @@ void Generator::generateElement(ElementNode* node) {
 
         if (node->tagName == "body") {
             if (!globalJsToInject.empty()) {
-                if (inlineMode) {
+                if (inlineJs) {
                     appendLine("<script>");
                     indent();
                     append(globalJsToInject);

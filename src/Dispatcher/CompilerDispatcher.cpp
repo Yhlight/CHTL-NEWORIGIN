@@ -76,7 +76,9 @@ Object.defineProperty(window, ')JS" << varName << R"JS(', {
 CompilationResult CompilerDispatcher::compile(
     const std::string& source,
     const std::string& source_path,
-    bool inline_mode,
+    bool default_struct,
+    bool inline_css,
+    bool inline_js,
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
@@ -92,6 +94,8 @@ CompilationResult CompilerDispatcher::compile(
     // 3. Compile the main CHTL content first to populate managers
     Lexer lexer(scanned_output.chtl_with_placeholders);
     Parser parser(lexer, source_path);
+    // Pass the default_struct option to the parser
+    parser.outputHtml5Doctype = default_struct;
     auto ast = parser.parse();
 
     // 4. Post-process script fragments to resolve named origin blocks
@@ -132,10 +136,14 @@ CompilationResult CompilerDispatcher::compile(
         } else if (fragment.type == FragmentType::CHTL_JS) {
             std::string compiled_js = chtl_js_compiler.compile(fragment.content);
             js_content_stream << compiled_js << "\n";
-            script_fragments_for_merging[placeholder] = "<script>" + compiled_js + "</script>";
+            if (inline_js) {
+                script_fragments_for_merging[placeholder] = "<script>" + compiled_js + "</script>";
+            }
         } else if (fragment.type == FragmentType::JS) {
             js_content_stream << fragment.content << "\n";
-            script_fragments_for_merging[placeholder] = "<script>" + fragment.content + "</script>";
+            if (inline_js) {
+                script_fragments_for_merging[placeholder] = "<script>" + fragment.content + "</script>";
+            }
         }
     }
 
@@ -157,13 +165,14 @@ CompilationResult CompilerDispatcher::compile(
         js_content_stream.str(),
         parser.sharedContext,
         parser.outputHtml5Doctype,
-        inline_mode,
+        inline_css,
+        inline_js,
         css_output_filename,
         js_output_filename
     );
 
-    // 9. If inlining, merge the script placeholders back into the HTML.
-    if (inline_mode) {
+    // 9. If inlining JS, merge the script placeholders back into the HTML.
+    if (inline_js) {
          html_content = merger.merge(html_content, script_fragments_for_merging);
     }
 

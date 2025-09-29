@@ -12,9 +12,11 @@ public:
     CompilationResult compile(
         const std::string& source,
         const std::string& source_path,
-        bool inline_mode = false,
-        const std::string& css_output_filename = "style.css",
-        const std::string& js_output_filename = "script.js"
+        bool default_struct,
+        bool inline_css,
+        bool inline_js,
+        const std::string& css_output_filename,
+        const std::string& js_output_filename
     );
 
 private:

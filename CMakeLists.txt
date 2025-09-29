@@ -113,7 +113,20 @@ target_link_libraries(cmod_packer PRIVATE chtl_lib)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp tests/ScannerTest.cpp tests/CHTLJSTest.cpp tests/CHTLParserTest.cpp tests/CoreFeaturesTest.cpp tests/LibSassIntegrationTest.cpp tests/QuickJSIntegrationTest.cpp)
+add_executable(chtl_tests
+    tests/main.cpp
+    tests/ScannerTest.cpp
+    tests/CHTLJSTest.cpp
+    tests/CHTLParserTest.cpp
+    tests/CoreFeaturesTest.cpp
+    tests/LibSassIntegrationTest.cpp
+    tests/QuickJSIntegrationTest.cpp
+    tests/ExpressionEngineTest.cpp
+    tests/CHTLJSGeneratorTest.cpp
+    tests/ModuleSystemTest.cpp
+    tests/CJMODAPITest.cpp
+    tests/CLILogicTest.cpp
+)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)
