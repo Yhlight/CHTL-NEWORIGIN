@@ -17,22 +17,37 @@ std::vector<fs::path> ModuleResolver::resolve(const std::string& rawPath, const 
         return resolvedPaths;
     }
 
-    // Define search directories relative to the current file's location.
+    // Handle wildcard imports
+    if (rawPath.back() == '*') {
+        fs::path basePath(rawPath.substr(0, rawPath.length() - 1));
+        if (fs::is_directory(basePath)) {
+            for (const auto& entry : fs::directory_iterator(basePath)) {
+                if (entry.is_regular_file() && (entry.path().extension() == ".chtl" || entry.path().extension() == ".cmod")) {
+                    resolvedPaths.push_back(fs::absolute(entry.path()));
+                }
+            }
+        }
+        return resolvedPaths;
+    }
+
+    // Define search directories in order of precedence
     std::vector<fs::path> searchDirs;
+    // 1. Official modules directory (placeholder)
+    // searchDirs.push_back(get_official_module_dir());
+    // 2. Local modules directory
+    searchDirs.push_back(currentDirectory / "module");
+    // 3. Current directory
     searchDirs.push_back(currentDirectory);
-    searchDirs.push_back(currentDirectory / "modules");
-    // In the future, we can add official/global module directories here.
 
     for (const auto& dir : searchDirs) {
         fs::path foundPath = findInDirectory(dir, rawPath);
         if (!foundPath.empty()) {
             resolvedPaths.push_back(foundPath);
-            // For non-wildcard paths, we can stop after the first match.
-            break;
+            return resolvedPaths; // Stop after the first match for non-wildcard paths
         }
     }
 
-    return resolvedPaths;
+    return resolvedPaths; // Return empty vector if not found
 }
 
 // Helper to find a module in a specific directory, trying different extensions.

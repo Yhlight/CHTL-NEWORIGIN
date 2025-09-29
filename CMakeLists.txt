@@ -104,11 +104,8 @@ target_link_libraries(chtl_compiler PRIVATE chtl_lib)
 # Add the cmod_packer executable
 add_executable(cmod_packer src/cmod_packer/main.cpp)
 
-# Link the packer against libzippp
-target_link_libraries(cmod_packer PRIVATE libzippp)
-
-# Ensure the packer can find the libzippp headers
-target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
+# Link the packer against our CHTL library to get access to the parser
+target_link_libraries(cmod_packer PRIVATE chtl_lib)
 
 
 # --- Test Suite ---
