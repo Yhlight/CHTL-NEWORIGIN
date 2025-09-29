@@ -77,3 +77,42 @@ TEST_CASE("Expression Parser: Property Reference", "[expression_parser]") {
     REQUIRE(refNode->selector == "box");
     REQUIRE(refNode->propertyName == "width");
 }
+
+TEST_CASE("Expression Engine: End-to-End Property Reference Evaluation", "[expression_evaluator]") {
+    std::string source = R"(
+        div {
+            id: "box1";
+            style {
+                width: 100px;
+                height: 200px;
+            }
+        }
+        div {
+            id: "box2";
+            style {
+                // Reference the width of box1
+                width: #box1.width + 50px;
+            }
+        }
+    )";
+
+    // 1. Parse the full CHTL source
+    Lexer lexer(source);
+    Parser parser(lexer);
+    auto nodes = parser.parse();
+    REQUIRE(nodes.size() == 2);
+
+    // 2. Find the dynamic style node in the second box
+    auto* box2 = static_cast<ElementNode*>(nodes[1].get());
+    REQUIRE(box2->inlineStyles.count("width") == 1);
+    auto* styleValue = box2->inlineStyles.at("width").get();
+    REQUIRE(styleValue->getType() == StyleValueType::Dynamic);
+    auto* dynamicNode = static_cast<DynamicStyleNode*>(styleValue);
+
+    // 3. Evaluate the expression with the parser's context
+    ExpressionEvaluator evaluator(parser);
+    std::string result = evaluator.evaluate(dynamicNode->expressionAst.get());
+
+    // 4. Check the result (100px + 50px)
+    REQUIRE(approx_equal(result, "150.000000px"));
+}

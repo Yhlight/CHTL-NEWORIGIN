@@ -6,6 +6,8 @@
 #include "../ExpressionNode/ConditionalNode.h"
 #include <stdexcept>
 #include <iostream>
+#include <iostream>
+#include "CHTL/CHTLNode/ElementNode.h"
 
 // A simple utility to parse a string like "100px" into a number and a unit.
 // This is a simplified version; a real implementation would be more robust.
@@ -45,10 +47,34 @@ std::string ExpressionEvaluator::visitLiteralNode(LiteralNode* node) {
 }
 
 std::string ExpressionEvaluator::visitPropertyRefNode(PropertyRefNode* node) {
-    // Placeholder: Full implementation requires traversing the main CHTL AST
-    // to find the specified element and its property value.
-    std::cerr << "Warning: Property reference evaluation is not yet implemented." << std::endl;
-    return "0px"; // Return a default value for now
+    ElementNode* targetElement = parserContext.findElementBySelector(node->selector);
+
+    if (!targetElement) {
+        std::cerr << "Warning: Could not find element with selector '" << node->selector << "' for property reference." << std::endl;
+        return "0"; // Return a default value
+    }
+
+    // Look for the property in inline styles first, then attributes.
+    StyleValue* styleValue = nullptr;
+    if (targetElement->inlineStyles.count(node->propertyName)) {
+        styleValue = targetElement->inlineStyles.at(node->propertyName).get();
+    } else if (targetElement->attributes.count(node->propertyName)) {
+        styleValue = targetElement->attributes.at(node->propertyName).get();
+    }
+
+    if (!styleValue) {
+        std::cerr << "Warning: Could not find property '" << node->propertyName << "' on element '" << node->selector << "'." << std::endl;
+        return "0"; // Return a default value
+    }
+
+    // If the referenced property is itself dynamic, we need to evaluate it.
+    if (styleValue->getType() == StyleValueType::Dynamic) {
+        auto* dynamicNode = static_cast<DynamicStyleNode*>(styleValue);
+        return this->evaluate(dynamicNode->expressionAst.get());
+    } else {
+        // Otherwise, just return its static value.
+        return styleValue->toString();
+    }
 }
 
 std::string ExpressionEvaluator::visitBinaryOpNode(BinaryOpNode* node) {

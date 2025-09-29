@@ -13,4 +13,8 @@ public:
     ExpressionNodeType getType() const override {
         return ExpressionNodeType::Literal;
     }
+
+    std::unique_ptr<ExpressionBaseNode> clone() const override {
+        return std::make_unique<LiteralNode>(value);
+    }
 };

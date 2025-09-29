@@ -76,11 +76,14 @@ public:
     std::unique_ptr<InfoNode> infoNode = nullptr;
     // The path of the source file being parsed.
     std::string sourcePath;
-    // --- End public interface for states ---
 
-    // --- End public interface for states ---
+    // --- AST Lookup ---
+    // Finds the first element node in the parsed AST that matches the given selector.
+    // Supports simple selectors: #id, .class, tag
+    ElementNode* findElementBySelector(const std::string& selector);
 
 private:
+    ElementNode* findElementRecursive(const std::string& selector, const std::vector<std::unique_ptr<BaseNode>>& nodes);
     friend class StatementState; // Allow StatementState to call parseTemplateDefinition
     void parseTemplateDefinition();
 

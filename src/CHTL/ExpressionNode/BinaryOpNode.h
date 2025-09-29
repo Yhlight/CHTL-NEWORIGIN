@@ -17,4 +17,8 @@ public:
     ExpressionNodeType getType() const override {
         return ExpressionNodeType::BinaryOp;
     }
+
+    std::unique_ptr<ExpressionBaseNode> clone() const override {
+        return std::make_unique<BinaryOpNode>(left->clone(), op, right->clone());
+    }
 };

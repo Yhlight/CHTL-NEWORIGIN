@@ -21,4 +21,12 @@ public:
     ExpressionNodeType getType() const override {
         return ExpressionNodeType::Conditional;
     }
+
+    std::unique_ptr<ExpressionBaseNode> clone() const override {
+        return std::make_unique<ConditionalNode>(
+            condition->clone(),
+            trueExpression->clone(),
+            falseExpression->clone()
+        );
+    }
 };

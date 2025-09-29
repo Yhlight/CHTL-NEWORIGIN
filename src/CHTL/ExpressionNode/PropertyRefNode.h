@@ -15,4 +15,8 @@ public:
     ExpressionNodeType getType() const override {
         return ExpressionNodeType::PropertyRef;
     }
+
+    std::unique_ptr<ExpressionBaseNode> clone() const override {
+        return std::make_unique<PropertyRefNode>(selector, propertyName);
+    }
 };

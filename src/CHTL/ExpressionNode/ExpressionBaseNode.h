@@ -16,4 +16,7 @@ class ExpressionBaseNode {
 public:
     virtual ~ExpressionBaseNode() = default;
     virtual ExpressionNodeType getType() const = 0;
+
+    // Creates a deep copy of the node.
+    virtual std::unique_ptr<ExpressionBaseNode> clone() const = 0;
 };

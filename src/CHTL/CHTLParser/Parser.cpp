@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "CHTL/CHTLState/StatementState.h" // Include the concrete state
 #include "CHTL/CHTLState/ParserState.h" // Include full definition for destructor
+#include "CHTL/CHTLNode/ElementNode.h"
 #include "CHTL/CHTLNode/StyleTemplateNode.h"
 #include "CHTL/CHTLNode/StaticStyleNode.h"
 #include <stdexcept>
@@ -181,5 +182,48 @@ std::string Parser::getCurrentNamespace() const {
     }
     return result;
 }
+
+ElementNode* Parser::findElementBySelector(const std::string& selector) {
+    if (!parsedNodes) {
+        return nullptr;
+    }
+    return findElementRecursive(selector, *parsedNodes);
+}
+
+ElementNode* Parser::findElementRecursive(const std::string& selector, const std::vector<std::unique_ptr<BaseNode>>& nodes) {
+    for (const auto& node : nodes) {
+        if (node->getType() == NodeType::Element) {
+            auto* element = static_cast<ElementNode*>(node.get());
+            bool match = false;
+            if (selector[0] == '#') {
+                auto it = element->attributes.find("id");
+                if (it != element->attributes.end() && it->second->toString() == selector.substr(1)) {
+                    match = true;
+                }
+            } else if (selector[0] == '.') {
+                auto it = element->attributes.find("class");
+                if (it != element->attributes.end() && it->second->toString() == selector.substr(1)) {
+                    match = true;
+                }
+            } else {
+                if (element->tagName == selector) {
+                    match = true;
+                }
+            }
+
+            if (match) {
+                return element;
+            }
+
+            // If not a match, search children
+            ElementNode* found_in_children = findElementRecursive(selector, element->children);
+            if (found_in_children) {
+                return found_in_children;
+            }
+        }
+    }
+    return nullptr;
+}
+
 
 Parser::~Parser() = default;

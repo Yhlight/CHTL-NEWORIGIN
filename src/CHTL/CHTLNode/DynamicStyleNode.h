@@ -23,10 +23,7 @@ public:
         return StyleValueType::Dynamic;
     }
 
-    // Cloning a dynamic style node now requires cloning the underlying expression AST.
-    // This functionality will need to be added to the expression nodes themselves.
     virtual std::unique_ptr<StyleValue> clone() const override {
-        // Placeholder: A full implementation requires a clone() method on ExpressionBaseNode.
-        return nullptr;
+        return std::make_unique<DynamicStyleNode>(expressionAst->clone());
     }
 };
