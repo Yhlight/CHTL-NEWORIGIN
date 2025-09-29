@@ -3,7 +3,8 @@
 #include "../CHTLLexer/Lexer.h"
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLManage/TemplateManager.h"
-#include "../CHTLManage/ConfigurationManager.h" // Add config manager
+#include "../CHTLManage/ConfigurationManager.h"
+#include "../CHTLManage/CJMODManager.h"
 #include "../Bridge/SharedContext.h"
 #include <memory>
 #include <vector>
@@ -53,6 +54,9 @@ public:
 
     // The manager for storing and retrieving configuration settings.
     ConfigurationManager configManager;
+
+    // The manager for loading and interacting with CJMOD extensions.
+    CJMODManager cjmodManager;
 
     // The "Salt Bridge" context for inter-compiler data sharing.
     SharedContext sharedContext;

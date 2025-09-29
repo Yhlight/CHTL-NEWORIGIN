@@ -339,38 +339,41 @@ void StatementState::parseImportStatement(Parser& parser) {
         throw std::runtime_error("Failed to resolve import: " + path);
     }
 
-    for (const auto& resolved_path : resolved_paths) {
-        std::string p_str = resolved_path.string();
-        try {
-            if (resolved_path.extension() == ".cmod") {
-                // Handle CMOD archive
-                auto fileContents = Loader::loadCmod(p_str);
-
-                // Find the main info and source file within the archive
-                std::string module_name = resolved_path.stem().string();
-                std::string info_file_key = "info/" + module_name + ".chtl";
-                std::string source_file_key = "src/" + module_name + ".chtl";
-
-                if (fileContents.find(source_file_key) == fileContents.end()) {
-                     throw std::runtime_error("Main source file not found in CMOD archive: " + source_file_key);
+    if (importType == "Chtl") {
+        for (const auto& resolved_path : resolved_paths) {
+            std::string p_str = resolved_path.string();
+            try {
+                if (resolved_path.extension() == ".cmod") {
+                    auto fileContents = Loader::loadCmod(p_str);
+                    std::string module_name = resolved_path.stem().string();
+                    std::string source_file_key = "src/" + module_name + ".chtl";
+                    if (fileContents.find(source_file_key) == fileContents.end()) {
+                        throw std::runtime_error("Main source file not found in CMOD archive: " + source_file_key);
+                    }
+                    std::string fileContent = fileContents.at(source_file_key);
+                    Lexer importLexer(fileContent);
+                    Parser importParser(importLexer, p_str);
+                    importParser.parse();
+                    parser.templateManager.merge(importParser.templateManager);
+                } else {
+                    std::string fileContent = Loader::loadFile(p_str);
+                    Lexer importLexer(fileContent);
+                    Parser importParser(importLexer, p_str);
+                    importParser.parse();
+                    parser.templateManager.merge(importParser.templateManager);
                 }
-
-                std::string fileContent = fileContents.at(source_file_key);
-                Lexer importLexer(fileContent);
-                Parser importParser(importLexer, p_str);
-                importParser.parse();
-                parser.templateManager.merge(importParser.templateManager);
-
-            } else {
-                // Handle regular CHTL file
-                std::string fileContent = Loader::loadFile(p_str);
-                Lexer importLexer(fileContent);
-                Parser importParser(importLexer, p_str);
-                importParser.parse();
-                parser.templateManager.merge(importParser.templateManager);
+            } catch (const std::runtime_error& e) {
+                throw std::runtime_error("Failed to import CHTL module '" + p_str + "': " + e.what());
             }
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to import file '" + p_str + "': " + e.what());
+        }
+    } else if (importType == "CJmod") {
+        for (const auto& resolved_path : resolved_paths) {
+            std::string p_str = resolved_path.string();
+            try {
+                parser.cjmodManager.load_module(p_str);
+            } catch (const std::runtime_error& e) {
+                throw std::runtime_error("Failed to load CJMOD module '" + p_str + "': " + e.what());
+            }
         }
     }
 }

@@ -108,6 +108,17 @@ add_executable(cmod_packer src/cmod_packer/main.cpp)
 target_link_libraries(cmod_packer PRIVATE chtl_lib)
 
 
+# --- CJMOD Modules ---
+# Compile the printMylove CJMOD as a shared library
+add_library(printMylove_cjmod SHARED modules/Chtholly/cjmod/src/printMylove.cpp)
+
+# Link the CJMOD against our CHTL library to get access to the API
+target_link_libraries(printMylove_cjmod PRIVATE chtl_lib)
+
+# Set a specific output directory for the CJMODs
+set_target_properties(printMylove_cjmod PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cjmods)
+
+
 # --- Test Suite ---
 # Enable testing with CTest
 enable_testing()
@@ -127,10 +138,14 @@ add_executable(chtl_tests
     tests/CJMODAPITest.cpp
     tests/CLILogicTest.cpp
     tests/OfficialModulesTest.cpp
+    tests/CJMODCodeGenTest.cpp
 )
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)
+
+# Make sure the test executable depends on the CJMOD being built first.
+add_dependencies(chtl_tests printMylove_cjmod)
 
 # Add the project root directory to the include path for tests
 target_include_directories(chtl_tests PRIVATE ${CMAKE_SOURCE_DIR})

@@ -134,7 +134,7 @@ CompilationResult CompilerDispatcher::compile(
         if (fragment.type == FragmentType::CSS) {
             css_content += fragment.content + "\n";
         } else if (fragment.type == FragmentType::CHTL_JS) {
-            std::string compiled_js = chtl_js_compiler.compile(fragment.content);
+            std::string compiled_js = chtl_js_compiler.compile(fragment.content, parser.cjmodManager);
             js_content_stream << compiled_js << "\n";
             if (inline_js) {
                 script_fragments_for_merging[placeholder] = "<script>" + compiled_js + "</script>";
