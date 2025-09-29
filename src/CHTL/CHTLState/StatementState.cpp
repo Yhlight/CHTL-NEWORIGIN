@@ -350,19 +350,83 @@ void StatementState::parseImportStatement(Parser& parser) {
 }
 
 std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) {
-    // Simplified for now to avoid compilation errors
-    parser.advanceTokens(); // [
-    parser.advanceTokens(); // Origin
-    parser.advanceTokens(); // ]
-    parser.advanceTokens(); // @
-    parser.advanceTokens(); // Type
-    parser.advanceTokens(); // name
-    parser.advanceTokens(); // {
-    while(parser.currentToken.type != TokenType::CloseBrace) {
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectKeyword(TokenType::Identifier, "KEYWORD_ORIGIN", "Origin");
+    parser.expectToken(TokenType::CloseBracket);
+
+    parser.expectToken(TokenType::At);
+    if (parser.currentToken.type != TokenType::Identifier) {
+        throw std::runtime_error("Expected a type identifier (e.g., 'Html') after '@' for [Origin] block.");
+    }
+    std::string originType = parser.currentToken.value;
+    parser.advanceTokens();
+
+    std::string originName;
+    if (parser.currentToken.type == TokenType::Identifier) {
+        originName = parser.currentToken.value;
         parser.advanceTokens();
     }
-    parser.advanceTokens(); // }
-    return nullptr;
+
+    // This is a USAGE, not a definition
+    if (parser.currentToken.type == TokenType::Semicolon) {
+        parser.expectToken(TokenType::Semicolon); // Consume the semicolon.
+        if (originName.empty()) {
+             throw std::runtime_error("Found usage of a named origin block, but a name was not provided.");
+        }
+        OriginNode* namedOrigin = parser.templateManager.getNamedOrigin(parser.getCurrentNamespace(), originName);
+        if (!namedOrigin) {
+            throw std::runtime_error("Named origin block '" + originName + "' not found.");
+        }
+        return NodeCloner::clone(namedOrigin);
+    }
+
+    // This is a DEFINITION
+    parser.expectToken(TokenType::OpenBrace);
+
+    const std::string& source = parser.lexer.getSource();
+    size_t contentStartPos = parser.currentToken.start_pos;
+    size_t scanPos = contentStartPos;
+    int braceLevel = 1;
+
+    while (braceLevel > 0 && scanPos < source.length()) {
+        char currentChar = source[scanPos];
+        if (currentChar == '{') {
+            braceLevel++;
+        } else if (currentChar == '}') {
+            braceLevel--;
+        }
+        scanPos++;
+    }
+
+    if (braceLevel != 0) {
+        throw std::runtime_error("Unmatched braces in [Origin] block.");
+    }
+
+    // The actual content is between the start position and one position before the final brace.
+    std::string rawContent = source.substr(contentStartPos, scanPos - contentStartPos - 1);
+
+    // Jump the lexer's position to after the block.
+    parser.lexer.setPosition(scanPos);
+    // Crucially, we must now reset the parser's token lookahead.
+    parser.advanceTokens();
+    parser.advanceTokens();
+    parser.advanceTokens();
+
+    auto originNode = std::make_unique<OriginNode>(originType, rawContent, originName);
+
+    // If it has a name, it's a definition that should be stored.
+    if (!originName.empty()) {
+        auto cloned_node = NodeCloner::clone(originNode.get());
+        auto* raw_ptr = dynamic_cast<OriginNode*>(cloned_node.release());
+        if (!raw_ptr) {
+            throw std::runtime_error("Internal error: Failed to clone OriginNode during parsing.");
+        }
+        parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), originName, std::unique_ptr<OriginNode>(raw_ptr));
+        return nullptr; // Named definitions are not added to the AST at their definition site.
+    }
+
+    // Otherwise, it's an anonymous block to be rendered in place.
+    return originNode;
 }
 
 

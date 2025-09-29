@@ -101,4 +101,37 @@ TEST_CASE("Core CHTL Feature Parsing and Generation", "[core]") {
         std::string actual_html = chtl_to_html_for_core_test(chtl);
         REQUIRE(normalize_html_for_core_test(actual_html) == expected_html);
     }
+
+    SECTION("[Origin] block should output its content raw") {
+        std::string chtl = R"(
+            body {
+                [Origin] @Html {
+                    <div class="raw">
+                        <span>This is raw HTML</span>
+                    </div>
+                }
+            }
+        )";
+        std::string expected_html = R"(<body><div class="raw"><span>This is raw HTML</span></div></body>)";
+        std::string actual_html = chtl_to_html_for_core_test(chtl);
+        REQUIRE(normalize_html_for_core_test(actual_html) == normalize_html_for_core_test(expected_html));
+    }
+
+    SECTION("Named [Origin] block should be definable and reusable") {
+        std::string chtl = R"(
+            [Origin] @Html MyRawBlock {
+                <footer>Copyright 2024</footer>
+            }
+
+            html {
+                body {
+                    p { text: "Some content"; }
+                    [Origin] @Html MyRawBlock;
+                }
+            }
+        )";
+        std::string expected_html = "<html><body><p>Some content</p><footer>Copyright 2024</footer></body></html>";
+        std::string actual_html = chtl_to_html_for_core_test(chtl);
+        REQUIRE(normalize_html_for_core_test(actual_html) == expected_html);
+    }
 }
