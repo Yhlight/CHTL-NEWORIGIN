@@ -1,16 +1,26 @@
 #pragma once
 
-#include "CHTLJSNode.h"
+#include "CHTLJSBaseNode.h"
 #include <string>
 #include <vector>
 
-class ScriptLoaderNode : public CHTLJSNode {
-public:
-    ScriptLoaderNode() = default;
+class ScriptLoaderNode : public CHTLJSBaseNode {
+private:
+    std::vector<std::string> files;
 
-    CHTLJSNodeType getType() const override {
-        return CHTLJSNodeType::ScriptLoader;
+public:
+    ScriptLoaderNode(const std::vector<std::string>& files_to_load) : files(files_to_load) {}
+
+    const std::vector<std::string>& getFiles() const {
+        return files;
     }
 
-    std::vector<std::string> paths;
+    virtual std::string toString() const override {
+        std::string result = "ScriptLoaderNode(Files: ";
+        for (const auto& file : files) {
+            result += file + " ";
+        }
+        result += ")";
+        return result;
+    }
 };

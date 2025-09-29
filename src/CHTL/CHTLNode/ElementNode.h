@@ -19,14 +19,18 @@ public:
     std::string tagName;
 
     // A map to store the element's attributes, e.g., {"id", "main"}.
-    std::map<std::string, StyleValue> attributes;
+    std::map<std::string, std::unique_ptr<StyleValue>> attributes;
 
     // A map to store parsed inline style properties for easy lookup.
-    std::map<std::string, StyleValue> inlineStyles;
+    std::map<std::string, std::unique_ptr<StyleValue>> inlineStyles;
 
     // A vector of child nodes. Using unique_ptr for memory management.
     std::vector<std::unique_ptr<BaseNode>> children;
 
     // A list of constraints defining which child types are not allowed.
     std::vector<Constraint> constraints;
+
+    const std::map<std::string, std::unique_ptr<StyleValue>>& getStyleValues() const {
+        return inlineStyles;
+    }
 };

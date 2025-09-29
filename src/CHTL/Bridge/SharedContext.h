@@ -5,9 +5,6 @@
 #include <map>
 #include <memory>
 
-// Forward declaration for the expression struct
-struct DynamicConditionalExpression;
-
 // Represents a single binding between a responsive variable and a DOM element's property.
 struct ResponsiveBinding {
     std::string elementId;
@@ -19,13 +16,15 @@ struct ResponsiveBinding {
 struct DynamicConditionalBinding {
     std::string targetElementId;
     std::string targetProperty;
-    std::shared_ptr<DynamicConditionalExpression> expression;
+    // The expression is now a simple string, to be parsed by the CHTL JS compiler.
+    std::string expression;
 };
 
 // Represents a binding for a block of content whose rendering is controlled by a dynamic condition.
 struct DynamicRenderingBinding {
     std::string elementId; // The ID of the wrapper div for the conditional content.
-    std::shared_ptr<DynamicConditionalExpression> expression;
+    // The expression is now a simple string.
+    std::string expression;
 };
 
 // The "Salt Bridge": A shared context to pass data between compilers.

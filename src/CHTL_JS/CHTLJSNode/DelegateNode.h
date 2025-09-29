@@ -1,19 +1,37 @@
 #pragma once
 
-#include "CHTLJSNode.h"
+#include "CHTLJSBaseNode.h"
 #include <string>
-#include <vector>
 #include <map>
 
-class DelegateNode : public CHTLJSNode {
+class DelegateNode : public CHTLJSBaseNode {
+private:
+    std::string parent_selector;
+    std::string target_selector;
+    std::map<std::string, std::string> events;
+
 public:
-    DelegateNode() = default;
-    CHTLJSNodeType getType() const override;
+    DelegateNode(const std::string& parent, const std::string& target, const std::map<std::string, std::string>& evts)
+        : parent_selector(parent), target_selector(target), events(evts) {}
 
-    // The selector(s) for the child elements to which events are delegated.
-    std::vector<std::string> target_selectors;
+    const std::string& getParentSelector() const {
+        return parent_selector;
+    }
 
-    // A map where the key is the event name (e.g., "click")
-    // and the value is the raw string of the handler function.
-    std::map<std::string, std::string> event_handlers;
+    const std::string& getTargetSelector() const {
+        return target_selector;
+    }
+
+    const std::map<std::string, std::string>& getEvents() const {
+        return events;
+    }
+
+    virtual std::string toString() const override {
+        std::string result = "DelegateNode(Parent: " + parent_selector + ", Target: " + target_selector + ", Events: {";
+        for (const auto& pair : events) {
+            result += " " + pair.first + ": " + pair.second + ";";
+        }
+        result += " })";
+        return result;
+    }
 };

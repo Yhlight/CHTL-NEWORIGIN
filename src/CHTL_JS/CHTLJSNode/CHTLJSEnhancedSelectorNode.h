@@ -1,12 +1,26 @@
 #pragma once
 
-#include "CHTLJSNode.h"
+#include "CHTLJSBaseNode.h"
 #include <string>
 
-class CHTLJSEnhancedSelectorNode : public CHTLJSNode {
-public:
-    explicit CHTLJSEnhancedSelectorNode(std::string selector_text);
-    CHTLJSNodeType getType() const override;
+class EnhancedSelectorNode : public CHTLJSBaseNode {
+private:
+    std::string selector;
+    std::string expression;
 
-    std::string selector_text;
+public:
+    EnhancedSelectorNode(const std::string& sel, const std::string& expr)
+        : selector(sel), expression(expr) {}
+
+    const std::string& getSelector() const {
+        return selector;
+    }
+
+    const std::string& getExpression() const {
+        return expression;
+    }
+
+    virtual std::string toString() const override {
+        return "EnhancedSelectorNode(Selector: " + selector + ", Expression: " + expression + ")";
+    }
 };

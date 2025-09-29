@@ -1,3 +1,4 @@
+/*
 #include "CHTLJSCompiler.h"
 #include "../CHTLLexer/CHTLJSLexer.h"
 #include "../CHTLJSParser/CHTLJSParser.h"
@@ -33,3 +34,4 @@ CHTLJSLexer CHTLJSCompiler::createLexer(const std::string& source) {
 CHTLJSParser CHTLJSCompiler::createParser(std::vector<CHTLJSToken> tokens) {
     return CHTLJSParser(tokens);
 }
+*/

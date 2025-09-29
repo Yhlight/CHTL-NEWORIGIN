@@ -3,8 +3,8 @@
 #include "../CHTLNode/FragmentNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/ScriptNode.h"
-#include "../CHTLNode/RawScriptNode.h"
-#include "../CHTLNode/EnhancedSelectorNode.h"
+#include "../CHTLNode/DynamicStyleNode.h"
+#include "../CHTLNode/StaticStyleNode.h"
 #include <stdexcept>
 #include <algorithm>
 #include <set>
@@ -60,8 +60,6 @@ std::string Generator::generate(
         generateNode(root.get());
     }
 
-    generateRuntimeScript(context); // This will now be part of the global JS.
-
     return result;
 }
 
@@ -86,64 +84,15 @@ void Generator::generateNode(BaseNode* node) {
         case NodeType::Origin:
             append(static_cast<const OriginNode*>(node)->content);
             break;
-        case NodeType::Script:
-            // Script content is now handled by the dispatcher and passed in globalJs
-            break;
-        case NodeType::Conditional:
-            generateConditional(static_cast<ConditionalNode*>(node));
-            break;
-        case NodeType::Namespace:
-            generateNamespace(static_cast<NamespaceNode*>(node));
-            break;
+        // Other node types are handled elsewhere or do not generate direct output.
         default:
             break;
-    }
-}
-
-void Generator::generateConditional(ConditionalNode* node) {
-    bool isDynamic = false;
-    for (const auto& conditionalCase : node->cases) {
-        if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
-            isDynamic = true;
-            break;
-        }
-    }
-
-    if (isDynamic) {
-        for (auto& conditionalCase : node->cases) {
-            if (conditionalCase.condition.type == StyleValue::DYNAMIC_CONDITIONAL) {
-                std::string wrapperId = "chtl-dyn-render-" + std::to_string(reinterpret_cast<uintptr_t>(&conditionalCase));
-                appendLine("<div id=\"" + wrapperId + "\">");
-                indent();
-                for (const auto& child : conditionalCase.children) {
-                    generateNode(child.get());
-                }
-                outdent();
-                appendLine("</div>");
-
-                DynamicRenderingBinding binding;
-                binding.elementId = wrapperId;
-                binding.expression = conditionalCase.condition.dynamic_expr;
-                mutableContext->dynamicRenderingBindings.push_back(binding);
-            }
-        }
-    } else {
-        for (const auto& conditionalCase : node->cases) {
-            if (conditionalCase.condition.type == StyleValue::BOOL && conditionalCase.condition.bool_val) {
-                for (const auto& child : conditionalCase.children) {
-                    generateNode(child.get());
-                }
-                break;
-            }
-        }
     }
 }
 
 
 void Generator::generateElement(ElementNode* node) {
     if (node->tagName.rfind("chtl_placeholder_", 0) == 0) {
-        // Placeholders are handled by the dispatcher's merger now.
-        // We just need to make sure they are present in the output.
         append(node->tagName + "{}");
         return;
     }
@@ -152,33 +101,52 @@ void Generator::generateElement(ElementNode* node) {
 
     append(getIndent() + "<" + node->tagName);
 
-    auto finalAttributes = node->attributes;
+    // Process attributes first to ensure we have an ID if needed for dynamic styles.
+    std::map<std::string, std::string> finalAttributeStrings;
+    for (const auto& attrPair : node->attributes) {
+        if (attrPair.second) {
+            finalAttributeStrings[attrPair.first] = attrPair.second->toString();
+        }
+    }
+
     std::string styleString;
-
     for (const auto& stylePair : node->inlineStyles) {
-        if (stylePair.second.type != StyleValue::RESPONSIVE && stylePair.second.type != StyleValue::DYNAMIC_CONDITIONAL) {
-            styleString += stylePair.first + ": " + styleValueToString(stylePair.second) + "; ";
+        if (stylePair.second) {
+            if (stylePair.second->getType() == StyleValueType::Dynamic) {
+                // Ensure the element has an ID for the runtime to find it.
+                if (finalAttributeStrings.find("id") == finalAttributeStrings.end()) {
+                    std::string newId = "chtl-id-" + std::to_string(reinterpret_cast<uintptr_t>(node));
+                    finalAttributeStrings["id"] = newId;
+                }
+                const std::string& elementId = finalAttributeStrings.at("id");
+
+                DynamicConditionalBinding binding;
+                binding.targetElementId = elementId;
+                binding.targetProperty = "style." + stylePair.first;
+
+                auto* dynamicNode = static_cast<DynamicStyleNode*>(stylePair.second.get());
+                binding.expression = dynamicNode->getExpression();
+
+                mutableContext->dynamicConditionalBindings.push_back(binding);
+            } else {
+                // It's a static style, so add it to the style string.
+                styleString += stylePair.first + ": " + stylePair.second->toString() + "; ";
+            }
         }
     }
 
+    // Combine generated styles with any existing style attribute.
     if (!styleString.empty()) {
-        if (finalAttributes.count("style")) {
-            finalAttributes["style"].string_val = styleString + finalAttributes["style"].string_val;
+        if (finalAttributeStrings.count("style")) {
+            finalAttributeStrings["style"] = styleString + finalAttributeStrings["style"];
         } else {
-            finalAttributes["style"] = StyleValue(styleString);
+            finalAttributeStrings["style"] = styleString;
         }
     }
 
-    for (auto it = finalAttributes.begin(); it != finalAttributes.end(); ) {
-        if (it->second.type == StyleValue::RESPONSIVE || it->second.type == StyleValue::DYNAMIC_CONDITIONAL) {
-            it = finalAttributes.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
-    for (auto const& [key, val] : finalAttributes) {
-        append(" " + key + "=\"" + styleValueToString(val) + "\"");
+    // Render all final attributes to the tag.
+    for (const auto& [key, val] : finalAttributeStrings) {
+        append(" " + key + "=\"" + val + "\"");
     }
 
     append(">");
@@ -241,20 +209,8 @@ void Generator::generateComment(const CommentNode* node) {
     appendLine("<!-- " + node->text + " -->");
 }
 
-void Generator::generateScript(const ScriptNode* node) {
-    // This is now handled by the dispatcher, which passes the combined script
-    // to the generate method. This function is effectively deprecated.
-}
-
 void Generator::generateNamespace(NamespaceNode* node) {
-    // Namespaces are for organization and don't produce output themselves,
-    // so we just generate their children.
     for (auto& child : node->children) {
         generateNode(child.get());
     }
-}
-
-void Generator::generateRuntimeScript(const SharedContext& context) {
-    // This logic is now part of the global JS content passed to the main generate method.
-    // The dispatcher will concatenate this with other script content.
 }

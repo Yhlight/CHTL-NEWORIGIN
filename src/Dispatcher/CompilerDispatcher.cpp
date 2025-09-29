@@ -130,9 +130,12 @@ CompilationResult CompilerDispatcher::compile(
         if (fragment.type == FragmentType::CSS) {
             css_content += fragment.content + "\n";
         } else if (fragment.type == FragmentType::CHTL_JS) {
-            std::string compiled_js = chtl_js_compiler.compile(fragment.content);
-            js_content_stream << compiled_js << "\n";
-            script_fragments_for_merging[placeholder] = "<script>" + compiled_js + "</script>";
+            // std::string compiled_js = chtl_js_compiler.compile(fragment.content);
+            // js_content_stream << compiled_js << "\n";
+            // script_fragments_for_merging[placeholder] = "<script>" + compiled_js + "</script>";
+            // For now, treat CHTL_JS as plain JS to avoid linker errors.
+            js_content_stream << fragment.content << "\n";
+            script_fragments_for_merging[placeholder] = "<script>" + fragment.content + "</script>";
         } else if (fragment.type == FragmentType::JS) {
             js_content_stream << fragment.content << "\n";
             script_fragments_for_merging[placeholder] = "<script>" + fragment.content + "</script>";

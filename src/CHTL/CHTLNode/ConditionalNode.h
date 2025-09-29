@@ -8,7 +8,7 @@
 // Represents a single case in an if-else if-else chain (e.g., an 'if', 'else if', or 'else' block).
 struct ConditionalCase {
     // The condition to evaluate. For 'else' blocks, this will be a StyleValue of type BOOL with a value of true.
-    StyleValue condition;
+    std::unique_ptr<StyleValue> condition;
 
     // The list of child nodes to include if the condition is met.
     std::vector<std::unique_ptr<BaseNode>> children;

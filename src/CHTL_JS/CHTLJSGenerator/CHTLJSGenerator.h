@@ -1,24 +1,29 @@
 #pragma once
 
-#include "../CHTLJSNode/CHTLJSNode.h"
-#include "../CHTLJSNode/EventBindingNode.h"
-#include "../CHTLJSNode/DelegateNode.h"
-#include "../CHTLJSNode/ScriptLoaderNode.h"
-#include "../CHTLJSManage/VirtualObjectManager.h"
-#include "../CHTLJSNode/RouterNode.h"
+#include "../CHTLJSNode/CHTLJSBaseNode.h"
 #include <string>
-#include <vector>
-#include <memory>
+
+// Forward declarations of node types to avoid circular dependencies
+class ScriptLoaderNode;
+class EnhancedSelectorNode;
+class ListenNode;
+class EventBindingNode;
+class DelegateNode;
+class AnimateNode;
+class VirtualObjectNode;
+class RouterNode;
 
 class CHTLJSGenerator {
 public:
-    std::string generate(const std::vector<std::unique_ptr<CHTLJSNode>>& ast, const VirtualObjectManager& vom);
+    std::string generate(const CHTLJSBaseNode& node);
 
 private:
-    bool scriptLoaderInjected = false;
-    bool routerInjected = false;
-    const VirtualObjectManager* vom = nullptr;
-    std::string generateNode(const CHTLJSNode* node);
-    std::string generateScriptLoader(const ScriptLoaderNode* node);
-    std::string generateRouter(const RouterNode* node);
+    std::string generateScriptLoader(const ScriptLoaderNode& node);
+    std::string generateEnhancedSelector(const EnhancedSelectorNode& node);
+    std::string generateListen(const ListenNode& node);
+    std::string generateEventBinding(const EventBindingNode& node);
+    std::string generateDelegate(const DelegateNode& node);
+    std::string generateAnimate(const AnimateNode& node);
+    std::string generateVirtualObject(const VirtualObjectNode& node);
+    std::string generateRouter(const RouterNode& node);
 };
