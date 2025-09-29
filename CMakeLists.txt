@@ -126,6 +126,7 @@ add_executable(chtl_tests
     tests/ModuleSystemTest.cpp
     tests/CJMODAPITest.cpp
     tests/CLILogicTest.cpp
+    tests/OfficialModulesTest.cpp
 )
 
 # Link the test executable against the CHTL library
