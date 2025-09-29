@@ -35,6 +35,11 @@ void test_chtl_js_listen_block();
 void test_event_delegation();
 void test_placeholder_based_parsing_and_generation();
 
+// --- Import Tests ---
+void test_import_style_template();
+void test_import_element_template();
+void test_import_non_chtl_as_origin();
+
 
 int main() {
     std::cout << "Running CHTL tests..." << std::endl;
@@ -57,6 +62,12 @@ int main() {
     // --- Running Placeholder Verification Test ---
     std::cout << "\n--- Running Placeholder Verification Test ---\n";
     run_test(test_placeholder_based_parsing_and_generation, "Placeholder-Based Parsing and Generation");
+
+    // --- Running Import Tests ---
+    std::cout << "\n--- Running Import Tests ---\n";
+    run_test(test_import_style_template, "Import Style Template");
+    run_test(test_import_element_template, "Import Element Template");
+    run_test(test_import_non_chtl_as_origin, "Import non-CHTL file as Origin");
 
     std::cout << "\nTests finished." << std::endl;
     return 0;

@@ -33,13 +33,6 @@ private:
     // Helper for specializing an element template usage
     void parseElementSpecializationBlock(Parser& parser, FragmentNode& fragment);
 
-    // Helper for parsing an import statement
-    void parseImportStatement(Parser& parser);
-    void handlePreciseImport(Parser& parser, const std::string& importType, const std::string& itemName, const std::string& path, const std::string& alias);
-    void handleWildcardImport(Parser& parser, bool isTemplate, bool isCustom, bool isOrigin, const std::string& importType, const std::string& path);
-    void handleNonChtlImport(Parser& parser, const std::string& importType, const std::string& path, const std::string& alias);
-
-
     // Helper for parsing an 'except' clause
     void parseExceptClause(Parser& parser, ElementNode& element);
 

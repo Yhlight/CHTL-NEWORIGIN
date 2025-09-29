@@ -54,6 +54,8 @@ set(CHTL_SOURCES
     src/CHTL/CHTLState/UseState.cpp
     src/CHTL/CHTLState/InfoState.cpp
     src/CHTL/CHTLState/NamespaceState.cpp
+    src/CHTL/CHTLState/ImportState.cpp
+    src/CHTL/CHTLLoader/ImportProcessor.cpp
     src/Dispatcher/CompilerDispatcher.cpp
     src/Scanner/UnifiedScanner.cpp
     src/CodeMerger/CodeMerger.cpp
@@ -96,7 +98,7 @@ target_include_directories(cmod_packer PRIVATE third-party/libzippp/src)
 enable_testing()
 
 # Add the test executable
-add_executable(chtl_tests tests/main.cpp tests/CoreFeatures.cpp tests/PlaceholderVerification.cpp)
+add_executable(chtl_tests tests/main.cpp tests/CoreFeatures.cpp tests/PlaceholderVerification.cpp tests/ImportTests.cpp)
 
 # Link the test executable against the CHTL library
 target_link_libraries(chtl_tests PRIVATE chtl_lib)

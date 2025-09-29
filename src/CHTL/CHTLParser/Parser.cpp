@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include "CHTL/CHTLState/StatementState.h" // Include the concrete state
 #include "CHTL/CHTLState/ParserState.h" // Include full definition for destructor
+#include "../CHTLLoader/ImportProcessor.h" // Include the new import processor
 #include <stdexcept>
 #include <sstream>
 
@@ -40,6 +41,11 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
     }
 
     this->parsedNodes = nullptr; // Clean up the pointer.
+
+    // After the initial parse, process all the import nodes.
+    ImportProcessor importProcessor(*this);
+    importProcessor.process(statements);
+
     return statements;
 }
 

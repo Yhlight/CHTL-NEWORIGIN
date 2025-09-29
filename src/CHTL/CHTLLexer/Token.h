@@ -69,6 +69,7 @@ enum class TokenType {
     Use,          // use
     Namespace,    // Namespace
     From,         // from
+    As,           // as
     Custom,       // Custom
     Delete,       // delete
     Insert,       // insert

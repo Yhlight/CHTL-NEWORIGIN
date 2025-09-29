@@ -64,6 +64,7 @@ Token Lexer::identifier() {
     if (value == "use") return {TokenType::Use, value, line, startCol, startPos};
     if (value == "Namespace") return {TokenType::Namespace, value, line, startCol, startPos};
     if (value == "from") return {TokenType::From, value, line, startCol, startPos};
+    if (value == "as") return {TokenType::As, value, line, startCol, startPos};
     if (value == "Custom") return {TokenType::Custom, value, line, startCol, startPos};
     if (value == "delete") return {TokenType::Delete, value, line, startCol, startPos};
     if (value == "insert") return {TokenType::Insert, value, line, startCol, startPos};

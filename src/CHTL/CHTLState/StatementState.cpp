@@ -30,6 +30,7 @@ class UseState;
 #include "UseState.h"
 #include "InfoState.h"
 #include "NamespaceState.h"
+#include "ImportState.h"
 
 // Forward declare to resolve circular dependency between element parsing and statement parsing
 class ElementNode;
@@ -135,7 +136,7 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
             return nullptr;
         }
         if (config.isKeyword(nextValue, "KEYWORD_IMPORT", "Import")) {
-            parseImportStatement(parser);
+            parser.setState(std::make_unique<ImportState>());
             return nullptr;
         }
         if (config.isKeyword(nextValue, "KEYWORD_ORIGIN", "Origin")) {
@@ -968,186 +969,6 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
         throw std::runtime_error("Invalid syntax for [Origin] block. Expected '{' for definition or ';' for usage.");
     }
 }
-
-void StatementState::parseImportStatement(Parser& parser) {
-    parser.expectToken(TokenType::OpenBracket);
-    parser.expectToken(TokenType::Import);
-    parser.expectToken(TokenType::CloseBracket);
-
-    bool isCustom = false;
-    bool isTemplate = false;
-    bool isOrigin = false;
-    std::string importType;
-    std::string itemName;
-
-    if (parser.currentToken.type == TokenType::OpenBracket) {
-        if (parser.peekToken.value == "Custom") isCustom = true;
-        else if (parser.peekToken.value == "Template") isTemplate = true;
-        else if (parser.peekToken.value == "Origin") isOrigin = true;
-        parser.advanceTokens();
-        parser.advanceTokens();
-        parser.expectToken(TokenType::CloseBracket);
-    }
-
-    if (parser.currentToken.type == TokenType::At) {
-        parser.advanceTokens();
-        importType = parser.currentToken.value;
-        parser.advanceTokens();
-    }
-
-    bool isWildcard = (parser.currentToken.type == TokenType::From);
-    if (!isWildcard) {
-        itemName = parser.currentToken.value;
-        parser.advanceTokens();
-    }
-
-    parser.expectKeyword(TokenType::From, "KEYWORD_FROM", "from");
-    if (parser.currentToken.type != TokenType::String) {
-        throw std::runtime_error("Import path must be a string literal.");
-    }
-    std::string path = parser.currentToken.value;
-    parser.advanceTokens();
-    if (!path.empty() && path.front() == '"') path.erase(0, 1);
-    if (!path.empty() && path.back() == '"') path.pop_back();
-
-    std::string alias;
-    if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_AS", "as")) {
-        alias = parser.currentToken.value;
-        parser.expectToken(TokenType::Identifier);
-    }
-    parser.expectToken(TokenType::Semicolon);
-
-    if (importType == "Html" || importType == "Style" || importType == "JavaScript") {
-        handleNonChtlImport(parser, importType, path, alias);
-    } else if (isWildcard) {
-        handleWildcardImport(parser, isTemplate, isCustom, isOrigin, importType, path);
-    } else {
-        handlePreciseImport(parser, importType, itemName, path, alias);
-    }
-}
-
-void StatementState::handleNonChtlImport(Parser& parser, const std::string& importType, const std::string& path, const std::string& alias) {
-    if (alias.empty()) {
-        throw std::runtime_error("Import for non-CHTL types must use 'as'.");
-    }
-    ModuleResolver resolver;
-     std::filesystem::path current_file_path(parser.sourcePath);
-    std::filesystem::path base_path = !parser.sourcePath.empty() && current_file_path.has_parent_path()
-                                          ? current_file_path.parent_path()
-                                          : std::filesystem::current_path();
-    std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, base_path);
-    if(resolved_paths.empty()){
-         throw std::runtime_error("Failed to resolve import: " + path);
-    }
-    std::string fileContent = Loader::loadFile(resolved_paths[0].string());
-    auto originNode = std::make_unique<OriginNode>(importType, fileContent, alias);
-    parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), alias, std::move(originNode));
-}
-
-void StatementState::handleWildcardImport(Parser& parser, bool isTemplate, bool isCustom, bool isOrigin, const std::string& importType, const std::string& path) {
-    ModuleResolver resolver;
-     std::filesystem::path current_file_path(parser.sourcePath);
-    std::filesystem::path base_path = !parser.sourcePath.empty() && current_file_path.has_parent_path()
-                                          ? current_file_path.parent_path()
-                                          : std::filesystem::current_path();
-    std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, base_path);
-     if (resolved_paths.empty()) {
-        throw std::runtime_error("Failed to resolve import: " + path);
-    }
-
-    for (const auto& resolved_path : resolved_paths) {
-        std::string p_str = resolved_path.string();
-        try {
-            std::string fileContent = Loader::loadFile(p_str);
-            Lexer importLexer(fileContent);
-            Parser importParser(importLexer, p_str);
-            importParser.parse();
-
-            TemplateManager::MergeOptions options;
-            if (isTemplate) options.type = TemplateManager::ImportType::TEMPLATE;
-            else if (isCustom) options.type = TemplateManager::ImportType::CUSTOM;
-            else if (isOrigin) options.type = TemplateManager::ImportType::ORIGIN;
-            else options.type = TemplateManager::ImportType::ALL;
-
-            if (!importType.empty()) options.subType = importType;
-
-            // If this is a full Chtl import ([Import] @Chtl from ...),
-            // use the logic that applies a default namespace.
-            if (options.type == TemplateManager::ImportType::ALL) {
-                std::string default_ns = resolved_path.stem().string();
-                parser.templateManager.merge_with_default_namespace(importParser.templateManager, default_ns);
-            } else {
-                // For other wildcard imports like [Import] [Template] from ..., merge directly.
-                parser.templateManager.merge(importParser.templateManager, options);
-            }
-        } catch (const std::runtime_error& e) {
-            throw std::runtime_error("Failed to process wildcard import from '" + p_str + "': " + e.what());
-        }
-    }
-}
-void StatementState::handlePreciseImport(Parser& parser, const std::string& importType, const std::string& itemName, const std::string& path, const std::string& alias) {
-     ModuleResolver resolver;
-     std::filesystem::path current_file_path(parser.sourcePath);
-    std::filesystem::path base_path = !parser.sourcePath.empty() && current_file_path.has_parent_path()
-                                          ? current_file_path.parent_path()
-                                          : std::filesystem::current_path();
-    std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, base_path);
-     if (resolved_paths.empty()) {
-        throw std::runtime_error("Failed to resolve import: " + path);
-    }
-    std::string p_str = resolved_paths[0].string();
-     try {
-        std::string fileContent = Loader::loadFile(p_str);
-        Lexer importLexer(fileContent);
-        Parser importParser(importLexer, p_str);
-        importParser.parse();
-
-        // --- Export Enforcement ---
-        // If an [Export] block exists, we must enforce it, even if it's empty.
-        if (importParser.infoNode && importParser.infoNode->exportBlockExists) {
-            bool isExported = false;
-            // Construct the key to look up in the exports map.
-            // e.g., "[Template] @Element"
-            std::string key_prefix = (importParser.templateManager.getElementTemplate("_global", itemName) && importParser.templateManager.getElementTemplate("_global", itemName)->isCustom)
-                                     ? "[Custom]"
-                                     : "[Template]";
-            std::string key = key_prefix + " @" + importType;
-
-            // Check if the specific type category (e.g., "[Template] @Element") is in the export map.
-            if (importParser.infoNode->exports.count(key)) {
-                const auto& symbols = importParser.infoNode->exports.at(key);
-                // Check if the specific item name is in the list of exported symbols for that category.
-                if (std::find(symbols.begin(), symbols.end(), itemName) != symbols.end()) {
-                    isExported = true;
-                }
-            }
-
-            if (!isExported) {
-                throw std::runtime_error("Item '" + itemName + "' of type " + key + " is not exported by module " + p_str);
-            }
-        }
-
-        std::string finalName = alias.empty() ? itemName : alias;
-        if (importType == "Element") {
-            ElementTemplateNode* node = importParser.templateManager.getElementTemplate("_global", itemName);
-            if (!node) throw std::runtime_error("Element template '" + itemName + "' not found in " + p_str);
-            parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalName, NodeCloner::clone_unique(node));
-        } else if (importType == "Style") {
-            StyleTemplateNode* node = importParser.templateManager.getStyleTemplate("_global", itemName);
-            if (!node) throw std::runtime_error("Style template '" + itemName + "' not found in " + p_str);
-            parser.templateManager.addStyleTemplate(parser.getCurrentNamespace(), finalName, NodeCloner::clone_unique(node));
-        } else if (importType == "Var") {
-            VarTemplateNode* node = importParser.templateManager.getVarTemplate("_global", itemName);
-            if (!node) throw std::runtime_error("Var template '" + itemName + "' not found in " + p_str);
-            parser.templateManager.addVarTemplate(parser.getCurrentNamespace(), finalName, NodeCloner::clone_unique(node));
-        } else {
-             throw std::runtime_error("Precise import is only supported for @Element, @Style, and @Var.");
-        }
-    } catch (const std::runtime_error& e) {
-        throw std::runtime_error("Failed to process import from '" + p_str + "': " + e.what());
-    }
-}
-
 
 void parseScriptBlock(Parser& parser, ElementNode& element) {
     parser.expectToken(TokenType::Identifier); // consume 'script'
