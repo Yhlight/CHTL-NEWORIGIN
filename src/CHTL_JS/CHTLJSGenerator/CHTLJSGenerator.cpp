@@ -1,4 +1,5 @@
 #include "CHTLJSGenerator.h"
+#include "../CHTLJSNode/RawJavaScriptNode.h"
 #include "../CHTLJSNode/CHTLJSEnhancedSelectorNode.h"
 #include "../CHTLJSNode/ListenNode.h"
 #include "../CHTLJSNode/EventBindingNode.h"
@@ -26,11 +27,7 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
             }
             const auto* listenNode = static_cast<const ListenNode*>(node.get());
             for (const auto& pair : listenNode->event_handlers) {
-                final_code << last_expression << ".addEventListener('" << pair.first << "', () => {";
-                for (const auto& body_node : pair.second) {
-                    final_code << generateNode(body_node.get());
-                }
-                final_code << "});\n";
+                final_code << last_expression << ".addEventListener('" << pair.first << "', " << pair.second << ");\n";
             }
             last_expression.clear();
         } else if (node->getType() == CHTLJSNodeType::EventBinding) {
@@ -39,11 +36,7 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
             }
             const auto* bindingNode = static_cast<const EventBindingNode*>(node.get());
             for (const auto& event_name : bindingNode->event_names) {
-                final_code << last_expression << ".addEventListener('" << event_name << "', () => {";
-                for (const auto& body_node : bindingNode->handler_body) {
-                    final_code << generateNode(body_node.get());
-                }
-                final_code << "});\n";
+                final_code << last_expression << ".addEventListener('" << event_name << "', " << bindingNode->handler_code << ");\n";
             }
             last_expression.clear();
         } else if (node->getType() == CHTLJSNodeType::Delegate) {
@@ -66,11 +59,7 @@ std::string CHTLJSGenerator::generate(const std::vector<std::unique_ptr<CHTLJSNo
                 }
 
                 final_code << "    if (" << condition << ") {\n";
-                final_code << "      (() => {";
-                for (const auto& body_node : pair.second) {
-                    final_code << generateNode(body_node.get());
-                }
-                final_code << "      }).call(target, event);\n";
+                final_code << "      (" << pair.second << ").call(target, event);\n";
                 final_code << "      break;\n";
                 final_code << "    }\n";
                 final_code << "    target = target.parentNode;\n";
@@ -228,20 +217,17 @@ std::string CHTLJSGenerator::generateScriptLoader(const ScriptLoaderNode* node) 
     return ss.str();
 }
 
-std::string CHTLJSGenerator::generatePlaceholderNode(const CHTLJSPlaceholderNode* node) {
-    return node->getCode();
-}
-
 std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
     if (!node) return "";
 
     switch (node->getType()) {
-        case CHTLJSNodeType::Placeholder:
-            return generatePlaceholderNode(static_cast<const CHTLJSPlaceholderNode*>(node));
         case CHTLJSNodeType::Router:
             return generateRouter(static_cast<const RouterNode*>(node));
         case CHTLJSNodeType::ScriptLoader:
             return generateScriptLoader(static_cast<const ScriptLoaderNode*>(node));
+        case CHTLJSNodeType::RawJavaScript: {
+            return static_cast<const RawJavaScriptNode*>(node)->js_code;
+        }
         case CHTLJSNodeType::EnhancedSelector: {
             return "document.querySelector('" + static_cast<const CHTLJSEnhancedSelectorNode*>(node)->selector_text + "')";
         }
@@ -257,13 +243,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
                 const auto* listenNode = static_cast<const ListenNode*>(valueNode);
                 auto it = listenNode->event_handlers.find(accessNode->propertyName);
                 if (it != listenNode->event_handlers.end()) {
-                    std::stringstream handler_body_ss;
-                    handler_body_ss << "() => {";
-                    for (const auto& body_node : it->second) {
-                        handler_body_ss << generateNode(body_node.get());
-                    }
-                    handler_body_ss << "}";
-                    return handler_body_ss.str();
+                    return it->second;
                 }
             }
             throw std::runtime_error("Property '" + accessNode->propertyName + "' not found in virtual object '" + accessNode->objectName + "'.");
@@ -278,13 +258,7 @@ std::string CHTLJSGenerator::generateNode(const CHTLJSNode* node) {
             if (animateNode->loop) ss << "  loop: " << *animateNode->loop << ",\n";
             if (animateNode->direction) ss << "  direction: '" << *animateNode->direction << "',\n";
             if (animateNode->delay) ss << "  delay: " << *animateNode->delay << ",\n";
-            if (animateNode->callback) {
-                ss << "  callback: () => {";
-                for (const auto& body_node : *animateNode->callback) {
-                    ss << generateNode(body_node.get());
-                }
-                ss << "},\n";
-            }
+            if (animateNode->callback) ss << "  callback: " << *animateNode->callback << ",\n";
 
             if (!animateNode->begin_styles.empty()) {
                 ss << "  begin: {";
