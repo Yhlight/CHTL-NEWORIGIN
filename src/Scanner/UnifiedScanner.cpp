@@ -1,4 +1,5 @@
 #include "UnifiedScanner.h"
+#include "CHTL_JS/CHTLLexer/CHTLJSLexer.h"
 #include <string>
 #include <cctype>
 #include <regex>
@@ -55,15 +56,33 @@ size_t UnifiedScanner::find_matching_brace(const std::string& s, size_t start_po
     return std::string::npos;
 }
 
-// Heuristic to differentiate CHTL JS from plain JS.
+// Differentiates CHTL JS from plain JS using a token-based analysis.
 CodeFragment UnifiedScanner::processScriptBlock(const std::string& content) {
-    if (content.find("{{") != std::string::npos || content.find("}}") != std::string::npos ||
-        content.find("->") != std::string::npos || content.find("Listen") != std::string::npos ||
-        content.find("Delegate") != std::string::npos || content.find("Animate") != std::string::npos ||
-        content.find("Router") != std::string::npos || content.find("Vir") != std::string::npos ||
-        content.find("ScriptLoader") != std::string::npos) {
-        return {FragmentType::CHTL_JS, content};
+    CHTLJSLexer lexer(content);
+    std::vector<CHTLJSToken> tokens = lexer.tokenize();
+
+    for (const auto& token : tokens) {
+        switch (token.type) {
+            // Check for tokens that are unambiguously part of CHTL JS syntax.
+            case CHTLJSTokenType::OpenDoubleBrace:
+            case CHTLJSTokenType::RightArrow:
+            case CHTLJSTokenType::EventBind:
+            case CHTLJSTokenType::Listen:
+            case CHTLJSTokenType::Delegate:
+            case CHTLJSTokenType::Animate:
+            case CHTLJSTokenType::Router:
+            case CHTLJSTokenType::Vir:
+            case CHTLJSTokenType::ScriptLoader:
+                // If any CHTL JS token is found, classify the whole block as CHTL_JS.
+                return {FragmentType::CHTL_JS, content};
+            default:
+                // Continue checking other tokens.
+                continue;
+        }
     }
+
+    // If no CHTL JS-specific tokens are found after checking the entire block,
+    // classify it as plain JavaScript.
     return {FragmentType::JS, content};
 }
 
