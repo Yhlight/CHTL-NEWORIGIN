@@ -38,20 +38,20 @@ void Lexer::initializeKeywords() {
     keywords_["true"] = TokenType::BOOLEAN_LITERAL;
     keywords_["false"] = TokenType::BOOLEAN_LITERAL;
     
-    // CSS units
-    keywords_["px"] = TokenType::CSS_UNIT;
-    keywords_["em"] = TokenType::CSS_UNIT;
-    keywords_["rem"] = TokenType::CSS_UNIT;
-    keywords_["%"] = TokenType::CSS_UNIT;
-    keywords_["vh"] = TokenType::CSS_UNIT;
-    keywords_["vw"] = TokenType::CSS_UNIT;
-    keywords_["vmin"] = TokenType::CSS_UNIT;
-    keywords_["vmax"] = TokenType::CSS_UNIT;
-    keywords_["pt"] = TokenType::CSS_UNIT;
-    keywords_["pc"] = TokenType::CSS_UNIT;
-    keywords_["in"] = TokenType::CSS_UNIT;
-    keywords_["cm"] = TokenType::CSS_UNIT;
-    keywords_["mm"] = TokenType::CSS_UNIT;
+    // CSS units (will be identified during parsing, not lexing)
+    // keywords_["px"] = TokenType::CSS_UNIT;
+    // keywords_["em"] = TokenType::CSS_UNIT;
+    // keywords_["rem"] = TokenType::CSS_UNIT;
+    // keywords_["%"] = TokenType::CSS_UNIT;
+    // keywords_["vh"] = TokenType::CSS_UNIT;
+    // keywords_["vw"] = TokenType::CSS_UNIT;
+    // keywords_["vmin"] = TokenType::CSS_UNIT;
+    // keywords_["vmax"] = TokenType::CSS_UNIT;
+    // keywords_["pt"] = TokenType::CSS_UNIT;
+    // keywords_["pc"] = TokenType::CSS_UNIT;
+    // keywords_["in"] = TokenType::CSS_UNIT;
+    // keywords_["cm"] = TokenType::CSS_UNIT;
+    // keywords_["mm"] = TokenType::CSS_UNIT;
 }
 
 std::vector<Token> Lexer::tokenize(const std::string& source) {
@@ -61,15 +61,18 @@ std::vector<Token> Lexer::tokenize(const std::string& source) {
     std::vector<Token> tokens;
     
     while (!isAtEnd()) {
-        skipWhitespace();
+        char c = current();
+        
+        if (isWhitespace(c)) {
+            tokens.push_back(scanWhitespace());
+            continue;
+        }
         
         if (isAtEnd()) break;
         
-        char c = current();
-        
         if (isAlpha(c) || c == '_') {
             tokens.push_back(scanIdentifier());
-        } else if (isDigit(c) || c == '.') {
+        } else if (isDigit(c)) {
             tokens.push_back(scanNumber());
         } else if (isQuote(c)) {
             tokens.push_back(scanString(c));
@@ -78,7 +81,12 @@ std::vector<Token> Lexer::tokenize(const std::string& source) {
         } else if (c == '/' && peek() == '*') {
             tokens.push_back(scanComment());
         } else if (c == '#') {
-            tokens.push_back(scanGeneratorComment());
+            // Check if it's a generator comment (must have space after #)
+            if (peek() == ' ') {
+                tokens.push_back(scanGeneratorComment());
+            } else {
+                tokens.push_back(createToken(TokenType::HASH, "#"));
+            }
         } else if (c == '[') {
             tokens.push_back(scanTemplateKeyword());
         } else if (isOperator(c)) {
@@ -367,6 +375,13 @@ Token Lexer::scanOperator() {
     char second = current();
     std::string twoChar = std::string(1, first) + std::string(1, second);
     
+    // Special case for **= operator
+    if (first == '*' && second == '*' && peek() == '=') {
+        advance(); // Skip second *
+        advance(); // Skip =
+        return createToken(TokenType::POWER_EQUAL, "**=");
+    }
+    
     if (isMultiCharOperator(first, second)) {
         advance();
         return createToken(recognizeOperator(twoChar), twoChar);
@@ -490,8 +505,7 @@ bool Lexer::isMultiCharOperator(char first, char second) const {
            (first == '*' && second == '=') ||
            (first == '/' && second == '=') ||
            (first == '%' && second == '=') ||
-           (first == '*' && second == '*') ||
-           (first == '*' && second == '*' && peek(2) == '=');
+           (first == '*' && second == '*');
 }
 
 bool Lexer::isNumberStart(char c) const {
