@@ -26,13 +26,13 @@ private:
 
     // Specific parsing functions for each construct
     std::unique_ptr<CHTLJSBaseNode> parseListen(const std::string& selector);
-    std::unique_ptr<CHTLJSBaseNode> parseDelegate();
+    std::unique_ptr<CHTLJSBaseNode> parseDelegate(const std::string& parent_selector);
     std::unique_ptr<CHTLJSBaseNode> parseAnimate();
     std::unique_ptr<CHTLJSBaseNode> parseRouter();
     std::unique_ptr<CHTLJSBaseNode> parseVir();
     std::unique_ptr<CHTLJSBaseNode> parseScriptLoader();
     std::unique_ptr<CHTLJSBaseNode> parseEnhancedSelector();
-    std::unique_ptr<CHTLJSBaseNode> parseEventBinding();
+    std::unique_ptr<CHTLJSBaseNode> parseEventBinding(const std::string& selector);
 };
 
 #endif // CHTLJSPARSER_H

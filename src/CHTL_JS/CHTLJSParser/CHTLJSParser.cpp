@@ -61,20 +61,32 @@ std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseStatement() {
             return parseAnimate();
         case CHTLJSTokenType::ScriptLoader:
             return parseScriptLoader();
-        case CHTLJSTokenType::OpenDoubleBrace:
-            if (peekToken().type == CHTLJSTokenType::Identifier) {
-                 if (tokens[position + 2].type == CHTLJSTokenType::CloseDoubleBrace) {
-                     if(tokens[position + 3].type == CHTLJSTokenType::RightArrow) {
-                         // This could be Listen, Delegate, or Enhanced Selector
-                         if(tokens[position + 4].type == CHTLJSTokenType::Listen) return parseListen("");
-                         if(tokens[position + 4].type == CHTLJSTokenType::Delegate) return parseDelegate();
-                         return parseEnhancedSelector();
-                     } else if (tokens[position + 3].type == CHTLJSTokenType::EventBind) {
-                         return parseEventBinding();
-                     }
-                 }
+        case CHTLJSTokenType::OpenDoubleBrace: {
+            consumeToken(); // {{
+            std::string selector = currentToken().value;
+            expectToken(CHTLJSTokenType::Identifier);
+            expectToken(CHTLJSTokenType::CloseDoubleBrace); // }}
+
+            if (currentToken().type == CHTLJSTokenType::RightArrow) {
+                consumeToken(); // ->
+                switch(currentToken().type) {
+                    case CHTLJSTokenType::Listen:
+                        return parseListen(selector);
+                    case CHTLJSTokenType::Delegate:
+                        return parseDelegate(selector);
+                    default:
+                        // Fallback to generic enhanced selector
+                        position -= 4; // Backtrack to start of selector
+                        return parseEnhancedSelector();
+                }
+            } else if (currentToken().type == CHTLJSTokenType::EventBind) {
+                return parseEventBinding(selector);
             }
-            break;
+            // If it's just a selector, we might need to backtrack or handle it differently
+            // For now, assume it's followed by an operator.
+            position -= 3; // Backtrack
+            return parseEnhancedSelector();
+        }
         case CHTLJSTokenType::Listen: // Standalone Listen
             return parseListen("");
         default:
@@ -104,7 +116,7 @@ std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseListen(const std::string& sel
     if (selector.empty()) { // Standalone Listen
         expectToken(CHTLJSTokenType::Listen);
     } else { // Chained from selector
-        consumeToken(); // ->
+        // consumeToken(); // -> is already consumed by the dispatcher
         expectToken(CHTLJSTokenType::Listen);
     }
 
@@ -162,24 +174,101 @@ std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseScriptLoader() {
 }
 
 // Stubs for other parsers - to be implemented
-std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseDelegate() {
-    // To be implemented
-    // For now, consume tokens to avoid infinite loops in testing
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseDelegate(const std::string& parent_selector) {
+    expectToken(CHTLJSTokenType::Delegate);
+    expectToken(CHTLJSTokenType::OpenBrace);
+
+    std::string target_selector;
+    std::map<std::string, std::string> events;
+
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        expectToken(CHTLJSTokenType::Identifier);
+        expectToken(CHTLJSTokenType::Colon);
+
+        if (key == "target") {
+            target_selector = currentToken().value;
+            // The spec says the target can be {{selector}} or [{{s1}}, {{s2}}...]
+            // This simplified parser will just grab the raw JS part for now.
+            expectToken(CHTLJSTokenType::RawJavaScript);
+        } else {
+            // Assume it's an event handler
+            std::string callback = currentToken().value;
+            expectToken(CHTLJSTokenType::RawJavaScript);
+            events[key] = callback;
+        }
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            consumeToken();
+        }
+    }
+    expectToken(CHTLJSTokenType::CloseBrace);
+
+    if (target_selector.empty()) {
+        throw std::runtime_error("Delegate block must contain a 'target' property.");
+    }
+
+    return std::make_unique<DelegateNode>(parent_selector, target_selector, events);
 }
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseAnimate() {
-    // To be implemented
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+    expectToken(CHTLJSTokenType::Animate);
+    expectToken(CHTLJSTokenType::OpenBrace);
+
+    std::map<std::string, std::string> properties;
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        expectToken(CHTLJSTokenType::Identifier);
+        expectToken(CHTLJSTokenType::Colon);
+
+        // The lexer will provide the complex value (e.g., array, object for 'when')
+        // as a single raw token. This simplifies the parser logic significantly.
+        std::string value = currentToken().value;
+        expectToken(CHTLJSTokenType::RawJavaScript);
+
+        properties[key] = value;
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            consumeToken();
+        }
+    }
+    expectToken(CHTLJSTokenType::CloseBrace);
+
+    return std::make_unique<AnimateNode>(properties);
 }
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseRouter() {
-    // To be implemented
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+    expectToken(CHTLJSTokenType::Router);
+    expectToken(CHTLJSTokenType::OpenBrace);
+
+    std::map<std::string, std::string> routes;
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        expectToken(CHTLJSTokenType::Identifier);
+        expectToken(CHTLJSTokenType::Colon);
+
+        std::string value = currentToken().value;
+        expectToken(CHTLJSTokenType::RawJavaScript);
+
+        routes[key] = value;
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            consumeToken();
+        }
+    }
+    expectToken(CHTLJSTokenType::CloseBrace);
+
+    return std::make_unique<RouterNode>(routes);
 }
-std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseEventBinding() {
-    // To be implemented
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseEventBinding(const std::string& selector) {
+    expectToken(CHTLJSTokenType::EventBind); // &->
+
+    // The spec allows for multiple events, comma-separated. This simplified
+    // parser will handle a single event for now.
+    std::string event_name = currentToken().value;
+    expectToken(CHTLJSTokenType::Identifier);
+    expectToken(CHTLJSTokenType::Colon);
+
+    std::string callback = currentToken().value;
+    expectToken(CHTLJSTokenType::RawJavaScript);
+
+    return std::make_unique<EventBindingNode>(selector, event_name, callback);
 }
