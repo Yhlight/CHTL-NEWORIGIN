@@ -10,7 +10,111 @@
 #include "../src/CHTL/ExpressionNode/LiteralNode.h"
 #include "../src/CHTL/CHTLNode/ResponsiveValueNode.h"
 #include "../src/CHTL/CHTLNode/StaticStyleNode.h"
+#include "../src/CHTL/CHTLNode/TextNode.h"
+#include "../src/CHTL/CHTLNode/FragmentNode.h"
 #include <regex>
+
+TEST_CASE("CHTL Parser for Advanced Template Features", "[CHTLParser][Templates]") {
+    SECTION("Style template inheritance should combine properties correctly") {
+        std::string source = R"(
+            [Template] @Style BaseButton {
+                padding: 10px;
+                border: 1px solid black;
+            }
+            [Template] @Style RedButton {
+                inherit @Style BaseButton;
+                background-color: red;
+                border: 2px solid darkred; // Override
+            }
+            div {
+                style { @Style RedButton; }
+            }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "test.chtl");
+        auto ast = parser.parse();
+        REQUIRE(ast.size() == 1);
+        auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+        REQUIRE(div_node->inlineStyles.size() == 3);
+        REQUIRE(div_node->inlineStyles.at("padding")->toString() == "10px");
+        REQUIRE(div_node->inlineStyles.at("background-color")->toString() == "red");
+        REQUIRE(div_node->inlineStyles.at("border")->toString() == "2px solid darkred");
+    }
+
+    SECTION("Custom style specialization should delete properties") {
+        std::string source = R"(
+            [Template] @Style BaseBox {
+                padding: 10px;
+                margin: 5px;
+                border: 1px solid black;
+            }
+            div {
+                style {
+                    @Style BaseBox {
+                        delete border, margin;
+                    }
+                }
+            }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "test.chtl");
+        auto ast = parser.parse();
+        REQUIRE(ast.size() == 1);
+        auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+        REQUIRE(div_node->inlineStyles.size() == 1);
+        REQUIRE(div_node->inlineStyles.count("padding") == 1);
+        REQUIRE(div_node->inlineStyles.count("border") == 0);
+        REQUIRE(div_node->inlineStyles.count("margin") == 0);
+    }
+
+    SECTION("Custom element specialization should delete elements") {
+        std::string source = R"(
+            [Custom] @Element Card {
+                h1 { text: "Title"; }
+                p { text: "Content"; }
+                span { text: "Footer"; }
+            }
+            @Element Card {
+                delete p;
+            };
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "test.chtl");
+        auto ast = parser.parse();
+        REQUIRE(ast.size() == 1);
+        auto* fragment = dynamic_cast<FragmentNode*>(ast[0].get());
+        REQUIRE(fragment != nullptr);
+        REQUIRE(fragment->children.size() == 2);
+        REQUIRE(static_cast<ElementNode*>(fragment->children[0].get())->tagName == "h1");
+        REQUIRE(static_cast<ElementNode*>(fragment->children[1].get())->tagName == "span");
+    }
+
+    SECTION("Custom element specialization should insert elements") {
+        std::string source = R"(
+            [Custom] @Element List {
+                li { text: "first"; }
+                li { text: "third"; }
+            }
+            @Element List {
+                insert after li[0] {
+                    li { text: "second"; }
+                }
+            };
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "test.chtl");
+        auto ast = parser.parse();
+        REQUIRE(ast.size() == 1);
+        auto* fragment = dynamic_cast<FragmentNode*>(ast[0].get());
+        REQUIRE(fragment != nullptr);
+        REQUIRE(fragment->children.size() == 3);
+        auto* second_li = dynamic_cast<ElementNode*>(fragment->children[1].get());
+        REQUIRE(second_li != nullptr);
+        auto* text_node = dynamic_cast<TextNode*>(second_li->children[0].get());
+        REQUIRE(text_node->text == "second");
+    }
+}
+
 
 TEST_CASE("CHTL Parser for Namespace block", "[CHTLParser][Namespace]") {
     std::string source = R"(

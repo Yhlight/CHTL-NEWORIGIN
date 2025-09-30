@@ -2,6 +2,7 @@
 
 #include "../CHTLParser/Parser.h"
 #include <algorithm>
+#include <vector>
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -210,7 +211,14 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
         auto styleNode = std::make_unique<StyleTemplateNode>();
         styleNode->isCustom = isCustom;
         while (parser.currentToken.type != TokenType::CloseBrace) {
-             if (parser.currentToken.type == TokenType::Identifier) {
+            if (parser.tryExpectKeyword(TokenType::Inherit, "KEYWORD_INHERIT", "inherit")) {
+                parser.expectToken(TokenType::At);
+                parser.expectKeyword(TokenType::Identifier, "KEYWORD_STYLE", "Style");
+                styleNode->parentNames.push_back(parser.currentToken.value);
+                parser.expectToken(TokenType::Identifier);
+                parser.expectToken(TokenType::Semicolon);
+            }
+            else if (parser.currentToken.type == TokenType::Identifier) {
                 std::string key = parser.currentToken.value;
                 parser.advanceTokens();
                 parser.expectToken(TokenType::Colon);
@@ -297,10 +305,114 @@ std::unique_ptr<BaseNode> StatementState::parseElementTemplateUsage(Parser& pars
         fragment->children.push_back(std::move(clonedNode));
     }
 
-    parser.expectToken(TokenType::Semicolon);
+    if (parser.currentToken.type == TokenType::OpenBrace) {
+        parseElementSpecializationBlock(parser, *fragment);
+    } else {
+        parser.expectToken(TokenType::Semicolon);
+    }
 
     return fragment;
 }
+
+void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNode& fragment) {
+    parser.expectToken(TokenType::OpenBrace);
+    while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        if (parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
+            parseDeleteInSpecialization(parser, fragment);
+        } else if (parser.tryExpectKeyword(TokenType::Insert, "KEYWORD_INSERT", "insert")) {
+            parseInsertInSpecialization(parser, fragment);
+        } else {
+            throw std::runtime_error("Unexpected token in element specialization block: " + parser.currentToken.value);
+        }
+    }
+    parser.expectToken(TokenType::CloseBrace);
+}
+
+void StatementState::parseDeleteInSpecialization(Parser& parser, FragmentNode& fragment) {
+    std::string tagName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    int index_to_delete = -1; // -1 means delete all matching tags
+    if (parser.currentToken.type == TokenType::OpenBracket) {
+        parser.advanceTokens(); // consume '['
+        index_to_delete = std::stoi(parser.currentToken.value);
+        parser.expectToken(TokenType::Number);
+        parser.expectToken(TokenType::CloseBracket);
+    }
+
+    auto& children = fragment.children;
+    int current_index = 0;
+
+    auto it = children.begin();
+    while (it != children.end()) {
+        bool removed = false;
+        if ((*it)->getType() == NodeType::Element) {
+            auto* element = static_cast<ElementNode*>((*it).get());
+            if (element->tagName == tagName) {
+                if (index_to_delete == -1 || current_index == index_to_delete) {
+                    it = children.erase(it);
+                    removed = true;
+                }
+                current_index++;
+            }
+        }
+        if (!removed) {
+            ++it;
+        }
+    }
+
+    parser.expectToken(TokenType::Semicolon);
+}
+
+void StatementState::parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
+    // This is a simplified implementation. A full version would need to handle
+    // all position keywords and more complex selectors.
+    parser.expectKeyword(TokenType::Identifier, "KEYWORD_AFTER", "after");
+
+    // Simplified selector: tag[index]
+    std::string tagName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+    parser.expectToken(TokenType::OpenBracket);
+    int target_index = std::stoi(parser.currentToken.value);
+    parser.expectToken(TokenType::Number);
+    parser.expectToken(TokenType::CloseBracket);
+
+    std::vector<std::unique_ptr<BaseNode>> new_nodes;
+    parser.expectToken(TokenType::OpenBrace);
+    while(parser.currentToken.type != TokenType::CloseBrace) {
+        new_nodes.push_back(handle(parser));
+    }
+    parser.expectToken(TokenType::CloseBrace);
+
+    // Find insertion point
+    auto& children = fragment.children;
+    int current_index = 0;
+    auto insert_it = children.end();
+    for (auto it = children.begin(); it != children.end(); ++it) {
+        if ((*it)->getType() == NodeType::Element) {
+            auto* element = static_cast<ElementNode*>((*it).get());
+            if (element->tagName == tagName) {
+                if (current_index == target_index) {
+                    insert_it = std::next(it);
+                    break;
+                }
+                current_index++;
+            }
+        }
+    }
+
+    if (insert_it != children.end()) {
+        children.insert(insert_it, std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
+    } else {
+        throw std::runtime_error("Could not find insertion point for insert specialization.");
+    }
+}
+
+// Stub for element modification, which is more complex.
+void StatementState::parseElementModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
+    // To be implemented
+}
+
 
 void StatementState::parseImportStatement(Parser& parser) {
     parser.expectToken(TokenType::OpenBracket);

@@ -9,6 +9,7 @@
 #include "../Util/StringUtil.h"
 #include <stdexcept>
 #include <sstream>
+#include <algorithm>
 
 namespace {
     bool isStyleValueTerminator(TokenType type) {
@@ -200,24 +201,72 @@ std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
 
 void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     parser.expectToken(TokenType::At);
-    if (parser.currentToken.value != "Style") {
-        throw std::runtime_error("Expected '@Style' for template usage.");
-    }
-    parser.advanceTokens(); // Consume 'Style'
+    parser.expectKeyword(TokenType::Identifier, "KEYWORD_STYLE", "Style");
 
     std::string templateName = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
-    parser.expectToken(TokenType::Semicolon);
 
-    // Get the template from the manager
-    const StyleTemplateNode* styleTemplate = parser.templateManager.getStyleTemplate(parser.getCurrentNamespace(), templateName);
+    // --- Specialization Block Parsing ---
+    std::map<std::string, std::unique_ptr<StyleValue>> specializedStyles;
+    std::vector<std::string> deletedProperties;
+    std::vector<std::string> deletedTemplates;
 
-    if (!styleTemplate) {
-        throw std::runtime_error("Style template '" + templateName + "' not found in namespace '" + parser.getCurrentNamespace() + "'.");
+    if (parser.currentToken.type == TokenType::OpenBrace) {
+        parser.advanceTokens(); // Consume '{'
+
+        while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+            if (parser.tryExpectKeyword(TokenType::Delete, "KEYWORD_DELETE", "delete")) {
+                // Handle deletion
+                do {
+                    if (parser.currentToken.type == TokenType::At) {
+                        // Deleting an inherited template, e.g., delete @Style Parent;
+                        parser.advanceTokens(); // consume @
+                        parser.expectKeyword(TokenType::Identifier, "KEYWORD_STYLE", "Style");
+                        deletedTemplates.push_back(parser.currentToken.value);
+                        parser.expectToken(TokenType::Identifier);
+                    } else {
+                        // Deleting a property, e.g., delete font-size;
+                        deletedProperties.push_back(parser.currentToken.value);
+                        parser.expectToken(TokenType::Identifier);
+                    }
+                } while (parser.currentToken.type == TokenType::Comma && (parser.advanceTokens(), true));
+                parser.expectToken(TokenType::Semicolon);
+            } else if (parser.currentToken.type == TokenType::Identifier) {
+                // Handle overriding/adding a property
+                std::string key = parser.currentToken.value;
+                parser.advanceTokens();
+                parser.expectToken(TokenType::Colon);
+                specializedStyles[key] = parseStyleExpression(parser);
+                if (parser.currentToken.type == TokenType::Semicolon) {
+                    parser.advanceTokens();
+                }
+            } else {
+                throw std::runtime_error("Unexpected token in style specialization block: " + parser.currentToken.value);
+            }
+        }
+        parser.expectToken(TokenType::CloseBrace);
+    } else {
+        parser.expectToken(TokenType::Semicolon);
     }
 
-    // Apply the styles to the context node
-    for (const auto& pair : styleTemplate->styles) {
+    // --- Style Resolution ---
+    std::map<std::string, std::unique_ptr<StyleValue>> finalStyles;
+    std::vector<std::string> visitedTemplates;
+
+    applyStyleTemplateRecursive(parser, parser.getCurrentNamespace(), templateName, finalStyles, deletedTemplates, visitedTemplates);
+
+    // Apply specialized styles (overrides)
+    for (auto& pair : specializedStyles) {
+        finalStyles[pair.first] = std::move(pair.second);
+    }
+
+    // Remove deleted properties
+    for (const auto& prop : deletedProperties) {
+        finalStyles.erase(prop);
+    }
+
+    // Apply the resolved styles to the context node.
+    for (const auto& pair : finalStyles) {
         parser.contextNode->inlineStyles[pair.first] = pair.second->clone();
     }
 }
@@ -230,5 +279,32 @@ void StyleBlockState::applyStyleTemplateRecursive(
         const std::vector<std::string>& deletedTemplates,
         std::vector<std::string>& visitedTemplates
     ) {
-        // Placeholder
+
+    // 0. Check if this template itself was deleted by a child.
+    if (std::find(deletedTemplates.begin(), deletedTemplates.end(), templateName) != deletedTemplates.end()) {
+        return;
+    }
+
+    // 1. Prevent circular inheritance.
+    if (std::find(visitedTemplates.begin(), visitedTemplates.end(), templateName) != visitedTemplates.end()) {
+        throw std::runtime_error("Circular inheritance detected in style templates involving '" + templateName + "'.");
+    }
+    visitedTemplates.push_back(templateName);
+
+    // 2. Get the template from the manager.
+    StyleTemplateNode* styleTemplate = parser.templateManager.getStyleTemplate(ns, templateName);
+    if (!styleTemplate) {
+        throw std::runtime_error("Style template '" + templateName + "' not found in namespace '" + ns + "'.");
+    }
+
+    // 3. Recursively apply parent templates first.
+    for (const auto& parentName : styleTemplate->parentNames) {
+        applyStyleTemplateRecursive(parser, ns, parentName, finalStyles, deletedTemplates, visitedTemplates);
+    }
+
+    // 4. Apply the styles from the current template.
+    // This ensures that child styles overwrite parent styles.
+    for (const auto& stylePair : styleTemplate->styles) {
+        finalStyles[stylePair.first] = stylePair.second->clone();
+    }
 }
