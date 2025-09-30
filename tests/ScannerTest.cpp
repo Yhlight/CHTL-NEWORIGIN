@@ -61,18 +61,21 @@ TEST_CASE("UnifiedScanner with mixed CHTL and CSS in style block", "[UnifiedScan
     // The scanner should find two CHTL fragments inside the style block.
     REQUIRE(output.fragments.size() == 2);
 
-    // Check that the CHTL source has placeholders.
-    // Note: The exact placeholder names don't matter, but their presence does.
-    REQUIRE(output.chtl_with_placeholders.find("CHTL_PLACEHOLDER_") != std::string::npos);
-    REQUIRE(output.chtl_with_placeholders.find("color: red;") != std::string::npos); // Standard CSS should remain.
-    REQUIRE(output.chtl_with_placeholders.find("border: 1px solid black;") != std::string::npos); // Standard CSS should remain.
+    // Check that the CHTL source has placeholders and that standard CSS remains.
+    REQUIRE(output.chtl_with_placeholders.find("/*_CHTL_PLACEHOLDER_") != std::string::npos);
+    REQUIRE(output.chtl_with_placeholders.find(".class-one") != std::string::npos);
+    REQUIRE(output.chtl_with_placeholders.find("color: red;") != std::string::npos);
+    REQUIRE(output.chtl_with_placeholders.find("border: 1px solid black;") != std::string::npos);
 
+    // Check that the original CHTL rules have been replaced.
+    REQUIRE(output.chtl_with_placeholders.find("width: 100px + 20px;") == std::string::npos);
+    REQUIRE(output.chtl_with_placeholders.find("@Style MyTemplate;") == std::string::npos);
 
     // Check that the fragments were extracted correctly.
     bool found_arithmetic = false;
     bool found_template = false;
     for (const auto& pair : output.fragments) {
-        if (pair.second.content == "100px + 20px") {
+        if (pair.second.content == "width: 100px + 20px;") {
             REQUIRE(pair.second.type == FragmentType::CHTL);
             found_arithmetic = true;
         }

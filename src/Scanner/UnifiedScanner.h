@@ -23,10 +23,7 @@ struct ScannedOutput {
 
 class UnifiedScanner {
 public:
-    ScannedOutput scan(const std::string& source);
-
-private:
-    // Parsing state to handle nested contexts like strings and comments
+    // The ParseState needs to be public so it can be used by helper functions.
     enum class ParseState {
         NORMAL,
         IN_SINGLE_QUOTE_STRING,
@@ -36,7 +33,14 @@ private:
         IN_BLOCK_COMMENT
     };
 
+    ScannedOutput scan(const std::string& source);
+
+private:
     int placeholder_id_counter = 0;
+    ScannedOutput output;
+
+    // The core recursive scanner for processing nested blocks.
+    std::string recursive_scan_and_replace(std::string& content, FragmentType parent_type);
 
     // Helper to find the end of a block with context awareness
     size_t find_matching_brace(const std::string& s, size_t start_pos);

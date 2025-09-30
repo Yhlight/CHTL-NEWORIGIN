@@ -9,19 +9,20 @@
 #include <fstream>
 #include <iostream>
 
-// We need to bring in the cmod_packer's main logic to test it.
-// In a larger project, this might be refactored into a shared library.
-#include "cmod_packer/main.cpp"
+#include "cmod_packer/packer.h"
 
 namespace fs = std::filesystem;
 
 struct OfficialModuleTestFixture {
     fs::path test_dir;
     fs::path official_module_dir;
+    fs::path modules_source_dir;
 
     OfficialModuleTestFixture() {
         test_dir = fs::current_path() / "official_module_test_env";
-        official_module_dir = test_dir / "modules"; // This will be our "official" dir
+        official_module_dir = test_dir / "modules"; // This will be our "official" dir for packaged cmods
+        modules_source_dir = fs::current_path() / "../../modules"; // Path to the actual source of the modules
+
         fs::create_directories(official_module_dir);
     }
 
@@ -30,13 +31,10 @@ struct OfficialModuleTestFixture {
     }
 
     void pack_module(const std::string& module_name) {
-        const char* argv[] = {
-            "cmod_packer",
-            ("modules/" + module_name).c_str(),
-            (official_module_dir / (module_name + ".cmod")).string().c_str()
-        };
-        int argc = sizeof(argv) / sizeof(argv[0]);
-        main(argc, const_cast<char**>(argv));
+        fs::path source_path = modules_source_dir / module_name;
+        fs::path output_path = official_module_dir / (module_name + ".cmod");
+        int result = pack_cmod(source_path, output_path);
+        REQUIRE(result == 0);
     }
 };
 

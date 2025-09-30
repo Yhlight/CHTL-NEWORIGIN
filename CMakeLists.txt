@@ -90,14 +90,17 @@ target_include_directories(chtl_compiler PRIVATE ${CMAKE_SOURCE_DIR})
 
 
 # --- CMOD Packer Utility ---
-# Add the cmod_packer executable
+# Create a library from the refactored packer logic
+add_library(cmod_packer_lib STATIC src/cmod_packer/packer.cpp)
+# Link the library against CHTL lib to get access to its parser and dependencies
+target_link_libraries(cmod_packer_lib PRIVATE chtl_lib)
+
+# Create the executable from the new minimal main.cpp
 add_executable(cmod_packer src/cmod_packer/main.cpp)
-
-# Link the packer against our CHTL library to get access to the parser
-target_link_libraries(cmod_packer PRIVATE chtl_lib)
-
-# Add the project root directory to the include path for the packer executable
-target_include_directories(cmod_packer PRIVATE ${CMAKE_SOURCE_DIR})
+# Link the executable to the library that contains the logic
+target_link_libraries(cmod_packer PRIVATE cmod_packer_lib)
+# The executable needs to find packer.h, which is in src/
+target_include_directories(cmod_packer PRIVATE src)
 
 
 # --- CJMOD Modules ---
@@ -129,12 +132,12 @@ add_executable(chtl_tests
     tests/ModuleSystemTest.cpp
     tests/CJMODAPITest.cpp
     tests/CLILogicTest.cpp
-    # tests/OfficialModulesTest.cpp # Temporarily disabled due to multiple main() definitions
+    tests/OfficialModulesTest.cpp
     tests/CJMODCodeGenTest.cpp
 )
 
-# Link the test executable against the CHTL library
-target_link_libraries(chtl_tests PRIVATE chtl_lib)
+# Link the test executable against the CHTL library and the CMOD packer library
+target_link_libraries(chtl_tests PRIVATE chtl_lib cmod_packer_lib)
 
 # Make sure the test executable depends on the CJMOD being built first.
 add_dependencies(chtl_tests printMylove_cjmod)
