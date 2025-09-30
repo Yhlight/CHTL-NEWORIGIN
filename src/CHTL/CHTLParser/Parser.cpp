@@ -8,6 +8,70 @@
 #include <sstream>
 #include <filesystem>
 
+namespace {
+    std::string tokenTypeToString(TokenType type) {
+        switch (type) {
+            case TokenType::EndOfFile: return "end of file";
+            case TokenType::Unexpected: return "unexpected token";
+            case TokenType::Number: return "number";
+            case TokenType::Identifier: return "identifier";
+            case TokenType::String: return "string";
+            case TokenType::OpenBrace: return "'{'";
+            case TokenType::CloseBrace: return "'}'";
+            case TokenType::OpenDoubleBrace: return "'{{'";
+            case TokenType::CloseDoubleBrace: return "'}}'";
+            case TokenType::Dollar: return "'$'";
+            case TokenType::Colon: return "':'";
+            case TokenType::Equals: return "'='";
+            case TokenType::Semicolon: return "';'";
+            case TokenType::HashComment: return "hash comment";
+            case TokenType::RightArrow: return "'->'";
+            case TokenType::Plus: return "'+'";
+            case TokenType::Minus: return "'-'";
+            case TokenType::Asterisk: return "'*'";
+            case TokenType::DoubleAsterisk: return "'**'";
+            case TokenType::Slash: return "'/'";
+            case TokenType::Percent: return "'%'";
+            case TokenType::OpenParen: return "'('";
+            case TokenType::CloseParen: return "')'";
+            case TokenType::Dot: return "'.'";
+            case TokenType::Hash: return "'#'";
+            case TokenType::Ampersand: return "'&'";
+            case TokenType::OpenBracket: return "'['";
+            case TokenType::CloseBracket: return "']'";
+            case TokenType::At: return "'@'";
+            case TokenType::Inherit: return "keyword 'inherit'";
+            case TokenType::Comma: return "','";
+            case TokenType::QuestionMark: return "'?'";
+            case TokenType::LogicalAnd: return "'&&'";
+            case TokenType::LogicalOr: return "'||'";
+            case TokenType::EqualsEquals: return "'=='";
+            case TokenType::NotEquals: return "'!='";
+            case TokenType::GreaterThan: return "'>'";
+            case TokenType::LessThan: return "'<'";
+            case TokenType::GreaterThanEquals: return "'>='";
+            case TokenType::LessThanEquals: return "'<='";
+            case TokenType::Origin: return "keyword 'Origin'";
+            case TokenType::Use: return "keyword 'use'";
+            case TokenType::Namespace: return "keyword 'Namespace'";
+            case TokenType::From: return "keyword 'from'";
+            case TokenType::Custom: return "keyword 'Custom'";
+            case TokenType::Delete: return "keyword 'delete'";
+            case TokenType::Insert: return "keyword 'insert'";
+            case TokenType::After: return "keyword 'after'";
+            case TokenType::Before: return "keyword 'before'";
+            case TokenType::Replace: return "keyword 'replace'";
+            case TokenType::Import: return "keyword '[Import]'";
+            case TokenType::Configuration: return "keyword '[Configuration]'";
+            case TokenType::Except: return "keyword 'except'";
+            case TokenType::Info: return "keyword '[Info]'";
+            case TokenType::If: return "keyword 'if'";
+            case TokenType::Else: return "keyword 'else'";
+            default: return "unknown token type " + std::to_string(static_cast<int>(type));
+        }
+    }
+}
+
 // The constructor now initializes the token stream and sets the initial state.
 Parser::Parser(Lexer& lexer, std::string source_path)
     : lexer(lexer),
@@ -114,10 +178,12 @@ void Parser::expectToken(TokenType type) {
     if (currentToken.type == type) {
         advanceTokens();
     } else {
-        throw std::runtime_error("Unexpected token: '" + currentToken.value + "' at line " +
-                                 std::to_string(currentToken.line) + ", column " +
-                                 std::to_string(currentToken.column) + ". Expected type " +
-                                 std::to_string(static_cast<int>(type)));
+        std::stringstream error_message;
+        error_message << "Unexpected token: '" << currentToken.value << "' at line "
+                      << currentToken.line << ", column " << currentToken.column
+                      << ". Expected " << tokenTypeToString(type) << " but got "
+                      << tokenTypeToString(currentToken.type) << ".";
+        throw std::runtime_error(error_message.str());
     }
 }
 

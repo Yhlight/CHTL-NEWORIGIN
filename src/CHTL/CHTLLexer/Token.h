@@ -75,8 +75,6 @@ enum class TokenType {
     After,        // after
     Before,       // before
     Replace,      // replace
-    AtTop,        // at top
-    AtBottom,     // at bottom
     Import,       // [Import]
     Configuration, // [Configuration]
     Except,        // except

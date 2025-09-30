@@ -87,7 +87,7 @@ std::unique_ptr<BaseNode> StatementState::handle(Parser& parser) {
         return parseComment(parser);
     }
 
-    throw std::runtime_error("Statements must begin with '[', an identifier, or hash comment. Found '" + parser.currentToken.value + "' instead.");
+    throw std::runtime_error("Unexpected token at top level: '" + parser.currentToken.value + "' at line " + std::to_string(parser.currentToken.line) + ". CHTL statements must begin with an identifier (e.g., 'div'), a directive (e.g., '[Import]'), or a comment.");
 }
 
 std::unique_ptr<BaseNode> StatementState::parseIfStatement(Parser& parser) {
@@ -196,7 +196,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
     parser.expectToken(TokenType::CloseBracket);
 
     parser.expectToken(TokenType::At);
-    if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected template type (Style, Element, Var) after '@'.");
+    if (parser.currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected template type (Style, Element, Var) after '@' at line " + std::to_string(parser.currentToken.line) + ".");
     std::string templateType = parser.currentToken.value;
     parser.advanceTokens();
 
@@ -264,7 +264,7 @@ void StatementState::parseTemplateDefinition(Parser& parser) {
         }
         parser.templateManager.addVarTemplate(currentNs, templateName, std::move(varNode));
     } else {
-        throw std::runtime_error("Unknown template type: " + templateType);
+        throw std::runtime_error("Unknown template type: '" + templateType + "' at line " + std::to_string(parser.currentToken.line) + ". Expected 'Style', 'Element', or 'Var'.");
     }
 
     parser.expectToken(TokenType::CloseBrace);
@@ -377,10 +377,17 @@ void StatementState::parseInsertInSpecialization(Parser& parser, FragmentNode& f
         position = InsertPosition::After;
     } else if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_REPLACE", "replace")) {
         position = InsertPosition::Replace;
-    } else if (parser.tryExpectKeyword(TokenType::AtTop, "KEYWORD_ATTOP", "at top")) {
-        position = InsertPosition::AtTop;
-    } else if (parser.tryExpectKeyword(TokenType::AtBottom, "KEYWORD_ATBOTTOM", "at bottom")) {
-        position = InsertPosition::AtBottom;
+    } else if (parser.currentToken.value == "at") {
+        parser.advanceTokens(); // Consume 'at'
+        if (parser.currentToken.value == "top") {
+            parser.advanceTokens(); // Consume 'top'
+            position = InsertPosition::AtTop;
+        } else if (parser.currentToken.value == "bottom") {
+            parser.advanceTokens(); // Consume 'bottom'
+            position = InsertPosition::AtBottom;
+        } else {
+            throw std::runtime_error("Invalid keyword after 'at'. Expected 'top' or 'bottom'.");
+        }
     } else {
         throw std::runtime_error("Invalid keyword for insert specialization.");
     }

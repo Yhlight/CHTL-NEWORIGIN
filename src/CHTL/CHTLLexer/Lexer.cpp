@@ -70,23 +70,6 @@ Token Lexer::identifier() {
     if (value == "after") return {TokenType::After, value, line, startCol, startPos};
     if (value == "before") return {TokenType::Before, value, line, startCol, startPos};
     if (value == "replace") return {TokenType::Replace, value, line, startCol, startPos};
-    if (value == "at") {
-        size_t preWhitespacePos = position;
-        int preWhitespaceLine = line;
-        int preWhitespaceCol = column;
-        skipWhitespace();
-        if (peek() == 't' && (position + 3) <= source.length() && source.substr(position, 3) == "top") {
-            advance(); advance(); advance();
-            return {TokenType::AtTop, "at top", line, startCol, startPos};
-        }
-        if (peek() == 'b' && (position + 6) <= source.length() && source.substr(position, 6) == "bottom") {
-            advance(); advance(); advance(); advance(); advance(); advance();
-            return {TokenType::AtBottom, "at bottom", line, startCol, startPos};
-        }
-        position = preWhitespacePos;
-        line = preWhitespaceLine;
-        column = preWhitespaceCol;
-    }
     if (value == "Import") return {TokenType::Import, value, line, startCol, startPos};
     if (value == "Configuration") return {TokenType::Configuration, value, line, startCol, startPos};
     if (value == "except") return {TokenType::Except, value, line, startCol, startPos};

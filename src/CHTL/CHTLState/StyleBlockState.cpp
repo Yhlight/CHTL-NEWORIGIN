@@ -41,7 +41,7 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
             parseAmpersandSelector(parser);
         }
         else {
-            throw std::runtime_error("Unexpected token in style block: " + parser.currentToken.value);
+            throw std::runtime_error("Unexpected token '" + parser.currentToken.value + "' in style block at line " + std::to_string(parser.currentToken.line) + ". Expected a property, a selector (e.g., '.class'), or a template usage (e.g., '@Style').");
         }
     }
     parser.expectToken(TokenType::CloseBrace);
@@ -158,7 +158,7 @@ void StyleBlockState::parseAmpersandSelector(Parser& parser) {
         class_ss >> first_class;
         base_selector = "." + first_class;
     } else {
-        throw std::runtime_error("Cannot use '&' selector on an element with no class or id attribute.");
+        throw std::runtime_error("Cannot use '&' selector on an element with no class or id attribute at line " + std::to_string(parser.currentToken.line) + ". The '&' selector requires the element to have a 'class' or 'id' attribute defined.");
     }
 
     // --- Hoisting the Style Rule ---
@@ -241,7 +241,7 @@ void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
                     parser.advanceTokens();
                 }
             } else {
-                throw std::runtime_error("Unexpected token in style specialization block: " + parser.currentToken.value);
+                throw std::runtime_error("Unexpected token '" + parser.currentToken.value + "' in style template specialization block at line " + std::to_string(parser.currentToken.line) + ". Expected 'delete' or a property override.");
             }
         }
         parser.expectToken(TokenType::CloseBrace);
