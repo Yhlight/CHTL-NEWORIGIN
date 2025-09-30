@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "libzippp.h"
+#include "libzippp/libzippp.h"
 
 class Loader {
 public:

@@ -7,6 +7,34 @@
 #include <stdexcept>
 #include <algorithm>
 #include <set>
+#include "../ExpressionNode/BinaryOpNode.h"
+#include "../ExpressionNode/LiteralNode.h"
+#include "../ExpressionNode/PropertyRefNode.h"
+#include <stdexcept>
+
+// --- Implementation of the new helper function ---
+std::string Generator::generateExpressionString(ExpressionBaseNode* node) {
+    if (!node) {
+        return "null";
+    }
+
+    if (auto* binOp = dynamic_cast<BinaryOpNode*>(node)) {
+        std::string left = generateExpressionString(binOp->left.get());
+        std::string right = generateExpressionString(binOp->right.get());
+        return "(" + left + " " + binOp->op + " " + right + ")";
+    }
+    if (auto* literal = dynamic_cast<LiteralNode*>(node)) {
+        // Here we assume literals in expressions are either numbers or variable names
+        // that will be resolved in JS. We might need to add quotes for strings later.
+        return literal->value;
+    }
+    if (auto* propRef = dynamic_cast<PropertyRefNode*>(node)) {
+        return "chtl.getProperty('" + propRef->selector + "', '" + propRef->propertyName + "')";
+    }
+
+    throw std::runtime_error("Unsupported node type in generateExpressionString.");
+}
+
 
 Generator::Generator() : indentLevel(0) {}
 
@@ -126,7 +154,7 @@ void Generator::generateElement(ElementNode* node) {
                 binding.targetProperty = "style." + stylePair.first;
 
                 auto* dynamicNode = static_cast<DynamicStyleNode*>(stylePair.second.get());
-                binding.expression = dynamicNode->getExpression();
+                binding.expression = generateExpressionString(dynamicNode->expressionAst.get());
 
                 mutableContext->dynamicConditionalBindings.push_back(binding);
             } else {

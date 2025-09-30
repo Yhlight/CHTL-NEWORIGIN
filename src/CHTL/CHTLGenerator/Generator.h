@@ -12,6 +12,8 @@
 #include <memory>
 #include <sstream>
 
+class ExpressionBaseNode; // Forward declaration
+
 // The Generator class traverses an Abstract Syntax Tree (AST) and
 // produces the final output string (e.g., HTML).
 class Generator {
@@ -59,4 +61,7 @@ private:
     void indent();
     void outdent();
     std::string getIndent();
+
+    // Helper to serialize an expression AST to a JS string
+    std::string generateExpressionString(ExpressionBaseNode* node);
 };

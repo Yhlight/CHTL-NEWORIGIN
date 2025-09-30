@@ -18,7 +18,7 @@ std::string get_base_filename(const std::string& input_path) {
 }
 
 int main(int argc, char* argv[]) {
-    cxxopts::Options options("chtl_compiler", "A compiler for the CHTL language");
+    cxxopts::options options("chtl_compiler", "A compiler for the CHTL language");
 
     options.add_options()
         ("h,help", "Print usage information")
@@ -69,12 +69,13 @@ int main(int argc, char* argv[]) {
         fs::path css_filepath = output_dir / (base_filename + ".css");
         fs::path js_filepath = output_dir / (base_filename + ".js");
 
-        // TODO: Update CompilerDispatcher to accept the new options
         CompilerDispatcher dispatcher;
         CompilationResult comp_result = dispatcher.compile(
             chtlSource,
             input_file,
-            (inline_css && inline_js), // Pass the old 'inline_mode' for now
+            default_struct,
+            inline_css,
+            inline_js,
             css_filepath.string(),
             js_filepath.string()
         );

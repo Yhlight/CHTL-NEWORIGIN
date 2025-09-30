@@ -32,7 +32,7 @@ static std::string chtl_to_html_for_core_test(const std::string& chtl_code) {
     Generator generator;
     SharedContext context;
     // Generate with default parameters (no doctype, no external files)
-    return generator.generate(ast, "", "", context, false, false, "", "");
+    return generator.generate(ast, "", "", context, false, false, false, "", "");
 }
 
 TEST_CASE("Core CHTL Feature Parsing and Generation", "[core]") {

@@ -18,6 +18,7 @@ private:
     size_t position;
 
     // Helper methods for tokenization.
+    bool isAtEnd() const;
     ExpressionToken getNextToken();
     char peek() const;
     char advance();

@@ -1,45 +1,53 @@
-#pragma once
+#ifndef CHTLJSLEXER_H
+#define CHTLJSLEXER_H
 
 #include <string>
 #include <vector>
+#include <map>
 
-// Defines the token types for the CHTL JS language.
 enum class CHTLJSTokenType {
-    // CHTL JS specific syntax
-    OpenDoubleBrace,  // {{
+    Identifier,
+    String,
+    Number,
+    OpenBrace,      // {
+    CloseBrace,     // }
+    OpenParen,      // (
+    CloseParen,     // )
+    OpenBracket,    // [
+    CloseBracket,   // ]
+    OpenDoubleBrace, // {{
     CloseDoubleBrace, // }}
-    Arrow,            // ->
-    EventBindingOperator, // &->
+    Colon,          // :
+    Semicolon,      // ;
+    Comma,          // ,
+    Dot,            // .
+    RightArrow,     // ->
+    EventBind,      // &->
 
     // Keywords
-    ScriptLoader,     // ScriptLoader keyword
-    Vir,              // Vir keyword for virtual objects
-    Router,           // Router keyword
+    Listen,
+    Delegate,
+    Animate,
+    Router,
+    Vir,
+    ScriptLoader,
+    Target,
+    Load,
 
-    // General tokens
-    Identifier,       // e.g., click, custom function names
-    RawJS,            // A block of plain JavaScript code
-    StringLiteral,    // For file paths in ScriptLoader
+    // Raw JS block, to be treated as a single token by this lexer
+    RawJavaScript,
 
-    // Punctuation
-    OpenBrace,        // {
-    CloseBrace,       // }
-    Colon,            // :
-    Comma,            // ,
-    Semicolon,        // ;
-
-    // Special tokens
-    EndOfFile,
     Unexpected,
+    EndOfFile
 };
 
-// Represents a single token extracted from the CHTL JS source.
 struct CHTLJSToken {
     CHTLJSTokenType type;
     std::string value;
+    int line;
+    int column;
 };
 
-// The CHTL JS Lexer, responsible for tokenizing CHTL JS source code.
 class CHTLJSLexer {
 public:
     explicit CHTLJSLexer(const std::string& source);
@@ -47,9 +55,18 @@ public:
 
 private:
     std::string source;
-    size_t position = 0;
+    size_t position;
+    int line;
+    int column;
 
-    CHTLJSToken getNextToken();
-    char peek(int offset = 0) const;
+    char peek();
     char advance();
+    void skipWhitespace();
+    CHTLJSToken identifier();
+    CHTLJSToken stringLiteral(char quoteType);
+    CHTLJSToken getNextToken();
+
+    std::map<std::string, CHTLJSTokenType> keywords;
 };
+
+#endif // CHTLJSLEXER_H

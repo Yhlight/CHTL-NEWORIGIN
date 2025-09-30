@@ -9,32 +9,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Dependencies ---
-include(ExternalProject)
-
-# LibSass (does not have CMake support, so we build it manually)
-ExternalProject_Add(
-    libsass_project
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass
-    # No configure step needed for the default Makefile
-    CONFIGURE_COMMAND ""
-    # The command to build the library
-    BUILD_COMMAND ${MAKE}
-    # No install step needed, we will use it from the build tree
-    INSTALL_COMMAND ""
-    # Ensure the build happens in the source directory of libsass
-    BUILD_IN_SOURCE 1
-)
-
-# Define the location for the compiled libsass library and its includes
-set(LIBSASS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass/include)
-set(LIBSASS_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libsass/lib/libsass.a)
-
-# Add the libzippp dependency
-add_subdirectory(third-party/libzippp)
-
-# Add the quickjs dependency
-add_subdirectory(third-party/quickjs)
-
+# Dependencies are now pre-built and stored in third-party/prebuilt
+set(PREBUILT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/prebuilt/include)
+set(PREBUILT_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third-party/prebuilt/lib)
 
 # --- Define CHTL Library ---
 # This makes it easy to link all CHTL source files to multiple executables.
@@ -77,27 +54,33 @@ set(CHTL_SOURCES
     src/CodeMerger/CodeMerger.cpp
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
+    src/CHTL/CHTLManage/CJMODManager.cpp
+    src/CHTL/ExpressionParser/ExpressionLexer.cpp
+    src/CHTL/ExpressionParser/ExpressionParser.cpp
 )
 
 # Add a library for the CHTL compiler components
 add_library(chtl_lib STATIC ${CHTL_SOURCES})
 
-# Make sure chtl_lib depends on the libsass project being built
-add_dependencies(chtl_lib libsass_project)
-
 # Add include directories for chtl_lib
-target_include_directories(chtl_lib PUBLIC src)
-target_include_directories(chtl_lib PUBLIC third-party/libzippp/src)
-target_include_directories(chtl_lib PUBLIC ${LIBSASS_INCLUDE_DIR})
+target_include_directories(chtl_lib PUBLIC src ${PREBUILT_INCLUDE_DIR})
 
 # Link chtl_lib against its dependencies
-target_link_libraries(chtl_lib PUBLIC libzippp ${LIBSASS_LIBRARY} qjs)
+target_link_libraries(chtl_lib PUBLIC
+    ${PREBUILT_LIB_DIR}/libzippp_static.a
+    ${PREBUILT_LIB_DIR}/libsass.a
+    ${PREBUILT_LIB_DIR}/libqjs.a
+    -lzip -lz -ldl -lm # System libraries required by dependencies
+)
 
 
 # --- Main Executable ---
 # This would be the main compiler executable.
 add_executable(chtl_compiler src/main.cpp)
 target_link_libraries(chtl_compiler PRIVATE chtl_lib)
+
+# Add the project root directory to the include path for the compiler executable
+target_include_directories(chtl_compiler PRIVATE ${CMAKE_SOURCE_DIR})
 
 
 # --- CMOD Packer Utility ---
@@ -106,6 +89,9 @@ add_executable(cmod_packer src/cmod_packer/main.cpp)
 
 # Link the packer against our CHTL library to get access to the parser
 target_link_libraries(cmod_packer PRIVATE chtl_lib)
+
+# Add the project root directory to the include path for the packer executable
+target_include_directories(cmod_packer PRIVATE ${CMAKE_SOURCE_DIR})
 
 
 # --- CJMOD Modules ---

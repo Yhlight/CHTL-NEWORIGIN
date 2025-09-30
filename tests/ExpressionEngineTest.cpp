@@ -5,6 +5,9 @@
 #include "../src/CHTL/ExpressionEvaluator/ExpressionEvaluator.h"
 #include "../src/CHTL/CHTLParser/Parser.h" // Needed for the evaluator context
 #include "../src/CHTL/CHTLLexer/Lexer.h"   // Needed for the parser context
+#include "../src/CHTL/ExpressionNode/PropertyRefNode.h"
+#include "../src/CHTL/CHTLNode/ElementNode.h"
+#include "../src/CHTL/CHTLNode/DynamicStyleNode.h"
 
 // Helper function to evaluate an expression string
 std::string evaluateExpression(const std::string& expr_str) {

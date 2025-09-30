@@ -27,6 +27,11 @@ public:
     // Merges templates from another manager into this one.
     void merge(const TemplateManager& other);
 
+    // Public getters to allow iteration (e.g., for cmod_packer)
+    const std::map<std::string, std::map<std::string, std::unique_ptr<StyleTemplateNode>>>& getStyleTemplates() const { return styleTemplates; }
+    const std::map<std::string, std::map<std::string, std::unique_ptr<ElementTemplateNode>>>& getElementTemplates() const { return elementTemplates; }
+    const std::map<std::string, std::map<std::string, std::unique_ptr<VarTemplateNode>>>& getVarTemplates() const { return varTemplates; }
+
 private:
     // Use type aliases for cleaner nested map declarations
     using StyleTemplateMap = std::map<std::string, std::unique_ptr<StyleTemplateNode>>;

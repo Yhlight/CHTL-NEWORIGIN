@@ -12,6 +12,38 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "../src/CHTL_JS/CHTLLexer/CHTLJSLexer.h"
+
+TEST_CASE("CHTLJS Lexer tokenizes correctly", "[CHTLJS_Lexer]") {
+    std::string source = R"(
+        Vir test = Listen {
+            click: () => { console.log("hello"); },
+            mouseenter: some_function
+        }
+    )";
+
+    CHTLJSLexer lexer(source);
+    auto tokens = lexer.tokenize();
+
+    REQUIRE(tokens.size() == 14);
+    REQUIRE(tokens[0].type == CHTLJSTokenType::Vir);
+    REQUIRE(tokens[1].type == CHTLJSTokenType::Identifier);
+    REQUIRE(tokens[1].value == "test");
+    REQUIRE(tokens[2].type == CHTLJSTokenType::Colon);
+    REQUIRE(tokens[3].type == CHTLJSTokenType::Listen);
+    REQUIRE(tokens[4].type == CHTLJSTokenType::OpenBrace);
+    REQUIRE(tokens[5].type == CHTLJSTokenType::Identifier);
+    REQUIRE(tokens[5].value == "click");
+    REQUIRE(tokens[6].type == CHTLJSTokenType::Colon);
+    REQUIRE(tokens[7].type == CHTLJSTokenType::RawJavaScript);
+    REQUIRE(tokens[8].type == CHTLJSTokenType::Comma);
+    REQUIRE(tokens[9].type == CHTLJSTokenType::Identifier);
+    REQUIRE(tokens[9].value == "mouseenter");
+    REQUIRE(tokens[10].type == CHTLJSTokenType::Colon);
+    REQUIRE(tokens[11].type == CHTLJSTokenType::RawJavaScript);
+    REQUIRE(tokens[12].type == CHTLJSTokenType::CloseBrace);
+    REQUIRE(tokens[13].type == CHTLJSTokenType::EndOfFile);
+}
 
 TEST_CASE("CHTLJS Parser and Generator for ScriptLoader", "[CHTLJS]") {
     // 1. Define the CHTL JS source code for the ScriptLoader

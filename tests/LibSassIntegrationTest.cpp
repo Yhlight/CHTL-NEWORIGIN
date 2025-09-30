@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include "sass.h" // Include the libsass header
+#include "sass/sass.h" // Include the libsass header
 
 TEST_CASE("LibSass API Integration", "[integration][libsass]") {
     SECTION("libsass_version() should return a valid version string") {

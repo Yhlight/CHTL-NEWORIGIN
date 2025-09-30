@@ -4,35 +4,64 @@
 #include "../src/CHTL/CHTLNode/ElementNode.h"
 #include "../src/CHTL/CHTLNode/StyleValue.h"
 #include "../src/CHTL/CHTLNode/DynamicStyleNode.h"
-#include "../src/CHTL/CHTLNode/ResponsiveValueNode.h" // This file doesn't exist yet
+#include "../src/CHTL/ExpressionNode/ConditionalNode.h"
+#include "../src/CHTL/ExpressionNode/BinaryOpNode.h"
+#include "../src/CHTL/ExpressionNode/PropertyRefNode.h"
+#include "../src/CHTL/ExpressionNode/LiteralNode.h"
+#include "../src/CHTL/CHTLNode/ResponsiveValueNode.h"
 #include "../src/CHTL/CHTLNode/StaticStyleNode.h"
 
 TEST_CASE("CHTL Parser for Dynamic Attribute Conditional Expressions", "[CHTLParser]") {
     std::string source = R"(
         div {
             style {
-                width: {{box}}->width > 2 ? 100px : 50px;
+                width: {{box}}->width > 2 ? "100px" : "50px";
             }
         }
     )";
 
     Lexer lexer(source);
-    Parser parser(lexer);
+    Parser parser(lexer, "test.chtl");
     auto ast = parser.parse();
 
     REQUIRE(ast.size() == 1);
     auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
     REQUIRE(div_node != nullptr);
 
-    const auto& styles = div_node->getStyleValues();
-    REQUIRE(styles.size() == 1);
-
-    const auto& style_value = styles.at("width");
+    REQUIRE(div_node->inlineStyles.count("width"));
+    const auto& style_value = div_node->inlineStyles.at("width");
     REQUIRE(style_value != nullptr);
 
     auto* dynamic_node = dynamic_cast<DynamicStyleNode*>(style_value.get());
     REQUIRE(dynamic_node != nullptr);
-    REQUIRE(dynamic_node->getExpression() == "{{box}}->width > 2 ? 100px : 50px");
+
+    REQUIRE(dynamic_node->expressionAst != nullptr);
+    auto* cond_node = dynamic_cast<ConditionalNode*>(dynamic_node->expressionAst.get());
+    REQUIRE(cond_node != nullptr);
+
+    // Check the condition part: {{box}}->width > 2
+    auto* condition_expr = dynamic_cast<BinaryOpNode*>(cond_node->condition.get());
+    REQUIRE(condition_expr != nullptr);
+    REQUIRE(condition_expr->op == ">");
+
+    auto* left_op = dynamic_cast<PropertyRefNode*>(condition_expr->left.get());
+    REQUIRE(left_op != nullptr);
+    REQUIRE(left_op->selector == "{{box}}");
+    REQUIRE(left_op->propertyName == "width");
+
+    auto* right_op = dynamic_cast<LiteralNode*>(condition_expr->right.get());
+    REQUIRE(right_op != nullptr);
+    REQUIRE(right_op->value == "2");
+
+    // Check the true branch: "100px"
+    auto* true_branch = dynamic_cast<LiteralNode*>(cond_node->trueExpression.get());
+    REQUIRE(true_branch != nullptr);
+    REQUIRE(true_branch->value == "\"100px\"");
+
+    // Check the false branch: "50px"
+    auto* false_branch = dynamic_cast<LiteralNode*>(cond_node->falseExpression.get());
+    REQUIRE(false_branch != nullptr);
+    REQUIRE(false_branch->value == "\"50px\"");
 }
 
 TEST_CASE("CHTL Parser for Reactive Values", "[CHTLParser]") {
@@ -47,7 +76,7 @@ TEST_CASE("CHTL Parser for Reactive Values", "[CHTLParser]") {
     )";
 
     Lexer lexer(source);
-    Parser parser(lexer);
+    Parser parser(lexer, "test.chtl");
     auto ast = parser.parse();
 
     REQUIRE(ast.size() == 1);

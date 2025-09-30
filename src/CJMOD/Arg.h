@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <map>
 
 // Represents a collection of atomic arguments parsed from a syntax pattern.
 // This is the main object that module developers will interact with.
