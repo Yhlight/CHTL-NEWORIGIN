@@ -4,17 +4,27 @@
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/StylePropertyNode.h"
+#include "../CHTLNode/LiteralNode.h"
+#include "../CHTLNode/BinaryOpNode.h"
 #include <stdexcept>
 
 namespace CHTL {
 
 CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
 
+// --- Core Parsing Logic ---
+
 std::unique_ptr<BaseNode> CHTLParser::parse() {
     if (isAtEnd()) {
         return nullptr;
     }
     return parseStatement();
+}
+
+// --- Token Manipulation Helpers ---
+
+bool CHTLParser::isAtEnd() const {
+    return current >= tokens.size();
 }
 
 Token CHTLParser::peek() const {
@@ -27,10 +37,6 @@ Token CHTLParser::advance() {
         current++;
     }
     return tokens[current - 1];
-}
-
-bool CHTLParser::isAtEnd() const {
-    return current >= tokens.size();
 }
 
 bool CHTLParser::check(TokenType type) const {
@@ -53,10 +59,10 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
     throw std::runtime_error(message);
 }
 
+// --- Statement-Level Parsing ---
+
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
-    while (match(TokenType::COMMENT)) {
-        // Skip comments
-    }
+    while (match(TokenType::COMMENT)) {}
 
     if (check(TokenType::IDENTIFIER)) {
         return parseElementNode();
@@ -71,7 +77,6 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
 std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
     Token tag = consume(TokenType::IDENTIFIER, "Expect element tag name.");
     auto element = std::make_unique<ElementNode>(tag.value);
-
     consume(TokenType::L_BRACE, "Expect '{' after element tag name.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
@@ -82,18 +87,19 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
         } else if (match(TokenType::TEXT_KEYWORD)) {
             element->addChild(parseTextNode());
         } else if (check(TokenType::IDENTIFIER)) {
+            // Lookahead to differentiate between an attribute and a child element.
             if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
                 parseAttribute(element.get());
             } else {
                 element->addChild(parseElementNode());
             }
         } else {
+            // If we find a token we don't recognize, we can't continue parsing this block.
             throw std::runtime_error("Unexpected token in element block: " + peek().value);
         }
     }
 
     consume(TokenType::R_BRACE, "Expect '}' after element block.");
-
     return element;
 }
 
@@ -101,12 +107,11 @@ void CHTLParser::parseAttribute(ElementNode* element) {
     Token key = consume(TokenType::IDENTIFIER, "Expect attribute key.");
     if (match(TokenType::COLON) || match(TokenType::EQUAL)) {
         std::string value_str;
-        while (peek().type != TokenType::SEMICOLON && !isAtEnd()) {
+        // Attributes can have unquoted literals, so we just consume tokens until the semicolon.
+        while (!isAtEnd() && peek().type != TokenType::SEMICOLON) {
             value_str += advance().value;
         }
-        if (value_str.empty()) {
-            throw std::runtime_error("Expect attribute value.");
-        }
+        if (value_str.empty()) throw std::runtime_error("Expect attribute value.");
         element->addAttribute(key.value, value_str);
         consume(TokenType::SEMICOLON, "Expect ';' after attribute.");
     } else {
@@ -118,7 +123,6 @@ std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
     consume(TokenType::L_BRACE, "Expect '{' after 'text' keyword.");
     Token text = consume(TokenType::STRING_LITERAL, "Expect string literal inside text block.");
     consume(TokenType::R_BRACE, "Expect '}' after text block.");
-
     return std::make_unique<TextNode>(text.value);
 }
 
@@ -129,17 +133,8 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode() {
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
         Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
         consume(TokenType::COLON, "Expect ':' after style property key.");
-
-        std::string value_str;
-        while (peek().type != TokenType::SEMICOLON && !isAtEnd()) {
-            value_str += advance().value;
-        }
-
-        if (value_str.empty()) {
-            throw std::runtime_error("Expect style property value.");
-        }
-
-        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, value_str));
+        auto value_expr = parseExpression();
+        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
         consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
     }
 
@@ -152,6 +147,68 @@ std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {
     Token content = consume(TokenType::STRING_LITERAL, "Expect script content.");
     consume(TokenType::R_BRACE, "Expect '}' after script block.");
     return std::make_unique<ScriptNode>(content.value);
+}
+
+// --- Expression Parsing (Precedence Climbing) ---
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
+    return parseTerm();
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseTerm() {
+    auto expr = parseFactor();
+    while (match(TokenType::PLUS) || match(TokenType::MINUS)) {
+        Token op = tokens[current - 1];
+        auto right = parseFactor();
+        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
+    }
+    return expr;
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseFactor() {
+    auto expr = parsePower();
+    while (match(TokenType::STAR) || match(TokenType::SLASH) || match(TokenType::PERCENT)) {
+        Token op = tokens[current - 1];
+        auto right = parsePower();
+        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
+    }
+    return expr;
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
+    auto expr = parsePrimary();
+    if (match(TokenType::STAR_STAR)) {
+        Token op = tokens[current - 1];
+        auto right = parsePower(); // Right-associative
+        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
+    }
+    return expr;
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
+    if (match(TokenType::NUMBER)) {
+        Token num_token = tokens[current - 1];
+        // Handle units like 'px', '%', etc.
+        if (check(TokenType::IDENTIFIER) || check(TokenType::PERCENT)) {
+            Token unit_token = advance();
+            Token combined_token = {num_token.type, num_token.value + unit_token.value};
+            return std::make_unique<LiteralNode>(combined_token);
+        }
+        return std::make_unique<LiteralNode>(num_token);
+    }
+
+    if (match(TokenType::IDENTIFIER)) {
+        return std::make_unique<LiteralNode>(tokens[current - 1]);
+    }
+
+    // Handle grouped expressions e.g. (10 + 5)
+    if (match(TokenType::L_BRACE)) { // Assuming L_PAREN for grouping, but let's use L_BRACE for now if no L_PAREN exists
+        auto expr = parseExpression();
+        consume(TokenType::R_BRACE, "Expect ')' after expression.");
+        return expr;
+    }
+
+    throw std::runtime_error("Expected expression, but found " + peek().value);
 }
 
 } // namespace CHTL

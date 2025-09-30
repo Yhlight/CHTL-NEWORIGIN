@@ -6,27 +6,44 @@
 namespace CHTL {
 
 enum class TokenType {
-    // Define some basic token types
+    // Basic
     UNKNOWN,
     EndOfFile,
     IDENTIFIER,
     STRING_LITERAL,
+    NUMBER,
     COMMENT,
+
+    // Keywords
     TEXT_KEYWORD,
-    L_BRACE,
-    R_BRACE,
     STYLE_KEYWORD,
     SCRIPT_KEYWORD,
+
+    // Punctuation
+    L_BRACE,
+    R_BRACE,
     COLON,
     EQUAL,
     SEMICOLON,
-    NUMBER
+
+    // Arithmetic Operators
+    PLUS,
+    MINUS,
+    STAR,
+    SLASH,
+    PERCENT,
+    STAR_STAR
 };
 
 class Token {
 public:
     TokenType type;
     std::string value;
+
+    // Helper for debugging
+    bool operator==(const Token& other) const {
+        return type == other.type && value == other.value;
+    }
 };
 
 } // namespace CHTL

@@ -46,6 +46,23 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
+        // --- Arithmetic Operators ---
+        if (input[pos] == '+') { tokens.push_back({TokenType::PLUS, "+"}); pos++; continue; }
+        if (input[pos] == '-') { tokens.push_back({TokenType::MINUS, "-"}); pos++; continue; }
+        if (input[pos] == '*') {
+            if (pos + 1 < input.length() && input[pos + 1] == '*') {
+                tokens.push_back({TokenType::STAR_STAR, "**"});
+                pos += 2;
+            } else {
+                tokens.push_back({TokenType::STAR, "*"});
+                pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '/') { tokens.push_back({TokenType::SLASH, "/"}); pos++; continue; }
+        if (input[pos] == '%') { tokens.push_back({TokenType::PERCENT, "%"}); pos++; continue; }
+
+
         if (input[pos] == '{') { tokens.push_back({TokenType::L_BRACE, "{"}); pos++; continue; }
         if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
         if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
@@ -85,11 +102,9 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             else if (value == "style") { tokens.push_back({TokenType::STYLE_KEYWORD, value}); }
             else if (value == "script") {
                 tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
-                // Consume whitespace
                 while (pos < input.length() && std::isspace(input[pos])) {
                     pos++;
                 }
-                // Expect a '{'
                 if (pos < input.length() && input[pos] == '{') {
                     tokens.push_back({TokenType::L_BRACE, "{"});
                     pos++;
