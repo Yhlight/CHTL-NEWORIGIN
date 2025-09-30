@@ -74,3 +74,13 @@ TEST_CASE("Tokenize Number", "[lexer]") {
     REQUIRE(tokens[0].type == CHTL::TokenType::NUMBER);
     REQUIRE(tokens[0].value == "123");
 }
+
+TEST_CASE("Tokenize Script Keyword", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "script";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 1);
+    REQUIRE(tokens[0].type == CHTL::TokenType::SCRIPT_KEYWORD);
+    REQUIRE(tokens[0].value == "script");
+}

@@ -16,6 +16,7 @@ enum class TokenType {
     L_BRACE,
     R_BRACE,
     STYLE_KEYWORD,
+    SCRIPT_KEYWORD,
     COLON,
     EQUAL,
     SEMICOLON,

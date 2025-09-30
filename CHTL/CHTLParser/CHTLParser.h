@@ -10,6 +10,7 @@ namespace CHTL {
 
 class ElementNode; // Forward declaration
 class StyleNode;   // Forward declaration
+class ScriptNode;  // Forward declaration
 
 class CHTLParser {
 public:
@@ -25,6 +26,7 @@ private:
     std::unique_ptr<BaseNode> parseElementStatement();
     void parseAttributeStatement(ElementNode& owner);
     std::unique_ptr<StyleNode> parseStyleStatement();
+    std::unique_ptr<ScriptNode> parseScriptStatement();
 
     // Token stream management
     std::vector<Token> tokens;

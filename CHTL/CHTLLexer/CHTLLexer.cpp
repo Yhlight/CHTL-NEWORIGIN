@@ -17,28 +17,29 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
-        if (pos + 1 < input.length() && input[pos] == '/' && input[pos + 1] == '/') {
-            std::string::size_type comment_start = pos + 2;
-            std::string::size_type comment_end = input.find('\n', comment_start);
-            std::string comment_value = (comment_end == std::string::npos) ? input.substr(comment_start) : input.substr(comment_start, comment_end - comment_start);
-            tokens.push_back({TokenType::COMMENT, comment_value});
-            pos = (comment_end == std::string::npos) ? input.length() : comment_end;
-            continue;
-        }
-
-        if (pos + 1 < input.length() && input[pos] == '/' && input[pos + 1] == '*') {
-            std::string::size_type comment_start = pos + 2;
-            std::string::size_type comment_end = input.find("*/", comment_start);
-            if (comment_end == std::string::npos) {
-                tokens.push_back({TokenType::COMMENT, input.substr(comment_start)});
-                pos = input.length();
-            } else {
-                tokens.push_back({TokenType::COMMENT, input.substr(comment_start, comment_end - comment_start)});
-                pos = comment_end + 2;
+        // --- Comment Handling ---
+        if (pos + 1 < input.length() && input[pos] == '/') {
+            if (input[pos + 1] == '/') { // Single-line
+                std::string::size_type comment_start = pos + 2;
+                std::string::size_type comment_end = input.find('\n', comment_start);
+                std::string comment_value = (comment_end == std::string::npos) ? input.substr(comment_start) : input.substr(comment_start, comment_end - comment_start);
+                tokens.push_back({TokenType::COMMENT, comment_value});
+                pos = (comment_end == std::string::npos) ? input.length() : comment_end;
+                continue;
             }
-            continue;
+            if (input[pos + 1] == '*') { // Multi-line
+                std::string::size_type comment_start = pos + 2;
+                std::string::size_type comment_end = input.find("*/", comment_start);
+                if (comment_end == std::string::npos) {
+                    tokens.push_back({TokenType::COMMENT, input.substr(comment_start)});
+                    pos = input.length();
+                } else {
+                    tokens.push_back({TokenType::COMMENT, input.substr(comment_start, comment_end - comment_start)});
+                    pos = comment_end + 2;
+                }
+                continue;
+            }
         }
-
         if (input[pos] == '#' && pos + 1 < input.length() && input[pos + 1] == ' ') {
             std::string::size_type comment_start = pos + 2;
             std::string::size_type comment_end = input.find('\n', comment_start);
@@ -48,41 +49,18 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
-        if (input[pos] == '{') {
-            tokens.push_back({TokenType::L_BRACE, "{"});
-            pos++;
-            continue;
-        }
+        // --- Single-character tokens ---
+        if (input[pos] == '{') { tokens.push_back({TokenType::L_BRACE, "{"}); pos++; continue; }
+        if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
+        if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
+        if (input[pos] == '=') { tokens.push_back({TokenType::EQUAL, "="}); pos++; continue; }
+        if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
 
-        if (input[pos] == '}') {
-            tokens.push_back({TokenType::R_BRACE, "}"});
-            pos++;
-            continue;
-        }
-
-        if (input[pos] == ':') {
-            tokens.push_back({TokenType::COLON, ":"});
-            pos++;
-            continue;
-        }
-
-        if (input[pos] == '=') {
-            tokens.push_back({TokenType::EQUAL, "="});
-            pos++;
-            continue;
-        }
-
-        if (input[pos] == ';') {
-            tokens.push_back({TokenType::SEMICOLON, ";"});
-            pos++;
-            continue;
-        }
-
+        // --- String Literals ---
         if (input[pos] == '"') {
             std::string::size_type literal_start = pos + 1;
             std::string::size_type literal_end = input.find('"', literal_start);
             if (literal_end == std::string::npos) {
-                // Handle unclosed string literal error
                 tokens.push_back({TokenType::UNKNOWN, input.substr(pos)});
                 pos = input.length();
             } else {
@@ -92,29 +70,62 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
+        // --- Numbers ---
         if (std::isdigit(input[pos])) {
             std::string::size_type num_start = pos;
             while (pos < input.length() && std::isdigit(input[pos])) {
                 pos++;
             }
-            std::string value = input.substr(num_start, pos - num_start);
-            tokens.push_back({TokenType::NUMBER, value});
+            tokens.push_back({TokenType::NUMBER, input.substr(num_start, pos - num_start)});
             continue;
         }
 
+        // --- Keywords and Identifiers ---
         if (std::isalpha(input[pos])) {
             std::string::size_type ident_start = pos;
             while (pos < input.length() && std::isalnum(input[pos])) {
                 pos++;
             }
             std::string value = input.substr(ident_start, pos - ident_start);
-            if (value == "text") {
-                tokens.push_back({TokenType::TEXT_KEYWORD, value});
-            } else if (value == "style") {
-                tokens.push_back({TokenType::STYLE_KEYWORD, value});
-            } else {
-                tokens.push_back({TokenType::IDENTIFIER, value});
+
+            if (value == "script") {
+                std::string::size_type temp_pos = pos;
+                while (temp_pos < input.length() && std::isspace(input[temp_pos])) {
+                    temp_pos++;
+                }
+
+                if (temp_pos < input.length() && input[temp_pos] == '{') {
+                    tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
+                    pos = temp_pos; // Move pos to the brace
+                    tokens.push_back({TokenType::L_BRACE, "{"});
+                    pos++; // Move pos past the brace
+
+                    std::string::size_type content_start = pos;
+                    int brace_level = 1;
+                    while (pos < input.length()) {
+                        if (input[pos] == '{') brace_level++;
+                        else if (input[pos] == '}') {
+                            brace_level--;
+                            if (brace_level == 0) break;
+                        }
+                        pos++;
+                    }
+
+                    if (brace_level == 0) {
+                        std::string content = input.substr(content_start, pos - content_start);
+                        tokens.push_back({TokenType::STRING_LITERAL, content});
+                    } else {
+                        tokens.push_back({TokenType::UNKNOWN, input.substr(content_start)});
+                        pos = input.length();
+                    }
+                    continue;
+                }
             }
+
+            if (value == "text") { tokens.push_back({TokenType::TEXT_KEYWORD, value}); }
+            else if (value == "style") { tokens.push_back({TokenType::STYLE_KEYWORD, value}); }
+            else if (value == "script") { tokens.push_back({TokenType::SCRIPT_KEYWORD, value}); }
+            else { tokens.push_back({TokenType::IDENTIFIER, value}); }
             continue;
         }
 

@@ -7,6 +7,7 @@
 #include <memory>
 #include <map>
 #include "StyleNode.h"
+#include "ScriptNode.h"
 
 namespace CHTL {
 
@@ -18,6 +19,7 @@ public:
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const { return children; }
     const std::map<std::string, std::string>& getAttributes() const { return attributes; }
     const StyleNode* getStyle() const { return style.get(); }
+    const ScriptNode* getScript() const { return script.get(); }
 
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
@@ -39,11 +41,16 @@ public:
         style = std::move(newStyle);
     }
 
+    void setScript(std::unique_ptr<ScriptNode> newScript) {
+        script = std::move(newScript);
+    }
+
 private:
     std::string tagName;
     std::vector<std::unique_ptr<BaseNode>> children;
     std::map<std::string, std::string> attributes;
     std::unique_ptr<StyleNode> style;
+    std::unique_ptr<ScriptNode> script;
 };
 
 } // namespace CHTL

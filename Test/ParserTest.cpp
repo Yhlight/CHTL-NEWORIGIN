@@ -5,6 +5,7 @@
 #include "CHTLNode/ElementNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLNode/ScriptNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -167,6 +168,24 @@ TEST_CASE("Parse Numeric Style Property", "[parser]") {
     const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
     REQUIRE(propNode->getKey() == "width");
     REQUIRE(propNode->getValue() == "100px");
+}
+
+TEST_CASE("Parse Simple Script Block", "[parser]") {
+    std::string input = "div { script { let a = 1; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+    REQUIRE(elementNode->getChildren().empty());
+
+    const CHTL::ScriptNode* scriptNode = elementNode->getScript();
+    REQUIRE(scriptNode != nullptr);
+    REQUIRE(scriptNode->getContent() == " let a = 1; ");
 }
 
 TEST_CASE("Parse Text Node", "[parser]") {
