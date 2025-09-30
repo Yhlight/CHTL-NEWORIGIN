@@ -111,12 +111,26 @@ void Generator::generateNode(BaseNode* node) {
             }
             break;
         case NodeType::Origin:
-            append(static_cast<const OriginNode*>(node)->content);
+            generateOrigin(static_cast<const OriginNode*>(node));
             break;
         // Other node types are handled elsewhere or do not generate direct output.
         default:
             break;
     }
+}
+
+void Generator::generateOrigin(const OriginNode* node) {
+    if (node->type == "Html") {
+        // Raw HTML is appended directly to the main result stream.
+        append(node->content);
+    } else if (node->type == "Style") {
+        // Raw CSS is appended to the global CSS content.
+        globalCssToInject += node->content + "\n";
+    } else if (node->type == "JavaScript") {
+        // Raw JS is appended to the global JS content.
+        globalJsToInject += node->content + "\n";
+    }
+    // Note: Other custom origin types are ignored by the generator.
 }
 
 

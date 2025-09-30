@@ -12,6 +12,28 @@
 #include "../src/CHTL/CHTLNode/StaticStyleNode.h"
 #include <regex>
 
+TEST_CASE("CHTL Parser for Namespace block", "[CHTLParser][Namespace]") {
+    std::string source = R"(
+        [Namespace] my_ui {
+            [Template] @Style Button {
+                padding: 10px;
+            }
+        }
+    )";
+
+    Lexer lexer(source);
+    Parser parser(lexer, "test.chtl");
+    parser.parse();
+
+    // After parsing, the template should exist in the manager under the correct namespace.
+    const auto* tmpl = parser.templateManager.getStyleTemplate("my_ui", "Button");
+    REQUIRE(tmpl != nullptr);
+
+    // Verify it doesn't exist in the global namespace.
+    const auto* global_tmpl = parser.templateManager.getStyleTemplate("_global", "Button");
+    REQUIRE(global_tmpl == nullptr);
+}
+
 TEST_CASE("CHTL Parser for Local Style Selector Hoisting", "[CHTLParser][StyleHoisting]") {
     std::string source = R"(
         div {

@@ -183,6 +183,16 @@ std::string Parser::getCurrentNamespace() const {
     return result;
 }
 
+void Parser::pushNamespace(const std::string& ns) {
+    namespaceStack.push_back(ns);
+}
+
+void Parser::popNamespace() {
+    if (!namespaceStack.empty()) {
+        namespaceStack.pop_back();
+    }
+}
+
 ElementNode* Parser::findElementBySelector(const std::string& selector) {
     if (!parsedNodes) {
         return nullptr;

@@ -67,6 +67,8 @@ public:
     // The stack of active namespaces.
     std::vector<std::string> namespaceStack;
     std::string getCurrentNamespace() const;
+    void pushNamespace(const std::string& ns);
+    void popNamespace();
 
     // A list of ampersand rules that are deferred because their base selector
     // (class or id) has not been defined yet.

@@ -379,33 +379,90 @@ void StatementState::parseImportStatement(Parser& parser) {
 }
 
 std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) {
-    // Simplified for now to avoid compilation errors
-    parser.advanceTokens(); // [
-    parser.advanceTokens(); // Origin
-    parser.advanceTokens(); // ]
-    parser.advanceTokens(); // @
-    parser.advanceTokens(); // Type
-    parser.advanceTokens(); // name
-    parser.advanceTokens(); // {
-    while(parser.currentToken.type != TokenType::CloseBrace) {
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectKeyword(TokenType::Origin, "KEYWORD_ORIGIN", "Origin");
+    parser.expectToken(TokenType::CloseBracket);
+
+    parser.expectToken(TokenType::At);
+    std::string type = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    std::string name;
+    if (parser.currentToken.type == TokenType::Identifier) {
+        name = parser.currentToken.value;
         parser.advanceTokens();
     }
-    parser.advanceTokens(); // }
-    return nullptr;
+
+    parser.expectToken(TokenType::OpenBrace);
+
+    // The content of an [Origin] block is raw and should not be tokenized.
+    // We will find the matching closing brace by scanning the raw source string.
+    const std::string& source = parser.lexer.getSource();
+    size_t start_pos = parser.lexer.getPosition(); // Position is now after the opening brace
+    size_t scan_pos = start_pos;
+    int brace_level = 1;
+
+    while (scan_pos < source.length()) {
+        if (source[scan_pos] == '{') {
+            brace_level++;
+        } else if (source[scan_pos] == '}') {
+            brace_level--;
+            if (brace_level == 0) {
+                break;
+            }
+        }
+        scan_pos++;
+    }
+
+    if (brace_level != 0) {
+        throw std::runtime_error("Unmatched braces in [Origin] block.");
+    }
+
+    std::string content = source.substr(start_pos, scan_pos - start_pos);
+
+    // Manually advance the lexer past the entire raw block.
+    parser.lexer.setPosition(scan_pos + 1);
+
+    // Reload the parser's lookahead tokens from the new lexer position.
+    parser.advanceTokens();
+    parser.advanceTokens();
+    parser.advanceTokens();
+
+    auto originNode = std::make_unique<OriginNode>(type, content);
+    if (!name.empty()) {
+        parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), name, std::move(originNode));
+        return nullptr;
+    }
+
+    return originNode;
 }
 
 
 void StatementState::parseNamespaceDefinition(Parser& parser) {
-    // Simplified for now
-    parser.advanceTokens();
-    parser.advanceTokens();
-    parser.advanceTokens();
-    parser.advanceTokens();
-    parser.advanceTokens();
-    while(parser.currentToken.type != TokenType::CloseBrace) {
-        parser.advanceTokens();
+    parser.expectToken(TokenType::OpenBracket);
+    parser.expectKeyword(TokenType::Namespace, "KEYWORD_NAMESPACE", "Namespace");
+    parser.expectToken(TokenType::CloseBracket);
+
+    std::string ns = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+    parser.pushNamespace(ns);
+
+    // Check for block-style namespace
+    if (parser.currentToken.type == TokenType::OpenBrace) {
+        parser.advanceTokens(); // Consume '{'
+        while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
+            // Recursively call the handle method of the *current* state object
+            // to parse statements within the namespace block.
+            auto node = this->handle(parser);
+            // Top-level statements inside a namespace don't typically produce a node
+            // for the parent's AST, so we discard the result.
+        }
+        parser.expectToken(TokenType::CloseBrace);
+        parser.popNamespace(); // Pop the namespace after the block is done.
     }
-    parser.advanceTokens();
+    // If it's not a block, the namespace applies until the end of the file.
+    // The spec is a bit ambiguous here, but a block-based scope is more robust,
+    // so we only implement the block-style `[Namespace] name { ... }` for now.
 }
 
 std::unique_ptr<BaseNode> StatementState::parseScriptElement(Parser& parser) {
