@@ -123,15 +123,47 @@ TEST_CASE("CHTL Parser for Advanced Template Features", "[CHTLParser][Templates]
         REQUIRE(static_cast<ElementNode*>(fragment->children[1].get())->tagName == "span");
     }
 
-    SECTION("Custom element specialization should insert elements") {
+    SECTION("Custom element specialization should insert elements with all positions") {
         std::string source = R"(
             [Custom] @Element List {
                 li { text: "first"; }
-                li { text: "third"; }
+                li { text: "fourth"; }
             }
             @Element List {
-                insert after li[0] {
-                    li { text: "second"; }
+                insert after li[0] { li { text: "second"; } }
+                insert before li[1] { li { text: "third"; } }
+                insert at top { li { text: "zero"; } }
+                insert at bottom { li { text: "fifth"; } }
+            };
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "test.chtl");
+        auto ast = parser.parse();
+        REQUIRE(ast.size() == 1);
+        auto* fragment = dynamic_cast<FragmentNode*>(ast[0].get());
+        REQUIRE(fragment != nullptr);
+        REQUIRE(fragment->children.size() == 5);
+        REQUIRE(static_cast<TextNode*>(static_cast<ElementNode*>(fragment->children[0].get())->children[0].get())->text == "zero");
+        REQUIRE(static_cast<TextNode*>(static_cast<ElementNode*>(fragment->children[1].get())->children[0].get())->text == "first");
+        REQUIRE(static_cast<TextNode*>(static_cast<ElementNode*>(fragment->children[2].get())->children[0].get())->text == "second");
+        REQUIRE(static_cast<TextNode*>(static_cast<ElementNode*>(fragment->children[3].get())->children[0].get())->text == "third");
+        REQUIRE(static_cast<TextNode*>(static_cast<ElementNode*>(fragment->children[4].get())->children[0].get())->text == "fifth");
+    }
+
+    SECTION("Custom element specialization should modify element styles") {
+        std::string source = R"(
+            [Custom] @Element Card {
+                div {
+                    class: "card-title";
+                    style { font-size: 20px; }
+                }
+            }
+            @Element Card {
+                div[0] {
+                    style {
+                        font-size: 24px; // Override
+                        color: blue;     // Add
+                    }
                 }
             };
         )";
@@ -141,11 +173,12 @@ TEST_CASE("CHTL Parser for Advanced Template Features", "[CHTLParser][Templates]
         REQUIRE(ast.size() == 1);
         auto* fragment = dynamic_cast<FragmentNode*>(ast[0].get());
         REQUIRE(fragment != nullptr);
-        REQUIRE(fragment->children.size() == 3);
-        auto* second_li = dynamic_cast<ElementNode*>(fragment->children[1].get());
-        REQUIRE(second_li != nullptr);
-        auto* text_node = dynamic_cast<TextNode*>(second_li->children[0].get());
-        REQUIRE(text_node->text == "second");
+        REQUIRE(fragment->children.size() == 1);
+        auto* div_node = dynamic_cast<ElementNode*>(fragment->children[0].get());
+        REQUIRE(div_node != nullptr);
+        REQUIRE(div_node->inlineStyles.size() == 2);
+        REQUIRE(div_node->inlineStyles.at("font-size")->toString() == "24px");
+        REQUIRE(div_node->inlineStyles.at("color")->toString() == "blue");
     }
 }
 

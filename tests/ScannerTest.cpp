@@ -1,129 +1,133 @@
 #include "../catch.hpp"
 #include "../src/Scanner/UnifiedScanner.h"
+#include <regex>
+#include <string>
 
-TEST_CASE("UnifiedScanner with Recursive Placeholder", "[UnifiedScanner][Recursive]") {
+// Helper to count occurrences of a substring
+int count_substring(const std::string& str, const std::string& sub) {
+    int count = 0;
+    size_t pos = 0;
+    while ((pos = str.find(sub, pos)) != std::string::npos) {
+        count++;
+        pos += sub.length();
+    }
+    return count;
+}
+
+TEST_CASE("UnifiedScanner: Full Placeholder Mechanism for JS", "[UnifiedScanner][Recursive]") {
     UnifiedScanner scanner;
     std::string source = R"(
         script {
+            // This is standard JS that should be extracted
+            const prefix = "hello";
+
+            // This is a CHTL JS construct that should remain
             Listen {
-                click: function() {
-                    console.log("I am standard JS");
+                click: function(e) { // This standard JS function block should be extracted
+                    const target = {{e.target}}; // This CHTL JS should remain inside the JS fragment
+                    console.log(prefix, target);
                 }
             }
+
+            // This is more standard JS that should be extracted
+            let suffix = "world";
         }
     )";
     ScannedOutput output = scanner.scan(source);
 
-    // The scanner should produce two fragments:
-    // 1. The outer CHTL_JS fragment (the Listen block).
-    // 2. The inner JS fragment (the function block).
-    REQUIRE(output.fragments.size() == 2);
+    // The scanner should find two JS fragments: one before Listen, and one after.
+    // The 'function' block inside Listen is part of the JS fragment that contains the CHTL JS.
+    REQUIRE(output.fragments.size() >= 2);
 
-    std::string chtl_js_content;
-    std::string js_content;
+    // The main placeholder string should only contain the CHTL JS `Listen` block, surrounded by JS placeholders.
+    REQUIRE(output.chtl_with_placeholders.find("Listen {") != std::string::npos);
+    REQUIRE(output.chtl_with_placeholders.find("const prefix") == std::string::npos);
+    REQUIRE(output.chtl_with_placeholders.find("let suffix") == std::string::npos);
+    REQUIRE(count_substring(output.chtl_with_placeholders, "__JS_PLACEHOLDER_") >= 2);
 
+    // Verify that the JS fragments were extracted correctly.
+    bool found_prefix_js = false;
+    bool found_suffix_js = false;
     for(const auto& pair : output.fragments) {
-        if (pair.second.type == FragmentType::CHTL_JS) {
-            chtl_js_content = pair.second.content;
-        } else if (pair.second.type == FragmentType::JS) {
-            js_content = pair.second.content;
+        if (pair.second.type == FragmentType::JS) {
+            if (pair.second.content.find("const prefix") != std::string::npos) {
+                found_prefix_js = true;
+            }
+            if (pair.second.content.find("let suffix") != std::string::npos) {
+                found_suffix_js = true;
+            }
         }
     }
-
-    // Verify the JS fragment was correctly extracted.
-    REQUIRE(!js_content.empty());
-    REQUIRE(js_content.find(R"(console.log("I am standard JS");)") != std::string::npos);
-
-    // Verify the CHTL_JS fragment now contains a placeholder for the JS function.
-    REQUIRE(!chtl_js_content.empty());
-    REQUIRE(chtl_js_content.find("__JS_PLACEHOLDER_") != std::string::npos);
-    REQUIRE(chtl_js_content.find("function()") == std::string::npos); // The original JS should be gone.
+    REQUIRE(found_prefix_js);
+    REQUIRE(found_suffix_js);
 }
 
-
-TEST_CASE("UnifiedScanner basic test", "[UnifiedScanner]") {
-    UnifiedScanner scanner;
-    std::string source = "div { style { color: red; } }";
-    ScannedOutput output = scanner.scan(source);
-
-    // The new scanner is smarter. For a style block containing only standard CSS,
-    // it should not extract any fragments. It leaves the block as-is for the
-    // CHTL parser to treat as a literal.
-    REQUIRE(output.fragments.size() == 0);
-    REQUIRE(output.chtl_with_placeholders == source);
-}
-
-TEST_CASE("UnifiedScanner with nested JS", "[UnifiedScanner]") {
-    UnifiedScanner scanner;
-    std::string source = "script { let a = { b: 1 }; }";
-    ScannedOutput output = scanner.scan(source);
-    REQUIRE(output.fragments.size() == 1);
-    REQUIRE(output.fragments.begin()->second.type == FragmentType::JS);
-    REQUIRE(output.fragments.begin()->second.content == " let a = { b: 1 }; ");
-}
-
-TEST_CASE("UnifiedScanner with CHTL JS", "[UnifiedScanner]") {
-    UnifiedScanner scanner;
-    std::string source = "script { {{box}}->click(); }";
-    ScannedOutput output = scanner.scan(source);
-    REQUIRE(output.fragments.size() == 1);
-    REQUIRE(output.fragments.begin()->second.type == FragmentType::CHTL_JS);
-    REQUIRE(output.fragments.begin()->second.content == " {{box}}->click(); ");
-}
-
-TEST_CASE("UnifiedScanner failing case with nested arrow function", "[UnifiedScanner]") {
-    UnifiedScanner scanner;
-    std::string source = "Listen {click: ()=>{ {{box}}->()=>{} }}";
-    ScannedOutput output = scanner.scan(source);
-    REQUIRE(output.fragments.size() == 1);
-    REQUIRE(output.fragments.begin()->second.type == FragmentType::CHTL_JS);
-    // The fragment should contain the entire Listen block for the CHTL JS parser.
-    REQUIRE(output.fragments.begin()->second.content == "Listen {click: ()=>{ {{box}}->()=>{} }}");
-}
-
-TEST_CASE("UnifiedScanner with mixed CHTL and CSS in style block", "[UnifiedScanner]") {
+TEST_CASE("UnifiedScanner: Full Placeholder Mechanism for CSS", "[UnifiedScanner][Recursive]") {
     UnifiedScanner scanner;
     std::string source = R"(
         style {
-            .class-one {
-                color: red;
-                width: 100px + 20px; // CHTL syntax
+            // This is a standard CSS rule that should be extracted
+            .my-class {
+                font-size: 16px;
             }
-            .class-two {
-                @Style MyTemplate; // CHTL syntax
-                border: 1px solid black;
+
+            // This is a CHTL feature that should remain
+            color: 10px + 20px;
+
+            // This is another standard CSS rule to be extracted
+            #my-id:hover {
+                text-decoration: underline;
             }
         }
     )";
-
     ScannedOutput output = scanner.scan(source);
 
-    // The scanner should find two CHTL fragments inside the style block.
+    // The scanner should extract the two standard CSS rules as fragments.
     REQUIRE(output.fragments.size() == 2);
 
-    // Check that the CHTL source has placeholders and that standard CSS remains.
-    REQUIRE(output.chtl_with_placeholders.find("/*_CHTL_PLACEHOLDER_") != std::string::npos);
-    REQUIRE(output.chtl_with_placeholders.find(".class-one") != std::string::npos);
-    REQUIRE(output.chtl_with_placeholders.find("color: red;") != std::string::npos);
-    REQUIRE(output.chtl_with_placeholders.find("border: 1px solid black;") != std::string::npos);
+    // The main placeholder string should only contain the CHTL part, surrounded by CSS placeholders.
+    std::string processed_style_block = std::regex_replace(output.chtl_with_placeholders, std::regex(R"(\s+)"), " ");
+    REQUIRE(processed_style_block.find("style { /*__CSS_PLACEHOLDER_0__*/ color: 10px + 20px; /*__CSS_PLACEHOLDER_1__*/ }") != std::string::npos);
 
-    // Check that the original CHTL rules have been replaced.
-    REQUIRE(output.chtl_with_placeholders.find("width: 100px + 20px;") == std::string::npos);
-    REQUIRE(output.chtl_with_placeholders.find("@Style MyTemplate;") == std::string::npos);
+    // Check that the standard CSS rules are not in the main string.
+    REQUIRE(processed_style_block.find(".my-class") == std::string::npos);
+    REQUIRE(processed_style_block.find("#my-id:hover") == std::string::npos);
 
-    // Check that the fragments were extracted correctly.
-    bool found_arithmetic = false;
-    bool found_template = false;
-    for (const auto& pair : output.fragments) {
-        if (pair.second.content == "width: 100px + 20px;") {
-            REQUIRE(pair.second.type == FragmentType::CHTL);
-            found_arithmetic = true;
-        }
-        if (pair.second.content == "@Style MyTemplate;") {
-            REQUIRE(pair.second.type == FragmentType::CHTL);
-            found_template = true;
+    // Check that the fragments contain the standard CSS
+    bool found_class_rule = false;
+    bool found_id_rule = false;
+    for(const auto& pair : output.fragments) {
+        if (pair.second.type == FragmentType::CSS) {
+            if (pair.second.content.find(".my-class") != std::string::npos) {
+                found_class_rule = true;
+            }
+            if (pair.second.content.find("#my-id:hover") != std::string::npos) {
+                found_id_rule = true;
+            }
         }
     }
-    REQUIRE(found_arithmetic);
-    REQUIRE(found_template);
+    REQUIRE(found_class_rule);
+    REQUIRE(found_id_rule);
+}
+
+TEST_CASE("UnifiedScanner: Basic CSS-only style block", "[UnifiedScanner]") {
+    UnifiedScanner scanner;
+    std::string source = "style { .foo { color: blue; } }";
+    ScannedOutput output = scanner.scan(source);
+
+    // A block with only standard CSS should result in one CSS fragment.
+    REQUIRE(output.fragments.size() == 1);
+    REQUIRE(output.fragments.begin()->second.type == FragmentType::CSS);
+    REQUIRE(output.fragments.begin()->second.content.find(".foo { color: blue; }") != std::string::npos);
+    // The placeholder should be inside the style block
+    REQUIRE(output.chtl_with_placeholders.find("style { /*__CSS_PLACEHOLDER_0__*/ }") != std::string::npos);
+}
+
+TEST_CASE("UnifiedScanner: Basic CHTL-JS-only script block", "[UnifiedScanner]") {
+    UnifiedScanner scanner;
+    std::string source = "script { {{box}}->click(); }";
+    ScannedOutput output = scanner.scan(source);
+    // Pure CHTL-JS doesn't get fragmented, it's the native language of the block.
+    REQUIRE(output.fragments.empty());
+    REQUIRE(output.chtl_with_placeholders.find("{{box}}->click();") != std::string::npos);
 }

@@ -321,7 +321,10 @@ void StatementState::parseElementSpecializationBlock(Parser& parser, FragmentNod
             parseDeleteInSpecialization(parser, fragment);
         } else if (parser.tryExpectKeyword(TokenType::Insert, "KEYWORD_INSERT", "insert")) {
             parseInsertInSpecialization(parser, fragment);
-        } else {
+        } else if (parser.currentToken.type == TokenType::Identifier) {
+            parseElementModificationInSpecialization(parser, fragment);
+        }
+        else {
             throw std::runtime_error("Unexpected token in element specialization block: " + parser.currentToken.value);
         }
     }
@@ -365,17 +368,33 @@ void StatementState::parseDeleteInSpecialization(Parser& parser, FragmentNode& f
 }
 
 void StatementState::parseInsertInSpecialization(Parser& parser, FragmentNode& fragment) {
-    // This is a simplified implementation. A full version would need to handle
-    // all position keywords and more complex selectors.
-    parser.expectKeyword(TokenType::Identifier, "KEYWORD_AFTER", "after");
+    enum class InsertPosition { Before, After, Replace, AtTop, AtBottom };
+    InsertPosition position;
 
-    // Simplified selector: tag[index]
-    std::string tagName = parser.currentToken.value;
-    parser.expectToken(TokenType::Identifier);
-    parser.expectToken(TokenType::OpenBracket);
-    int target_index = std::stoi(parser.currentToken.value);
-    parser.expectToken(TokenType::Number);
-    parser.expectToken(TokenType::CloseBracket);
+    if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_BEFORE", "before")) {
+        position = InsertPosition::Before;
+    } else if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_AFTER", "after")) {
+        position = InsertPosition::After;
+    } else if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_REPLACE", "replace")) {
+        position = InsertPosition::Replace;
+    } else if (parser.tryExpectKeyword(TokenType::AtTop, "KEYWORD_ATTOP", "at top")) {
+        position = InsertPosition::AtTop;
+    } else if (parser.tryExpectKeyword(TokenType::AtBottom, "KEYWORD_ATBOTTOM", "at bottom")) {
+        position = InsertPosition::AtBottom;
+    } else {
+        throw std::runtime_error("Invalid keyword for insert specialization.");
+    }
+
+    std::string tagName;
+    int target_index = -1;
+    if (position != InsertPosition::AtTop && position != InsertPosition::AtBottom) {
+        tagName = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        parser.expectToken(TokenType::OpenBracket);
+        target_index = std::stoi(parser.currentToken.value);
+        parser.expectToken(TokenType::Number);
+        parser.expectToken(TokenType::CloseBracket);
+    }
 
     std::vector<std::unique_ptr<BaseNode>> new_nodes;
     parser.expectToken(TokenType::OpenBrace);
@@ -384,16 +403,57 @@ void StatementState::parseInsertInSpecialization(Parser& parser, FragmentNode& f
     }
     parser.expectToken(TokenType::CloseBrace);
 
-    // Find insertion point
-    auto& children = fragment.children;
+    if (position == InsertPosition::AtTop) {
+        fragment.children.insert(fragment.children.begin(), std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
+        return;
+    }
+    if (position == InsertPosition::AtBottom) {
+        fragment.children.insert(fragment.children.end(), std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
+        return;
+    }
+
     int current_index = 0;
-    auto insert_it = children.end();
-    for (auto it = children.begin(); it != children.end(); ++it) {
+    for (auto it = fragment.children.begin(); it != fragment.children.end(); ++it) {
         if ((*it)->getType() == NodeType::Element) {
             auto* element = static_cast<ElementNode*>((*it).get());
+            if (element->tagName == tagName && current_index == target_index) {
+                if (position == InsertPosition::After) {
+                    fragment.children.insert(std::next(it), std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
+                } else if (position == InsertPosition::Before) {
+                    fragment.children.insert(it, std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
+                } else if (position == InsertPosition::Replace) {
+                    it = fragment.children.erase(it);
+                    fragment.children.insert(it, std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
+                }
+                return;
+            }
+            current_index++;
+        }
+    }
+    throw std::runtime_error("Could not find insertion point for insert specialization.");
+}
+
+void StatementState::parseElementModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
+    std::string tagName = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    int target_index = -1;
+    if (parser.currentToken.type == TokenType::OpenBracket) {
+        parser.advanceTokens();
+        target_index = std::stoi(parser.currentToken.value);
+        parser.expectToken(TokenType::Number);
+        parser.expectToken(TokenType::CloseBracket);
+    }
+
+    // Find the target node
+    ElementNode* targetNode = nullptr;
+    int current_index = 0;
+    for (auto& child : fragment.children) {
+        if (child->getType() == NodeType::Element) {
+            auto* element = static_cast<ElementNode*>(child.get());
             if (element->tagName == tagName) {
-                if (current_index == target_index) {
-                    insert_it = std::next(it);
+                if (target_index == -1 || current_index == target_index) {
+                    targetNode = element;
                     break;
                 }
                 current_index++;
@@ -401,16 +461,25 @@ void StatementState::parseInsertInSpecialization(Parser& parser, FragmentNode& f
         }
     }
 
-    if (insert_it != children.end()) {
-        children.insert(insert_it, std::make_move_iterator(new_nodes.begin()), std::make_move_iterator(new_nodes.end()));
-    } else {
-        throw std::runtime_error("Could not find insertion point for insert specialization.");
+    if (!targetNode) {
+        throw std::runtime_error("Could not find element '" + tagName + "' to modify in specialization.");
     }
-}
 
-// Stub for element modification, which is more complex.
-void StatementState::parseElementModificationInSpecialization(Parser& parser, FragmentNode& fragment) {
-    // To be implemented
+    parser.expectToken(TokenType::OpenBrace);
+    if (parser.currentToken.value == "style") {
+        // Set the context for the StyleBlockState to the node we want to modify
+        ElementNode* originalContext = parser.contextNode;
+        parser.contextNode = targetNode;
+
+        StyleBlockState styleState;
+        styleState.handle(parser);
+
+        // Restore the original context
+        parser.contextNode = originalContext;
+    } else {
+        throw std::runtime_error("Only 'style' blocks are supported in element modification for now.");
+    }
+    parser.expectToken(TokenType::CloseBrace);
 }
 
 
