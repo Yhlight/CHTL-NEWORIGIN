@@ -53,7 +53,7 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
 
 void Parser::parseTemplateDefinition() {
     expectToken(TokenType::OpenBracket);
-    expectKeyword(TokenType::Identifier, "KEYWORD_TEMPLATE", "Template");
+    expectToken(TokenType::Template);
     expectToken(TokenType::CloseBracket);
 
     if (currentToken.type != TokenType::At) {
@@ -121,53 +121,6 @@ void Parser::expectToken(TokenType type) {
     }
 }
 
-bool Parser::tryExpectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue) {
-    const auto& aliases = configManager.getKeywordAliases(internalName);
-
-    if (!aliases.empty()) {
-        // User has defined aliases. Check only against them.
-        for (const auto& alias : aliases) {
-            if (currentToken.value == alias) {
-                advanceTokens();
-                return true;
-            }
-        }
-        // If aliases are defined, we don't fall back to the default string value.
-        return false;
-    }
-
-    // No aliases defined. Check against the default string value.
-    if (currentToken.value == defaultValue) {
-        advanceTokens();
-        return true;
-    }
-    // As a final fallback for non-string-based tokens, check the token type.
-    if (currentToken.type == type) {
-        advanceTokens();
-        return true;
-    }
-
-    return false;
-}
-
-void Parser::expectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue) {
-    if (!tryExpectKeyword(type, internalName, defaultValue)) {
-        const auto& aliases = configManager.getKeywordAliases(internalName);
-        std::string expectedMessage;
-        if (!aliases.empty()) {
-            std::stringstream ss;
-            ss << "one of [";
-            for (size_t i = 0; i < aliases.size(); ++i) {
-                ss << "'" << aliases[i] << "'" << (i < aliases.size() - 1 ? ", " : "");
-            }
-            ss << "]";
-            expectedMessage = ss.str();
-        } else {
-            expectedMessage = "'" + defaultValue + "'";
-        }
-        throw std::runtime_error("Unexpected token: '" + currentToken.value + "'. Expected keyword " + expectedMessage + ".");
-    }
-}
 
 std::string Parser::getCurrentNamespace() const {
     if (namespaceStack.empty()) {

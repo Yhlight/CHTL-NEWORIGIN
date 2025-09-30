@@ -2,8 +2,7 @@
 
 #include <string>
 #include <vector>
-#include "../Scanner/UnifiedScanner.h"
-#include "../CodeMerger/CodeMerger.h"
+#include "../FragmentScanner/FragmentScanner.h"
 #include "CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.h"
 #include "CompilationResult.h"
 
@@ -20,7 +19,6 @@ public:
     );
 
 private:
-    UnifiedScanner scanner;
-    CodeMerger merger;
+    // The CHTL JS Compiler is kept as it processes fragments.
     CHTLJSCompiler chtl_js_compiler;
 };

@@ -82,62 +82,66 @@ CompilationResult CompilerDispatcher::compile(
     const std::string& css_output_filename,
     const std::string& js_output_filename
 ) {
-    // 1. Scan the source to separate CHTL from other languages
-    ScannedOutput scanned_output = scanner.scan(source);
+    // 1. Scan the source to get a vector of typed code fragments.
+    FragmentScanner scanner(source);
+    std::vector<CodeFragment> fragments = scanner.scan();
 
-    // 2. Initialize CSS and JS content strings
-    std::string css_content;
+    // 2. Initialize content buffers and separate CHTL from other fragments.
+    std::string chtl_source;
+    std::stringstream css_content_stream;
     std::stringstream js_content_stream;
-    std::map<std::string, std::string> placeholder_contents;
+    std::vector<CodeFragment> non_chtl_fragments;
 
-    // 3. Compile the main CHTL content first to populate managers
-    Lexer lexer(scanned_output.chtl_with_placeholders);
+    for (const auto& fragment : fragments) {
+        if (fragment.type == FragmentType::CHTL) {
+            chtl_source += fragment.content;
+        } else {
+            non_chtl_fragments.push_back(fragment);
+        }
+    }
+
+    // 3. Compile the main CHTL content. This builds the AST and populates
+    //    the necessary managers and contexts (e.g., for templates, CJMODs).
+    Lexer lexer(chtl_source);
     Parser parser(lexer, source_path);
     parser.outputHtml5Doctype = default_struct;
     auto ast = parser.parse();
 
-    // 4. Process all fragments from the scanner
-    for (const auto& pair : scanned_output.fragments) {
-        const std::string& placeholder = pair.first;
-        const CodeFragment& fragment = pair.second;
-
+    // 4. Process the non-CHTL fragments now that the parser context is available.
+    for (const auto& fragment : non_chtl_fragments) {
         switch(fragment.type) {
             case FragmentType::CSS:
-                css_content += fragment.content + "\n";
+                css_content_stream << fragment.content << "\n";
                 break;
             case FragmentType::JS:
                 js_content_stream << fragment.content << "\n";
-                placeholder_contents[placeholder] = fragment.content;
                 break;
             case FragmentType::CHTL_JS: {
+                // The CHTL_JS compiler needs the CJMODManager from the main parser.
                 std::string compiled_js = chtl_js_compiler.compile(fragment.content, parser.cjmodManager);
                 js_content_stream << compiled_js << "\n";
-                placeholder_contents[placeholder] = compiled_js;
                 break;
             }
-            case FragmentType::CHTL:
-                // For CHTL fragments (e.g., from style blocks), the placeholder
-                // is left in the AST to be handled by the CHTL expression evaluator.
-                // The merger will just put the raw CHTL back.
-                placeholder_contents[placeholder] = fragment.content;
+            default: // Should not happen
                 break;
         }
     }
 
-    // 5. Generate and prepend runtime script if needed
+    // 5. Generate the runtime script needed for dynamic features from the parser's context.
     std::string runtime_script = generateRuntimeScript(parser.sharedContext);
     if (!runtime_script.empty()) {
         js_content_stream.str(runtime_script + js_content_stream.str());
     }
 
-    // 6. Add any CSS hoisted from local style blocks by the parser
-    css_content += parser.globalStyleContent;
+    // 6. Add any CSS that was hoisted from local style blocks by the CHTL parser.
+    css_content_stream << parser.globalStyleContent;
 
-    // 7. Generate the HTML. The generator no longer handles inlining.
+    // 7. Generate the final HTML. The Generator is now the single source of truth for
+    //    handling inlining and linking external files. No more placeholder merging.
     Generator generator;
-    std::string html_with_placeholders = generator.generate(
+    std::string final_html = generator.generate(
         ast,
-        css_content,
+        css_content_stream.str(),
         js_content_stream.str(),
         parser.sharedContext,
         default_struct,
@@ -147,28 +151,10 @@ CompilationResult CompilerDispatcher::compile(
         js_output_filename
     );
 
-    // 8. Use the CodeMerger to substitute all placeholders recursively.
-    std::string final_html = merger.merge(html_with_placeholders, placeholder_contents);
-
-    // 9. If inlining, inject the final CSS and JS into the HTML.
-    if (inline_css && !css_content.empty()) {
-        std::string style_tag = "<style>" + css_content + "</style>";
-        size_t head_pos = final_html.find("</head>");
-        if (head_pos != std::string::npos) {
-            final_html.insert(head_pos, style_tag);
-        }
-    }
-    if (inline_js && !js_content_stream.str().empty()) {
-        std::string script_tag = "<script>" + js_content_stream.str() + "</script>";
-        size_t body_pos = final_html.find("</body>");
-        if (body_pos != std::string::npos) {
-            final_html.insert(body_pos, script_tag);
-        }
-    }
-
+    // 8. Prepare and return the final compilation result.
     CompilationResult result;
     result.html_content = final_html;
-    result.css_content = css_content;
+    result.css_content = css_content_stream.str();
     result.js_content = js_content_stream.str();
 
     return result;

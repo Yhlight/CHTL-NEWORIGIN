@@ -59,6 +59,10 @@ Token Lexer::identifier() {
         value += advance();
     }
 
+    if (value == "text") return {TokenType::Text, value, line, startCol, startPos};
+    if (value == "style") return {TokenType::Style, value, line, startCol, startPos};
+    if (value == "script") return {TokenType::Script, value, line, startCol, startPos};
+    if (value == "Template") return {TokenType::Template, value, line, startCol, startPos};
     if (value == "inherit") return {TokenType::Inherit, value, line, startCol, startPos};
     if (value == "Origin") return {TokenType::Origin, value, line, startCol, startPos};
     if (value == "use") return {TokenType::Use, value, line, startCol, startPos};

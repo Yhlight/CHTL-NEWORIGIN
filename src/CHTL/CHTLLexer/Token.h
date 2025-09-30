@@ -65,6 +65,10 @@ enum class TokenType {
     LessThanEquals,    // <=
 
     // Keywords
+    Template,     // Template
+    Text,         // text
+    Style,        // style
+    Script,       // script
     Origin,       // Origin
     Use,          // use
     Namespace,    // Namespace

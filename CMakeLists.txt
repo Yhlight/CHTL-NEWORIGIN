@@ -49,9 +49,8 @@ set(CHTL_SOURCES
     src/CHTL/CHTLState/InfoState.cpp
     src/CHTL/CHTLState/NamespaceState.cpp
     src/CHTL/CHTLStrategy/ElementParsingStrategy.cpp
+    src/FragmentScanner/FragmentScanner.cpp
     src/Dispatcher/CompilerDispatcher.cpp
-    src/Scanner/UnifiedScanner.cpp
-    src/CodeMerger/CodeMerger.cpp
     src/CHTL/Util/ASTUtil.cpp
     src/CHTL/Util/NodeCloner.cpp
     src/CHTL/CHTLManage/CJMODManager.cpp

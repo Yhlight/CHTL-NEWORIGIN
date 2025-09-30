@@ -37,10 +37,6 @@ public:
 
     void advanceTokens();
     void expectToken(TokenType type);
-    // Expects a keyword, throwing an error if not found. Allows for user-defined aliases.
-    void expectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue);
-    // Tries to match a keyword. Returns true and advances if successful, false otherwise.
-    bool tryExpectKeyword(TokenType type, const std::string& internalName, const std::string& defaultValue);
 
     // A context node for states that need to modify a parent, e.g.,
     // a state for parsing attributes needs to know which element to modify.

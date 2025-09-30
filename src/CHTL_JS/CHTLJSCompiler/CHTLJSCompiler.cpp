@@ -2,8 +2,8 @@
 #include "../CHTLJSParser/CHTLJSParser.h"
 #include "../CHTLJSGenerator/CHTLJSGenerator.h"
 #include "../CHTLJSNode/CHTLJSBaseNode.h"
-#include "../CJMOD/CJMODScanner.h"
-#include "../CJMOD/CJMODResultQueue.h"
+#include "CJMOD/CJMODScanner.h"
+#include "CJMOD/CJMODResultQueue.h"
 #include <regex>
 #include <algorithm>
 
