@@ -101,4 +101,29 @@ TEST_CASE("Core CHTL Feature Parsing and Generation", "[core]") {
         std::string actual_html = chtl_to_html_for_core_test(chtl);
         REQUIRE(normalize_html_for_core_test(actual_html) == expected_html);
     }
+
+    // This test is disabled because the expression evaluator that handles referenced
+    // properties is not yet implemented. It is added here to guide future
+    // development and to be enabled once the evaluator is complete. It will
+    // validate the new descendant and indexed selector logic in the parser.
+    SECTION("Referenced property with descendant selector", "[.disabled]") {
+        std::string chtl = R"(
+            div {
+                id: "box1";
+                div {
+                   class: "inner";
+                   style { width: 250px; }
+                }
+            }
+            div {
+                id: "box2";
+                style {
+                    height: #box1 .inner.width;
+                }
+            }
+        )";
+        std::string expected_html = R"(<div id="box1"><div class="inner" style="width: 250px; "></div></div><div id="box2" style="height: 250px; "></div>)";
+        std::string actual_html = chtl_to_html_for_core_test(chtl);
+        REQUIRE(normalize_html_for_core_test(actual_html) == expected_html);
+    }
 }

@@ -1,91 +1,119 @@
-# CHTL Project: Comprehensive Review and Development Roadmap
+# CHTL Project Code Review Report
 
-## 1. Overall Assessment
+**Date:** 2025-09-30
+**Reviewer:** Jules
 
-The CHTL project is an ambitious undertaking with a remarkably detailed and well-thought-out specification (`CHTL.md`). The codebase reflects this ambition with a strong architectural foundation that aligns with the specification's recommendations, particularly the use of a state-machine parser and distinct components for different language features.
+## 1. Executive Summary
 
-However, the project is in a highly developmental state where the implementation depth is inconsistent. While some components (like the CMOD packer) are surprisingly mature, the most critical enabling technologies are either incomplete or fundamentally misaligned with the specification.
+This report provides a comprehensive review of the CHTL compiler codebase against the specifications outlined in `CHTL.md`.
 
-The single greatest issue preventing progress is the **critical failure of the Unified Scanner**. This component does not function as specified, which creates a cascading failure that blocks the implementation and testing of almost all advanced CHTL and CHTL JS features.
+The project is built upon an **excellent and highly promising architectural foundation**. The separation of concerns into a Lexer, a state-machine Parser, a rich AST, a Visitor-pattern Generator, and a dispatching system is a robust and scalable design. The C++ code is generally clean and well-organized.
 
-This report provides a detailed breakdown of the current state and a prioritized roadmap to guide future development.
+However, the current implementation is at an **early-to-mid stage of development**. While the architecture is in place, the implementation of most of the advanced, high-value features described in the documentation is either missing or incomplete. The system can parse and generate simple CHTL files, but it cannot yet deliver on the full power of the language.
 
-## 2. Build System and Dependencies
+The most critical issue is the **Unified Scanner**, which is currently a simplified stub and does not perform the sophisticated code separation required for the project's core vision.
 
-A major discrepancy exists between the project's documented setup and its build configuration.
+This report will detail the status of each component and feature, and conclude with a prioritized, actionable development roadmap.
 
-*   **Finding:** The `CMakeLists.txt` file is configured to link against pre-built static libraries (`libzippp_static.a`, `libsass.a`, `libqjs.a`) located in the `third-party/prebuilt` directory.
-*   **Discrepancy:** The initial setup instructions involved cloning the source code for these dependencies into `third-party/`. The build system, as it stands, **does not compile these dependencies from source**.
-*   **Recommendation:** A definitive dependency management strategy must be chosen.
-    *   **Option A (Stick with Pre-built - Recommended for Simplicity):** Remove the cloned source directories (`third-party/libzippp`, etc.) to avoid confusion. Document the exact versions and build configurations required to produce the pre-compiled libraries.
-    *   **Option B (Build from Source):** Integrate the cloned libraries into the main CMake build using `add_subdirectory()`. This is more complex but gives full control over the build process and aligns with the user's request to "isolate third-party libraries."
+---
 
-## 3. CHTL Core Compiler: Feature Gap Analysis
+## 2. Component-by-Component Analysis
 
-The core CHTL parser is well-structured but has significant feature gaps.
+### 2.1. CHTL Compiler (`src/CHTL/`)
 
-### 3.1. Strengths (Well-Implemented Features)
+#### **Lexer (`CHTLLexer`)**
+*   **Strengths:** Comprehensive token recognition that correctly handles most operators, comments (including the special `# ` syntax), and keywords.
+*   **Weaknesses:** Contains a **critical bug** in the `number()` function, which is overly greedy and incorrectly tokenizes CSS values with units (e.g., `100px solid` becomes one token). Error reporting is minimal.
+*   **Status:** **Buggy but Functional for Basic Cases.**
 
-*   **Core Parser Architecture:** The state-machine pattern (`ParserState`) is a solid, extensible foundation.
-*   **Basic Syntax:** Standard elements, attributes (`:` and `=`), the `text: "..."` shorthand, and `#` comments are correctly parsed.
-*   **Expression Parsing:** The delegation of complex style values (e.g., `width: 100px + 50px`) to a dedicated `ExpressionParser` that builds an AST is an excellent and robust design.
-*   **Responsive Values (`$var$`):** The parsing and registration of responsive values for both attributes and style properties is functional.
-*   **Constraints (`except`):** The `except` keyword is correctly parsed, and its various forms are recognized.
+#### **Parser (`CHTLParser`)**
+*   **Strengths:** Excellent state-machine architecture that is modular and extensible. Correctly handles basic element structures, attributes, namespaces, and customizable keywords via the `ConfigurationManager`.
+*   **Weaknesses:** The implementation of advanced features is largely incomplete. The logic for parsing Templates, Customization, and Imports is a stub. The selector-finding logic (`findElementBySelector`) is too basic to support referenced properties.
+*   **Status:** **Partially Implemented.**
 
-### 3.2. Gaps (Partially Implemented or Missing Features)
+#### **AST Nodes (`CHTLNode`)**
+*   **Strengths:** This is a major highlight of the project. The node hierarchy is comprehensive, well-designed, and capable of representing the full CHTL language specification. The use of a `StyleValue` abstraction to handle static, dynamic, and conditional values is particularly powerful and well-conceived.
+*   **Weaknesses:** None identified.
+*   **Status:** **Fully Designed (Implementation of all nodes not verified).**
 
-*   **Local Style Block Selectors (Critical Gap):** The ability to define `.class`, `#id`, and `&` rules inside a local `style` block to be hoisted to a global stylesheet is **non-functional**. The parsing functions (`parseClassOrIdSelector`, etc.) are empty stubs. This is one of the most powerful specified features, and its absence is a major gap.
-*   **Advanced Templates & Customization (Critical Gap):** While basic template definition and usage is implemented, the advanced features that provide real power and flexibility are missing:
-    *   Template inheritance (e.g., `@Style OtherTemplate;` inside a definition).
-    *   Template specialization (the block after a template usage, e.g., `@Element Box { delete div[0]; }`).
-    *   Valueless style groups in `[Custom] @Style`.
-*   **Granular Imports:** The powerful, specific import syntax (e.g., `[Import] [Custom] @Element Box from ...`, wildcard imports) is not implemented. The current system only supports file-level `@Chtl` and `@CJmod` imports.
-*   **Key Directives as Stubs:** The parsing functions for `[Origin]`, `[Namespace]`, and `[Export]` are stubs that consume tokens but do not implement the specified functionality.
+#### **Code Generator (`CHTLGenerator`)**
+*   **Strengths:** Uses a clean Visitor pattern. Correctly generates the data structures (`DynamicConditionalBinding`) needed for dynamic styles and passes them to the `SharedContext` (the "Salt Bridge"). Handles output flexibility (inlining vs. external files) well.
+*   **Weaknesses:** Key functionality is missing. It lacks handlers for `ConditionalNode` and `ScriptNode`. Most importantly, it does not generate the client-side JavaScript runtime needed to make the dynamic features work. There is a significant integration bug where it produces data for dynamic styles, but the `Dispatcher`'s runtime is built for responsive values.
+*   **Status:** **Partially Implemented.**
 
-## 4. Advanced Ecosystem: CHTL JS and Modules
+### 2.2. Core Infrastructure
 
-The state of the advanced ecosystem components is highly varied.
+#### **Unified Scanner (`src/Scanner/`)**
+*   **Strengths:** The brace-matching algorithm (`find_matching_brace`) is excellent, correctly handling strings and comments to avoid errors.
+*   **Weaknesses:** This is the **most critical weakness** of the project. The current implementation is a non-recursive, simplified stub that cannot handle the nested, mixed-language code that is a core promise of CHTL. The regex used to find CHTL features inside `style` blocks is inadequate and misses most of the specified syntax.
+*   **Status:** **Not Implemented (Stub only).**
 
-### 4.1. CMOD Packer (Strength)
+#### **Compiler Dispatcher (`src/Dispatcher/`)**
+*   **Strengths:** A well-designed orchestrator that correctly implements the high-level compilation pipeline. Contains an excellent, self-contained `generateRuntimeScript` function for the `$variable$` responsive value feature.
+*   **Weaknesses:** Suffers from a critical integration bug: the runtime it generates (for responsive values) does not match the data produced by the `CHTLGenerator` (for dynamic conditional styles). It also does not integrate with any external CSS/JS compilers as suggested in the documentation.
+*   **Status:** **Partially Implemented (Integration Bug).**
 
-*   The `cmod_packer` utility is the most complete and well-implemented component in the entire project. It correctly validates the `src/` and `info/` module structure, uses the core parser to analyze all source files, and—most impressively—**automatically generates the `[Export]` block** based on the templates it finds. This is a production-ready tool.
+#### **Code Merger (`src/CodeMerger/`)**
+*   **Strengths:** A simple, efficient, and correctly implemented utility for replacing placeholders in the final HTML.
+*   **Weaknesses:** None identified.
+*   **Status:** **Fully Implemented.**
 
-### 4.2. CHTL JS Parser (Incomplete)
+---
 
-*   The parser has a decent foundation and correctly recognizes the keywords for most CHTL JS features (`Listen`, `Animate`, `Router`, `Vir`, etc.).
-*   However, the implementation is **mostly stubs**. Only `ScriptLoader`, `Listen`, and `Vir` have basic parsing logic. `Animate`, `Router`, `Delegate`, and the event binding operator (`&->`) are completely unimplemented.
-*   Its fundamental design, which expects a single `RawJavaScript` token for callbacks, is a critical flaw that prevents it from handling nested CHTL JS syntax. This is a direct consequence of the scanner's failure.
+## 3. Feature Implementation Status (vs. CHTL.md)
 
-### 4.3. Unified Scanner (Critical Failure)
+| Feature                                | Status                     | Notes                                                                                                         |
+| -------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Core Syntax**                        |                            |                                                                                                               |
+| Basic Element & Attribute Parsing      | **Partially Implemented**  | Works for basic cases.                                                                                        |
+| Comments (`//`, `/**/`, `# `)          | **Fully Implemented**      | Correctly implemented.                                                                                        |
+| Local Style Blocks (`style {}`)        | **Partially Implemented**  | Basic inline styles and attribute generation work.                                                            |
+| **CSS Extensions**                     |                            |                                                                                                               |
+| Attribute Arithmetic (`100px + 5px`)   | **Buggy**                  | The lexer incorrectly parses numbers with units.                                                              |
+| Referenced Properties (`#box.width`)   | **Not Implemented**        | The parser's selector logic is too simple to support this.                                                    |
+| Conditional Properties (`width > 50?`) | **Partially Implemented**  | The Generator creates data for dynamic conditions, but the runtime is missing and static conditions are not handled. |
+| **Templating & Customization**         |                            |                                                                                                               |
+| Templates (`[Template]`)               | **Partially Implemented**  | Parser only handles basic `@Style` templates. No `@Element`, `@Var`, or inheritance.                        |
+| Customization (`[Custom]`)             | **Not Implemented**        |                                                                                                               |
+| **Modularity**                         |                            |                                                                                                               |
+| Imports (`[Import]`)                   | **Not Implemented**        |                                                                                                               |
+| Namespaces (`[Namespace]`)             | **Partially Implemented**  | The parser has a namespace stack, but full resolution is not implemented.                                     |
+| CMOD/CJMOD Modules                     | **Not Implemented**        |                                                                                                               |
+| **CHTL JS & Dynamic Features**         |                            |                                                                                                               |
+| Unified Scanner                        | **Not Implemented**        | The current implementation is a non-recursive stub. **This is a blocker for all CHTL JS features.**         |
+| CHTL JS Syntax (`{{...}}`, `->`)       | **Not Implemented**        |                                                                                                               |
+| Responsive Values (`$var$`)            | **Partially Implemented**  | The Dispatcher generates a great runtime, but the Generator doesn't provide the data for it. (Integration Bug) |
+| Dynamic Conditionals (`if{...}`)       | **Not Implemented**        | No generation logic for this.                                                                                 |
 
-*   This component is the project's **most significant roadblock and requires a complete rewrite**.
-*   **Architectural Mismatch:** The implementation does not function as the initial, global source code separator described in `CHTL.md`. It is a limited tool that only looks for `style` and `script` keywords, rather than processing the entire file first.
-*   **Failed Placeholder Mechanism:** It **does not implement the recursive "black box" placeholder system**. It extracts the *entire* content of a script block and classifies the whole thing as either `JS` or `CHTL_JS`. It fails to parse the content to replace standard JS constructs (like `function() { ... }` or `if() {}`) with placeholders.
-*   **Impact:** Without a functional Unified Scanner, the core premise of CHTL—the seamless integration of multiple languages—is unachievable. The CHTL JS parser and the advanced CSS features are completely blocked by its failure.
+---
 
-## 5. Recommended Development Roadmap
+## 4. Development Roadmap & Recommendations
 
-This roadmap prioritizes fixing foundational issues before implementing new features.
+The following is a prioritized list of actionable recommendations to guide future development.
 
-*   **P0: Decide on Dependency Management Strategy:**
-    1.  Choose between using pre-built libraries or building from source via CMake's `add_subdirectory()`.
-    2.  Update the `CMakeLists.txt` and repository structure accordingly. This must be done before any other development to ensure a stable build environment.
+### **Priority 1: Fix Core Blockers**
+*These issues must be addressed before significant progress can be made on other features.*
 
-*   **P1: Re-architect and Implement the Unified Scanner (Highest Priority):**
-    1.  Rewrite the scanner from scratch to match the architecture specified in `CHTL.md`. It must be the first step in the compilation pipeline, processing the entire raw source file.
-    2.  Implement the recursive placeholder mechanism to correctly isolate CHTL JS from standard JS constructs (`function`, `if`, `for`, etc.) within script blocks.
-    3.  Implement comprehensive scanning for *all* specified CHTL features within global `style` blocks (conditionals, variables, etc.), not just templates and basic arithmetic.
+1.  **Rewrite the `UnifiedScanner`:** This is the highest priority. The scanner must be rewritten to be fully recursive and context-aware, capable of correctly separating nested blocks of CHTL, CHTL JS, CSS, and JS code as envisioned in the documentation.
+2.  **Fix Lexer Number Parsing:** The bug in `CHTLLexer::number()` must be fixed to correctly parse numbers with units without consuming unrelated text.
 
-*   **P2: Complete Core CHTL Features:**
-    1.  With the scanner providing clean CSS, implement the local style block selectors (`.class`, `#id`, `&`) and the logic to hoist them to a global stylesheet.
-    2.  Implement the advanced template and customization features (`inherit`, `delete`, `insert`).
-    3.  Flesh out the stubbed directives (`[Origin]`, `[Namespace]`, `[Export]`).
-    4.  Implement the granular import syntax.
+### **Priority 2: Implement Core Language Features**
+*Once the blockers are cleared, focus on building out the most critical language features.*
 
-*   **P3: Complete CHTL JS Parser:**
-    1.  With a functional scanner providing clean CHTL JS input, implement the full parsing logic for `Animate`, `Router`, `Delegate`, and the event binding operator (`&->`).
-    2.  Refactor the parser to handle nested CHTL JS constructs, which will now be possible.
+1.  **Fix Generator/Dispatcher Integration:** Synchronize the `CHTLGenerator` and `CompilerDispatcher` so that the runtime script generated by the dispatcher correctly handles the dynamic binding data produced by the generator.
+2.  **Implement Full Selector Logic:** Enhance `Parser::findElementBySelector` to support the full range of required selectors (descendant, indexed) to enable Referenced Properties.
+3.  **Implement Full Template System:** Complete the parser logic for `@Element` and `@Var` templates, as well as template inheritance and specialization (`[Custom]`).
+4.  **Implement Static Conditional Rendering:** Add the logic to the `Generator` to handle `ConditionalNode` and correctly render content based on static conditions.
 
-*   **P4: Testing and Integration:**
-    1.  Create dedicated tests for all the newly implemented features, especially for the Unified Scanner.
-    2.  Perform end-to-end integration tests to ensure the entire pipeline (Scanner -> CHTL Compiler -> CHTL JS Compiler -> Code Merger) works as specified in `CHTL.md`.
+### **Priority 3: Build Out the CHTL JS Ecosystem**
+*With a functional core language, the focus can shift to the JavaScript extension.*
+
+1.  **Implement the CHTL JS Compiler:** Build the parser and generator for the CHTL JS syntax.
+2.  **Implement the JavaScript Runtime:** Create the full client-side `__chtl` runtime library that can handle all dynamic features (responsive values, conditional rendering, animations, etc.).
+3.  **Implement the Module System:** Build the CMOD/CJMOD packaging and loading system.
+
+### **Priority 4: Improve Tooling and Developer Experience**
+*These can be worked on incrementally throughout the development process.*
+
+1.  **Enhance Error Reporting:** Improve the lexer and parser to provide more specific, helpful error messages, including line/column numbers and expected syntax.
+2.  **Implement Error Recovery:** Add error recovery mechanisms to the parser so that it can report multiple errors in a single file instead of halting on the first one.

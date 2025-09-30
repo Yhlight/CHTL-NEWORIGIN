@@ -157,3 +157,30 @@ TEST_CASE("CHTL Parser for Style Template", "[CHTLParser]") {
     REQUIRE(bg_color_value != nullptr);
     REQUIRE(bg_color_value->toString() == "red");
 }
+
+TEST_CASE("CHTL Parser for Compound Style Values", "[CHTLParser]") {
+    std::string source = R"(
+        div {
+            style {
+                border: 1px solid black;
+            }
+        }
+    )";
+
+    Lexer lexer(source);
+    Parser parser(lexer, "test.chtl");
+    auto ast = parser.parse();
+
+    REQUIRE(ast.size() == 1);
+    auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+    REQUIRE(div_node != nullptr);
+
+    // Check that the border property was parsed correctly.
+    REQUIRE(div_node->inlineStyles.count("border"));
+    auto* border_value = dynamic_cast<StaticStyleNode*>(div_node->inlineStyles.at("border").get());
+    REQUIRE(border_value != nullptr);
+
+    // This verifies that the parser correctly reconstructed the value from
+    // the tokens "1", "px", "solid", and "black" after the lexer fix.
+    REQUIRE(border_value->toString() == "1px solid black");
+}

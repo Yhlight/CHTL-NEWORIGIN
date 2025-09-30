@@ -4,6 +4,8 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/DynamicStyleNode.h"
 #include "../CHTLNode/StaticStyleNode.h"
+#include "../CHTLNode/ResponsiveValueNode.h"
+#include "../CHTLNode/StyleValue.h"
 #include <stdexcept>
 #include <algorithm>
 #include <set>
@@ -139,25 +141,54 @@ void Generator::generateElement(ElementNode* node) {
     }
 
     std::string styleString;
+    // Ensure the element has an ID if it has any dynamic or responsive properties.
+    bool needsId = false;
+    for (const auto& attrPair : node->attributes) {
+        if (attrPair.second && attrPair.second->getType() == StyleValueType::Responsive) needsId = true;
+    }
+    for (const auto& stylePair : node->inlineStyles) {
+        if (stylePair.second && (stylePair.second->getType() == StyleValueType::Responsive || stylePair.second->getType() == StyleValueType::Dynamic)) needsId = true;
+    }
+    if (needsId && finalAttributeStrings.find("id") == finalAttributeStrings.end()) {
+        finalAttributeStrings["id"] = "chtl-id-" + std::to_string(reinterpret_cast<uintptr_t>(node));
+    }
+
+
+    // Process attributes for responsive bindings
+    for (const auto& attrPair : node->attributes) {
+        if (attrPair.second && attrPair.second->getType() == StyleValueType::Responsive) {
+            auto* responsiveNode = static_cast<ResponsiveValueNode*>(attrPair.second.get());
+            ResponsiveBinding binding;
+            binding.elementId = finalAttributeStrings.at("id");
+            binding.property = attrPair.first;
+            binding.unit = responsiveNode->getUnit();
+            mutableContext->responsiveBindings[responsiveNode->getVariableName()].push_back(binding);
+            // Set initial attribute to empty string
+            finalAttributeStrings[attrPair.first] = "";
+        }
+    }
+
+
     for (const auto& stylePair : node->inlineStyles) {
         if (stylePair.second) {
             if (stylePair.second->getType() == StyleValueType::Dynamic) {
-                // Ensure the element has an ID for the runtime to find it.
-                if (finalAttributeStrings.find("id") == finalAttributeStrings.end()) {
-                    std::string newId = "chtl-id-" + std::to_string(reinterpret_cast<uintptr_t>(node));
-                    finalAttributeStrings["id"] = newId;
-                }
                 const std::string& elementId = finalAttributeStrings.at("id");
-
                 DynamicConditionalBinding binding;
                 binding.targetElementId = elementId;
                 binding.targetProperty = "style." + stylePair.first;
-
                 auto* dynamicNode = static_cast<DynamicStyleNode*>(stylePair.second.get());
                 binding.expression = generateExpressionString(dynamicNode->expressionAst.get());
-
                 mutableContext->dynamicConditionalBindings.push_back(binding);
-            } else {
+            } else if (stylePair.second->getType() == StyleValueType::Responsive) {
+                auto* responsiveNode = static_cast<ResponsiveValueNode*>(stylePair.second.get());
+                ResponsiveBinding binding;
+                binding.elementId = finalAttributeStrings.at("id");
+                binding.property = "style." + stylePair.first;
+                binding.unit = responsiveNode->getUnit();
+                mutableContext->responsiveBindings[responsiveNode->getVariableName()].push_back(binding);
+                // Don't add to static style string, runtime will handle it.
+            }
+            else {
                 // It's a static style, so add it to the style string.
                 styleString += stylePair.first + ": " + stylePair.second->toString() + "; ";
             }

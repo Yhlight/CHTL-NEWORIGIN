@@ -138,9 +138,12 @@ Token Lexer::number() {
             value += advance();
         }
     }
-    while (isalpha(peek()) || peek() == '%') {
-        value += advance();
-    }
+    // The logic to consume units (e.g., "px", "%") has been removed.
+    // This was causing a bug where "100pxsolid" would be tokenized as a single,
+    // invalid number. Now, "100" will be a Number token, and a unit like "px"
+    // will be a subsequent Identifier token. This is a cleaner separation of
+    // concerns, making the lexer more robust. The parser will be updated to
+    // handle a number followed by a unit identifier.
     return {TokenType::Number, value, line, startCol, startPos};
 }
 

@@ -72,34 +72,59 @@ void StyleBlockState::parseInlineProperty(Parser& parser) {
 }
 
 std::unique_ptr<StyleValue> StyleBlockState::parseStyleExpression(Parser& parser) {
-    // 1. Collect the raw string for the expression.
-    // We read tokens from the main CHTL lexer until we hit a terminator.
-    std::stringstream ss;
-    size_t start_pos = parser.currentToken.start_pos;
-    size_t end_pos = start_pos;
-
+    // 1. Collect tokens until a terminator. This is more robust than grabbing a raw substring
+    // and correctly handles the lexer's new behavior of separating numbers from units.
+    std::vector<Token> valueTokens;
     while (!isStyleValueTerminator(parser.currentToken.type)) {
-        end_pos = parser.currentToken.start_pos + parser.currentToken.value.length();
+        valueTokens.push_back(parser.currentToken);
         parser.advanceTokens();
     }
-    std::string expression_string = parser.lexer.getSource().substr(start_pos, end_pos - start_pos);
+
+    if (valueTokens.empty()) {
+        throw std::runtime_error("Expected a value for the style property.");
+    }
+
+    // 2. Reconstruct the expression string and check for operators.
+    std::stringstream expression_ss;
+    bool hasOperator = false;
+    for (size_t i = 0; i < valueTokens.size(); ++i) {
+        const auto& token = valueTokens[i];
+        expression_ss << token.value;
+
+        if (i < valueTokens.size() - 1) {
+            const auto& nextToken = valueTokens[i+1];
+            bool isUnit = (nextToken.type == TokenType::Identifier || nextToken.type == TokenType::Percent);
+            if (token.type != TokenType::Number || !isUnit) {
+                 expression_ss << " ";
+            }
+        }
+        if (token.type == TokenType::Plus || token.type == TokenType::Minus || token.type == TokenType::Asterisk ||
+            token.type == TokenType::Slash || token.type == TokenType::QuestionMark) {
+            hasOperator = true;
+        }
+    }
+    std::string expression_string = expression_ss.str();
     trim(expression_string);
 
-    // 2. Check for the simple case: a static value with no operators.
-    // This is a temporary optimization. A more robust solution might parse all values.
-    if (expression_string.find_first_of("+*-/<>?&|") == std::string::npos) {
-        // Also check for responsive values
-        if (expression_string.front() == '$' && expression_string.back() == '$') {
-            std::string varName = expression_string.substr(1, expression_string.length() - 2);
-            return std::make_unique<ResponsiveValueNode>(varName, ""); // Note: Unit handling needs refinement
+    // 3. If there are no complex operators, treat it as a static or responsive value.
+    if (!hasOperator) {
+        // Check for responsive values, e.g., $myVar$ or $myVar$px
+        if (valueTokens.size() > 2 && valueTokens[0].type == TokenType::Dollar && valueTokens[2].type == TokenType::Dollar) {
+            if (valueTokens.size() == 3) {
+                // Case: $myVar$
+                return std::make_unique<ResponsiveValueNode>(valueTokens[1].value, "");
+            }
+            if (valueTokens.size() == 4 && valueTokens[3].type == TokenType::Identifier) {
+                // Case: $myVar$px
+                return std::make_unique<ResponsiveValueNode>(valueTokens[1].value, valueTokens[3].value);
+            }
         }
         return std::make_unique<StaticStyleNode>(expression_string);
     }
 
-    // 3. If it's a complex expression, use the new ExpressionParser.
+    // 4. If it's a complex expression, use the ExpressionParser.
     ExpressionLexer expressionLexer(expression_string);
     std::vector<ExpressionToken> expressionTokens = expressionLexer.tokenize();
-
     ExpressionParser expressionParser(expressionTokens);
     std::unique_ptr<ExpressionBaseNode> expressionAst = expressionParser.parse();
 

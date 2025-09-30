@@ -74,15 +74,35 @@ void Parser::parseTemplateDefinition() {
             expectToken(TokenType::Identifier);
             expectToken(TokenType::Colon);
 
-            // This is a simplified value parser. A more robust implementation
-            // would delegate to a state or a dedicated value-parsing function.
-            std::string propertyValue;
-            if (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::Number) {
-                propertyValue = currentToken.value;
+            // This is the new, robust value parser. It collects all tokens for a value
+            // until a semicolon and then reconstructs the value string. This correctly
+            // handles multi-token values like "16px" or "1px solid black" which are
+            // now produced by the updated lexer.
+            std::vector<Token> valueTokens;
+            while (currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::CloseBrace && currentToken.type != TokenType::EndOfFile) {
+                valueTokens.push_back(currentToken);
                 advanceTokens();
-            } else {
-                throw std::runtime_error("Expected a simple literal value in style template definition.");
             }
+
+            if (valueTokens.empty()) {
+                throw std::runtime_error("Expected a value for the style property in template definition.");
+            }
+
+            std::stringstream value_ss;
+            for (size_t i = 0; i < valueTokens.size(); ++i) {
+                const auto& token = valueTokens[i];
+                value_ss << token.value;
+
+                // Add a space unless it's a number followed by a unit-like identifier.
+                if (i < valueTokens.size() - 1) {
+                    const auto& nextToken = valueTokens[i+1];
+                    bool isUnit = (nextToken.type == TokenType::Identifier || nextToken.type == TokenType::Percent);
+                    if (token.type != TokenType::Number || !isUnit) {
+                         value_ss << " ";
+                    }
+                }
+            }
+            std::string propertyValue = value_ss.str();
 
             expectToken(TokenType::Semicolon);
 
@@ -190,39 +210,78 @@ ElementNode* Parser::findElementBySelector(const std::string& selector) {
     return findElementRecursive(selector, *parsedNodes);
 }
 
+// This is the new, enhanced implementation of the recursive selector search.
+// It now supports descendant selectors (e.g., ".container div") and
+// indexed access (e.g., "div[1]").
 ElementNode* Parser::findElementRecursive(const std::string& selector, const std::vector<std::unique_ptr<BaseNode>>& nodes) {
+    std::stringstream ss(selector);
+    std::string segment;
+    std::vector<std::string> segments;
+    while (ss >> segment) {
+        segments.push_back(segment);
+    }
+
+    std::vector<ElementNode*> current_matches;
     for (const auto& node : nodes) {
         if (node->getType() == NodeType::Element) {
-            auto* element = static_cast<ElementNode*>(node.get());
-            bool match = false;
-            if (selector[0] == '#') {
-                auto it = element->attributes.find("id");
-                if (it != element->attributes.end() && it->second->toString() == selector.substr(1)) {
-                    match = true;
-                }
-            } else if (selector[0] == '.') {
-                auto it = element->attributes.find("class");
-                if (it != element->attributes.end() && it->second->toString() == selector.substr(1)) {
-                    match = true;
-                }
-            } else {
-                if (element->tagName == selector) {
-                    match = true;
-                }
-            }
-
-            if (match) {
-                return element;
-            }
-
-            // If not a match, search children
-            ElementNode* found_in_children = findElementRecursive(selector, element->children);
-            if (found_in_children) {
-                return found_in_children;
-            }
+            current_matches.push_back(static_cast<ElementNode*>(node.get()));
         }
     }
-    return nullptr;
+
+    for (const auto& seg : segments) {
+        std::vector<ElementNode*> next_matches;
+        std::string tag_or_class_or_id = seg;
+        int index = -1;
+
+        // Check for indexed access, e.g., "div[1]"
+        size_t bracket_pos = seg.find('[');
+        if (bracket_pos != std::string::npos) {
+            tag_or_class_or_id = seg.substr(0, bracket_pos);
+            std::string index_str = seg.substr(bracket_pos + 1, seg.find(']') - bracket_pos - 1);
+            try {
+                index = std::stoi(index_str);
+            } catch (const std::invalid_argument& e) {
+                // Handle error: invalid index format
+                return nullptr;
+            }
+        }
+
+        std::vector<ElementNode*> segment_found_nodes;
+        for (auto* element : current_matches) {
+            // Search direct children for matches
+            for (const auto& child_node : element->children) {
+                 if (child_node->getType() == NodeType::Element) {
+                    auto* child_element = static_cast<ElementNode*>(child_node.get());
+                    bool match = false;
+                    if (tag_or_class_or_id[0] == '#') {
+                        auto it = child_element->attributes.find("id");
+                        if (it != child_element->attributes.end() && it->second->toString() == tag_or_class_or_id.substr(1)) match = true;
+                    } else if (tag_or_class_or_id[0] == '.') {
+                        auto it = child_element->attributes.find("class");
+                        if (it != child_element->attributes.end() && it->second->toString() == tag_or_class_or_id.substr(1)) match = true;
+                    } else {
+                        if (child_element->tagName == tag_or_class_or_id) match = true;
+                    }
+                    if(match) segment_found_nodes.push_back(child_element);
+                 }
+            }
+        }
+
+        if (index != -1) {
+            if (index >= 0 && index < segment_found_nodes.size()) {
+                next_matches.push_back(segment_found_nodes[index]);
+            }
+        } else {
+            next_matches = segment_found_nodes;
+        }
+
+        current_matches = next_matches;
+        if (current_matches.empty()) {
+            return nullptr; // No match found for this segment
+        }
+    }
+
+    return current_matches.empty() ? nullptr : current_matches.front();
 }
 
 

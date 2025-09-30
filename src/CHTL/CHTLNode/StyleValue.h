@@ -5,7 +5,8 @@
 
 enum class StyleValueType {
     Static,
-    Dynamic
+    Dynamic,
+    Responsive
 };
 
 class StyleValue {
