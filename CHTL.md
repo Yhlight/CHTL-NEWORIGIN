@@ -1280,8 +1280,9 @@ CHTL JS是CHTL项目的扩展语法(不是CHTL的JS，而是CHTL项目能够使�
 CHTL JS完全独立于JS，是一门独立的编程语言，与JS毫无关系，只是最终转变为JS代码  
 JS的语法由CHTL内置的JS编译器解析，CHTL JS的语法由CHTL JS编译器解析  
 两者之间并不兼容，CHTL JS的语法是CHTL JS编译器的扩展语法  
-CHTL JS的实现依赖于统一扫描器，在实现CHTL JS编译器之前，你应该查阅后续的统一扫描器的说明，以及静态环境与运行时代码的说明  
 这些是你正确实现CHTL JS的基础，请不要试图让CHTL JS去解析JS代码  
+
+CHTL JS使用独立的编译器
 
 CHTL JS的函数皆为声明式语法  
 均支持无序键值对，可选键值对，无修饰字面量  
@@ -1917,12 +1918,12 @@ CMOD和CJMOD文件夹内部实际使用的是标准的CMOD和CJMOD的组织方�
 ###### 进度条
 
 ##### CJMOD
-###### printMylove
-printMylove可以将一张图片变成字符像素块的形式，你可以使用printMylove来把图片转换成字符像素块或ASCII的形式  
+###### PrintMylove
+PrintMylove可以将一张图片变成字符像素块的形式，你可以使用PrintMylove来把图片转换成字符像素块或ASCII的形式
 然后输出到控制台  
 支持无序键值对，可选键值对，无修饰字面量  
 ```chtl
-const str = printMylove {
+const str = PrintMylove {
     url: ,
     mode: ,  // 模式可以选择ASCII或Pixel
     width: ,  // 宽度，支持的单位有CSS单位以及百分比，小数，纯数字(像素)
@@ -1931,14 +1932,14 @@ const str = printMylove {
 };
 ```
 
-###### iNeverAway
-iNeverAway是一个很特别的功能，从名称上面你完全是理解不到这个功能的实际作用的 iNeverAway用于创建一组标记函数  
-iNeverAway与其他CHTL JS功能不同，它允许开发者定义键，而不是使用键，并可以使用状态区分同名的键  
-iNeverAway需要与虚对象共用  
+###### INeverAway
+INeverAway是一个很特别的功能，从名称上面你完全是理解不到这个功能的实际作用的 INeverAway用于创建一组标记函数
+INeverAway与其他CHTL JS功能不同，它允许开发者定义键，而不是使用键，并可以使用状态区分同名的键
+INeverAway需要与虚对象共用
 支持无序键值对，可选键值对，无修饰字面量  
 
 ```chtl
-Vir Test = iNeverAway {
+Vir Test = INeverAway {
     Void<A>: function(int, int) {
 
     },
@@ -1961,20 +1962,20 @@ Test->Void<A>();
 Test是虚拟对象，是不存在的对象，这里并没有创建一个对象  
 
 实现原理：  
-iNeverAway  ->  创建一组JS全局函数，名称由CHTL编译器统一管理，在调用时才生成对应的JS函数代码  
+INeverAway  ->  创建一组JS全局函数，名称由CHTL编译器统一管理，在调用时才生成对应的JS函数代码
 Vir对象本身不存在，最终转变成相对应的函数的引用  
 
-iNeverAway函数存在的意义其实很迷惑人，这是因为相对于使用iNeverAway，更多人更喜欢使用普通的函数  
-这是当然，毕竟iNeverAway存在的意义本身就不是作为实用功能而存在，然而，iNeverAway其实是CHTL JS的一种新方向  
+INeverAway函数存在的意义其实很迷惑人，这是因为相对于使用INeverAway，更多人更喜欢使用普通的函数
+这是当然，毕竟INeverAway存在的意义本身就不是作为实用功能而存在，然而，INeverAway其实是CHTL JS的一种新方向
 也是对函数重载的重定义  
 
-###### util...then表达式
+###### util...end表达式
 
-util 表达式 -> change { 条件变化时 } -> then { 条件完成时 }
+util 表达式 -> change { 条件变化时 } -> end { 条件完成时 }
 
-util a > b -> change print("发生变化") -> then print("a > b");  // 单行语句情况下，change条件可以不写分号
-util a > b -> change print("发生变化"); -> then print("a > b");
-util a < b -> change {print("发生变化");} -> then {print("a < b");}  // 多行代码下，无论如何都要以分号结束
+util a > b -> change print("发生变化") -> end print("a > b");  // 单行语句情况下，change条件可以不写分号
+util a > b -> change print("发生变化"); -> end print("a > b");
+util a < b -> change {print("发生变化");} -> end {print("a < b");}  // 多行代码下，无论如何都要以分号结束
 
 #### Yuigahama 由比滨结衣模块
 由比滨结衣模块使用CMOD
@@ -2010,6 +2011,8 @@ util a < b -> change {print("发生变化");} -> then {print("a < b");}  // 多�
 CJmod与Cmod采用相同的路径搜索策略。  
 
 ## 项目结构建议
+由于CHTL项目的复杂性，我们强烈建议使用状态机(state) + 策略模式模式(Strategy)来组织CHTL项目
+
 ```chtl
 CHTL(项目文件夹，可以换成src)
     -CHTL(CHTL编译器)
@@ -2021,6 +2024,7 @@ CHTL(项目文件夹，可以换成src)
         -CHTLNode(内含BaseNode文件，ElementNode，TextNode，CommentNode，TemplateNode，CustomNode，StyleNode，ScriptNode，OriginNode，ImportNode，ConfigNode，NamespaceNode，OperatorNode(delete，insert，use...)等文件)
         -CHTLParser
         -CHTLState
+        -CHTLStrategy
 	    -CHTLIOStream(如果需要IO流)
         -CMODSystem
 
@@ -2033,6 +2037,7 @@ CHTL(项目文件夹，可以换成src)
         -CHTLJSNode(CHTLJSBaseNode等CHTL JS节点)
         -CHTLJSParser
         -CHTLJSState
+        -CHTLJSStrategy
 	    -CHTLJSIOStream(如果需要IO流)
         -CJMODSystem
 
@@ -2040,11 +2045,7 @@ CHTL(项目文件夹，可以换成src)
 
     -JS
 
-    -Scanner
-
-    -CodeMerger
-
-    -CompilerDispatcher
+    -SharedCore(盐桥，共享CHTL和CHTL JS的数据)
 
     -ThirdParty
 
@@ -2062,40 +2063,16 @@ CHTL(项目文件夹，可以换成src)
 ```
 
 ## 项目流程
-┌─────────────────────────────────────────────────────────────────┐
-│                         CHTL源代码                               │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CHTLUnifiedScanner                           │
-│                   (精准代码切割器)                               │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              ▼
-        ┌──────────────┬──────────────┬──────────────┬────────────┐
-        │   CHTL片段   │ CHTL JS片段  │   CSS片段    │   JS片段   │
-        └──────┬───────┴──────┬───────┴──────┬───────┴──────┬─────┘
-               │              │              │              │
-               ▼              ▼              ▼              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    CompilerDispatcher                           │
-│                   (编译器调度器)                                 │
-└──────┬──────────────┬──────────────┬──────────────┬────────────┘
-                     
-                    ┌─────────────┐ ┌─────────────┐
-                    │    CHTL     │ │   CHTL JS   │
-                    │  Compiler   │ │  Compiler   │
-                    │  (手写)     │ │  (手写)      │
-                    └─────────────┘ └─────────────┘
-                        │              │
-                        └──────────────┴
-                              ▼ 
-                    ┌-------────────-----──┐
-                    |     CodeMerger       |
-                    |     (代码合并器)       |
-                    └──────────------------┘  
+                    ┌─────────────┐                   ┌─────────────┐
+                    │    CHTL     │     盐桥机制       │   CHTL JS   │
+                    │  Compiler   │   <---------->    │  Compiler   │
+                    │  (手写)     │                    │  (手写)      │
+                    └─────────────┘                    └─────────────┘
+                        │                                    │
+                        └──────────────----------------------┴
                             ▼ CHTL和CHTL JS处理后的完整代码
+
+                            ... 借助外部编译器进行语法验证
                     ┌─────────────┐ ┌─────────────┐
                     │     CSS     │ │JavaScript   │
                     │  Compiler   │ │  Compiler   │
@@ -2124,7 +2101,7 @@ CHTL(项目文件夹，可以换成src)
 
 局部样式块允许使用以下语法元素：模板变量，自定义变量，自定义变量特例化，模板样式组，自定义样式组，无值样式组，自定义样式组特例化，delete属性，delete继承，样式组间继承，生成器注释，全缀名，任意类型原始嵌入(原始嵌入可在任意位置使用)，以及通过命名空间引入模板变量，自定义变量，模板样式组，自定义样式组，无值样式组，即from语句  
 
-局部script允许使用以下CHTL语法元素：模板变量，自定义变量组，变量组特例化，命名空间from，注释及任意类型原始嵌入(注释和原始嵌入为特殊存在，可在任意位置使用)，注意{{&}}等CHTL提供给CHTL JS的特供语法属于CHTL本身功能，不应误禁  
+局部script允许使用以下CHTL语法元素：模板变量，自定义变量组，变量组特例化，命名空间from，注释及任意类型原始嵌入(注释和原始嵌入为特殊存在，可在任意位置使用)，{{&}}属于CHTL与CHTL JS的交互语法
 
 ## CJMOD API
 ### 简介
@@ -2264,7 +2241,7 @@ args.transform("pow(" + args[0].value + args[2].value + ")");
 ```
 
 ##### CJMODScanner
-统一扫描器用于CJMOD API的接口  
+特殊的扫描器，用于扫描语法片段
 
 ###### scan
 扫描语法片段，第二参数为扫描的关键字  
@@ -2329,19 +2306,19 @@ CHTL JS函数，用于CJMOD API的接口
 
 ```cpp
 CHTLJSFunction func;
-CHTLJSFunction::CreateCHTLJSFunction("printMyLove {url: $!_, mode: $?_}");
+CHTLJSFunction::CreateCHTLJSFunction("PrintMylove {url: $!_, mode: $?_}");
 ```
 
 ```chtl
 script
 {
-    printMyLove({url: "https://www.baidu.com", mode: "auto"});
+    PrintMylove({url: "https://www.baidu.com", mode: "auto"});
 }
 
 天然支持Vir  
 script
 {
-    Vir test = printMyLove({url: "https://www.baidu.com", mode: "auto"});
+    Vir test = PrintMylove({url: "https://www.baidu.com", mode: "auto"});
 }
 ```
 
@@ -2351,425 +2328,182 @@ script
 可以使用bindVirtualObject手动绑定虚对象Vir，获得虚对象的支持  
 
 ```cpp
-Syntax::isCHTLJSFunction("printMyLove {url: $!_, mode: $?_}");  // 输出-> true
-CHTLJSFunction::bindVirtualObject("printMyLove");  // 写函数名称 
+Syntax::isCHTLJSFunction("PrintMylove {url: $!_, mode: $?_}");  // 输出-> true
+CHTLJSFunction::bindVirtualObject("PrintMylove");  // 写函数名称
 ```
 
-### 扫描算法(辅助统一扫描器)
+### 扫描算法
+这是我目前已知的两种可用的扫描算法，如果有更好的算法，建议更换更好的扫描算法
+
 #### 双指针扫描
 CJMOD的代码总是以片段出现，双指针扫描一开始两个指针同时位于0位置  
 然后预先扫描一个片段是否存在关键字，没有就移动前指针到合适的位置  
 然后类似滑动窗口算法同步向前，如果前指针遇到了关键字，就通知后指针准备收集  
 确保语法片段能够成功返回CJMOD，使其正确填充参数  
 
-#### 前置截取
-前置截取是另一种扫描方式，传统扫描器无法处理arg ** arg2这样的语法片段，因为关键字是**  
-前面的片段会被扫描并切分到片段之中，前置截取就要截取回来，避免将语法发送给编译器，引发错误  
-
-上述两个扫描机制都是作为CJMOD提供给统一扫描器的辅助，而不是统一扫描器的根本算法  
-它们应该类似挂件一样，辅助识别  
-
-## 统一扫描器
-### 概述
-统一扫描器是CHTL项目最核心的组件，需要极其精妙的算法来支持  
-这里大概说明一些机制  
-
-统一扫描器不接管CHTL和CHTL JS编译器的工作，它需要做的是分离全局style块和局部script内部允许的部分CHTL语法，以及核心任务，完全分离JS和CHTL JS代码  
-
-统一扫描器负责-> 分离全局style块和局部script内部允许的部分CHTL语法  
-统一扫描器负责-> 完全分离JS和CHTL JS代码  
-你不应该试图使用统一扫描器去取代CHTL，CHTL JS的Lexer  
-这是一个例子  
-
-统一扫描器拿到的CHTL / CHTL JS片段，必须是完整且能够被各自的编译器处理  
-如果指望统一扫描器能够完全分离多门语言，这是不可能的事情  
-统一扫描器的原理一直是依托于针对性处理和边界识别  
-而不是地毯式判断  
-
-假设统一扫描器除了要分离JS，CHTL JS外，现在还需要分离Vue语法了，这样要如何？  
-正统依靠统一扫描器的做法是寻找Vue语法种的特殊语法边界，通过语法边界使用占位符替换Vue语法，并保留边界信息  
-对于语法冲突，例如JS和Vue语法可能会出现相同的边界，则直接针对性覆写 / 特殊处理，直接交给Vue处理，除非完全无法区分，否则完全可控  
-每一套语法都有自己的范式，为此通过语法边界(语法的表达形式)来使用占位符机制替换相关语法，并保留边界信息，这才是统一扫描器需要做的事情  
-
-统一扫描器最终还是为了服务于CHTL和CHTL JS  
-
-#### 可变长度切片与智能扩增
-扫描器需要根据代码切割的位置动态扩增 / 回退，避免截取位置导致的语法边界破坏  
-
-#### 占位符机制
-统一扫描器主要负责完全分离CHTL JS和JS代码，也要对一小部分的CHTL的语法进行负责  
-
-这里专门阐述一下为了完全分离CHTL JS和JS代码，要如何做  
-
-由于CHTL JS不会对符号进行处理，我们可以利用这一个天然的特征，做到忽略占位符和符号，使其不破坏语法边界，实现无痛分离CHTL JS和JS代码  
-
-```chtl
-function test(a,b,c) {
-    return {{a}};
-}
-
-_JS_CODE_PLACEHOLDER_ {
-    _JS_CODE_PLACEHOLDER_ {{a}};
-}
-```
-CHTL JS编译器最终只需要处理{{a}}  
-
-JS的函数啊，对象，CHTL JS会忽略符号，我们可以巧妙利用这一点，将JS代码变为占位符，保留纯CHTL JS以及边界符号  
-
-```chtl
-const a = {{a}};
-
-_JS_CODE_PLACEHOLDER_ {{a}};  // 完全分离JS和CHTL JS代码
-```
-
-无论嵌套多深入，照样能够处理  
-```chtl
-for() {
-    for() {
-        {{a}}
-
-        for() {
-            {{a}}
-        }
-    }
-}
-
-->
-
-_JS_CODE_PLACEHOLDER_ {
-    _JS_CODE_PLACEHOLDER_ {
-        {{a}}
-
-        _JS_CODE_PLACEHOLDER_ {
-            {{a}}
-        }
-    }
-}
-```
-CHTL JS会忽略符号以及占位符，这样就能够完全分离CHTL JS和JS代码了，同时保持CHTL JS代码的边界没有被破坏  
-
-反过来，哪怕CHTL JS内部的JS语法也能够完美分离  
-
-```chtl
-Listen {
-    click: _JS_CODE_PLACEHOLDER_ {
-
-    };
-}
-```
-
-```chtl
-const anim = Animate {
-        target: {{选择器}} || [{{选择器1}}, {{选择器2}}] || DOM对象
-        duration: 100,  // 动画持续时间，ms
-        easing: ease-in-out,  // 缓慢函数
-
-        begin: {  // 起始状态，写css代码
-
-        }
-
-        when: [
-            {
-                at: ,
-                opacity: 0,
-                transform: ,
-            },
-            {
-                at: 0.8;
-            }
-        ]
-
-        end: {
-
-        }
-
-        loop: -1,
-        direction: ,
-        delay:  ,
-        callback: () => {}
-    };
-```
-
-```chtl
-_JS_CODE_PLACEHOLDER_ Animate { 
-    target: {{选择器}} || [{{选择器1}}, {{选择器2}}] || DOM对象
-        duration: 100,  // 动画持续时间，ms
-        easing: ease-in-out,  // 缓慢函数
-
-        begin: {  // 起始状态，写css代码
-
-        }
-
-        when: [
-            {
-                at: ,
-                opacity: 0,
-                transform: ,
-            },
-            {
-                at: 0.8;
-            }
-        ]
-
-        end: {
-
-        }
-
-        loop: -1,
-        direction: ,
-        delay:  ,
-        callback: _JS_CODE_PLACEHOLDER_
- };
-```
-
-->  CHTL JS编译器只需要做好自己的事情就好了  
-
-只需要在代码合并阶段解码占位符即可，CSS和JS编译器都需要接收完整的，纯净的代码  
-
-#### 宽判 严判
-CHTL代码几乎总是以块存在，因此可以收集块来推送给编译器  
-但是有一些特殊的地方，例如全局style中允许的chtl语法，他们也应该被正确分离  
-例如局部script，全局script，局部script允许使用部分chtl语法，完全的chtl js和js语法  
-这意味着分离规则需要特别仔细，而全局script则允许完全的chtl js和js语句  
-因此要做到以chtl和chtl js作为切割的点位  
-如果没有切割到chtl和chtl js这些语法，那么毫无疑问的说，前面绝对是纯净的代码，这就是宽判的由来  
-要做到以正确处理大块的chtl，又做到处理允许的那些chtl语法  
-而chtl js和js相互混杂，chtl js本身具有特殊性，其提供的函数内部甚至可能具有js代码，因此，要做到严判，以最小单元和占位符机制进行处理    
-在处理完毕chtl，chtl js的代码后，毫无疑问，剩下的就是js代码  
-
-### 作用对象
-统一扫描器并不是为了完全分离CHTL，CSS，CHTL JS，JS而存在的体系  
-而是为了从混杂的代码中分离非原生语法  
-
-统一扫描器的作用对象只有两个，全局style块和所有script块  
-在全局style块中允许使用以下CHTL语法 -> 属性运算，属性条件表达式，模板变量，自定义变量，自定义变量特例化，模板样式组，自定义样式组，无值样式组，自定义样式组特例化，delete属性，delete继承，样式组继承，生成器注释，全缀名，任意类型原始嵌入（原始嵌入可在任意位置使用），以及通过命名空间引入模板变量，自定义变量，模板样式组，自定义样式组，无值样式组，即from语法  
-
-显然，这些CHTL功能CSS编译器肯定是无法处理的，为此统一扫描器就要对此进行分离  
-
-局部script允许使用模板变量，自定义变量组，变量组特例化，命名空间from，CHTL JS与JS  
-也就是说，局部script有可能出现三种语言混合的情况  
-统一扫描器就要对此进行分离，分成CHTL，JS，CHTL JS的语法片段  
-
-非局部script因为严禁使用CHTL语法，所有只需要处理CHTL JS和JS两种语言  
-
-然而，这里面最大的难点还是完全分离CHTL JS和JS代码  
-
-### 统一扫描器效果演示
-#### 预留占位符
-在一些情况下，统一扫描器需要与编译器进行交互  
-例如CHTL JS中，很多功能都会内置JS代码，如果只是依靠统一扫描器  
-那么CHTL JS编译器肯定是无法处理  
-
-例如说  
-```chtl
-Listen {
-    click: function() { for }
-}
-
-Listen {
-    click: () => { if }
-}
-```
-开发者无法确定用户将会编写什么代码  
-为此让CHTL JS编译器去推测用户会写什么语法简直不现实  
-因此我们需要预先在代码实现中添加这些占位符，表示CHTL JS编译器不直接处理的语法  
-
-```chtl
-Listen {
-    click: _CODE_PLACEHOLDER_ ,  // 在代码实现时，添加占位符，让CHTL JS编译器不直接处理其中的语法，而是跳过这部分代码，让CHTL JS编译器更加智能，避免因为引入JS语法的可能
-}
-```
-
-```chtl
-Listen {
-    click: () => { {{box}}->textContent = "Hello World"; }
-}
-```
-
-在实际实现中，统一扫描器会将() => { {{box}}->textContent = "Hello World"; }  
-转换为  
-_JS_CODE_PLACEHOLDER_ { {{box}}->_JS_CODE_PLACEHOLDER_ }  
-_CODE_PLACEHOLDER_将作为CHTL JS的占位符节点，存储占位符 + 纯CHTL JS  
-在代码生成的同时，二次处理_CODE_PLACEHOLDER_，将内部的CHTL JS代码转换为JS代码    
-这样，拿到的内容就是最终的JS代码，CHTL JS无需为JS负责，无需试图去解析JS语法  
-
-#### 语法边界与符号的忽略
-在JS中，很多功能都是具有语法边界的，例如函数，类，if-else等基本的结构    
-这些结构通常以块存在，而这些语法边界符号CHTL JS编译器会天然忽略掉  
-通常来说，应该只有{}需要进行保留，保留{}将可能在一些特殊情况下提供帮助  
-而不是把所有内容都归为占位符  
-
-```chtl
-Listen {
-    click: () => { if({{box}}->textContent == "HelloWorld") { console.log({{box}}->textContent) } }
-}
-```
-() => { if({{box}}->textContent == "HelloWorld") { console.log({{box}}->textContent) } }
-转换为  
-
-_JS_CODE_PLACEHOLDER_ {
-    _JS_CODE_PLACEHOLDER_ {{box}}-> _JS_CODE_PLACEHOLDER_ {
-        _JS_CODE_PLACEHOLDER_ {{box}}-> _JS_CODE_PLACEHOLDER_
-    }
-}
-
-#### 黑盒机制
-很显然，CHTL JS不会认识JS代码，不会认识除了CHTL JS语法之外的语法  
-这样，我们就可以放肆地将非CHTL JS的语法的代码块替换为占位符  
-
-```chtl
-((window) => {
-    const Louder = {
-        modules: {},
-        define: function (name, deps, factory) {
-            if (this.modules[name]) return;
-
-            this.modules[name] = {
-                deps,
-                factory,
-                exports: {},
-                initialized: false,
-            };
-        },
-
-        test: {{box}},
-
-        require: function (name) {
-            const mod = this.modules[name];
-            if (!mod) throw new Error(`模块${name}未定义`);
-            if (mod.initialized) return mod.exports;
-
-            mod.initialized = true;
-            const depExports = mod.deps.map(dep => {
-                if (dep === "require") return this.require;
-                if (dep === "exports") return mod.exports;
-                if (dep === "module") return mod;
-                return this.require(dep);
-            });
-
-            mod.factory.apply(null, depExports);
-
-            return mod.exports;
-        }
-    }
-
-    window.Louder = Louder;
-})(window);
-```
-
-上述代码最终变为  
-```chtl
-_JS_CODE_PLACEHOLDER_ {
-    _JS_CODE_PLACEHOLDER_ {
-        _JS_CODE_PLACEHOLDER_ { }
-        _JS_CODE_PLACEHOLDER_ {
-            _JS_CODE_PLACEHOLDER_ {
-                _JS_CODE_PLACEHOLDER_ { }
-                _JS_CODE_PLACEHOLDER_
-            }
-        }
-
-        _JS_CODE_PLACEHOLDER_ {{box}}
-        _JS_CODE_PLACEHOLDER_ {
-            _JS_CODE_PLACEHOLDER_ { }
-            _JS_CODE_PLACEHOLDER_
-        }
-    }
-}_JS_CODE_PLACEHOLDER_
-```
-
-解码得到的就是  
-```chtl
-((window) => {
-    const Louder = {
-        modules: {}
-        ,define: function (name, deps, factory) {
-            if (this.modules[name]) return;
-
-            this.modules[name] = {
-                deps,
-                factory,
-                exports: { }
-                ,initialized: false,
-            }
-
-            ,test: {{box}}
-            ,require: function (name) {
-                const mod = this.modules[name];
-                if (!mod) throw new Error(`模块${name}未定义`);
-                if (mod.initialized) return mod.exports;
-
-                mod.initialized = true;
-                const depExports = mod.deps.map(dep => {
-
-                }
-
-                );
-                mod.factory.apply(null, depExports);
-                return mod.exports;
-            }
-        }
-    }
-})(window);
-```
-
-由此可见，占位符机制更像是一种状态转换的机制  
-
-#### 静态环境与运行时代码
-尽管CHTL和CHTL JS都是在静态的环境，通过编译转换为HTML + CSS + JS代码  
-不具有着运行时的环境，但这并不代表CHTL JS无法支持运行时功能  
-只要JS能够做得到，那么CHTL JS自然也能够支持这些运行时功能  
-例如响应式值就是依靠转换后的代码来实现  
-
-希望不要踏进CHTL / CHTL JS永远也做不到响应式语法的支持的误解  
-
-#### 结束语
-统一扫描器实际上最核心是占位符机制，灵活运用CHTL JS编译器的天然不处理符号的特征，实现不破坏边界的代码分离，实现CHTL JS和JS代码的无痛分离  
-这样才能够真正做到完全分离CHTL和CHTL JS语法  
+#### 动态感知
+例如arg ** arg，识别之后动态识别前后
 
 ## CLI
-CHTL提供了两个CLI工具，分别为常规命令行与命令行程序  
-常规命令行与我们平时使用的cmd，powershell无异，不具备渲染等特征，主打一个简洁  
+CHTL提供了两个CLI工具，分别为常规命令行与命令行程序
+常规命令行与我们平时使用的cmd，powershell无异，不具备渲染等特征，主打一个简洁
 
-命令行程序则支持常规命令行很多不支持的功能，例如画面渲染，RGB，背景图，半透明等  
+命令行程序则支持常规命令行很多不支持的功能，例如画面渲染，RGB，背景图，半透明等
+
+CLI支持事件循环
 
 ### 默认结构
-注意，默认情况下，CHTL编译器不应该提供默认的结构，而是根据用户写了什么内容，生成什么内容  
-这是因为CHTL编译器必须高度支持SPA页面，SPA页面通常不具有结构，尽管生成的结构会被Web处理器忽略，但提供纯净的内容更适合  
-你可以使用编译器指令--default-struct -> 来输出带有默认结构的HTML代码  
+注意，默认情况下，CHTL编译器不应该提供默认的结构，而是根据用户写了什么内容，生成什么内容
+这是因为CHTL编译器必须高度支持SPA页面，SPA页面通常不具有结构，尽管生成的结构会被Web处理器忽略，但提供纯净的内容更适合
+你可以使用编译器指令--default-struct -> 来输出带有默认结构的HTML代码
 
 ### 内联
-默认情况下，CHTL编译后将得到独立的HTML，CSS，JS文件  
-你可以使用--inline指令指示编译器生成内联的HTML文件，而非独立的文件  
---inline指令共有三条  
+默认情况下，CHTL编译后将得到独立的HTML，CSS，JS文件
+你可以使用--inline指令指示编译器生成内联的HTML文件，而非独立的文件
+--inline指令共有三条
 
---inline  
---inline-css  
---inline-js  
+--inline
+--inline-css
+--inline-js
 
 ## VSCode IDE
-CHTL项目推荐使用VSCode IDE  
-VSCode IDE需要满足下述基本要求  
+CHTL项目推荐使用VSCode IDE
+VSCode IDE需要满足下述基本要求
 
-1. 代码高亮  
-2. 代码格式化(JS和CHTL JS使用JS风格代码格式化，其他使用C++风格代码格式化)  
-3. 代码提示  
-4. 页面预览  
-5. 右键浏览器打开  
-6. 右键打开文档  
-7. 右键导出HTML  
-8. 右键导出CSS  
-9. 右键导出JS  
-10. 实时预览  
-11. 内置编译器和官方模块  
-12. 自动模块解包和JSON查询表  
-13. 右键编译  
-14. 解决[]自动补全冲突  
+1. 代码高亮
+2. 代码格式化(JS和CHTL JS使用JS风格代码格式化，其他使用C++风格代码格式化)
+3. 代码提示
+4. 页面预览
+5. 右键浏览器打开
+6. 右键打开文档
+7. 右键导出HTML
+8. 右键导出CSS
+9. 右键导出JS
+10. 实时预览
+11. 内置编译器和官方模块
+12. 自动模块解包和JSON查询表
+13. 右键编译
+14. 解决[]自动补全冲突
 15. 模块语法提示
 
 ### 自动模块解包和JSON查询表
-如果导入的是CMOD模块，则导出[Export]块的内容，并根据此优化性能，提供语法提示，并创建json表    
-如果导入的是CJMOD模块，则根据scan，CHTLJSFunction，analyze这三个函数接收的代码片段，提供语法提示，并创建json表  
+如果导入的是CMOD模块，则导出[Export]块的内容，并根据此优化性能，提供语法提示，并创建json表
+如果导入的是CJMOD模块，则根据scan，CHTLJSFunction，analyze这三个函数接收的代码片段，提供语法提示，并创建json表
 
 ## 编译监视器
-编译计时器能够监视编译器的编译时间和使用内存，必要时杀死程序，防止对开发者的造成可能的危害  
+编译计时器能够监视编译器的编译时间和使用内存，必要时杀死程序，防止对开发者的造成可能的危害
+
+## CHTL委员会第三期-元素行为与条件渲染
+### 行为
+```chtl
+div
+{
+    style
+    {
+
+    }
+
+    script
+    {
+
+    }
+
+    text
+    {
+
+    }
+}
+```
+上述是一个常见的CHTL元素
+它的内部具有style，script，text三个块
+这些块被称为行为
+决定了这个元素具有什么样的特征
+例如style块决定了元素具有什么样式
+script块决定了元素具有什么行为
+text块决定了元素具有什么文本内容
+
+行为是CHTL元素的核心，它控制着CHTL元素的特征，如何显示，如何响应，如何交互
+在默认情况下，行为使用声明块表示，例如style{}，script{}，text{}
+
+如果你想要引入更多的行为，请尽可能使用声明式语法取代程序式语法
+例如if
+
+```cpp
+if(条件表达式)
+{
+    // 条件成立时执行的代码
+} else if(条件表达式)
+{
+    // 条件成立时执行的代码
+} else
+{
+    // 条件不成立时执行的代码
+}
+```
+
+```chtl
+if
+{
+    condition: 与属性相关的条件表达式,
+    // 条件成立时执行的代码，写属性
+    width: 100px,
+    display: block,
+}
+else if
+{
+    condition: 与属性相关的条件表达式,
+    // CSS代码
+}
+else
+{
+    // CSS代码
+}
+```
+
+当然，这只是一种建议，你也完全可以使用原本的程序式语法
+或者两者同时提供
+
+### 条件渲染
+现在，你可以在元素内部定义if块，用于条件渲染
+条件渲染属于静态特征
+
+```chtl
+html
+{
+    head
+    {
+
+    }
+
+    body
+    {
+        if
+        {
+            condition: html.width < 500px,
+            display: none,
+        }
+    }
+}
+```
+
+### 动态条件渲染
+静态条件渲染必然是存在限制的，为此，CHTL JS提供了动态条件渲染
+
+```chtl
+html
+{
+    head
+    {
+
+    }
+
+    body
+    {
+        if
+        {
+            condition: {{html}}.width < 500px,  // 使用动态属性 / 响应式值时，使用动态条件渲染
+            display: none,
+        }
+    }
+}
+```

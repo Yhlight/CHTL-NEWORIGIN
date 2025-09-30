@@ -1,0 +1,36 @@
+# CMake build files
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Compiled binaries and libraries
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+*.out
+
+# Object files
+*.o
+*.obj
+
+# CHTL module artifacts
+*.cmod
+*.cjmod
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Third-party libraries (cloned from git)
+/third-party/
