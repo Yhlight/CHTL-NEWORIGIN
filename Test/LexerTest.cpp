@@ -53,3 +53,14 @@ TEST_CASE("Tokenize Text Block", "[lexer]") {
     REQUIRE(tokens[3].type == CHTL::TokenType::R_BRACE);
     REQUIRE(tokens[3].value == "}");
 }
+
+TEST_CASE("Tokenize Attribute Syntax Characters", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = ":=;";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 3);
+    REQUIRE(tokens[0].type == CHTL::TokenType::COLON);
+    REQUIRE(tokens[1].type == CHTL::TokenType::EQUAL);
+    REQUIRE(tokens[2].type == CHTL::TokenType::SEMICOLON);
+}

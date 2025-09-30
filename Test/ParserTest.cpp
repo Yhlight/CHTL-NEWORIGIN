@@ -81,6 +81,50 @@ TEST_CASE("Parse Mixed Content", "[parser]") {
     REQUIRE(contentNode->getValue() == "Content");
 }
 
+TEST_CASE("Parse Simple Attribute", "[parser]") {
+    std::string input = "div { id: \"my-id\"; }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+    REQUIRE(elementNode->getChildren().empty());
+    REQUIRE(elementNode->getAttributes().size() == 1);
+    REQUIRE(elementNode->getAttribute("id") == "my-id");
+}
+
+TEST_CASE("Parse Attribute with Equal Sign", "[parser]") {
+    std::string input = "div { id = \"my-id\"; }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getAttributes().size() == 1);
+    REQUIRE(elementNode->getAttribute("id") == "my-id");
+}
+
+TEST_CASE("Parse Attribute with Unquoted Literal", "[parser]") {
+    std::string input = "div { class: box; }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getAttributes().size() == 1);
+    REQUIRE(elementNode->getAttribute("class") == "box");
+}
+
 TEST_CASE("Parse Text Node", "[parser]") {
     // 1. Lex the input string
     std::string input = "text { \"Hello, Parser!\" }";

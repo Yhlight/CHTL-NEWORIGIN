@@ -15,7 +15,6 @@ std::unique_ptr<BaseNode> CHTLParser::parse() {
     if (isAtEnd()) {
         return nullptr;
     }
-    // For now, we assume a single statement in the file.
     return parseStatement();
 }
 
@@ -26,38 +25,55 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
         return parseTextStatement();
     }
     if (peek().type == TokenType::IDENTIFIER) {
+        // This could be an element or an attribute. Attributes are only valid
+        // inside an element block, so we assume this is an element.
         return parseElementStatement();
     }
-    // If no known statement pattern is found, advance and ignore.
     advance();
     return nullptr;
 }
 
 std::unique_ptr<BaseNode> CHTLParser::parseTextStatement() {
-    advance(); // Consume 'text' keyword
-
+    advance();
     if (!match({TokenType::L_BRACE})) throw std::runtime_error("Expected '{' after 'text'.");
-
     Token content = advance();
     if (content.type != TokenType::STRING_LITERAL) throw std::runtime_error("Expected string literal inside text block.");
-
     if (!match({TokenType::R_BRACE})) throw std::runtime_error("Expected '}' after text block content.");
-
     return std::make_unique<TextNode>(content.value);
 }
 
-std::unique_ptr<BaseNode> CHTLParser::parseElementStatement() {
-    Token identifier = advance(); // Consume identifier
+void CHTLParser::parseAttributeStatement(ElementNode& owner) {
+    Token key = advance(); // Consume identifier (key)
 
+    if (!match({TokenType::COLON, TokenType::EQUAL})) throw std::runtime_error("Expected ':' or '=' after attribute key.");
+
+    Token value = advance(); // Consume value
+    if (value.type != TokenType::STRING_LITERAL && value.type != TokenType::IDENTIFIER) {
+        throw std::runtime_error("Expected string literal or identifier for attribute value.");
+    }
+
+    if (!match({TokenType::SEMICOLON})) throw std::runtime_error("Expected ';' after attribute value.");
+
+    owner.addAttribute(key.value, value.value);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseElementStatement() {
+    Token identifier = advance();
     if (!match({TokenType::L_BRACE})) throw std::runtime_error("Expected '{' after element identifier.");
 
     auto element = std::make_unique<ElementNode>(identifier.value);
 
-    // Recursively parse child nodes until a '}' is found.
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        auto child = parseStatement();
-        if (child) { // Add the child node if it's not null
-            element->addChild(std::move(child));
+        // Look ahead to see if it's an attribute (IDENTIFIER : or IDENTIFIER =)
+        if (peek().type == TokenType::IDENTIFIER && current + 1 < tokens.size() &&
+            (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
+            parseAttributeStatement(*element);
+        } else {
+            // Otherwise, it's a nested statement (element, text, etc.)
+            auto child = parseStatement();
+            if (child) {
+                element->addChild(std::move(child));
+            }
         }
     }
 

@@ -14,7 +14,10 @@ enum class TokenType {
     COMMENT,
     TEXT_KEYWORD,
     L_BRACE,
-    R_BRACE
+    R_BRACE,
+    COLON,
+    EQUAL,
+    SEMICOLON
 };
 
 class Token {

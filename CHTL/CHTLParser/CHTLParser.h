@@ -8,6 +8,8 @@
 
 namespace CHTL {
 
+class ElementNode; // Forward declaration
+
 class CHTLParser {
 public:
     explicit CHTLParser(std::vector<Token> tokens);
@@ -20,6 +22,7 @@ private:
     std::unique_ptr<BaseNode> parseStatement();
     std::unique_ptr<BaseNode> parseTextStatement();
     std::unique_ptr<BaseNode> parseElementStatement();
+    void parseAttributeStatement(ElementNode& owner);
 
     // Token stream management
     std::vector<Token> tokens;

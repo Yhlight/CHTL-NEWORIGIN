@@ -60,6 +60,24 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
+        if (input[pos] == ':') {
+            tokens.push_back({TokenType::COLON, ":"});
+            pos++;
+            continue;
+        }
+
+        if (input[pos] == '=') {
+            tokens.push_back({TokenType::EQUAL, "="});
+            pos++;
+            continue;
+        }
+
+        if (input[pos] == ';') {
+            tokens.push_back({TokenType::SEMICOLON, ";"});
+            pos++;
+            continue;
+        }
+
         if (input[pos] == '"') {
             std::string::size_type literal_start = pos + 1;
             std::string::size_type literal_end = input.find('"', literal_start);
