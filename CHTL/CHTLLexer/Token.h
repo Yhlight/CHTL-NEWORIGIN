@@ -10,7 +10,11 @@ enum class TokenType {
     UNKNOWN,
     END_OF_FILE,
     IDENTIFIER,
-    STRING_LITERAL
+    STRING_LITERAL,
+    COMMENT,
+    TEXT_KEYWORD,
+    L_BRACE,
+    R_BRACE
 };
 
 class Token {
