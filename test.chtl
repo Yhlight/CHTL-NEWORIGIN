@@ -1,0 +1,28 @@
+# This is a test CHTL file
+html
+{
+    head
+    {
+        title
+        {
+            text
+            {
+                "CHTL Test Page"
+            }
+        }
+    }
+    
+    body
+    {
+        div
+        {
+            id: "main";
+            class: "container";
+            
+            text
+            {
+                "Hello, CHTL World!"
+            }
+        }
+    }
+}
