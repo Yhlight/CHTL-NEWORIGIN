@@ -88,24 +88,12 @@ ScannedOutput UnifiedScanner::scan(const std::string& source) {
             processed_source.append(source, last_pos, i - last_pos);
 
             if (is_style) {
+                // This is the corrected logic. It treats the entire block content as a single CSS fragment.
+                std::string placeholder = "/*_CSS_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "_*/";
                 std::string block_content = source.substr(block_start + 1, block_end - block_start - 1);
-                std::string style_body_processed;
-                std::regex chtl_in_css_regex(R"((@Style\s+[a-zA-Z0-9_]+;)|([\w-]+\s*:\s*[^;]*[+\-*/][^;]*;))");
-
-                auto it_begin = std::sregex_iterator(block_content.begin(), block_content.end(), chtl_in_css_regex);
-                auto it_end = std::sregex_iterator();
-                auto last_suffix_it = block_content.cbegin();
-
-                for (std::sregex_iterator it = it_begin; it != it_end; ++it) {
-                    style_body_processed.append(it->prefix().first, it->prefix().second);
-                    std::string placeholder = "/*_CHTL_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "_*/";
-                    this->output.fragments[placeholder] = {FragmentType::CHTL, it->str()};
-                    style_body_processed += placeholder;
-                    last_suffix_it = it->suffix().first;
-                }
-                style_body_processed.append(last_suffix_it, block_content.cend());
-                processed_source += "style {" + style_body_processed + "}";
-
+                this->output.fragments[placeholder] = {FragmentType::CSS, block_content};
+                // Replace the original content with a placeholder to shield the CHTL parser from it.
+                processed_source += "style {" + placeholder + "}";
             } else { // is_script or is_listen
                 std::string placeholder = "/*_CHTL_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "_*/";
                 if (is_listen) {

@@ -1,0 +1,11 @@
+
+        width: 100px;
+
+
+    .test-class {
+        // These expressions should be evaluated by the new CSSCompiler
+        width: 100.000000px;
+        height: 0.000000;
+        border-width: 5.000000px;
+        padding: 16.000000;
+    }

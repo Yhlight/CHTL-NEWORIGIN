@@ -5,6 +5,7 @@
 #include "../Scanner/UnifiedScanner.h"
 #include "../CodeMerger/CodeMerger.h"
 #include "CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.h"
+#include "CSS/CSSCompiler.h"
 #include "CompilationResult.h"
 
 class CompilerDispatcher {
@@ -23,4 +24,5 @@ private:
     UnifiedScanner scanner;
     CodeMerger merger;
     CHTLJSCompiler chtl_js_compiler;
+    CSSCompiler css_compiler;
 };

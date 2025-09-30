@@ -132,7 +132,7 @@ CompilationResult CompilerDispatcher::compile(
         const CodeFragment& fragment = pair.second;
 
         if (fragment.type == FragmentType::CSS) {
-            css_content += fragment.content + "\n";
+            css_content += css_compiler.compile(fragment.content, parser) + "\n";
         } else if (fragment.type == FragmentType::CHTL_JS) {
             std::string compiled_js = chtl_js_compiler.compile(fragment.content, parser.cjmodManager);
             js_content_stream << compiled_js << "\n";
