@@ -1,6 +1,8 @@
 #include "../catch.hpp"
 #include "../src/CHTL/CHTLLexer/Lexer.h"
 #include "../src/CHTL/CHTLParser/Parser.h"
+#include "../src/CHTL/CHTLManage/TemplateManager.h"
+#include "../src/CHTL/CHTLManage/ConfigurationManager.h"
 #include "../src/CHTL/CHTLNode/ElementNode.h"
 #include "../src/CHTL/CHTLNode/StyleValue.h"
 #include "../src/CHTL/CHTLNode/DynamicStyleNode.h"
@@ -21,11 +23,13 @@ TEST_CASE("CHTL Parser for Dynamic Attribute Conditional Expressions", "[CHTLPar
     )";
 
     Lexer lexer(source);
-    Parser parser(lexer, "test.chtl");
-    auto ast = parser.parse();
+    TemplateManager tm;
+    ConfigurationManager cm;
+    Parser parser(lexer, tm, cm, "test.chtl");
+    parser.parse();
 
-    REQUIRE(ast.size() == 1);
-    auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+    REQUIRE(parser.ast.size() == 1);
+    auto* div_node = dynamic_cast<ElementNode*>(parser.ast[0].get());
     REQUIRE(div_node != nullptr);
 
     REQUIRE(div_node->inlineStyles.count("width"));
@@ -76,11 +80,13 @@ TEST_CASE("CHTL Parser for Reactive Values", "[CHTLParser]") {
     )";
 
     Lexer lexer(source);
-    Parser parser(lexer, "test.chtl");
-    auto ast = parser.parse();
+    TemplateManager tm;
+    ConfigurationManager cm;
+    Parser parser(lexer, tm, cm, "test.chtl");
+    parser.parse();
 
-    REQUIRE(ast.size() == 1);
-    auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+    REQUIRE(parser.ast.size() == 1);
+    auto* div_node = dynamic_cast<ElementNode*>(parser.ast[0].get());
     REQUIRE(div_node != nullptr);
 
     // Test reactive attribute
@@ -129,12 +135,14 @@ TEST_CASE("CHTL Parser for Style Template", "[CHTLParser]") {
     )";
 
     Lexer lexer(source);
-    Parser parser(lexer, "test.chtl");
-    auto ast = parser.parse();
+    TemplateManager tm;
+    ConfigurationManager cm;
+    Parser parser(lexer, tm, cm, "test.chtl");
+    parser.parse();
 
     // The AST should contain the div element, not the template definition.
-    REQUIRE(ast.size() == 1);
-    auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+    REQUIRE(parser.ast.size() == 1);
+    auto* div_node = dynamic_cast<ElementNode*>(parser.ast[0].get());
     REQUIRE(div_node != nullptr);
 
     // The div should have three styles: two from the template and one direct.

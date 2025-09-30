@@ -10,6 +10,8 @@
 #include "../src/CHTL/CHTLLexer/Lexer.h"
 #include "../src/CHTL/CHTLNode/ElementNode.h"
 #include "../src/CHTL/CHTLNode/ScriptNode.h"
+#include "../src/CHTL/CHTLManage/TemplateManager.h"
+#include "../src/CHTL/CHTLManage/ConfigurationManager.h"
 #include <string>
 
 // Helper to remove whitespace for consistent test comparisons
@@ -115,6 +117,9 @@ TEST_CASE("CHTLJS Generator: Delegate", "[chtljs_generator]") {
 }
 
 TEST_CASE("CHTL Parser: Automatic Attribute Injection", "[chtl_parser]") {
+    TemplateManager tm;
+    ConfigurationManager cm;
+
     SECTION("Auto-inject class") {
         std::string source = R"(
             div {
@@ -124,10 +129,10 @@ TEST_CASE("CHTL Parser: Automatic Attribute Injection", "[chtl_parser]") {
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
-        auto nodes = parser.parse();
-        REQUIRE(nodes.size() == 1);
-        auto* element = static_cast<ElementNode*>(nodes[0].get());
+        Parser parser(lexer, tm, cm);
+        parser.parse();
+        REQUIRE(parser.ast.size() == 1);
+        auto* element = static_cast<ElementNode*>(parser.ast[0].get());
         REQUIRE(element->attributes.count("class") == 1);
         REQUIRE(element->attributes.at("class")->toString() == "my-button");
     }
@@ -141,10 +146,10 @@ TEST_CASE("CHTL Parser: Automatic Attribute Injection", "[chtl_parser]") {
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
-        auto nodes = parser.parse();
-        REQUIRE(nodes.size() == 1);
-        auto* element = static_cast<ElementNode*>(nodes[0].get());
+        Parser parser(lexer, tm, cm);
+        parser.parse();
+        REQUIRE(parser.ast.size() == 1);
+        auto* element = static_cast<ElementNode*>(parser.ast[0].get());
         REQUIRE(element->attributes.count("id") == 1);
         REQUIRE(element->attributes.at("id")->toString() == "app-root");
     }
@@ -159,10 +164,10 @@ TEST_CASE("CHTL Parser: Automatic Attribute Injection", "[chtl_parser]") {
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
-        auto nodes = parser.parse();
-        REQUIRE(nodes.size() == 1);
-        auto* element = static_cast<ElementNode*>(nodes[0].get());
+        Parser parser(lexer, tm, cm);
+        parser.parse();
+        REQUIRE(parser.ast.size() == 1);
+        auto* element = static_cast<ElementNode*>(parser.ast[0].get());
         REQUIRE(element->attributes.count("id") == 1);
         REQUIRE(element->attributes.at("id")->toString() == "manual-id");
     }

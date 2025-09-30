@@ -5,10 +5,10 @@
 #include <fstream>
 #include <sstream>
 #include "libzippp/libzippp.h"
-#include "CHTL/CHTLLoader/Loader.h"
 #include "CHTL/CHTLLexer/Lexer.h"
 #include "CHTL/CHTLParser/Parser.h"
 #include "CHTL/CHTLManage/TemplateManager.h"
+#include "CHTL/CHTLManage/ConfigurationManager.h"
 
 namespace fs = std::filesystem;
 
@@ -27,14 +27,15 @@ void add_directory_to_archive(libzippp::ZipArchive& archive, const fs::path& dir
 
 // Parses all .chtl files in a directory to populate a template manager.
 void parse_module_sources(const fs::path& src_dir, TemplateManager& manager) {
+    ConfigurationManager configManager; // A local config manager for the packer's scope.
     for (const auto& entry : fs::recursive_directory_iterator(src_dir)) {
         if (entry.is_regular_file() && entry.path().extension() == ".chtl") {
             try {
-                std::string content = Loader::loadFile(entry.path().string());
+                std::string content = Parser::loadFile(entry.path().string());
                 Lexer lexer(content);
-                Parser parser(lexer, entry.path().string());
-                parser.parse(); // This populates the parser's template manager
-                manager.merge(parser.templateManager);
+                // The parser now uses the passed-in template manager by reference.
+                Parser parser(lexer, manager, configManager, entry.path().string());
+                parser.parse(); // This populates the manager directly.
             } catch (const std::exception& e) {
                 std::cerr << "Warning: Could not parse '" << entry.path() << "': " << e.what() << std::endl;
             }
@@ -104,7 +105,7 @@ int main(int argc, char* argv[]) {
     std::string export_block = generate_export_block(manager);
 
     // 3. Read the original info file and append the export block
-    std::string info_content = Loader::loadFile(info_file_path.string());
+    std::string info_content = Parser::loadFile(info_file_path.string());
     info_content += export_block;
 
     try {

@@ -20,14 +20,18 @@ class ElementNode;
 // token stream.
 class Parser {
 public:
-    explicit Parser(Lexer& lexer, std::string source_path = "");
+    explicit Parser(Lexer& lexer, TemplateManager& tm, ConfigurationManager& cm, std::string source_path = "");
     ~Parser(); // Add destructor declaration
 
-    // The main entry point for parsing.
-    std::vector<std::unique_ptr<BaseNode>> parse();
+    // The main entry point for parsing. This will populate the `ast` member.
+    void parse();
 
     // Transitions the parser to a new state.
     void setState(std::unique_ptr<ParserState> newState);
+
+    // Static utilities
+    static std::string loadFile(const std::string& path);
+    static std::map<std::string, std::string> loadCmod(const std::string& path);
 
     // --- Public interface for ParserState objects ---
     Lexer& lexer;
@@ -50,10 +54,10 @@ public:
     std::string globalStyleContent;
 
     // The manager for storing and retrieving template definitions.
-    TemplateManager templateManager;
+    TemplateManager& templateManager;
 
     // The manager for storing and retrieving configuration settings.
-    ConfigurationManager configManager;
+    ConfigurationManager& configManager;
 
     // The manager for loading and interacting with CJMOD extensions.
     CJMODManager cjmodManager;
@@ -72,9 +76,8 @@ public:
     // (class or id) has not been defined yet.
     std::vector<std::string> deferredAmpersandRules;
 
-    // A pointer to the list of root nodes parsed so far.
-    // This allows states to perform lookups on the current AST.
-    const std::vector<std::unique_ptr<BaseNode>>* parsedNodes = nullptr;
+    // The AST parsed from the source. It is owned by the parser.
+    std::vector<std::unique_ptr<BaseNode>> ast;
 
     // A pointer to the parsed info node, if one exists.
     std::unique_ptr<InfoNode> infoNode = nullptr;
@@ -90,6 +93,10 @@ private:
     ElementNode* findElementRecursive(const std::string& selector, const std::vector<std::unique_ptr<BaseNode>>& nodes);
     friend class StatementState; // Allow StatementState to call parseTemplateDefinition
     void parseTemplateDefinition();
+    void handleImportStatement();
+    void processChtlImport(const std::string& path);
+    void processCssImport(const std::string& path);
+    std::string getBasePath() const;
 
 public:
     std::unique_ptr<ParserState> currentState;

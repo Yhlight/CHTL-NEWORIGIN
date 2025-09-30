@@ -1,8 +1,9 @@
 #include "../catch.hpp"
 #include "CHTL/CHTLLoader/ModuleResolver.h"
-#include "CHTL/CHTLLoader/Loader.h"
 #include "CHTL/CHTLParser/Parser.h"
 #include "CHTL/CHTLLexer/Lexer.h"
+#include "CHTL/CHTLManage/TemplateManager.h"
+#include "CHTL/CHTLManage/ConfigurationManager.h"
 #include "libzippp/libzippp.h"
 #include <filesystem>
 #include <fstream>
@@ -29,7 +30,7 @@ struct ModuleSystemTestFixture {
         // Create a dummy .cmod file
         libzippp::ZipArchive zf((test_dir / "module" / "MyCmod.cmod").string());
         zf.open(libzippp::ZipArchive::New);
-        zf.addFile("src/MyCmod.chtl", "div {}");
+        zf.addFile("src/MyCmod.chtl", "[Template] @Style CMOD_Style {}");
         zf.close();
     }
 
@@ -63,22 +64,24 @@ TEST_CASE_METHOD(ModuleSystemTestFixture, "Module Resolver", "[module_system]") 
 
 TEST_CASE_METHOD(ModuleSystemTestFixture, "CMOD Loader", "[module_system]") {
     SECTION("Loads content from a .cmod file") {
-        auto contents = Loader::loadCmod((test_dir / "module" / "MyCmod.cmod").string());
+        auto contents = Parser::loadCmod((test_dir / "module" / "MyCmod.cmod").string());
         REQUIRE(contents.size() == 1);
         REQUIRE(contents.count("src/MyCmod.chtl") == 1);
-        REQUIRE(contents.at("src/MyCmod.chtl") == "div {}");
+        REQUIRE(contents.at("src/MyCmod.chtl") == "[Template] @Style CMOD_Style {}");
     }
 }
 
 TEST_CASE_METHOD(ModuleSystemTestFixture, "Parser CMOD Import", "[module_system]") {
     SECTION("Parser can import a .cmod file") {
-        std::string source = R"([Import] @Chtl from "MyCmod";)";
+        std::string source = R"([Import] @Chtl from "MyCmod.cmod";)";
         Lexer lexer(source);
+        TemplateManager tm;
+        ConfigurationManager cm;
         // The parser needs the path to the file it's parsing to resolve relative imports
-        Parser parser(lexer, (test_dir / "module" / "dummy.chtl").string());
+        Parser parser(lexer, tm, cm, (test_dir / "module" / "dummy.chtl").string());
         parser.parse();
-        // The test passes if no exceptions are thrown.
-        // A more advanced test would check if templates from the module were loaded.
-        SUCCEED();
+
+        // Check if the template from the CMOD file was loaded into the manager
+        REQUIRE(tm.getStyleTemplate("_global", "CMOD_Style") != nullptr);
     }
 }

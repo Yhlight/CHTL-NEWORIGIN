@@ -4,6 +4,8 @@
 #include <vector>
 #include "../Scanner/UnifiedScanner.h"
 #include "../CodeMerger/CodeMerger.h"
+#include "../CHTL/CHTLManage/TemplateManager.h"
+#include "../CHTL/CHTLManage/ConfigurationManager.h"
 #include "CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.h"
 #include "CompilationResult.h"
 
@@ -23,4 +25,6 @@ private:
     UnifiedScanner scanner;
     CodeMerger merger;
     CHTLJSCompiler chtl_js_compiler;
+    TemplateManager templateManager;
+    ConfigurationManager configManager;
 };

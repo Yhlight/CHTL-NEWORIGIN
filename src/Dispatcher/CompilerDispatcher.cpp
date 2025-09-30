@@ -93,10 +93,10 @@ CompilationResult CompilerDispatcher::compile(
 
     // 3. Compile the main CHTL content first to populate managers
     Lexer lexer(scanned_output.chtl_with_placeholders);
-    Parser parser(lexer, source_path);
+    Parser parser(lexer, templateManager, configManager, source_path);
     // Pass the default_struct option to the parser
     parser.outputHtml5Doctype = default_struct;
-    auto ast = parser.parse();
+    parser.parse();
 
     // 4. Post-process script fragments to resolve named origin blocks
     for (auto& pair : scanned_output.fragments) {
@@ -126,7 +126,7 @@ CompilationResult CompilerDispatcher::compile(
         }
     }
 
-    // 5. Process all fragments from the scanner
+    // 6. Process all fragments from the scanner
     for (const auto& pair : scanned_output.fragments) {
         const std::string& placeholder = pair.first;
         const CodeFragment& fragment = pair.second;
@@ -148,19 +148,20 @@ CompilationResult CompilerDispatcher::compile(
     }
 
 
-    // 6. Generate and prepend runtime script if needed
+    // 7. Generate and prepend runtime script if needed
     std::string runtime_script = generateRuntimeScript(parser.sharedContext);
     if (!runtime_script.empty()) {
         js_content_stream.str(runtime_script + js_content_stream.str());
     }
 
-    // 7. Add any CSS hoisted from local style blocks by the parser
+    // 8. Add any CSS hoisted from local style blocks by the parser
     css_content += parser.globalStyleContent;
 
-    // 8. Generate the HTML.
+    // 9. Generate the HTML.
     Generator generator;
     std::string html_content = generator.generate(
-        ast,
+        parser.ast,
+        templateManager,
         css_content,
         js_content_stream.str(),
         parser.sharedContext,
@@ -171,7 +172,7 @@ CompilationResult CompilerDispatcher::compile(
         js_output_filename
     );
 
-    // 9. If inlining JS, merge the script placeholders back into the HTML.
+    // 10. If inlining JS, merge the script placeholders back into the HTML.
     if (inline_js) {
          html_content = merger.merge(html_content, script_fragments_for_merging);
     }

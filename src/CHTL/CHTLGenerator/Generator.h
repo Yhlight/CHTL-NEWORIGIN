@@ -7,6 +7,7 @@
 #include "../CHTLNode/ConditionalNode.h"
 #include "../CHTLNode/NamespaceNode.h"
 #include "../Bridge/SharedContext.h"
+#include "../CHTLManage/TemplateManager.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -23,6 +24,7 @@ public:
     // The main entry point for the generation process.
     std::string generate(
         std::vector<std::unique_ptr<BaseNode>>& roots,
+        TemplateManager& templateManager,
         const std::string& globalCss,
         const std::string& globalJs,
         SharedContext& context,
@@ -43,6 +45,7 @@ private:
     std::string cssOutputFilename;
     std::string jsOutputFilename;
     SharedContext* mutableContext = nullptr;
+    TemplateManager* templateManager = nullptr;
 
 #include "../CHTLNode/ScriptNode.h"
     // Visitor-style methods to generate output for each node type.

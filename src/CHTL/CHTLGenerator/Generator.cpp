@@ -11,6 +11,7 @@
 #include "../ExpressionNode/LiteralNode.h"
 #include "../ExpressionNode/PropertyRefNode.h"
 #include <stdexcept>
+#include <iostream>
 
 // --- Implementation of the new helper function ---
 std::string Generator::generateExpressionString(ExpressionBaseNode* node) {
@@ -62,6 +63,7 @@ void Generator::appendLine(const std::string& str) {
 
 std::string Generator::generate(
     std::vector<std::unique_ptr<BaseNode>>& roots,
+    TemplateManager& templateManager,
     const std::string& globalCss,
     const std::string& globalJs,
     SharedContext& context,
@@ -73,6 +75,7 @@ std::string Generator::generate(
 ) {
     result.clear();
     indentLevel = 0;
+    this->templateManager = &templateManager;
     this->globalCssToInject = globalCss;
     this->globalJsToInject = globalJs;
     this->inlineCss = inline_css;
@@ -106,7 +109,8 @@ void Generator::generateNode(BaseNode* node) {
             generateComment(static_cast<const CommentNode*>(node));
             break;
         case NodeType::Fragment:
-            for (auto& child : static_cast<FragmentNode*>(node)->children) {
+            // A fragment is a collection of nodes that should be generated in sequence.
+            for (const auto& child : static_cast<const FragmentNode*>(node)->children) {
                 generateNode(child.get());
             }
             break;

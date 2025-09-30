@@ -3,14 +3,19 @@
 #include "CHTL/CHTLState/ParserState.h" // Include full definition for destructor
 #include "CHTL/CHTLNode/ElementNode.h"
 #include "CHTL/CHTLNode/StyleTemplateNode.h"
+#include "CHTL/CHTLNode/ElementTemplateNode.h"
 #include "CHTL/CHTLNode/StaticStyleNode.h"
+#include "libzippp/libzippp.h"
 #include <stdexcept>
 #include <sstream>
 #include <filesystem>
+#include <fstream>
 
 // The constructor now initializes the token stream and sets the initial state.
-Parser::Parser(Lexer& lexer, std::string source_path)
+Parser::Parser(Lexer& lexer, TemplateManager& tm, ConfigurationManager& cm, std::string source_path)
     : lexer(lexer),
+      templateManager(tm),
+      configManager(cm),
       currentToken({TokenType::Unexpected, ""}),
       peekToken({TokenType::Unexpected, ""}),
       peekToken2({TokenType::Unexpected, ""}),
@@ -26,15 +31,19 @@ Parser::Parser(Lexer& lexer, std::string source_path)
 }
 
 // The main parse loop now delegates to the current state's handle method.
-std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
-    std::vector<std::unique_ptr<BaseNode>> statements;
-    this->parsedNodes = &statements; // Point to the vector we are building.
+void Parser::parse() {
+    this->ast.clear();
 
     while (currentToken.type != TokenType::EndOfFile) {
         // Handle top-level constructs that are not part of the regular state flow.
-        if (currentToken.type == TokenType::OpenBracket && peekToken.value == "Template") {
+        if (currentToken.type == TokenType::OpenBracket && (peekToken.value == "Template" || peekToken.value == "Custom")) {
             parseTemplateDefinition();
             continue; // Template definitions do not produce a node in the main AST.
+        }
+
+        if (currentToken.type == TokenType::OpenBracket && peekToken.value == "Import") {
+            handleImportStatement();
+            continue;
         }
 
         if (!currentState) {
@@ -43,58 +52,75 @@ std::vector<std::unique_ptr<BaseNode>> Parser::parse() {
         // Delegate parsing to the current state for regular elements.
         auto node = currentState->handle(*this);
         if (node) {
-             statements.push_back(std::move(node));
+             this->ast.push_back(std::move(node));
         }
     }
-
-    this->parsedNodes = nullptr; // Clean up the pointer.
-    return statements;
 }
 
 void Parser::parseTemplateDefinition() {
     expectToken(TokenType::OpenBracket);
-    expectKeyword(TokenType::Identifier, "KEYWORD_TEMPLATE", "Template");
+    bool isCustom = false;
+    if (peekToken.value == "Custom") {
+        isCustom = true;
+        advanceTokens();
+    } else {
+        expectKeyword(TokenType::Identifier, "KEYWORD_TEMPLATE", "Template");
+    }
     expectToken(TokenType::CloseBracket);
 
-    if (currentToken.type != TokenType::At) {
-        throw std::runtime_error("Expected '@' for template type definition.");
-    }
-    advanceTokens(); // Consume '@'
+    expectToken(TokenType::At);
+    if (currentToken.type != TokenType::Identifier) throw std::runtime_error("Expected template type (Style, Element, Var) after '@'.");
+    std::string templateType = currentToken.value;
+    advanceTokens();
 
-    if (currentToken.value == "Style") {
-        advanceTokens(); // Consume 'Style'
-        std::string templateName = currentToken.value;
-        expectToken(TokenType::Identifier);
-        expectToken(TokenType::OpenBrace);
+    std::string templateName = currentToken.value;
+    expectToken(TokenType::Identifier);
 
-        auto styleTemplate = std::make_unique<StyleTemplateNode>();
+    expectToken(TokenType::OpenBrace);
 
-        while (currentToken.type != TokenType::CloseBrace && currentToken.type != TokenType::EndOfFile) {
-            std::string propertyName = currentToken.value;
-            expectToken(TokenType::Identifier);
-            expectToken(TokenType::Colon);
+    std::string currentNs = getCurrentNamespace();
 
-            // This is a simplified value parser. A more robust implementation
-            // would delegate to a state or a dedicated value-parsing function.
-            std::string propertyValue;
-            if (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::Number) {
-                propertyValue = currentToken.value;
+    if (templateType == "Style") {
+        auto styleNode = std::make_unique<StyleTemplateNode>();
+        styleNode->isCustom = isCustom;
+        while (currentToken.type != TokenType::CloseBrace) {
+             if (currentToken.type == TokenType::Identifier) {
+                std::string key = currentToken.value;
                 advanceTokens();
+                expectToken(TokenType::Colon);
+
+                // This part requires a StyleBlockState, which we don't have here.
+                // For now, we'll keep it simple and parse only static values.
+                if (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::Number || currentToken.type == TokenType::String) {
+                    styleNode->styles[key] = std::make_unique<StaticStyleNode>(currentToken.value);
+                    advanceTokens();
+                } else {
+                    throw std::runtime_error("Complex style expressions in templates are not fully supported in this context.");
+                }
+
+                if (currentToken.type == TokenType::Semicolon) {
+                    advanceTokens();
+                }
             } else {
-                throw std::runtime_error("Expected a simple literal value in style template definition.");
+                 throw std::runtime_error("Unexpected token in @Style definition: " + currentToken.value);
             }
-
-            expectToken(TokenType::Semicolon);
-
-            styleTemplate->styles[propertyName] = std::make_unique<StaticStyleNode>(propertyValue);
         }
-
-        expectToken(TokenType::CloseBrace);
-        templateManager.addStyleTemplate(getCurrentNamespace(), templateName, std::move(styleTemplate));
-
+        templateManager.addStyleTemplate(currentNs, templateName, std::move(styleNode));
+    } else if (templateType == "Element") {
+        auto elementNode = std::make_unique<ElementTemplateNode>();
+        elementNode->isCustom = isCustom;
+        while (currentToken.type != TokenType::CloseBrace) {
+            auto childNode = currentState->handle(*this);
+            if (childNode) {
+                 elementNode->children.push_back(std::move(childNode));
+            }
+        }
+        templateManager.addElementTemplate(currentNs, templateName, std::move(elementNode));
     } else {
-        throw std::runtime_error("Unsupported template type: " + currentToken.value);
+        throw std::runtime_error("Unknown template type: " + templateType);
     }
+
+    expectToken(TokenType::CloseBrace);
 }
 
 // Allows changing the parser's state.
@@ -184,10 +210,8 @@ std::string Parser::getCurrentNamespace() const {
 }
 
 ElementNode* Parser::findElementBySelector(const std::string& selector) {
-    if (!parsedNodes) {
-        return nullptr;
-    }
-    return findElementRecursive(selector, *parsedNodes);
+    // Now searches the persistent AST owned by the parser.
+    return findElementRecursive(selector, this->ast);
 }
 
 ElementNode* Parser::findElementRecursive(const std::string& selector, const std::vector<std::unique_ptr<BaseNode>>& nodes) {
@@ -227,3 +251,105 @@ ElementNode* Parser::findElementRecursive(const std::string& selector, const std
 
 
 Parser::~Parser() = default;
+
+std::string Parser::loadFile(const std::string& path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + path);
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+std::string Parser::getBasePath() const {
+    try {
+        if (sourcePath.empty()) return ".";
+        return std::filesystem::path(sourcePath).parent_path().string();
+    } catch (...) {
+        return "."; // Fallback for invalid paths
+    }
+}
+
+void Parser::processChtlImport(const std::string& path) {
+    std::string basePath = getBasePath();
+    std::string fullPath = (std::filesystem::path(basePath) / path).string();
+
+    std::string importedContent = loadFile(fullPath);
+
+    Lexer importedLexer(importedContent);
+    // The new parser for the imported file shares the *same* managers as this parser.
+    Parser importedParser(importedLexer, this->templateManager, this->configManager, fullPath);
+
+    // Parse the imported file. This will populate the shared managers.
+    importedParser.parse();
+}
+
+void Parser::processCssImport(const std::string& path) {
+    std::string basePath = getBasePath();
+    std::string fullPath = (std::filesystem::path(basePath) / path).string();
+    std::string cssContent = loadFile(fullPath);
+
+    this->globalStyleContent += "\n/* Imported from " + path + " */\n";
+    this->globalStyleContent += cssContent;
+    this->globalStyleContent += "\n";
+}
+
+std::map<std::string, std::string> Parser::loadCmod(const std::string& path) {
+    libzippp::ZipArchive zf(path);
+    zf.open(libzippp::ZipArchive::ReadOnly);
+    std::vector<libzippp::ZipEntry> entries = zf.getEntries();
+    std::map<std::string, std::string> fileContents;
+
+    for (const auto& entry : entries) {
+        if (!entry.isDirectory()) {
+            fileContents[entry.getName()] = entry.readAsText();
+        }
+    }
+    return fileContents;
+}
+
+void Parser::handleImportStatement() {
+    // Consume '[', 'Import', ']'
+    expectToken(TokenType::OpenBracket);
+    expectKeyword(TokenType::Identifier, "KEYWORD_IMPORT", "Import");
+    expectToken(TokenType::CloseBracket);
+
+    expectToken(TokenType::At);
+    std::string importTypeStr = currentToken.value;
+    advanceTokens(); // Consume type
+
+    expectKeyword(TokenType::Identifier, "KEYWORD_FROM", "from");
+
+    std::string filePath;
+    if (currentToken.type == TokenType::String) {
+        filePath = currentToken.value;
+        advanceTokens();
+    } else if (currentToken.type == TokenType::Identifier) {
+        filePath = currentToken.value;
+        advanceTokens();
+    } else {
+        throw std::runtime_error("Expected a file path for [Import] statement.");
+    }
+
+    // Optional 'as' alias is ignored for now, but we need to parse it
+    if (tryExpectKeyword(TokenType::Identifier, "KEYWORD_AS", "as")) {
+        if (currentToken.type == TokenType::Identifier) {
+            advanceTokens(); // Consume alias
+        } else {
+            throw std::runtime_error("Expected an alias identifier after 'as'.");
+        }
+    }
+
+    if (currentToken.type == TokenType::Semicolon) {
+        advanceTokens();
+    }
+
+    if (importTypeStr == "Chtl") {
+        processChtlImport(filePath);
+    } else if (importTypeStr == "Style") {
+        processCssImport(filePath);
+    } else {
+        // For now, we can just ignore unsupported import types or log a warning.
+    }
+}

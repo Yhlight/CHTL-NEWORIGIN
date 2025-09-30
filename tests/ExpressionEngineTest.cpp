@@ -7,13 +7,18 @@
 #include "../src/CHTL/ExpressionNode/PropertyRefNode.h"
 #include "../src/CHTL/CHTLNode/ElementNode.h"
 #include "../src/CHTL/CHTLNode/DynamicStyleNode.h"
+#include "../src/CHTL/CHTLManage/TemplateManager.h"
+#include "../src/CHTL/CHTLManage/ConfigurationManager.h"
 
 // Helper function to evaluate an expression string
 std::string evaluateExpression(const std::string& expr_str) {
     // We need a dummy Parser context for the evaluator
-    std::string dummy_source = "";
+    std::string dummy_source = "div {}"; // Provide a minimal valid source
     Lexer dummy_lexer(dummy_source);
-    Parser dummy_parser(dummy_lexer);
+    TemplateManager tm;
+    ConfigurationManager cm;
+    Parser dummy_parser(dummy_lexer, tm, cm);
+    dummy_parser.parse(); // Initialize the parser's internal state
 
     ExpressionLexer lexer(expr_str);
     auto tokens = lexer.tokenize();
@@ -100,12 +105,14 @@ TEST_CASE("Expression Engine: End-to-End Property Reference Evaluation", "[expre
 
     // 1. Parse the full CHTL source
     Lexer lexer(source);
-    Parser parser(lexer);
-    auto nodes = parser.parse();
-    REQUIRE(nodes.size() == 2);
+    TemplateManager tm;
+    ConfigurationManager cm;
+    Parser parser(lexer, tm, cm);
+    parser.parse();
+    REQUIRE(parser.ast.size() == 2);
 
     // 2. Find the dynamic style node in the second box
-    auto* box2 = static_cast<ElementNode*>(nodes[1].get());
+    auto* box2 = static_cast<ElementNode*>(parser.ast[1].get());
     REQUIRE(box2->inlineStyles.count("width") == 1);
     auto* styleValue = box2->inlineStyles.at("width").get();
     REQUIRE(styleValue->getType() == StyleValueType::Dynamic);

@@ -1,92 +1,82 @@
 # CHTL Development Roadmap
 
-## 1. Vision
+## Introduction
 
-The goal is to evolve CHTL from its current state into a fully-featured, robust, and production-ready language ecosystem as envisioned in `CHTL.md`. This roadmap prioritizes the maturation of the CHTL JS pipeline, the implementation of missing features, and the overall stability of the compiler.
-
-This roadmap is divided into three strategic phases:
-*   **Phase 1: Solidify the Foundation**
-*   **Phase 2: Feature Parity and Expansion**
-*   **Phase 3: Ecosystem and Polish**
+This document outlines a prioritized development roadmap for the CHTL project, based on the findings from the comprehensive code review. The roadmap is designed to guide development efforts by focusing on the most critical missing features and architectural weaknesses. The primary goal is to bring the CHTL language and its tooling to a state of completeness that matches the ambition of the `CHTL.md` specification.
 
 ---
 
-## 2. Phase 1: Solidify the Foundation
+## Priority 1: Implement Core CHTL Language Features
 
-This phase focuses on bringing the CHTL JS pipeline up to the same level of quality and robustness as the main CHTL compiler.
+**Objective:** Implement the missing high-level directives that are fundamental to CHTL's design for modularity, reuse, and customization.
 
-*   **1.1. Refactor the CHTL JS Parser**
-    *   **Goal:** Replace the current string/regex-based parser with a token-based parser.
-    *   **Tasks:**
-        *   Implement a `CHTLJSLexer` that produces a stream of tokens for all CHTL JS syntax.
-        *   Re-implement the `CHTLJSParser` to consume this token stream and build the AST. This should be modeled after the robust, state-based design of the main CHTL parser.
-    *   **Rationale:** This is the most critical technical debt to address. A token-based parser is more robust, maintainable, and extensible, which is essential for implementing the full CHTL JS feature set.
+*   **1.1. Implement `[Import]` System:**
+    *   **Task:** Add parser logic and AST nodes to handle `[Import]` directives for CHTL, CSS, JS, and CMOD/CJMOD files.
+    *   **Rationale:** This is the most critical missing feature. Without it, projects cannot be broken down into multiple files, making the language unsuitable for any non-trivial application.
 
-*   **1.2. Implement the Unified Scanner Specification**
-    *   **Goal:** Fully implement the fine-grained placeholder mechanism for interleaved JS and CHTL JS code.
-    *   **Tasks:**
-        *   Enhance the `UnifiedScanner` to recursively replace non-CHTL JS code blocks (like `function() { ... }`) inside a script with placeholders, as detailed in `CHTL.md`.
-        *   The `CodeMerger` will need to be updated to handle the decoding of these nested placeholders.
-    *   **Rationale:** This is the core requirement for enabling the seamless mix of CHTL JS and standard JavaScript, which is a major selling point of the language.
+*   **1.2. Implement `[Custom]` System:**
+    *   **Task:** Implement the parser logic and AST nodes for `[Custom]` blocks, including support for specialization (e.g., adding styles, inserting/deleting elements) and the `delete` keyword.
+    *   **Rationale:** Customization is a core pillar of CHTL's power. This feature allows for the creation of reusable, yet flexible, components.
 
-*   **1.3. Enhance Unit Testing**
-    *   **Goal:** Establish a comprehensive test suite for the existing, functional components.
-    *   **Tasks:**
-        *   Write unit tests for the `CHTLParser` covering all implemented features (`[Template]`, `[Import]`, `if/else`, etc.).
-        *   Write unit tests for the `cmod_packer`.
-        *   Write integration tests that compile a sample `.chtl` file and verify the HTML, CSS, and JS output.
-    *   **Rationale:** A strong test suite is essential for stability and will prevent regressions as new, more complex features are added.
+*   **1.3. Implement `[Configuration]` System:**
+    *   **Task:** Add support for parsing `[Configuration]` blocks to allow for keyword customization and compiler behavior modification.
+    - **Rationale:** This feature is essential for adapting CHTL to different coding styles and project requirements.
+
+*   **1.4. Implement `[Namespace]` System:**
+    *   **Task:** Fully implement the `[Namespace]` directive to manage scope and prevent naming conflicts, especially when using `[Import]`.
+    *   **Rationale:** As projects grow and imports are used, namespaces become essential for maintaining a clean and manageable codebase.
 
 ---
 
-## 3. Phase 2: Feature Parity and Expansion
+## Priority 2: Mature the Architectural Backbone
 
-This phase focuses on implementing the remaining language features from `CHTL.md` and completing the module system.
+**Objective:** Develop a robust and reliable compilation pipeline by maturing the language separation and dispatching logic.
 
-*   **2.1. Complete CHTL Feature Set**
-    *   **Goal:** Implement all remaining CHTL language features.
-    *   **Tasks:**
-        *   Implement the full feature set for `[Custom]` element specializations (`insert`, `delete`, `[index]`).
-        *   Implement `except` clauses for constraints.
-        *   Implement advanced `[Configuration]` options.
+*   **2.1. Implement the "Placeholder Mechanism" in the Unified Scanner:**
+    *   **Task:** Rearchitect the `Scanner` to use the "占位符机制" (placeholder mechanism) described in `CHTL.md`. This involves intelligently replacing non-target language fragments with placeholders to ensure accurate separation.
+    *   **Rationale:** The current scanner is too simplistic. A robust placeholder system is the only way to reliably separate the CHTL, CHTL JS, CSS, and JS code blocks in complex, nested files.
 
-*   **2.2. Complete CHTL JS Feature Set**
-    *   **Goal:** Implement all remaining CHTL JS language features.
-    *   **Tasks:**
-        *   Implement dynamic property expressions (`width: {{box}}->width > 2 ? ...`).
-        *   Implement the `iNeverAway` and `util...then` expression features.
-        *   Implement the full `printMylove` functionality from the "Chtholly" official module.
-
-*   **2.3. Finalize the CJMOD System**
-    *   **Goal:** Implement the full CJMOD API for extending CHTL JS.
-    *   **Tasks:**
-        *   Implement the `Syntax`, `Arg`, `CJMODScanner`, and `CHTLJSFunction` classes as described in the `CJMOD API` section of the spec.
-        *   Create a mechanism for CJMODs to register "transformers" that the `CHTLJSCompiler` can execute.
-        *   Build the official "Chtholly" CJMOD module as a reference implementation.
-    *   **Rationale:** A powerful module system is key to building a community and allowing for third-party extensions.
+*   **2.2. Enhance the Compiler Dispatcher:**
+    *   **Task:** Improve the `Dispatcher` to work in tandem with the enhanced `Scanner`. It needs to manage the full lifecycle of code fragments and their placeholders, dispatching them to the correct compilers and reassembling them correctly.
+    *   **Rationale:** A smarter dispatcher is needed to orchestrate the complex, multi-stage compilation process.
 
 ---
 
-## 4. Phase 3: Ecosystem and Polish
+## Priority 3: Develop the Module Ecosystem
 
-This phase focuses on the developer experience and tools surrounding the core compiler.
+**Objective:** Build a functional module system to enable code sharing and the creation of a CHTL component library.
 
-*   **4.1. CLI Enhancements**
-    *   **Goal:** Improve the CLI and fix minor issues.
-    *   **Tasks:**
-        *   Refactor the `CompilerDispatcher` to accept the more granular `--inline-css` and `--inline-js` flags directly, removing the `TODO` noted in the code.
-        *   Implement the "interactive" CLI program with enhanced rendering features.
+*   **3.1. Enhance the CMOD/CJMOD Packer:**
+    *   **Task:** Expand the `cmod_packer` script into a full-featured tool. It must support parsing `info` files, handling dependencies, and packaging modules with complex sub-module structures.
+    *   **Rationale:** A powerful module system is key to building an ecosystem around CHTL and encouraging community contributions.
 
-*   **4.2. VSCode Extension**
-    *   **Goal:** Create a VSCode extension to support CHTL development.
-    *   **Tasks:**
-        *   Implement basic syntax highlighting for `.chtl` and `.cjjs` files.
-        *   Implement code completion based on the `[Export]` blocks of CMODs.
-        *   Integrate the compiler to provide real-time error checking and a live preview feature.
+*   **3.2. Implement `[Export]` Table Generation:**
+    *   **Task:** Integrate logic into the `cmod_packer` to automatically generate the `[Export]` table within the `info` file.
+    *   **Rationale:** The export table is critical for both performance (by allowing selective loading) and for enabling IDEs to provide intelligent code completion and module browsing.
 
-*   **4.3. Documentation and Official Modules**
-    *   **Goal:** Create comprehensive documentation and build out the official modules.
-    *   **Tasks:**
-        *   Write user-facing documentation that is more approachable than the technical specification.
-        *   Build all the CMOD components listed for the "Chtholly" and "Yuigahama" official modules (e.g., Accordion, Photo Album, Music Player).
-    *   **Rationale:** Good documentation and a rich set of official components are crucial for attracting users and driving adoption of the language.
+---
+
+## Priority 4: Improve Developer Experience
+
+**Objective:** Make the CHTL compiler and language more user-friendly and easier to debug.
+
+*   **4.1. Implement Robust Error Handling:**
+    *   **Task:** Add comprehensive error detection and reporting to both the CHTL and CHTL JS parsers. Errors should be descriptive, providing line numbers and clear messages about the syntax issue.
+    *   **Rationale:** Good error handling is non-negotiable for a usable programming language. It is one of the most important factors for developer productivity.
+
+*   **4.2. Add Inline Code Documentation:**
+    *   **Task:** Add comments and documentation blocks throughout the codebase, especially in complex areas like the parsers, generators, and the scanner.
+    *   **Rationale:** The current lack of documentation makes the codebase difficult to understand and maintain. This is essential for long-term project health and for onboarding new contributors.
+
+---
+
+## Priority 5: Complete Partial Features
+
+**Objective:** Finish the implementation of features that are currently incomplete.
+
+*   **5.1. Implement Template Inheritance:**
+    *   **Task:** Add support for both explicit (`inherit`) and implicit (nested `@Style`) template inheritance.
+*   **5.2. Enhance Property Expressions:**
+    *   **Task:** Implement support for cross-element property references and dynamic expressions.
+*   **5.3. Finalize the "Salt Bridge":**
+    *   **Task:** Fully implement the data sharing mechanism between the CHTL and CHTL JS compilers to enable seamless integration for features like responsive values.
