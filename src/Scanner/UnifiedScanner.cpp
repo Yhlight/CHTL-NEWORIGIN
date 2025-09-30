@@ -3,12 +3,7 @@
 #include <cctype>
 #include <regex>
 
-// This is the final, robust implementation of the Unified Scanner.
-// It correctly handles nested structures in style blocks by using a regex
-// to find and extract CHTL-specific statements.
-
 namespace {
-    // Helper to check if a substring at a position is a keyword, ensuring it's a whole word.
     bool is_keyword_at(const std::string& s, size_t pos, const std::string& keyword) {
         if (pos + keyword.length() > s.length()) return false;
         if (s.substr(pos, keyword.length()) != keyword) return false;
@@ -18,7 +13,6 @@ namespace {
     }
 }
 
-// Robust method to find a matching closing brace, now a member of the class.
 size_t UnifiedScanner::find_matching_brace(const std::string& s, size_t start_pos) {
     if (start_pos >= s.length() || s[start_pos] != '{') return std::string::npos;
 
@@ -55,7 +49,6 @@ size_t UnifiedScanner::find_matching_brace(const std::string& s, size_t start_po
     return std::string::npos;
 }
 
-// Heuristic to differentiate CHTL JS from plain JS.
 CodeFragment UnifiedScanner::processScriptBlock(const std::string& content) {
     if (content.find("{{") != std::string::npos || content.find("}}") != std::string::npos ||
         content.find("->") != std::string::npos || content.find("Listen") != std::string::npos ||
@@ -70,69 +63,87 @@ CodeFragment UnifiedScanner::processScriptBlock(const std::string& content) {
 ScannedOutput UnifiedScanner::scan(const std::string& source) {
     this->output = ScannedOutput();
     this->placeholder_id_counter = 0;
-    std::string processed_source;
+    std::string mutable_source = source;
+
+    this->output.chtl_with_placeholders = recursive_scan_and_replace(mutable_source, FragmentType::CHTL);
+
+    return this->output;
+}
+
+std::string UnifiedScanner::recursive_scan_and_replace(std::string& content, FragmentType parent_type) {
+    std::string processed_content;
     size_t last_pos = 0;
 
-    for (size_t i = 0; i < source.length(); ++i) {
-        bool is_style = is_keyword_at(source, i, "style");
-        bool is_script = is_keyword_at(source, i, "script");
-        bool is_listen = is_keyword_at(source, i, "Listen");
+    for (size_t i = 0; i < content.length(); ++i) {
+        bool is_style = is_keyword_at(content, i, "style");
+        bool is_script = is_keyword_at(content, i, "script");
 
-        if (is_style || is_script || is_listen) {
-            size_t block_start = source.find('{', i);
+        // The top-level CHTL scan looks for style and script blocks.
+        if (parent_type == FragmentType::CHTL && (is_style || is_script)) {
+            size_t block_start = content.find('{', i);
             if (block_start == std::string::npos) continue;
 
-            size_t block_end = find_matching_brace(source, block_start);
+            size_t block_end = find_matching_brace(content, block_start);
             if (block_end == std::string::npos) continue;
 
-            processed_source.append(source, last_pos, i - last_pos);
+            processed_content.append(content, last_pos, i - last_pos);
+
+            std::string block_content = content.substr(block_start + 1, block_end - block_start - 1);
 
             if (is_style) {
-                std::string block_content = source.substr(block_start + 1, block_end - block_start - 1);
-                std::string style_body_processed;
-                std::regex chtl_in_css_regex(R"((@Style\s+[a-zA-Z0-9_]+;)|([\w-]+\s*:\s*[^;]*[+\-*/][^;]*;))");
-
-                auto it_begin = std::sregex_iterator(block_content.begin(), block_content.end(), chtl_in_css_regex);
-                auto it_end = std::sregex_iterator();
-                auto last_suffix_it = block_content.cbegin();
-
-                for (std::sregex_iterator it = it_begin; it != it_end; ++it) {
-                    style_body_processed.append(it->prefix().first, it->prefix().second);
-                    std::string placeholder = "/*_CHTL_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "_*/";
-                    this->output.fragments[placeholder] = {FragmentType::CHTL, it->str()};
-                    style_body_processed += placeholder;
-                    last_suffix_it = it->suffix().first;
-                }
-                style_body_processed.append(last_suffix_it, block_content.cend());
-                processed_source += "style {" + style_body_processed + "}";
-
-            } else { // is_script or is_listen
-                std::string placeholder = "/*_CHTL_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "_*/";
-                if (is_listen) {
-                    this->output.fragments[placeholder] = {FragmentType::CHTL_JS, source.substr(i, block_end - i + 1)};
-                    processed_source += placeholder;
-                } else { // is_script
-                    std::string block_content = source.substr(block_start + 1, block_end - block_start - 1);
-                    this->output.fragments[placeholder] = processScriptBlock(block_content);
-                    processed_source += "script {" + placeholder + "}";
-                }
+                // Style blocks are treated as CSS for recursive scanning.
+                std::string processed_block_content = recursive_scan_and_replace(block_content, FragmentType::CSS);
+                processed_content += "style {" + processed_block_content + "}";
+            } else { // is_script
+                // Script blocks are treated as CHTL_JS for recursive scanning.
+                std::string processed_block_content = recursive_scan_and_replace(block_content, FragmentType::CHTL_JS);
+                processed_content += "script {" + processed_block_content + "}";
             }
 
             last_pos = block_end + 1;
             i = block_end;
         }
+        // Inside a CHTL_JS block, look for standard JS function blocks to extract.
+        else if (parent_type == FragmentType::CHTL_JS && is_keyword_at(content, i, "function")) {
+            size_t block_start = content.find('{', i);
+            if (block_start == std::string::npos) continue;
+
+            size_t block_end = find_matching_brace(content, block_start);
+            if (block_end == std::string::npos) continue;
+
+            std::string function_full = content.substr(i, block_end - i + 1);
+
+            // Create a placeholder for the entire JS function.
+            std::string placeholder = "__JS_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "__";
+            output.fragments[placeholder] = {FragmentType::JS, function_full};
+
+            processed_content.append(content, last_pos, i - last_pos);
+            processed_content.append(placeholder);
+
+            last_pos = block_end + 1;
+            i = block_end;
+        }
+        // Inside a CSS block, look for CHTL features to extract.
+        else if (parent_type == FragmentType::CSS) {
+             // This regex finds CHTL features inside a style block.
+             std::regex chtl_in_css_regex(R"((@Style\s+[a-zA-Z0-9_]+;)|([\w-]+\s*:\s*[^;]*[+\-*/][^;]*;))");
+             std::smatch match;
+             if (std::regex_search(content.cbegin() + i, content.cend(), match, chtl_in_css_regex)) {
+                 if (match.position() == 0) { // Ensure the match is at the current position
+                    std::string chtl_feature = match.str();
+                    std::string placeholder = "/*_CHTL_PLACEHOLDER_" + std::to_string(placeholder_id_counter++) + "_*/";
+                    output.fragments[placeholder] = {FragmentType::CHTL, chtl_feature};
+
+                    processed_content.append(content, last_pos, i - last_pos);
+                    processed_content.append(placeholder);
+
+                    last_pos = i + chtl_feature.length();
+                    i = last_pos -1;
+                 }
+             }
+        }
     }
 
-    processed_source.append(source, last_pos, source.length() - last_pos);
-    this->output.chtl_with_placeholders = processed_source;
-
-    return this->output;
-}
-
-// recursive_scan_and_replace is not used in this simplified, test-aligned version,
-// but the declaration is kept in the header to satisfy the previous code review.
-// A full implementation would be needed for the full CHTL JS vision.
-std::string UnifiedScanner::recursive_scan_and_replace(std::string& content, FragmentType parent_type) {
-    // This is a stub to satisfy the build. The main scan function contains the active logic.
-    return content;
+    processed_content.append(content, last_pos, content.length() - last_pos);
+    return processed_content;
 }

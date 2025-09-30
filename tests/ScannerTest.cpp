@@ -1,6 +1,46 @@
 #include "../catch.hpp"
 #include "../src/Scanner/UnifiedScanner.h"
 
+TEST_CASE("UnifiedScanner with Recursive Placeholder", "[UnifiedScanner][Recursive]") {
+    UnifiedScanner scanner;
+    std::string source = R"(
+        script {
+            Listen {
+                click: function() {
+                    console.log("I am standard JS");
+                }
+            }
+        }
+    )";
+    ScannedOutput output = scanner.scan(source);
+
+    // The scanner should produce two fragments:
+    // 1. The outer CHTL_JS fragment (the Listen block).
+    // 2. The inner JS fragment (the function block).
+    REQUIRE(output.fragments.size() == 2);
+
+    std::string chtl_js_content;
+    std::string js_content;
+
+    for(const auto& pair : output.fragments) {
+        if (pair.second.type == FragmentType::CHTL_JS) {
+            chtl_js_content = pair.second.content;
+        } else if (pair.second.type == FragmentType::JS) {
+            js_content = pair.second.content;
+        }
+    }
+
+    // Verify the JS fragment was correctly extracted.
+    REQUIRE(!js_content.empty());
+    REQUIRE(js_content.find(R"(console.log("I am standard JS");)") != std::string::npos);
+
+    // Verify the CHTL_JS fragment now contains a placeholder for the JS function.
+    REQUIRE(!chtl_js_content.empty());
+    REQUIRE(chtl_js_content.find("__JS_PLACEHOLDER_") != std::string::npos);
+    REQUIRE(chtl_js_content.find("function()") == std::string::npos); // The original JS should be gone.
+}
+
+
 TEST_CASE("UnifiedScanner basic test", "[UnifiedScanner]") {
     UnifiedScanner scanner;
     std::string source = "div { style { color: red; } }";
