@@ -10,6 +10,55 @@
 #include "../src/CHTL/ExpressionNode/LiteralNode.h"
 #include "../src/CHTL/CHTLNode/ResponsiveValueNode.h"
 #include "../src/CHTL/CHTLNode/StaticStyleNode.h"
+#include <regex>
+
+TEST_CASE("CHTL Parser for Local Style Selector Hoisting", "[CHTLParser][StyleHoisting]") {
+    std::string source = R"(
+        div {
+            style {
+                // This should be an inline style
+                font-size: 16px;
+
+                // This should be hoisted
+                .box {
+                    color: red;
+                    border: 1px solid black;
+                }
+
+                // This should also be hoisted, referencing the injected class
+                &:hover {
+                    color: blue;
+                }
+            }
+        }
+    )";
+
+    Lexer lexer(source);
+    Parser parser(lexer, "test.chtl");
+    auto ast = parser.parse();
+
+    REQUIRE(ast.size() == 1);
+    auto* div_node = dynamic_cast<ElementNode*>(ast[0].get());
+    REQUIRE(div_node != nullptr);
+
+    // 1. Verify automatic attribute injection
+    REQUIRE(div_node->attributes.count("class") == 1);
+    REQUIRE(div_node->attributes.at("class")->toString() == "box");
+
+    // 2. Verify that only the inline style remains on the node
+    REQUIRE(div_node->inlineStyles.size() == 1);
+    REQUIRE(div_node->inlineStyles.count("font-size") == 1);
+
+    // 3. Verify that the hoisted rules were added to the global style content
+    std::string hoisted_styles = parser.globalStyleContent;
+
+    // Normalize whitespace for consistent matching
+    hoisted_styles = std::regex_replace(hoisted_styles, std::regex(R"(\s+)"), " ");
+
+    REQUIRE(hoisted_styles.find(".box {  color: red; border: 1px solid black;  }") != std::string::npos);
+    REQUIRE(hoisted_styles.find(".box:hover {  color: blue;  }") != std::string::npos);
+}
+
 
 TEST_CASE("CHTL Parser for Dynamic Attribute Conditional Expressions", "[CHTLParser]") {
     std::string source = R"(

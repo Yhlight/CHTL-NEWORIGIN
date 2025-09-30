@@ -34,6 +34,10 @@ std::unique_ptr<BaseNode> StyleBlockState::handle(Parser& parser) {
             parseInlineProperty(parser);
         } else if (parser.currentToken.type == TokenType::At) {
             parseStyleTemplateUsage(parser);
+        } else if (parser.currentToken.type == TokenType::Dot || parser.currentToken.type == TokenType::Hash) {
+            parseClassOrIdSelector(parser);
+        } else if (parser.currentToken.type == TokenType::Ampersand) {
+            parseAmpersandSelector(parser);
         }
         else {
             throw std::runtime_error("Unexpected token in style block: " + parser.currentToken.value);
@@ -106,23 +110,93 @@ std::unique_ptr<StyleValue> StyleBlockState::parseStyleExpression(Parser& parser
     return std::make_unique<DynamicStyleNode>(std::move(expressionAst));
 }
 
-// --- Placeholder functions for features not yet implemented/refactored ---
-
 void StyleBlockState::parseClassOrIdSelector(Parser& parser) {
-     parser.advanceTokens(); // consume . or #
-     parser.advanceTokens(); // consume name
-     parser.expectToken(TokenType::OpenBrace);
-     while(parser.currentToken.type != TokenType::CloseBrace) parser.advanceTokens();
-     parser.expectToken(TokenType::CloseBrace);
+    if (!parser.contextNode) return;
+
+    std::string selector_char = parser.currentToken.value;
+    parser.advanceTokens(); // consume . or #
+
+    std::string selector_name = parser.currentToken.value;
+    parser.expectToken(TokenType::Identifier);
+
+    // --- Automatic Attribute Injection ---
+    std::string attribute_name = (selector_char == ".") ? "class" : "id";
+    if (parser.contextNode->attributes.find(attribute_name) == parser.contextNode->attributes.end()) {
+        parser.contextNode->attributes[attribute_name] = std::make_unique<StaticStyleNode>(selector_name);
+    }
+
+    // --- Hoisting the Style Rule ---
+    std::string rule_body = parseCssRuleBlock(parser);
+    std::stringstream ss;
+    ss << selector_char << selector_name << " { " << rule_body << " }\n";
+    parser.globalStyleContent += ss.str();
 }
+
 void StyleBlockState::parseAmpersandSelector(Parser& parser) {
+    if (!parser.contextNode) return;
+
     parser.advanceTokens(); // consume &
-    while(parser.currentToken.type != TokenType::OpenBrace) parser.advanceTokens();
-    parser.expectToken(TokenType::OpenBrace);
-    while(parser.currentToken.type != TokenType::CloseBrace) parser.advanceTokens();
-    parser.expectToken(TokenType::CloseBrace);
+
+    // The rest of the selector (e.g., :hover, ::before, [disabled])
+    std::string pseudo_selector;
+    while(parser.currentToken.type != TokenType::OpenBrace && parser.currentToken.type != TokenType::EndOfFile) {
+        pseudo_selector += parser.currentToken.value;
+        parser.advanceTokens();
+    }
+
+    // --- Determine the base selector ---
+    std::string base_selector;
+    // Prioritize ID, then class
+    if (parser.contextNode->attributes.count("id")) {
+        base_selector = "#" + parser.contextNode->attributes.at("id")->toString();
+    } else if (parser.contextNode->attributes.count("class")) {
+        // Just use the first class name for simplicity
+        std::string full_class = parser.contextNode->attributes.at("class")->toString();
+        std::stringstream class_ss(full_class);
+        std::string first_class;
+        class_ss >> first_class;
+        base_selector = "." + first_class;
+    } else {
+        throw std::runtime_error("Cannot use '&' selector on an element with no class or id attribute.");
+    }
+
+    // --- Hoisting the Style Rule ---
+    std::string rule_body = parseCssRuleBlock(parser);
+    std::stringstream ss;
+    ss << base_selector << pseudo_selector << " { " << rule_body << " }\n";
+    parser.globalStyleContent += ss.str();
 }
-std::string StyleBlockState::parseCssRuleBlock(Parser& parser) { return ""; }
+
+std::string StyleBlockState::parseCssRuleBlock(Parser& parser) {
+    parser.expectToken(TokenType::OpenBrace);
+    const auto& start_token = parser.currentToken;
+    if (start_token.type == TokenType::CloseBrace) {
+        parser.advanceTokens(); // Consume '}'
+        return "";
+    }
+
+    size_t start_pos = start_token.start_pos;
+    size_t end_pos = start_pos;
+    int brace_level = 1;
+
+    while (brace_level > 0 && parser.currentToken.type != TokenType::EndOfFile) {
+        end_pos = parser.currentToken.start_pos + parser.currentToken.value.length();
+        if (parser.currentToken.type == TokenType::OpenBrace) {
+            brace_level++;
+        } else if (parser.currentToken.type == TokenType::CloseBrace) {
+            brace_level--;
+            if (brace_level == 0) {
+                end_pos = parser.currentToken.start_pos;
+                break;
+            }
+        }
+        parser.advanceTokens();
+    }
+
+    parser.expectToken(TokenType::CloseBrace);
+
+    return parser.lexer.getSource().substr(start_pos, end_pos - start_pos);
+}
 
 void StyleBlockState::parseStyleTemplateUsage(Parser& parser) {
     parser.expectToken(TokenType::At);
