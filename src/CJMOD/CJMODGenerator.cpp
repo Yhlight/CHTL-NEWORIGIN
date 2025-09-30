@@ -1,9 +1,9 @@
 #include "CJMODGenerator.h"
+#include "CJMODResultQueue.h" // Include the new queue header
 #include <iostream>
 
-// Placeholder implementation
+// The exportResult function now adds the transformed code from the Arg object
+// to the singleton queue, making it available to the main compiler.
 void CJMODGenerator::exportResult(const Arg& result_arg) {
-    // A real implementation would queue the transformed code from the Arg object
-    // to be inserted into the final JavaScript output by the main CHTL JS compiler.
-    std::cout << "CJMOD Generator: Exporting result -> " << result_arg.getTransformation() << std::endl;
+    CJMODResultQueue::getInstance().addResult(result_arg.getTransformation());
 }
