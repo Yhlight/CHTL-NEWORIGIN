@@ -7,18 +7,50 @@
 #include "CHTL/CHTLManage/CJMODManager.h"
 #include "CHTL_JS/CHTLJSCompiler/CHTLJSCompiler.h"
 
-TEST_CASE("CJMOD API: End-to-end Compilation", "[cjmod_api][e2e]") {
+TEST_CASE("CJMOD API: Real Scanner Logic", "[cjmod_api][scanner]") {
+    // 1. Create a token stream representing: const x = a ** b;
+    std::vector<CHTLJSToken> tokens = {
+        {CHTLJSTokenType::Identifier, "const"},
+        {CHTLJSTokenType::Identifier, "x"},
+        {CHTLJSTokenType::Identifier, "="},
+        {CHTLJSTokenType::Identifier, "a"},
+        {CHTLJSTokenType::Operator, "**"}, // This is the keyword at index 4
+        {CHTLJSTokenType::Identifier, "b"},
+        {CHTLJSTokenType::Semicolon, ";"}
+    };
+
+    // 2. Define the syntax pattern we are looking for: $ ** $
+    auto syntax_arg = Syntax::analyze("$ ** $");
+
+    // 3. Scan the token stream
+    auto result = CJMODScanner::scan(tokens, *syntax_arg, "**", 0);
+
+    // 4. Verify the results
+    REQUIRE(result.has_value());
+
+    // The match should be at indices 3, 4, 5
+    REQUIRE(result->start_index == 3);
+    REQUIRE(result->end_index == 5);
+
+    // Check the captured values
+    REQUIRE(result->matched_arg != nullptr);
+    REQUIRE(result->matched_arg->arguments.size() == 3);
+    REQUIRE(result->matched_arg->arguments[0]->value == "a");
+    REQUIRE(result->matched_arg->arguments[1]->value == "**");
+    REQUIRE(result->matched_arg->arguments[2]->value == "b");
+}
+
+
+TEST_CASE("CJMOD API: End-to-end Compilation with Real Scanner", "[cjmod_api][e2e]") {
     // 1. Define a simple CJMOD module for the power operator (**)
     auto power_module = std::make_unique<CJMODModule>();
     power_module->name = "PowerOperator";
     power_module->keyword = "**";
     power_module->syntax_arg = Syntax::analyze("$ ** $");
     power_module->processFunc = [](Arg& arg) {
-        // The scanner provides the filled arg, e.g., with values "3", "**", "4"
-        // The transform function should generate the final JS.
         std::string base = arg.arguments[0]->value;
         std::string exp = arg.arguments[2]->value;
-        arg.transform("pow(" + base + ", " + exp + ")");
+        arg.transform("Math.pow(" + base + ", " + exp + ")");
         CJMODGenerator::exportResult(arg);
     };
 
@@ -26,7 +58,7 @@ TEST_CASE("CJMOD API: End-to-end Compilation", "[cjmod_api][e2e]") {
     CJMODManager cjmodManager;
     cjmodManager.load_module(std::move(power_module));
 
-    // 3. Define the source code to be compiled
+    // 3. Define the source code to be compiled. The real scanner needs to handle surrounding tokens.
     std::string source = "const result = 3 ** 4;";
 
     // 4. Compile the source using the CHTLJSCompiler
@@ -34,7 +66,7 @@ TEST_CASE("CJMOD API: End-to-end Compilation", "[cjmod_api][e2e]") {
     std::string final_js = compiler.compile(source, cjmodManager);
 
     // 5. Assert that the transformation was applied correctly
-    std::string expected_js = "const result = pow(3, 4);";
+    std::string expected_js = "const result = Math.pow(3, 4);";
     REQUIRE(final_js == expected_js);
 }
 
@@ -63,14 +95,6 @@ TEST_CASE("CJMOD API: AtomArg Class", "[cjmod_api]") {
         REQUIRE(simple.is_optional == false);
         REQUIRE(simple.is_required == false);
         REQUIRE(simple.is_unordered == false);
-
-        // Note: The logic for parsing flags from the placeholder string
-        // is not yet implemented in the AtomArg constructor.
-        // This test would fail and should be updated when that logic is added.
-        // AtomArg complex("$?_!");
-        // REQUIRE(complex.is_optional == true);
-        // REQUIRE(complex.is_required == true);
-        // REQUIRE(complex.is_unordered == true);
     }
 
     SECTION("fillValue and bind work") {
@@ -98,13 +122,9 @@ TEST_CASE("CJMOD API: Arg Class", "[cjmod_api]") {
 
 TEST_CASE("CJMOD API: Scanner and Generator", "[cjmod_api]") {
     SECTION("Scanner and Generator can be called") {
-        // This is just a smoke test to ensure the static methods can be called.
         Arg syntax_arg;
-        auto scanned_arg = CJMODScanner::scan(syntax_arg, "**");
-        REQUIRE(scanned_arg != nullptr);
-
-        scanned_arg->transform("console.log('hello');");
-        CJMODGenerator::exportResult(*scanned_arg);
-        SUCCEED(); // Pass if no exceptions are thrown
+        std::vector<CHTLJSToken> tokens;
+        auto scanned_arg = CJMODScanner::scan(tokens, syntax_arg, "**", 0);
+        REQUIRE(!scanned_arg.has_value()); // Expect no result on empty tokens
     }
 }
