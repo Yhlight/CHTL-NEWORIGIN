@@ -5,7 +5,7 @@
 
 // This helper function mimics the setup in main.cpp to test argument parsing.
 cxxopts::parse_result parse_test_args(int argc, const char* argv[]) {
-    cxxopts::Options options("chtl_compiler_test", "A test for the CHTL CLI");
+    cxxopts::options options("chtl_compiler_test", "A test for the CHTL CLI");
     options.add_options()
         ("h,help", "Print usage information")
         ("o,output", "Output directory for compiled files", cxxopts::value<std::string>()->default_value("."))

@@ -3,7 +3,7 @@
 #include "CHTL/CHTLLoader/Loader.h"
 #include "CHTL/CHTLParser/Parser.h"
 #include "CHTL/CHTLLexer/Lexer.h"
-#include "libzippp.h"
+#include "libzippp/libzippp.h"
 #include <filesystem>
 #include <fstream>
 

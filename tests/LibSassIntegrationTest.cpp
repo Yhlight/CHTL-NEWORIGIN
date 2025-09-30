@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "../catch.hpp"
 #include "sass/sass.h" // Include the libsass header
 
 TEST_CASE("LibSass API Integration", "[integration][libsass]") {

@@ -6,8 +6,8 @@
 #include "../ExpressionNode/ConditionalNode.h"
 #include <stdexcept>
 #include <iostream>
-#include <iostream>
 #include "CHTL/CHTLNode/ElementNode.h"
+#include "CHTL/CHTLNode/DynamicStyleNode.h"
 
 // A simple utility to parse a string like "100px" into a number and a unit.
 // This is a simplified version; a real implementation would be more robust.

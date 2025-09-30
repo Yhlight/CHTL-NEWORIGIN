@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "../catch.hpp"
 #include "../src/CHTL_JS/CHTLJSParser/CHTLJSParser.h"
 #include "../src/CHTL_JS/CHTLJSGenerator/CHTLJSGenerator.h"
 #include "../src/CHTL_JS/CHTLJSNode/ScriptLoaderNode.h"

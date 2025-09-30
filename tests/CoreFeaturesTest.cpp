@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "../catch.hpp"
 #include "CHTL/CHTLLexer/Lexer.h"
 #include "CHTL/CHTLParser/Parser.h"
 #include "CHTL/CHTLGenerator/Generator.h"

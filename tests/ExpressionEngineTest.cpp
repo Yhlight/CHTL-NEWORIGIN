@@ -1,4 +1,3 @@
-#define CATCH_CONFIG_MAIN
 #include "../catch.hpp"
 #include "../src/CHTL/ExpressionParser/ExpressionLexer.h"
 #include "../src/CHTL/ExpressionParser/ExpressionParser.h"

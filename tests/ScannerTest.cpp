@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "../catch.hpp"
 #include "../src/Scanner/UnifiedScanner.h"
 
 TEST_CASE("UnifiedScanner basic test", "[UnifiedScanner]") {

@@ -1,5 +1,5 @@
-#include "catch.hpp"
-#include "quickjs.h" // Include the QuickJS header
+#include "../catch.hpp"
+#include "quickjs/quickjs.h" // Include the QuickJS header
 
 TEST_CASE("QuickJS API Integration", "[integration][quickjs]") {
     SECTION("JS_NewRuntime and JS_FreeRuntime should execute without errors") {

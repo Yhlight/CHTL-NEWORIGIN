@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "../catch.hpp"
 #include "../src/CHTL/CHTLLexer/Lexer.h"
 #include "../src/CHTL/CHTLParser/Parser.h"
 #include "../src/CHTL/CHTLNode/ElementNode.h"
