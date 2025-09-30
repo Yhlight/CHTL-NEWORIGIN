@@ -62,11 +62,17 @@ std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseStatement() {
         case CHTLJSTokenType::ScriptLoader:
             return parseScriptLoader();
         case CHTLJSTokenType::OpenDoubleBrace:
-            if (peekToken().type == CHTLJSTokenType::Identifier) {
+             if (peekToken().type == CHTLJSTokenType::Identifier && tokens.size() > position + 3) {
                  if (tokens[position + 2].type == CHTLJSTokenType::CloseDoubleBrace) {
-                     if(tokens[position + 3].type == CHTLJSTokenType::RightArrow) {
-                         // This could be Listen, Delegate, or Enhanced Selector
-                         if(tokens[position + 4].type == CHTLJSTokenType::Listen) return parseListen("");
+                     if(tokens[position + 3].type == CHTLJSTokenType::RightArrow && tokens.size() > position + 4) {
+                         if(tokens[position + 4].type == CHTLJSTokenType::Listen) {
+                            // Capture selector and pass it to parseListen
+                            std::string selector = peekToken().value;
+                            consumeToken(); // {{
+                            consumeToken(); // selector
+                            consumeToken(); // }}
+                            return parseListen(selector);
+                         }
                          if(tokens[position + 4].type == CHTLJSTokenType::Delegate) return parseDelegate();
                          return parseEnhancedSelector();
                      } else if (tokens[position + 3].type == CHTLJSTokenType::EventBind) {
@@ -74,7 +80,7 @@ std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseStatement() {
                      }
                  }
             }
-            break;
+            return parseEnhancedSelector();
         case CHTLJSTokenType::Listen: // Standalone Listen
             return parseListen("");
         default:
@@ -161,25 +167,133 @@ std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseScriptLoader() {
     return std::make_unique<ScriptLoaderNode>(files);
 }
 
-// Stubs for other parsers - to be implemented
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseDelegate() {
-    // To be implemented
-    // For now, consume tokens to avoid infinite loops in testing
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+    // The dispatcher has identified {{...}}->Delegate, current token is `{{`
+    expectToken(CHTLJSTokenType::OpenDoubleBrace);
+    std::string parentSelector = currentToken().value;
+    expectToken(CHTLJSTokenType::Identifier);
+    expectToken(CHTLJSTokenType::CloseDoubleBrace);
+    expectToken(CHTLJSTokenType::RightArrow);
+    expectToken(CHTLJSTokenType::Delegate);
+    expectToken(CHTLJSTokenType::OpenBrace);
+
+    std::string targetSelector;
+    std::map<std::string, std::string> events;
+
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        expectToken(CHTLJSTokenType::Identifier);
+        expectToken(CHTLJSTokenType::Colon);
+
+        if (key == "target") {
+            targetSelector = currentToken().value;
+            expectToken(CHTLJSTokenType::RawJavaScript);
+        } else {
+            std::string callback = currentToken().value;
+            expectToken(CHTLJSTokenType::RawJavaScript);
+            events[key] = callback;
+        }
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            consumeToken();
+        }
+    }
+    expectToken(CHTLJSTokenType::CloseBrace);
+
+    if (targetSelector.empty()) {
+        throw std::runtime_error("Delegate block must contain a 'target' property.");
+    }
+
+    return std::make_unique<DelegateNode>(parentSelector, targetSelector, events);
 }
+
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseAnimate() {
-    // To be implemented
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+    expectToken(CHTLJSTokenType::Animate);
+    expectToken(CHTLJSTokenType::OpenBrace);
+
+    std::map<std::string, std::string> properties;
+    while (currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        expectToken(CHTLJSTokenType::Identifier);
+        expectToken(CHTLJSTokenType::Colon);
+
+        std::string value = currentToken().value;
+        // The value can be a block or a single literal, so we treat it all as raw JS for now.
+        expectToken(CHTLJSTokenType::RawJavaScript);
+
+        properties[key] = value;
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            consumeToken();
+        }
+    }
+    expectToken(CHTLJSTokenType::CloseBrace);
+
+    return std::make_unique<AnimateNode>(properties);
 }
+
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseRouter() {
-    // To be implemented
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+    expectToken(CHTLJSTokenType::Router);
+    expectToken(CHTLJSTokenType::OpenBrace);
+
+    std::string url;
+    std::string page;
+
+    while(currentToken().type != CHTLJSTokenType::CloseBrace) {
+        std::string key = currentToken().value;
+        expectToken(CHTLJSTokenType::Identifier);
+        expectToken(CHTLJSTokenType::Colon);
+
+        if (key == "url") {
+            url = currentToken().value;
+            expectToken(CHTLJSTokenType::RawJavaScript);
+        } else if (key == "page") {
+            page = currentToken().value;
+            expectToken(CHTLJSTokenType::RawJavaScript);
+        } else {
+            throw std::runtime_error("Unexpected key in Router block: " + key);
+        }
+
+        if (currentToken().type == CHTLJSTokenType::Comma) {
+            consumeToken();
+        }
+    }
+    expectToken(CHTLJSTokenType::CloseBrace);
+
+    if (url.empty() || page.empty()) {
+        throw std::runtime_error("Router block must contain both 'url' and 'page' properties.");
+    }
+
+    // The URL value from the lexer will include quotes, e.g., `"/home"`. We need to strip them.
+    if (url.length() >= 2 && url.front() == '"' && url.back() == '"') {
+        url = url.substr(1, url.length() - 2);
+    }
+
+    std::map<std::string, std::string> routes;
+    routes[url] = page;
+
+    return std::make_unique<RouterNode>(routes);
 }
+
 std::unique_ptr<CHTLJSBaseNode> CHTLJSParser::parseEventBinding() {
-    // To be implemented
-    while(currentToken().type != CHTLJSTokenType::EndOfFile) consumeToken();
-    return nullptr;
+    // The dispatcher has identified {{...}} &->, current token is `{{`
+    expectToken(CHTLJSTokenType::OpenDoubleBrace);
+    std::string selector = currentToken().value;
+    expectToken(CHTLJSTokenType::Identifier);
+    expectToken(CHTLJSTokenType::CloseDoubleBrace);
+    expectToken(CHTLJSTokenType::EventBind);
+
+    std::string eventName = currentToken().value;
+    expectToken(CHTLJSTokenType::Identifier);
+    expectToken(CHTLJSTokenType::Colon);
+
+    std::string callback = currentToken().value;
+    expectToken(CHTLJSTokenType::RawJavaScript);
+
+    // Optional semicolon
+    if (currentToken().type == CHTLJSTokenType::Semicolon) {
+        consumeToken();
+    }
+
+    return std::make_unique<EventBindingNode>(selector, eventName, callback);
 }
