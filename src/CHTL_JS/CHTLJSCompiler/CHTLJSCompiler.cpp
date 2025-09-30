@@ -5,60 +5,68 @@
 #include "../CJMOD/CJMODScanner.h"
 #include "../CJMOD/CJMODResultQueue.h"
 #include <regex>
+#include <algorithm>
 
 // The compile method now integrates the full CJMOD pipeline.
 std::string CHTLJSCompiler::compile(const std::string& chtl_js_source, CJMODManager& cjmodManager) {
     std::string processed_source = chtl_js_source;
     int placeholder_index = 0;
 
-    // 1. Pre-process the source with all loaded CJMODs
-    for (const auto& module_pair : cjmodManager.getModules()) {
-        const auto& module = module_pair.second;
-        const auto& keyword = module->keyword;
+    // This loop continues as long as we are successfully finding and replacing
+    // CJMOD patterns. Each replacement modifies the source string, so we must
+    // re-tokenize and restart the scan to ensure character positions are correct.
+    bool replaced_in_pass = true;
+    while(replaced_in_pass) {
+        replaced_in_pass = false;
 
-        // Keep scanning for the keyword until no more matches are found
-        while (processed_source.find(keyword) != std::string::npos) {
-            // 2. Scan for the syntax pattern
-            auto scanned_arg = CJMODScanner::scan(*(module->syntax_arg), keyword);
-            if (scanned_arg->arguments.empty()) {
-                // No more matches found by the scanner for this keyword
-                break;
-            }
+        // Tokenize the current version of the source string.
+        CHTLJSLexer lexer(processed_source);
+        std::vector<CHTLJSToken> tokens = lexer.tokenize();
 
-            // 3. Run the module's processing logic, which will eventually
-            // call CJMODGenerator::exportResult() to queue the final JS.
-            module->processFunc(*scanned_arg);
+        for (const auto& module_pair : cjmodManager.getModules()) {
+            const auto& module = module_pair.second;
 
-            // 4. Replace the found source code with a placeholder.
-            // This is simplified; a real implementation would need the scanner
-            // to return the exact range of the match. Our mock always finds "3 ** 4".
-            size_t match_pos = processed_source.find("3 ** 4");
-            if (match_pos != std::string::npos) {
+            // Scan from the beginning of the token stream.
+            auto result = CJMODScanner::scan(tokens, *(module->syntax_arg), module->keyword, 0);
+
+            if (result.has_value()) {
+                // A match was found.
+
+                // 1. Run the module's processing logic to generate the final JS.
+                // This will queue the result in the CJMODResultQueue singleton.
+                module->processFunc(*(result->matched_arg));
+
+                // 2. Determine the character range of the matched tokens.
+                const CHTLJSToken& start_token = tokens[result->start_index];
+                const CHTLJSToken& end_token = tokens[result->end_index];
+                size_t start_pos = start_token.start_pos;
+                size_t length = (end_token.start_pos + end_token.value.length()) - start_pos;
+
+                // 3. Replace the source code with a placeholder.
                 std::string placeholder = "__CJMOD_PLACEHOLDER_" + std::to_string(placeholder_index++) + "__";
-                processed_source.replace(match_pos, 6, placeholder);
-            } else {
-                // If the specific text isn't found, break to avoid an infinite loop.
+                processed_source.replace(start_pos, length, placeholder);
+
+                // 4. Mark that we made a change and break to re-tokenize and restart the scan.
+                replaced_in_pass = true;
                 break;
             }
         }
     }
 
-    // 5. Parse the modified source (with placeholders) to get the standard CHTL JS AST.
+    // Now, the source has been fully pre-processed.
     CHTLJSParser parser;
     std::unique_ptr<CHTLJSBaseNode> ast = parser.parse(processed_source);
 
     std::string final_js;
     if (ast) {
-        // 6. Generate the main JavaScript code. It will contain the placeholders.
         CHTLJSGenerator generator;
         final_js = generator.generate(*ast);
     } else {
-        // If the AST is null, it might be a file with only CJMOD syntax.
+        // If the AST is null, the file might contain only CJMOD syntax.
         final_js = processed_source;
     }
 
-
-    // 7. Retrieve the generated CJMOD results and substitute them back.
+    // Substitute the generated CJMOD results back into the final JS.
     auto cjmod_results = CJMODResultQueue::getInstance().popAllResults();
     for (size_t i = 0; i < cjmod_results.size(); ++i) {
         std::string placeholder = "__CJMOD_PLACEHOLDER_" + std::to_string(i) + "__";

@@ -55,20 +55,22 @@ void CHTLJSLexer::skipWhitespace() {
 CHTLJSToken CHTLJSLexer::identifier() {
     std::string value;
     int startCol = column;
+    size_t startPos = position;
     while (isalnum(peek()) || peek() == '_') {
         value += advance();
     }
 
     if (keywords.count(value)) {
-        return {keywords.at(value), value, line, startCol};
+        return {keywords.at(value), value, line, startCol, startPos};
     }
 
-    return {CHTLJSTokenType::Identifier, value, line, startCol};
+    return {CHTLJSTokenType::Identifier, value, line, startCol, startPos};
 }
 
 CHTLJSToken CHTLJSLexer::stringLiteral(char quoteType) {
     std::string value;
     int startCol = column;
+    size_t startPos = position;
     advance(); // consume opening quote
     while (peek() != quoteType && peek() != '\0') {
         if (peek() == '\\') { // Handle escape sequences
@@ -79,14 +81,16 @@ CHTLJSToken CHTLJSLexer::stringLiteral(char quoteType) {
     if (peek() == quoteType) {
         advance(); // consume closing quote
     }
-    return {CHTLJSTokenType::String, value, line, startCol};
+    return {CHTLJSTokenType::String, value, line, startCol, startPos};
 }
 
 CHTLJSToken CHTLJSLexer::getNextToken() {
     skipWhitespace();
 
+    size_t startPos = position;
+
     if (position >= source.length()) {
-        return {CHTLJSTokenType::EndOfFile, "", line, column};
+        return {CHTLJSTokenType::EndOfFile, "", line, column, startPos};
     }
 
     char current = peek();
@@ -100,7 +104,7 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
         while(isdigit(peek())) {
             value += advance();
         }
-        return {CHTLJSTokenType::Number, value, line, startCol};
+        return {CHTLJSTokenType::Number, value, line, startCol, startPos};
     }
     if (current == '"' || current == '\'') {
         return stringLiteral(current);
@@ -111,76 +115,68 @@ CHTLJSToken CHTLJSLexer::getNextToken() {
             advance();
             if (peek() == '{') {
                 advance();
-                return {CHTLJSTokenType::OpenDoubleBrace, "{{", line, startCol};
+                return {CHTLJSTokenType::OpenDoubleBrace, "{{", line, startCol, startPos};
             }
-            return {CHTLJSTokenType::OpenBrace, "{", line, startCol};
+            return {CHTLJSTokenType::OpenBrace, "{", line, startCol, startPos};
         case '}':
             advance();
             if (peek() == '}') {
                 advance();
-                return {CHTLJSTokenType::CloseDoubleBrace, "}}", line, startCol};
+                return {CHTLJSTokenType::CloseDoubleBrace, "}}", line, startCol, startPos};
             }
-            return {CHTLJSTokenType::CloseBrace, "}", line, startCol};
+            return {CHTLJSTokenType::CloseBrace, "}", line, startCol, startPos};
         case '-':
             if (position + 1 < source.length() && source[position + 1] == '>') {
                 advance(); advance();
-                return {CHTLJSTokenType::RightArrow, "->", line, startCol};
+                return {CHTLJSTokenType::RightArrow, "->", line, startCol, startPos};
             }
             break;
         case '&':
             if (position + 2 < source.length() && source[position + 1] == '-' && source[position + 2] == '>') {
                 advance(); advance(); advance();
-                return {CHTLJSTokenType::EventBind, "&->", line, startCol};
+                return {CHTLJSTokenType::EventBind, "&->", line, startCol, startPos};
             }
             break;
-        case '(': advance(); return {CHTLJSTokenType::OpenParen, "(", line, startCol};
-        case ')': advance(); return {CHTLJSTokenType::CloseParen, ")", line, startCol};
-        case '[': advance(); return {CHTLJSTokenType::OpenBracket, "[", line, startCol};
-        case ']': advance(); return {CHTLJSTokenType::CloseBracket, "]", line, startCol};
-        case ':': advance(); return {CHTLJSTokenType::Colon, ":", line, startCol};
-        case ';': advance(); return {CHTLJSTokenType::Semicolon, ";", line, startCol};
-        case ',': advance(); return {CHTLJSTokenType::Comma, ",", line, startCol};
-        case '.': advance(); return {CHTLJSTokenType::Dot, ".", line, startCol};
+        case '(': advance(); return {CHTLJSTokenType::OpenParen, "(", line, startCol, startPos};
+        case ')': advance(); return {CHTLJSTokenType::CloseParen, ")", line, startCol, startPos};
+        case '[': advance(); return {CHTLJSTokenType::OpenBracket, "[", line, startCol, startPos};
+        case ']': advance(); return {CHTLJSTokenType::CloseBracket, "]", line, startCol, startPos};
+        case ':': advance(); return {CHTLJSTokenType::Colon, ":", line, startCol, startPos};
+        case ';': advance(); return {CHTLJSTokenType::Semicolon, ";", line, startCol, startPos};
+        case ',': advance(); return {CHTLJSTokenType::Comma, ",", line, startCol, startPos};
+        case '.': advance(); return {CHTLJSTokenType::Dot, ".", line, startCol, startPos};
     }
 
-    // As a fallback for things like JS code inside callbacks, we consume until a known CHTL JS delimiter
-    // This is a simplification. A truly robust parser would need to handle nested structures.
+    // Fallback for RawJavaScript
     std::string rawJs;
     int brace_level = 0;
 
-    // If we are inside an event handler, e.g., after a colon.
-    size_t last_token_end = position;
-    if (position > 0) {
-        char prev_char = source[position - 1];
-        if (isspace(prev_char)) {
-             size_t temp_pos = position - 2;
-             while(temp_pos > 0 && isspace(source[temp_pos])) {
-                 temp_pos--;
-             }
-             prev_char = source[temp_pos];
-        }
-        if (prev_char == ':') {
-             brace_level = 1;
-        }
+    size_t temp_pos = position > 0 ? position -1 : 0;
+    while(temp_pos > 0 && isspace(source[temp_pos])) {
+        temp_pos--;
     }
-
+    if (source[temp_pos] == ':') {
+         brace_level = 1;
+    }
 
     while (position < source.length()) {
         char c = peek();
         if (c == '{') brace_level++;
         if (c == '}') brace_level--;
 
-        // Stop if we hit a closing brace at the top level or a comma between event handlers
-        if ((c == '}' && brace_level < 0) || (c == ',' && brace_level == 0)) {
-            break;
+        if ((c == '}' && brace_level < 0) || (c == ',' && brace_level <= 0)) {
+            size_t next_non_space = source.find_first_not_of(" \t\n\r", position + 1);
+            if (c == ',' && next_non_space != std::string::npos && isalpha(source[next_non_space])) {
+                 break;
+            }
         }
         rawJs += advance();
     }
 
     if (!rawJs.empty()) {
-        return {CHTLJSTokenType::RawJavaScript, rawJs, line, startCol};
+        return {CHTLJSTokenType::RawJavaScript, rawJs, line, startCol, startPos};
     }
 
 
-    return {CHTLJSTokenType::Unexpected, std::string(1, advance()), line, startCol};
+    return {CHTLJSTokenType::Unexpected, std::string(1, advance()), line, startCol, startPos};
 }

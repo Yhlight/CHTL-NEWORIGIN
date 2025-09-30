@@ -134,6 +134,7 @@ add_executable(chtl_tests
     tests/CLILogicTest.cpp
     tests/OfficialModulesTest.cpp
     tests/CJMODCodeGenTest.cpp
+    tests/GeneratorTest.cpp
 )
 
 # Link the test executable against the CHTL library and the CMOD packer library

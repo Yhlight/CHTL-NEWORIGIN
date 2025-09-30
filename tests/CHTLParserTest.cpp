@@ -14,6 +14,40 @@
 #include "../src/CHTL/CHTLNode/FragmentNode.h"
 #include <regex>
 
+TEST_CASE("CHTL Parser for Import Statements", "[CHTLParser][Import]") {
+    SECTION("Granular import of a specific template") {
+        std::string source = R"(
+            [Import] [Template] @Element MyButton from "./tests/components.chtl";
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "/app/test.chtl"); // Provide a base path for module resolution
+        parser.parse();
+
+        // The template manager should now contain the imported template.
+        const auto* tmpl = parser.templateManager.getElementTemplate("_global", "MyButton");
+        REQUIRE(tmpl != nullptr);
+    }
+
+    SECTION("Raw asset import of a CSS file") {
+        std::string source = R"(
+            [Import] @Style from "./tests/styles.css" as imported_styles;
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer, "/app/test.chtl");
+        parser.parse();
+
+        // The template manager should contain a named origin block with the CSS content.
+        const auto* origin_node = parser.templateManager.getNamedOrigin("_global", "imported_styles");
+        REQUIRE(origin_node != nullptr);
+        REQUIRE(origin_node->type == "Style");
+
+        std::string content = origin_node->content;
+        content = std::regex_replace(content, std::regex(R"(\s+)"), " ");
+        REQUIRE(content.find(".imported-style { color: purple; font-weight: bold; }") != std::string::npos);
+    }
+}
+
+
 TEST_CASE("CHTL Parser for Advanced Template Features", "[CHTLParser][Templates]") {
     SECTION("Style template inheritance should combine properties correctly") {
         std::string source = R"(

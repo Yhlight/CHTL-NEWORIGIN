@@ -46,6 +46,7 @@ struct CHTLJSToken {
     std::string value;
     int line;
     int column;
+    size_t start_pos = 0; // The starting position of the token in the source string
 };
 
 class CHTLJSLexer {

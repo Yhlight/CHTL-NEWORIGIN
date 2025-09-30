@@ -419,9 +419,26 @@ void StatementState::parseImportStatement(Parser& parser) {
     parser.expectKeyword(TokenType::Identifier, "KEYWORD_IMPORT", "Import");
     parser.expectToken(TokenType::CloseBracket);
 
+    std::string metaQualifier;
+    bool isGranular = false;
+    if (parser.currentToken.type == TokenType::OpenBracket) {
+        isGranular = true;
+        parser.advanceTokens();
+        metaQualifier = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+        parser.expectToken(TokenType::CloseBracket);
+    }
+
     parser.expectToken(TokenType::At);
     std::string importType = parser.currentToken.value;
     parser.expectToken(TokenType::Identifier);
+
+    bool isWildcard = (parser.currentToken.type == TokenType::From);
+    std::string itemName;
+    if (isGranular && !isWildcard) {
+        itemName = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
+    }
 
     parser.expectKeyword(TokenType::From, "KEYWORD_FROM", "from");
 
@@ -431,11 +448,13 @@ void StatementState::parseImportStatement(Parser& parser) {
     std::string path = parser.currentToken.value;
     parser.advanceTokens();
 
-    if (!path.empty() && path.front() == '"') {
-        path.erase(0, 1);
-    }
-    if (!path.empty() && path.back() == '"') {
-        path.pop_back();
+    if (!path.empty() && path.front() == '"') path.erase(0, 1);
+    if (!path.empty() && path.back() == '"') path.pop_back();
+
+    std::string alias;
+    if (parser.tryExpectKeyword(TokenType::Identifier, "KEYWORD_AS", "as")) {
+        alias = parser.currentToken.value;
+        parser.expectToken(TokenType::Identifier);
     }
 
     parser.expectToken(TokenType::Semicolon);
@@ -446,47 +465,47 @@ void StatementState::parseImportStatement(Parser& parser) {
                                           ? current_file_path.parent_path()
                                           : std::filesystem::current_path();
     std::vector<std::filesystem::path> resolved_paths = resolver.resolve(path, base_path);
-
     if (resolved_paths.empty()) {
         throw std::runtime_error("Failed to resolve import: " + path);
     }
 
-    if (importType == "Chtl") {
-        for (const auto& resolved_path : resolved_paths) {
-            std::string p_str = resolved_path.string();
-            try {
-                if (resolved_path.extension() == ".cmod") {
-                    auto fileContents = Loader::loadCmod(p_str);
-                    std::string module_name = resolved_path.stem().string();
-                    std::string source_file_key = "src/" + module_name + ".chtl";
-                    if (fileContents.find(source_file_key) == fileContents.end()) {
-                        throw std::runtime_error("Main source file not found in CMOD archive: " + source_file_key);
-                    }
-                    std::string fileContent = fileContents.at(source_file_key);
-                    Lexer importLexer(fileContent);
-                    Parser importParser(importLexer, p_str);
-                    importParser.parse();
-                    parser.templateManager.merge(importParser.templateManager);
-                } else {
-                    std::string fileContent = Loader::loadFile(p_str);
-                    Lexer importLexer(fileContent);
-                    Parser importParser(importLexer, p_str);
-                    importParser.parse();
-                    parser.templateManager.merge(importParser.templateManager);
-                }
-            } catch (const std::runtime_error& e) {
-                throw std::runtime_error("Failed to import CHTL module '" + p_str + "': " + e.what());
+    if (importType == "Chtl" && !isGranular) {
+        for (const auto& p : resolved_paths) {
+            std::string content = Loader::loadFile(p.string());
+            Lexer importLexer(content);
+            Parser importParser(importLexer, p.string());
+            importParser.parse();
+            parser.templateManager.merge(importParser.templateManager);
+        }
+    } else if (importType == "CJmod" && !isGranular) {
+        for (const auto& p : resolved_paths) {
+            parser.cjmodManager.load_module(p.string());
+        }
+    } else if (isGranular && !itemName.empty()) {
+        std::string resolved_path_str = resolved_paths[0].string();
+        std::string fileContent = Loader::loadFile(resolved_path_str);
+        Lexer importLexer(fileContent);
+        Parser importParser(importLexer, resolved_path_str);
+        importParser.parse();
+        std::string finalItemName = alias.empty() ? itemName : alias;
+        bool found = false;
+        if (importType == "Element") {
+            auto* tmpl = importParser.templateManager.getElementTemplate("_global", itemName);
+            if (tmpl) {
+                parser.templateManager.addElementTemplate(parser.getCurrentNamespace(), finalItemName, NodeCloner::clone(tmpl));
+                found = true;
             }
         }
-    } else if (importType == "CJmod") {
-        for (const auto& resolved_path : resolved_paths) {
-            std::string p_str = resolved_path.string();
-            try {
-                parser.cjmodManager.load_module(p_str);
-            } catch (const std::runtime_error& e) {
-                throw std::runtime_error("Failed to load CJMOD module '" + p_str + "': " + e.what());
-            }
+        if (!found) {
+             throw std::runtime_error("Could not find item '" + itemName + "' in file '" + path + "'.");
         }
+    } else {
+        std::string fileContent = Loader::loadFile(resolved_paths[0].string());
+        if (alias.empty()) {
+            throw std::runtime_error("Raw asset import for @" + importType + " requires an 'as' alias.");
+        }
+        auto originNode = std::make_unique<OriginNode>(importType, fileContent);
+        parser.templateManager.addNamedOrigin(parser.getCurrentNamespace(), alias, std::move(originNode));
     }
 }
 
@@ -507,10 +526,8 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
 
     parser.expectToken(TokenType::OpenBrace);
 
-    // The content of an [Origin] block is raw and should not be tokenized.
-    // We will find the matching closing brace by scanning the raw source string.
     const std::string& source = parser.lexer.getSource();
-    size_t start_pos = parser.lexer.getPosition(); // Position is now after the opening brace
+    size_t start_pos = parser.lexer.getPosition();
     size_t scan_pos = start_pos;
     int brace_level = 1;
 
@@ -532,10 +549,8 @@ std::unique_ptr<BaseNode> StatementState::parseOriginDefinition(Parser& parser) 
 
     std::string content = source.substr(start_pos, scan_pos - start_pos);
 
-    // Manually advance the lexer past the entire raw block.
     parser.lexer.setPosition(scan_pos + 1);
 
-    // Reload the parser's lookahead tokens from the new lexer position.
     parser.advanceTokens();
     parser.advanceTokens();
     parser.advanceTokens();
@@ -559,29 +574,20 @@ void StatementState::parseNamespaceDefinition(Parser& parser) {
     parser.expectToken(TokenType::Identifier);
     parser.pushNamespace(ns);
 
-    // Check for block-style namespace
     if (parser.currentToken.type == TokenType::OpenBrace) {
-        parser.advanceTokens(); // Consume '{'
+        parser.advanceTokens();
         while (parser.currentToken.type != TokenType::CloseBrace && parser.currentToken.type != TokenType::EndOfFile) {
-            // Recursively call the handle method of the *current* state object
-            // to parse statements within the namespace block.
             auto node = this->handle(parser);
-            // Top-level statements inside a namespace don't typically produce a node
-            // for the parent's AST, so we discard the result.
         }
         parser.expectToken(TokenType::CloseBrace);
-        parser.popNamespace(); // Pop the namespace after the block is done.
+        parser.popNamespace();
     }
-    // If it's not a block, the namespace applies until the end of the file.
-    // The spec is a bit ambiguous here, but a block-based scope is more robust,
-    // so we only implement the block-style `[Namespace] name { ... }` for now.
 }
 
 std::unique_ptr<BaseNode> StatementState::parseScriptElement(Parser& parser) {
     parser.expectToken(TokenType::Identifier); // script
     parser.expectToken(TokenType::OpenBrace);
 
-    // 1. Capture the raw script content
     std::stringstream content_ss;
     size_t start_pos = parser.currentToken.start_pos;
     size_t end_pos = start_pos;
@@ -591,7 +597,6 @@ std::unique_ptr<BaseNode> StatementState::parseScriptElement(Parser& parser) {
     }
     std::string scriptContent = parser.lexer.getSource().substr(start_pos, end_pos - start_pos);
 
-    // 2. Scan for auto-injectable selectors
     if (parser.contextNode) {
         std::regex selector_regex(R"(\{\{\s*([.#])([a-zA-Z0-9_-]+)\s*\}\})");
         std::smatch matches;
@@ -602,10 +607,8 @@ std::unique_ptr<BaseNode> StatementState::parseScriptElement(Parser& parser) {
             std::string name = matches[2];
 
             if (type == "." && parser.contextNode->attributes.find("class") == parser.contextNode->attributes.end()) {
-                // Auto-inject class attribute
                 parser.contextNode->attributes["class"] = std::make_unique<StaticStyleNode>(name);
             } else if (type == "#" && parser.contextNode->attributes.find("id") == parser.contextNode->attributes.end()) {
-                // Auto-inject id attribute
                 parser.contextNode->attributes["id"] = std::make_unique<StaticStyleNode>(name);
             }
             search_start = matches.suffix().first;
