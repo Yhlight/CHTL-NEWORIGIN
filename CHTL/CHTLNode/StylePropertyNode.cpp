@@ -1,4 +1,4 @@
-#include "StyleNode.h"
+#include "StylePropertyNode.h"
 
 namespace CHTL {
 

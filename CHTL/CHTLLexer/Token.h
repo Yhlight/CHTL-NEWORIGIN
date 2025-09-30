@@ -15,9 +15,11 @@ enum class TokenType {
     TEXT_KEYWORD,
     L_BRACE,
     R_BRACE,
+    STYLE_KEYWORD,
     COLON,
     EQUAL,
-    SEMICOLON
+    SEMICOLON,
+    NUMBER
 };
 
 class Token {

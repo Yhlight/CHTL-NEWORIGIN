@@ -25,10 +25,10 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
         return parseTextStatement();
     }
     if (peek().type == TokenType::IDENTIFIER) {
-        // This could be an element or an attribute. Attributes are only valid
-        // inside an element block, so we assume this is an element.
         return parseElementStatement();
     }
+        // A style block can only be inside an element, so we don't check for it here.
+        // If it's none of the above, it's an unknown statement.
     advance();
     return nullptr;
 }
@@ -64,9 +64,10 @@ std::unique_ptr<BaseNode> CHTLParser::parseElementStatement() {
     auto element = std::make_unique<ElementNode>(identifier.value);
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        // Look ahead to see if it's an attribute (IDENTIFIER : or IDENTIFIER =)
-        if (peek().type == TokenType::IDENTIFIER && current + 1 < tokens.size() &&
-            (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
+        if (peek().type == TokenType::STYLE_KEYWORD) {
+            element->setStyle(parseStyleStatement());
+        } else if (peek().type == TokenType::IDENTIFIER && current + 1 < tokens.size() &&
+                   (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
             parseAttributeStatement(*element);
         } else {
             // Otherwise, it's a nested statement (element, text, etc.)
@@ -80,6 +81,41 @@ std::unique_ptr<BaseNode> CHTLParser::parseElementStatement() {
     if (!match({TokenType::R_BRACE})) throw std::runtime_error("Expected '}' after element block.");
 
     return element;
+}
+
+std::unique_ptr<StyleNode> CHTLParser::parseStyleStatement() {
+    advance(); // Consume 'style' keyword
+
+    if (!match({TokenType::L_BRACE})) throw std::runtime_error("Expected '{' after 'style' keyword.");
+
+    auto styleNode = std::make_unique<StyleNode>();
+
+    // Loop until we find the closing brace of the style block.
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        // Parse a single style property: key: value;
+        Token key = advance();
+        if (key.type != TokenType::IDENTIFIER) throw std::runtime_error("Expected style property key.");
+
+        if (!match({TokenType::COLON})) throw std::runtime_error("Expected ':' after style property key.");
+
+        // Consume all tokens until the semicolon to form the value.
+        std::string combined_value;
+        while (!check(TokenType::SEMICOLON) && !isAtEnd()) {
+            combined_value += advance().value;
+        }
+
+        if (combined_value.empty()) {
+            throw std::runtime_error("Expected a value for the style property.");
+        }
+
+        if (!match({TokenType::SEMICOLON})) throw std::runtime_error("Expected ';' after style property.");
+
+        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, combined_value));
+    }
+
+    if (!match({TokenType::R_BRACE})) throw std::runtime_error("Expected '}' to close style block.");
+
+    return styleNode;
 }
 
 

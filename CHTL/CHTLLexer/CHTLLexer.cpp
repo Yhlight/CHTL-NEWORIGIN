@@ -92,6 +92,16 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
+        if (std::isdigit(input[pos])) {
+            std::string::size_type num_start = pos;
+            while (pos < input.length() && std::isdigit(input[pos])) {
+                pos++;
+            }
+            std::string value = input.substr(num_start, pos - num_start);
+            tokens.push_back({TokenType::NUMBER, value});
+            continue;
+        }
+
         if (std::isalpha(input[pos])) {
             std::string::size_type ident_start = pos;
             while (pos < input.length() && std::isalnum(input[pos])) {
@@ -100,6 +110,8 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             std::string value = input.substr(ident_start, pos - ident_start);
             if (value == "text") {
                 tokens.push_back({TokenType::TEXT_KEYWORD, value});
+            } else if (value == "style") {
+                tokens.push_back({TokenType::STYLE_KEYWORD, value});
             } else {
                 tokens.push_back({TokenType::IDENTIFIER, value});
             }

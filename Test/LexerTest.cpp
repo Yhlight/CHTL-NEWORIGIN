@@ -64,3 +64,13 @@ TEST_CASE("Tokenize Attribute Syntax Characters", "[lexer]") {
     REQUIRE(tokens[1].type == CHTL::TokenType::EQUAL);
     REQUIRE(tokens[2].type == CHTL::TokenType::SEMICOLON);
 }
+
+TEST_CASE("Tokenize Number", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "123";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 1);
+    REQUIRE(tokens[0].type == CHTL::TokenType::NUMBER);
+    REQUIRE(tokens[0].value == "123");
+}

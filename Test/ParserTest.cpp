@@ -3,6 +3,8 @@
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLNode/TextNode.h"
 #include "CHTLNode/ElementNode.h"
+#include "CHTLNode/StyleNode.h"
+#include "CHTLNode/StylePropertyNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -123,6 +125,48 @@ TEST_CASE("Parse Attribute with Unquoted Literal", "[parser]") {
     REQUIRE(elementNode != nullptr);
     REQUIRE(elementNode->getAttributes().size() == 1);
     REQUIRE(elementNode->getAttribute("class") == "box");
+}
+
+TEST_CASE("Parse Simple Style Block", "[parser]") {
+    std::string input = "div { style { color: red; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+    REQUIRE(elementNode->getChildren().empty());
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "color");
+    REQUIRE(propNode->getValue() == "red");
+}
+
+TEST_CASE("Parse Numeric Style Property", "[parser]") {
+    std::string input = "div { style { width: 100px; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "width");
+    REQUIRE(propNode->getValue() == "100px");
 }
 
 TEST_CASE("Parse Text Node", "[parser]") {

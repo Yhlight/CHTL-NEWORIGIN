@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include "StyleNode.h"
 
 namespace CHTL {
 
@@ -16,6 +17,7 @@ public:
     const std::string& getTagName() const { return tagName; }
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const { return children; }
     const std::map<std::string, std::string>& getAttributes() const { return attributes; }
+    const StyleNode* getStyle() const { return style.get(); }
 
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
@@ -33,10 +35,15 @@ public:
         return ""; // Return empty string if not found
     }
 
+    void setStyle(std::unique_ptr<StyleNode> newStyle) {
+        style = std::move(newStyle);
+    }
+
 private:
     std::string tagName;
     std::vector<std::unique_ptr<BaseNode>> children;
     std::map<std::string, std::string> attributes;
+    std::unique_ptr<StyleNode> style;
 };
 
 } // namespace CHTL
