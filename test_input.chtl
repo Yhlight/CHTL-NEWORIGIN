@@ -1,0 +1,9 @@
+html {
+    head {
+        title "CHTL Test Page"
+    }
+    body {
+        h1 "Welcome to CHTL"
+        p "This is a test of the CHTL compiler."
+    }
+}
