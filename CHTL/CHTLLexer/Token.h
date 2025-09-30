@@ -8,7 +8,7 @@ namespace CHTL {
 enum class TokenType {
     // Define some basic token types
     UNKNOWN,
-    END_OF_FILE,
+    EndOfFile,
     IDENTIFIER,
     STRING_LITERAL,
     COMMENT,

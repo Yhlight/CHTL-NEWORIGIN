@@ -1,16 +1,17 @@
-#ifndef CHTL_BASE_NODE_H
-#define CHTL_BASE_NODE_H
+#ifndef BASE_NODE_H
+#define BASE_NODE_H
 
-#include <memory>
-#include <vector>
+#include <iostream>
+#include <string>
 
 namespace CHTL {
 
 class BaseNode {
 public:
     virtual ~BaseNode() = default;
+    virtual void print(int indent = 0) const = 0;
 };
 
 } // namespace CHTL
 
-#endif // CHTL_BASE_NODE_H
+#endif // BASE_NODE_H

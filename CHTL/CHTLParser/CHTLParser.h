@@ -3,41 +3,37 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 #include "../CHTLLexer/Token.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/StyleNode.h"
+#include "../CHTLNode/ScriptNode.h"
 
 namespace CHTL {
 
-class ElementNode; // Forward declaration
-class StyleNode;   // Forward declaration
-class ScriptNode;  // Forward declaration
-
 class CHTLParser {
 public:
-    explicit CHTLParser(std::vector<Token> tokens);
-    ~CHTLParser();
-
+    CHTLParser(const std::vector<Token>& tokens);
     std::unique_ptr<BaseNode> parse();
 
 private:
-    // Statement parsing
-    std::unique_ptr<BaseNode> parseStatement();
-    std::unique_ptr<BaseNode> parseTextStatement();
-    std::unique_ptr<BaseNode> parseElementStatement();
-    void parseAttributeStatement(ElementNode& owner);
-    std::unique_ptr<StyleNode> parseStyleStatement();
-    std::unique_ptr<ScriptNode> parseScriptStatement();
-
-    // Token stream management
-    std::vector<Token> tokens;
+    const std::vector<Token>& tokens;
     size_t current = 0;
 
-    bool isAtEnd();
-    Token peek();
-    Token previous();
+    Token peek() const;
     Token advance();
-    bool check(TokenType type);
-    bool match(std::vector<TokenType> types);
+    bool isAtEnd() const;
+    bool check(TokenType type) const;
+    bool match(TokenType type);
+    Token consume(TokenType type, const std::string& message);
+
+    std::unique_ptr<BaseNode> parseStatement();
+    std::unique_ptr<ElementNode> parseElementNode();
+    std::unique_ptr<BaseNode> parseTextNode();
+    std::unique_ptr<StyleNode> parseStyleNode();
+    std::unique_ptr<ScriptNode> parseScriptNode();
+    void parseAttribute(ElementNode* element);
 };
 
 } // namespace CHTL

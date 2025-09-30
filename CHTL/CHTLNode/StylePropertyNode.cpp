@@ -1,7 +1,13 @@
 #include "StylePropertyNode.h"
+#include <iostream>
 
 namespace CHTL {
 
-// All methods are defined in the header, so this file is intentionally empty.
+void StylePropertyNode::print(int indent) const {
+    for (int i = 0; i < indent; ++i) {
+        std::cout << "  ";
+    }
+    std::cout << key << ": " << value << ";" << std::endl;
+}
 
 } // namespace CHTL

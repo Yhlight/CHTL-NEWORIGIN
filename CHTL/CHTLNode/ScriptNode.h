@@ -11,6 +11,7 @@ public:
     explicit ScriptNode(const std::string& content) : content(content) {}
 
     const std::string& getContent() const { return content; }
+    void print(int indent = 0) const override;
 
 private:
     std::string content;

@@ -15,6 +15,8 @@ public:
     void addProperty(std::unique_ptr<StylePropertyNode> property) {
         properties.push_back(std::move(property));
     }
+    void print(int indent = 0) const override;
+
 
 private:
     std::vector<std::unique_ptr<StylePropertyNode>> properties;

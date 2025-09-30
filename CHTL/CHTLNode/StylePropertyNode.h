@@ -13,6 +13,7 @@ public:
 
     const std::string& getKey() const { return key; }
     const std::string& getValue() const { return value; }
+    void print(int indent = 0) const override;
 
 private:
     std::string key;
