@@ -243,6 +243,12 @@ public:
      * @return Error message
      */
     std::string getErrorMessage() const;
+    
+    /**
+     * @brief Get all tokens
+     * @return Vector of all tokens
+     */
+    const std::vector<Token>& getTokens() const;
 
 private:
     std::string input_;

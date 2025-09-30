@@ -17,7 +17,7 @@ target_include_directories(chtl_tests PRIVATE
 )
 
 # Link libraries
-target_link_libraries(chtl_tests PRIVATE chtl_lib Threads::Threads)
+target_link_libraries(chtl_tests PRIVATE chtl_lib)
 
 # Add test to CTest
 add_test(NAME chtl_tests COMMAND chtl_tests)

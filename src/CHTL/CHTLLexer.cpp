@@ -126,6 +126,10 @@ std::string CHTLLexer::getErrorMessage() const {
     return errorMessage_;
 }
 
+const std::vector<Token>& CHTLLexer::getTokens() const {
+    return tokens_;
+}
+
 void CHTLLexer::tokenizeInput() {
     while (position_ < input_.length()) {
         skipWhitespace();
@@ -210,11 +214,15 @@ void CHTLLexer::skipMultilineComment() {
         if (input_[position_] == '\n') {
             line_++;
             column_ = 1;
+            position_++;
         } else {
             column_++;
+            position_++;
         }
-        position_++;
     }
+    
+    // If we reach here, the comment wasn't properly closed
+    errorMessage_ = "Unterminated multiline comment";
 }
 
 Token CHTLLexer::parseStringLiteral() {
@@ -250,6 +258,25 @@ Token CHTLLexer::parseStringLiteral() {
 Token CHTLLexer::parseNumberLiteral() {
     std::string value;
     
+    // Check for hexadecimal number
+    if (position_ + 2 < input_.length() && 
+        input_[position_] == '0' && 
+        (input_[position_ + 1] == 'x' || input_[position_ + 1] == 'X')) {
+        // Parse hexadecimal number
+        value += advanceChar(); // '0'
+        value += advanceChar(); // 'x' or 'X'
+        
+        while (position_ < input_.length() && 
+               (isDigit(input_[position_]) || 
+                (input_[position_] >= 'a' && input_[position_] <= 'f') ||
+                (input_[position_] >= 'A' && input_[position_] <= 'F'))) {
+            value += advanceChar();
+        }
+        
+        return Token(TokenType::NUMBER_LITERAL, value, line_, column_);
+    }
+    
+    // Parse decimal number
     while (position_ < input_.length() && (isDigit(input_[position_]) || input_[position_] == '.')) {
         value += advanceChar();
     }
@@ -278,14 +305,24 @@ Token CHTLLexer::parseOperator() {
     
     switch (c) {
         case ':': return Token(TokenType::COLON, ":", line_, column_);
-        case '=': return Token(TokenType::EQUALS, "=", line_, column_);
+        case '=': 
+            if (peekChar() == '=') {
+                advanceChar();
+                return Token(TokenType::EQUAL, "==", line_, column_);
+            }
+            return Token(TokenType::EQUALS, "=", line_, column_);
         case ';': return Token(TokenType::SEMICOLON, ";", line_, column_);
         case ',': return Token(TokenType::COMMA, ",", line_, column_);
         case '.': return Token(TokenType::DOT, ".", line_, column_);
         case '#': return Token(TokenType::HASH, "#", line_, column_);
         case '@': return Token(TokenType::AT, "@", line_, column_);
         case '?': return Token(TokenType::QUESTION, "?", line_, column_);
-        case '!': return Token(TokenType::EXCLAMATION, "!", line_, column_);
+        case '!': 
+            if (peekChar() == '=') {
+                advanceChar();
+                return Token(TokenType::NOT_EQUAL, "!=", line_, column_);
+            }
+            return Token(TokenType::EXCLAMATION, "!", line_, column_);
         case '+': return Token(TokenType::PLUS, "+", line_, column_);
         case '-': return Token(TokenType::MINUS, "-", line_, column_);
         case '*': 
