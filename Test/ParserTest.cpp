@@ -255,8 +255,28 @@ TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") 
     REQUIRE(rightLit->getValue().value == "50");
 }
 
-TEST_CASE("Parse Text Attribute as TextNode", "[parser]") {
+TEST_CASE("Parse Text Attribute", "[parser]") {
     std::string input = "div { text: \"hello world\"; }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+
+    // Ensure it is treated as a regular attribute
+    REQUIRE(elementNode->getAttributes().size() == 1);
+    REQUIRE(elementNode->getAttribute("text") == "hello world");
+
+    // Ensure no TextNode child was created
+    REQUIRE(elementNode->getChildren().empty());
+}
+
+TEST_CASE("Parse Text Block in Element", "[parser]") {
+    std::string input = "div { text { \"hello world\" } }";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);

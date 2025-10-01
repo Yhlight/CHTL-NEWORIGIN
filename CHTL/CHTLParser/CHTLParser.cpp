@@ -99,7 +99,7 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
                 }
 
                 consume(TokenType::SEMICOLON, "Expect ';' after text attribute.");
-                element->addChild(std::make_unique<TextNode>(value.value));
+                element->addAttribute("text", value.value);
             } else {
                 // It's a text block.
                 advance(); // Consume TEXT_KEYWORD
@@ -140,7 +140,14 @@ void CHTLParser::parseAttribute(ElementNode* element) {
 
 std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
     consume(TokenType::L_BRACE, "Expect '{' after 'text' keyword.");
-    Token text = consume(TokenType::STRING_LITERAL, "Expect string literal inside text block.");
+    Token text;
+    if (match(TokenType::STRING_LITERAL) || match(TokenType::IDENTIFIER)) {
+        text = tokens[current - 1];
+    } else if (check(TokenType::R_BRACE)) { // Handles empty text block `text {}`
+        text = {TokenType::STRING_LITERAL, ""};
+    } else {
+        throw std::runtime_error("Expect string, literal or '}' inside text block.");
+    }
     consume(TokenType::R_BRACE, "Expect '}' after text block.");
     return std::make_unique<TextNode>(text.value);
 }
