@@ -15,23 +15,31 @@ namespace CHTL {
 
 CHTLGenerator::CHTLGenerator() : m_template_manager(TemplateManager::getInstance()) {}
 
-std::string CHTLGenerator::generate(const BaseNode* root) {
-    if (!root) {
-        if (!m_global_styles.str().empty()) {
-            std::stringstream final_html;
-            final_html << "<html><head><style>"
-                       << m_global_styles.str()
-                       << "</style></head><body>"
-                       << ""
-                       << "</body></html>";
-            return final_html.str();
-        }
-        return "";
-    }
-    m_root = root;
-    std::string body_content = generateNode(root);
+std::string CHTLGenerator::generate(std::vector<std::unique_ptr<BaseNode>>& nodes) {
+    std::stringstream body_content_ss;
 
-    if (!m_global_styles.str().empty()) {
+    // Find the first element node to act as the root for expression evaluation
+    for (const auto& node : nodes) {
+        if (dynamic_cast<const ElementNode*>(node.get())) {
+            m_root_element = node.get();
+            break;
+        }
+    }
+
+    // If no root element is found, just use the first node
+    if (!m_root_element && !nodes.empty()) {
+        m_root_element = nodes[0].get();
+    }
+
+    // Generate content for all root-level nodes
+    for (const auto& node : nodes) {
+        body_content_ss << generateNode(node.get());
+    }
+
+    std::string body_content = body_content_ss.str();
+
+    // If there's any content (body or styles), wrap it in a full HTML document
+    if (!body_content.empty() || !m_global_styles.str().empty()) {
         std::stringstream final_html;
         final_html << "<html><head><style>"
                    << m_global_styles.str()
@@ -41,7 +49,7 @@ std::string CHTLGenerator::generate(const BaseNode* root) {
         return final_html.str();
     }
 
-    return body_content;
+    return ""; // Return empty string if no content was generated
 }
 
 std::string CHTLGenerator::generateNode(const BaseNode* node) {
@@ -56,6 +64,7 @@ std::string CHTLGenerator::generateNode(const BaseNode* node) {
         return generateScriptNode(scriptNode);
     }
     if (dynamic_cast<const TemplateDefinitionNode*>(node)) {
+        // Template definitions are handled by the parser/manager and don't produce output here.
         return "";
     }
     if (const auto* templateUsageNode = dynamic_cast<const TemplateUsageNode*>(node)) {
@@ -82,7 +91,7 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
             }
             for (const auto& child : def->getChildren()) {
                 if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
-                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root_element, node->getStyle());
                      style_ss << prop->getKey() << ": ";
                     if (val.type == EvaluatedValue::Type::NUMBER) {
                         style_ss << val.number_value << val.unit;
@@ -95,7 +104,7 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         }
         // 2. Add inline properties (will override template properties)
         for (const auto& prop : node->getStyle()->getProperties()) {
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root_element, node->getStyle());
             style_ss << prop->getKey() << ": ";
             if (val.type == EvaluatedValue::Type::NUMBER) {
                 style_ss << val.number_value << val.unit;
@@ -127,7 +136,7 @@ void CHTLGenerator::generateStyleNode(const StyleNode* node) {
         m_global_styles << block->getSelector() << " {";
         for (const auto& prop : block->getProperties()) {
             m_global_styles << prop->getKey() << ": ";
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node);
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root_element, node);
             if (val.type == EvaluatedValue::Type::NUMBER) {
                 m_global_styles << val.number_value << val.unit;
             } else {
@@ -150,7 +159,7 @@ std::string CHTLGenerator::generateScriptNode(const ScriptNode* node) {
 }
 
 void CHTLGenerator::generateTemplateDefinition(const TemplateDefinitionNode* node) {
-    // This is handled by the parser.
+    // This is handled by the parser/manager.
 }
 
 std::string CHTLGenerator::generateTemplateUsage(const TemplateUsageNode* node) {

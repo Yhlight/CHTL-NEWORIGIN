@@ -13,14 +13,8 @@ std::string generate_from_string(const std::string& chtl_input) {
     CHTL::CHTLParser parser(tokens);
     parser.parse();
     auto ast_nodes = parser.getAST();
-    if (ast_nodes.empty()) {
-        return "";
-    }
-
-    // For the purpose of these tests, we assume a single root node to generate from.
-    std::unique_ptr<CHTL::BaseNode> root = std::move(ast_nodes[0]);
     CHTL::CHTLGenerator generator;
-    return generator.generate(root.get());
+    return generator.generate(ast_nodes);
 }
 
 TEST_CASE("Generator expands style templates", "[generator]") {
@@ -40,7 +34,7 @@ TEST_CASE("Generator expands style templates", "[generator]") {
     // Note: This test will fail until the generator is updated to handle template expansion.
     // The expected output assumes that the generator will eventually expand the style template
     // into the p element's inline style.
-    REQUIRE(result == "<p style=\"color: black;font-size: 16px;font-weight: bold;\"></p>");
+    REQUIRE(result == "<html><head><style></style></head><body><p style=\"color: black;font-size: 16px;font-weight: bold;\"></p></body></html>");
 }
 
 TEST_CASE("Generator expands element templates", "[generator]") {
@@ -55,5 +49,5 @@ TEST_CASE("Generator expands element templates", "[generator]") {
     )";
     std::string result = generate_from_string(input);
     // Note: This test will also fail until the generator is updated.
-    REQUIRE(result == "<div><h1>Title</h1><p>Content</p></div>");
+    REQUIRE(result == "<html><head><style></style></head><body><div><h1>Title</h1><p>Content</p></div></body></html>");
 }
