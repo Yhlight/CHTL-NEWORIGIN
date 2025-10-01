@@ -188,17 +188,15 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
 std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
     if (match(TokenType::NUMBER)) {
         Token num_token = tokens[current - 1];
-        // Handle units like 'px', '%', etc.
+        std::string unit;
         if (check(TokenType::IDENTIFIER) || check(TokenType::PERCENT)) {
-            Token unit_token = advance();
-            Token combined_token = {num_token.type, num_token.value + unit_token.value};
-            return std::make_unique<LiteralNode>(combined_token);
+            unit = advance().value;
         }
-        return std::make_unique<LiteralNode>(num_token);
+        return std::make_unique<LiteralNode>(num_token, unit);
     }
 
     if (match(TokenType::IDENTIFIER)) {
-        return std::make_unique<LiteralNode>(tokens[current - 1]);
+        return std::make_unique<LiteralNode>(tokens[current - 1], "");
     }
 
     // Handle grouped expressions e.g. (10 + 5)

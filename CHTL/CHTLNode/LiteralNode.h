@@ -8,13 +8,15 @@ namespace CHTL {
 
 class LiteralNode : public ExpressionNode {
 public:
-    explicit LiteralNode(const Token& value);
+    explicit LiteralNode(const Token& value, const std::string& unit = "");
     void print(int indent = 0) const override;
     ExpressionType getType() const override;
     const Token& getValue() const;
+    const std::string& getUnit() const;
 
 private:
     Token value;
+    std::string unit;
 };
 
 } // namespace CHTL

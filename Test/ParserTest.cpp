@@ -163,8 +163,26 @@ TEST_CASE("Parse Numeric Style Property", "[parser]") {
     CHTL::CHTLParser parser(tokens);
     std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
-    // This test is expected to fail until the expression parser is implemented
-    // For now, it will fail because the placeholder parser only consumes one token.
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "width");
+
+    const CHTL::ExpressionNode* exprNode = propNode->getValue();
+    REQUIRE(exprNode != nullptr);
+    REQUIRE(exprNode->getType() == CHTL::ExpressionType::LITERAL);
+
+    const auto* litNode = dynamic_cast<const CHTL::LiteralNode*>(exprNode);
+    REQUIRE(litNode != nullptr);
+    REQUIRE(litNode->getValue().type == CHTL::TokenType::NUMBER);
+    REQUIRE(litNode->getValue().value == "100");
+    REQUIRE(litNode->getUnit() == "px");
 }
 
 TEST_CASE("Parse Simple Script Block", "[parser]") {
