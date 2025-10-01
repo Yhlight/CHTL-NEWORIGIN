@@ -67,7 +67,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     if (check(TokenType::IDENTIFIER)) {
         return parseElementNode();
     }
-    if (match(TokenType::TEXT_KEYWORD)) {
+    if (match(TokenType::KEYWORD_TEXT)) {
         return parseTextNode();
     }
 
@@ -80,11 +80,11 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
     consume(TokenType::L_BRACE, "Expect '{' after element tag name.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (match(TokenType::STYLE_KEYWORD)) {
+        if (match(TokenType::KEYWORD_STYLE)) {
             element->setStyle(parseStyleNode());
-        } else if (match(TokenType::SCRIPT_KEYWORD)) {
+        } else if (match(TokenType::KEYWORD_SCRIPT)) {
             element->setScript(parseScriptNode());
-        } else if (match(TokenType::TEXT_KEYWORD)) {
+        } else if (match(TokenType::KEYWORD_TEXT)) {
             element->addChild(parseTextNode());
         } else if (check(TokenType::IDENTIFIER)) {
             // Lookahead to differentiate between an attribute and a child element.
@@ -121,7 +121,13 @@ void CHTLParser::parseAttribute(ElementNode* element) {
 
 std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
     consume(TokenType::L_BRACE, "Expect '{' after 'text' keyword.");
-    Token text = consume(TokenType::STRING_LITERAL, "Expect string literal inside text block.");
+    Token text;
+    if (check(TokenType::STRING_LITERAL)) {
+        text = consume(TokenType::STRING_LITERAL, ""); // Message is not used here
+    } else if (check(TokenType::UNQUOTED_LITERAL)) {
+        text = consume(TokenType::UNQUOTED_LITERAL, ""); // Message is not used here
+    }
+    // Allow empty text blocks
     consume(TokenType::R_BRACE, "Expect '}' after text block.");
     return std::make_unique<TextNode>(text.value);
 }
