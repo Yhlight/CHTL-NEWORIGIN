@@ -4,6 +4,7 @@
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/StylePropertyNode.h"
+#include "../CHTLNode/SelectorBlockNode.h"
 #include "../CHTLNode/LiteralNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
 #include <stdexcept>
@@ -81,7 +82,7 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
         if (match(TokenType::STYLE_KEYWORD)) {
-            element->setStyle(parseStyleNode());
+            element->setStyle(parseStyleNode(element.get()));
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
         } else if (match(TokenType::TEXT_KEYWORD)) {
@@ -126,16 +127,54 @@ std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
     return std::make_unique<TextNode>(text.value);
 }
 
-std::unique_ptr<StyleNode> CHTLParser::parseStyleNode() {
+#include "../CHTLNode/SelectorBlockNode.h"
+
+std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
     auto styleNode = std::make_unique<StyleNode>();
     consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-        consume(TokenType::COLON, "Expect ':' after style property key.");
-        auto value_expr = parseExpression();
-        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        if (match(TokenType::DOT)) { // Class selector
+            Token name = consume(TokenType::IDENTIFIER, "Expect class name after '.'.");
+            std::string selector_name = name.value;
+            parent->addAttribute("class", selector_name); // Will be handled in ElementNode
+
+            auto selectorBlock = std::make_unique<SelectorBlockNode>("." + selector_name);
+            consume(TokenType::L_BRACE, "Expect '{' after selector name.");
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                consume(TokenType::COLON, "Expect ':' after style property key.");
+                auto value_expr = parseExpression();
+                selectorBlock->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after selector block.");
+            styleNode->addSelectorBlock(std::move(selectorBlock));
+        } else if (match(TokenType::HASH)) { // ID selector
+            Token name = consume(TokenType::IDENTIFIER, "Expect id name after '#'.");
+            std::string selector_name = name.value;
+            parent->addAttribute("id", selector_name);
+
+            auto selectorBlock = std::make_unique<SelectorBlockNode>("#" + selector_name);
+            consume(TokenType::L_BRACE, "Expect '{' after selector name.");
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                consume(TokenType::COLON, "Expect ':' after style property key.");
+                auto value_expr = parseExpression();
+                selectorBlock->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after selector block.");
+            styleNode->addSelectorBlock(std::move(selectorBlock));
+        } else if (check(TokenType::IDENTIFIER)) { // Inline property
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+            consume(TokenType::COLON, "Expect ':' after style property key.");
+            auto value_expr = parseExpression();
+            styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        } else {
+            throw std::runtime_error("Unexpected token in style block: " + peek().value);
+        }
     }
 
     consume(TokenType::R_BRACE, "Expect '}' after style block.");

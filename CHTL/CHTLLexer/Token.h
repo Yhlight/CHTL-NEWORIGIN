@@ -25,6 +25,8 @@ enum class TokenType {
     COLON,
     EQUAL,
     SEMICOLON,
+    DOT,
+    HASH,
 
     // Arithmetic Operators
     PLUS,

@@ -256,3 +256,47 @@ TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") 
     REQUIRE(rightLit->getValue().type == CHTL::TokenType::NUMBER);
     REQUIRE(rightLit->getValue().value == "50");
 }
+
+TEST_CASE("Parse Style Block with Class Selector", "[parser]") {
+    std::string input = "div { style { .my-class { color: blue; } } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getAttribute("class") == "my-class");
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getSelectorBlocks().size() == 1);
+
+    const auto* selectorBlock = styleNode->getSelectorBlocks()[0].get();
+    REQUIRE(selectorBlock->getSelector() == ".my-class");
+    REQUIRE(selectorBlock->getProperties().size() == 1);
+    REQUIRE(selectorBlock->getProperties()[0]->getKey() == "color");
+}
+
+TEST_CASE("Parse Style Block with ID Selector", "[parser]") {
+    std::string input = "div { style { #my-id { background-color: red; } } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getAttribute("id") == "my-id");
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getSelectorBlocks().size() == 1);
+
+    const auto* selectorBlock = styleNode->getSelectorBlocks()[0].get();
+    REQUIRE(selectorBlock->getSelector() == "#my-id");
+    REQUIRE(selectorBlock->getProperties().size() == 1);
+    REQUIRE(selectorBlock->getProperties()[0]->getKey() == "background-color");
+}

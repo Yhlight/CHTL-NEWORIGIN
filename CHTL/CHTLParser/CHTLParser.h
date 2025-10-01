@@ -34,7 +34,7 @@ private:
     std::unique_ptr<BaseNode> parseStatement();
     std::unique_ptr<ElementNode> parseElementNode();
     std::unique_ptr<BaseNode> parseTextNode();
-    std::unique_ptr<StyleNode> parseStyleNode();
+    std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);
     std::unique_ptr<ScriptNode> parseScriptNode();
     void parseAttribute(ElementNode* element);
 
