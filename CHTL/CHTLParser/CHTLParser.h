@@ -10,6 +10,7 @@
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/ExpressionNode.h"
+#include "../CHTLNode/ConditionalExpressionNode.h"
 
 namespace CHTL {
 
@@ -40,10 +41,15 @@ private:
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();
-    std::unique_ptr<ExpressionNode> parseTerm();      // Addition and Subtraction
-    std::unique_ptr<ExpressionNode> parseFactor();    // Multiplication, Division, Modulo
-    std::unique_ptr<ExpressionNode> parsePower();     // Exponentiation (right-associative)
-    std::unique_ptr<ExpressionNode> parsePrimary();   // Literals and grouping
+    std::unique_ptr<ExpressionNode> parseTernary();
+    std::unique_ptr<ExpressionNode> parseLogicalOr();
+    std::unique_ptr<ExpressionNode> parseLogicalAnd();
+    std::unique_ptr<ExpressionNode> parseEquality();
+    std::unique_ptr<ExpressionNode> parseComparison();
+    std::unique_ptr<ExpressionNode> parseTerm();
+    std::unique_ptr<ExpressionNode> parseFactor();
+    std::unique_ptr<ExpressionNode> parsePower();
+    std::unique_ptr<ExpressionNode> parsePrimary();
 };
 
 } // namespace CHTL

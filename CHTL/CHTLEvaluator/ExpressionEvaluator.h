@@ -9,6 +9,8 @@
 
 namespace CHTL {
 
+class StyleNode;
+
 struct EvaluatedValue {
     enum class Type { NUMBER, STRING };
 
@@ -28,7 +30,7 @@ struct EvaluatedValue {
 
 class ExpressionEvaluator {
 public:
-    EvaluatedValue evaluate(const ExpressionNode* expression);
+    EvaluatedValue evaluate(const ExpressionNode* expression, const StyleNode* style_context = nullptr);
 };
 
 }

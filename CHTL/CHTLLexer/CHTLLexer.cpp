@@ -46,35 +46,78 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
-        // --- Arithmetic Operators ---
+        // --- Operators and Punctuation ---
         if (input[pos] == '+') { tokens.push_back({TokenType::PLUS, "+"}); pos++; continue; }
         if (input[pos] == '-') { tokens.push_back({TokenType::MINUS, "-"}); pos++; continue; }
         if (input[pos] == '*') {
             if (pos + 1 < input.length() && input[pos + 1] == '*') {
-                tokens.push_back({TokenType::STAR_STAR, "**"});
-                pos += 2;
+                tokens.push_back({TokenType::STAR_STAR, "**"}); pos += 2;
             } else {
-                tokens.push_back({TokenType::STAR, "*"});
-                pos++;
+                tokens.push_back({TokenType::STAR, "*"}); pos++;
             }
             continue;
         }
         if (input[pos] == '/') { tokens.push_back({TokenType::SLASH, "/"}); pos++; continue; }
         if (input[pos] == '%') { tokens.push_back({TokenType::PERCENT, "%"}); pos++; continue; }
-
-
         if (input[pos] == '{') { tokens.push_back({TokenType::L_BRACE, "{"}); pos++; continue; }
         if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
         if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
-        if (input[pos] == '=') { tokens.push_back({TokenType::EQUAL, "="}); pos++; continue; }
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
-        if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
-        if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
-        if (input[pos] == '&') { tokens.push_back({TokenType::AMPERSAND, "&"}); pos++; continue; }
+        if (input[pos] == '?') { tokens.push_back({TokenType::QUESTION_MARK, "?"}); pos++; continue; }
 
-        if (input[pos] == '"') {
+        if (input[pos] == '>') {
+            if (pos + 1 < input.length() && input[pos + 1] == '=') {
+                tokens.push_back({TokenType::GREATER_EQUAL, ">="}); pos += 2;
+            } else {
+                tokens.push_back({TokenType::GREATER, ">"}); pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '<') {
+            if (pos + 1 < input.length() && input[pos + 1] == '=') {
+                tokens.push_back({TokenType::LESS_EQUAL, "<="}); pos += 2;
+            } else {
+                tokens.push_back({TokenType::LESS, "<"}); pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '=') {
+            if (pos + 1 < input.length() && input[pos + 1] == '=') {
+                tokens.push_back({TokenType::EQUAL_EQUAL, "=="}); pos += 2;
+            } else {
+                tokens.push_back({TokenType::EQUAL, "="}); pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '!') {
+            if (pos + 1 < input.length() && input[pos + 1] == '=') {
+                tokens.push_back({TokenType::BANG_EQUAL, "!="}); pos += 2;
+            } else {
+                tokens.push_back({TokenType::UNKNOWN, "!"}); pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '&') {
+            if (pos + 1 < input.length() && input[pos + 1] == '&') {
+                tokens.push_back({TokenType::AMPERSAND_AMPERSAND, "&&"}); pos += 2;
+            } else {
+                tokens.push_back({TokenType::UNKNOWN, "&"}); pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '|') {
+            if (pos + 1 < input.length() && input[pos + 1] == '|') {
+                tokens.push_back({TokenType::PIPE_PIPE, "||"}); pos += 2;
+            } else {
+                tokens.push_back({TokenType::UNKNOWN, "|"}); pos++;
+            }
+            continue;
+        }
+
+        if (input[pos] == '"' || input[pos] == '\'') {
+            char quote_char = input[pos];
             std::string::size_type literal_start = pos + 1;
-            std::string::size_type literal_end = input.find('"', literal_start);
+            std::string::size_type literal_end = input.find(quote_char, literal_start);
             if (literal_end == std::string::npos) {
                 tokens.push_back({TokenType::UNKNOWN, input.substr(pos)});
                 pos = input.length();

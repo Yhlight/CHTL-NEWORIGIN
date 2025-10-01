@@ -56,7 +56,7 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         if (!node->getStyle()->getProperties().empty()) {
             ss << " style=\"";
             for (const auto& prop : node->getStyle()->getProperties()) {
-                EvaluatedValue val = m_evaluator.evaluate(prop->getValue());
+                EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), node->getStyle());
                 ss << prop->getKey() << ": ";
                 if (val.type == EvaluatedValue::Type::NUMBER) {
                     ss << val.number_value << val.unit;
@@ -80,12 +80,12 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
     return ss.str();
 }
 
-std::string CHTLGenerator::generateStyleNode(const StyleNode* node) {
+void CHTLGenerator::generateStyleNode(const StyleNode* node) {
     for (const auto& block : node->getSelectorBlocks()) {
         m_global_styles << block->getSelector() << " {";
         for (const auto& prop : block->getProperties()) {
             m_global_styles << prop->getKey() << ":";
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue());
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), node);
             if (val.type == EvaluatedValue::Type::NUMBER) {
                 m_global_styles << val.number_value << val.unit;
             } else {
@@ -95,7 +95,6 @@ std::string CHTLGenerator::generateStyleNode(const StyleNode* node) {
         }
         m_global_styles << "}";
     }
-    return "";
 }
 
 std::string CHTLGenerator::generateTextNode(const TextNode* node) {

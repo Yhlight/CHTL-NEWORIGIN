@@ -7,7 +7,8 @@ namespace CHTL {
 
 enum class ExpressionType {
     LITERAL,
-    BINARY_OP
+    BINARY_OP,
+    CONDITIONAL
 };
 
 class ExpressionNode : public BaseNode {

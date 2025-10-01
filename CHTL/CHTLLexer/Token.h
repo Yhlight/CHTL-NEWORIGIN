@@ -35,7 +35,18 @@ enum class TokenType {
     STAR,
     SLASH,
     PERCENT,
-    STAR_STAR
+    STAR_STAR,
+
+    // Conditional and Logical Operators
+    QUESTION_MARK,
+    GREATER,
+    LESS,
+    GREATER_EQUAL,
+    LESS_EQUAL,
+    EQUAL_EQUAL,
+    BANG_EQUAL,
+    AMPERSAND_AMPERSAND,
+    PIPE_PIPE
 };
 
 class Token {
