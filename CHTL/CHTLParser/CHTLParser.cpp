@@ -1,35 +1,47 @@
 #include "CHTLParser.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
-#include "../CHTLNode/StyleNode.h"
-#include "../CHTLNode/ScriptNode.h"
-#include "../CHTLNode/StylePropertyNode.h"
-#include "../CHTLNode/LiteralNode.h"
+#include "../CHTLState/ParsingState.h"
+#include "../CHTLState/InitialState.h"
 #include "../CHTLNode/BinaryOpNode.h"
+#include "../CHTLNode/LiteralNode.h"
 #include <stdexcept>
 
 namespace CHTL {
 
-CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
-
-// --- Core Parsing Logic ---
-
-std::unique_ptr<BaseNode> CHTLParser::parse() {
-    if (isAtEnd()) {
-        return nullptr;
-    }
-    return parseStatement();
+CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {
+    // Create a virtual root node to hold all top-level elements.
+    root = std::make_unique<ElementNode>("<root>");
+    nodeStack.push(root.get());
+    // Set the initial state of the parser.
+    setState(std::make_unique<InitialState>());
 }
 
-// --- Token Manipulation Helpers ---
+std::unique_ptr<BaseNode> CHTLParser::parse() {
+    while (state && !isAtEnd()) {
+        // Centrally handle comments. They can appear anywhere and should be ignored.
+        if (peek().type == TokenType::COMMENT) {
+            advance();
+            continue;
+        }
+        state->handle(*this);
+    }
+    // The virtual root node contains the parsed document structure
+    return std::move(root);
+}
 
-bool CHTLParser::isAtEnd() const {
-    return current >= tokens.size();
+void CHTLParser::setState(std::unique_ptr<ParsingState> newState) {
+    state = std::move(newState);
 }
 
 Token CHTLParser::peek() const {
     if (isAtEnd()) return {TokenType::EndOfFile, ""};
     return tokens[current];
+}
+
+Token CHTLParser::peekNext() const {
+    if (current + 1 >= tokens.size()) {
+        return {TokenType::EndOfFile, ""};
+    }
+    return tokens[current + 1];
 }
 
 Token CHTLParser::advance() {
@@ -39,8 +51,14 @@ Token CHTLParser::advance() {
     return tokens[current - 1];
 }
 
+bool CHTLParser::isAtEnd() const {
+    return current >= tokens.size() || tokens[current].type == TokenType::EndOfFile;
+}
+
 bool CHTLParser::check(TokenType type) const {
-    if (isAtEnd()) return false;
+    if (isAtEnd()) {
+        return false;
+    }
     return peek().type == type;
 }
 
@@ -56,100 +74,43 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
     if (check(type)) {
         return advance();
     }
-    throw std::runtime_error(message);
+    throw std::runtime_error(message + " - Found " + peek().value + " instead.");
 }
 
-// --- Statement-Level Parsing ---
-
-std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
-    while (match(TokenType::COMMENT)) {}
-
-    if (check(TokenType::IDENTIFIER)) {
-        return parseElementNode();
+void CHTLParser::openNode(std::unique_ptr<ElementNode> node) {
+    ElementNode* node_ptr = node.get();
+    if (nodeStack.empty()) {
+         root = std::move(node);
+         nodeStack.push(node_ptr);
+         return;
     }
-    if (match(TokenType::TEXT_KEYWORD)) {
-        return parseTextNode();
-    }
-
-    return nullptr;
+    nodeStack.top()->addChild(std::move(node));
+    nodeStack.push(node_ptr);
 }
 
-std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
-    Token tag = consume(TokenType::IDENTIFIER, "Expect element tag name.");
-    auto element = std::make_unique<ElementNode>(tag.value);
-    consume(TokenType::L_BRACE, "Expect '{' after element tag name.");
-
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (match(TokenType::STYLE_KEYWORD)) {
-            element->setStyle(parseStyleNode());
-        } else if (match(TokenType::SCRIPT_KEYWORD)) {
-            element->setScript(parseScriptNode());
-        } else if (match(TokenType::TEXT_KEYWORD)) {
-            element->addChild(parseTextNode());
-        } else if (check(TokenType::IDENTIFIER)) {
-            // Lookahead to differentiate between an attribute and a child element.
-            if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
-                parseAttribute(element.get());
-            } else {
-                element->addChild(parseElementNode());
-            }
-        } else {
-            // If we find a token we don't recognize, we can't continue parsing this block.
-            throw std::runtime_error("Unexpected token in element block: " + peek().value);
-        }
-    }
-
-    consume(TokenType::R_BRACE, "Expect '}' after element block.");
-    return element;
-}
-
-void CHTLParser::parseAttribute(ElementNode* element) {
-    Token key = consume(TokenType::IDENTIFIER, "Expect attribute key.");
-    if (match(TokenType::COLON) || match(TokenType::EQUAL)) {
-        std::string value_str;
-        // Attributes can have unquoted literals, so we just consume tokens until the semicolon.
-        while (!isAtEnd() && peek().type != TokenType::SEMICOLON) {
-            value_str += advance().value;
-        }
-        if (value_str.empty()) throw std::runtime_error("Expect attribute value.");
-        element->addAttribute(key.value, value_str);
-        consume(TokenType::SEMICOLON, "Expect ';' after attribute.");
-    } else {
-        throw std::runtime_error("Expect ':' or '=' after attribute key.");
+void CHTLParser::closeNode() {
+    if (nodeStack.size() > 1) { // Do not pop the virtual root
+        nodeStack.pop();
     }
 }
 
-std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
-    consume(TokenType::L_BRACE, "Expect '{' after 'text' keyword.");
-    Token text = consume(TokenType::STRING_LITERAL, "Expect string literal inside text block.");
-    consume(TokenType::R_BRACE, "Expect '}' after text block.");
-    return std::make_unique<TextNode>(text.value);
-}
-
-std::unique_ptr<StyleNode> CHTLParser::parseStyleNode() {
-    auto styleNode = std::make_unique<StyleNode>();
-    consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
-
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-        consume(TokenType::COLON, "Expect ':' after style property key.");
-        auto value_expr = parseExpression();
-        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+void CHTLParser::addNode(std::unique_ptr<BaseNode> node) {
+    if (nodeStack.empty()) {
+        throw std::runtime_error("Cannot add a node when the node stack is empty.");
     }
-
-    consume(TokenType::R_BRACE, "Expect '}' after style block.");
-    return styleNode;
+    nodeStack.top()->addChild(std::move(node));
 }
 
-std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {
-    consume(TokenType::L_BRACE, "Expect '{' after 'script' keyword.");
-    Token content = consume(TokenType::STRING_LITERAL, "Expect script content.");
-    consume(TokenType::R_BRACE, "Expect '}' after script block.");
-    return std::make_unique<ScriptNode>(content.value);
+ElementNode* CHTLParser::getCurrentNode() {
+    if (nodeStack.empty()) {
+        return nullptr;
+    }
+    return nodeStack.top();
 }
 
-// --- Expression Parsing (Precedence Climbing) ---
+CHTLParser::~CHTLParser() = default;
+
+// --- Expression Parsing (Pratt/Precedence Climbing) ---
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
     return parseTerm();
@@ -157,8 +118,8 @@ std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseTerm() {
     auto expr = parseFactor();
-    while (match(TokenType::PLUS) || match(TokenType::MINUS)) {
-        Token op = tokens[current - 1];
+    while (peek().type == TokenType::PLUS || peek().type == TokenType::MINUS) {
+        Token op = advance();
         auto right = parseFactor();
         expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
     }
@@ -167,8 +128,8 @@ std::unique_ptr<ExpressionNode> CHTLParser::parseTerm() {
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseFactor() {
     auto expr = parsePower();
-    while (match(TokenType::STAR) || match(TokenType::SLASH) || match(TokenType::PERCENT)) {
-        Token op = tokens[current - 1];
+    while (peek().type == TokenType::STAR || peek().type == TokenType::SLASH) {
+        Token op = advance();
         auto right = parsePower();
         expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
     }
@@ -177,8 +138,8 @@ std::unique_ptr<ExpressionNode> CHTLParser::parseFactor() {
 
 std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
     auto expr = parsePrimary();
-    if (match(TokenType::STAR_STAR)) {
-        Token op = tokens[current - 1];
+    if (peek().type == TokenType::STAR_STAR) {
+        Token op = advance();
         auto right = parsePower(); // Right-associative
         expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
     }
@@ -186,25 +147,13 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
 }
 
 std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
-    if (match(TokenType::NUMBER)) {
-        Token num_token = tokens[current - 1];
-        // Handle units like 'px', '%', etc.
-        if (check(TokenType::IDENTIFIER) || check(TokenType::PERCENT)) {
-            Token unit_token = advance();
-            Token combined_token = {num_token.type, num_token.value + unit_token.value};
-            return std::make_unique<LiteralNode>(combined_token);
-        }
-        return std::make_unique<LiteralNode>(num_token);
-    }
-
-    if (match(TokenType::IDENTIFIER)) {
+    if (match(TokenType::NUMBER) || match(TokenType::STRING_LITERAL) || match(TokenType::IDENTIFIER)) {
         return std::make_unique<LiteralNode>(tokens[current - 1]);
     }
 
-    // Handle grouped expressions e.g. (10 + 5)
-    if (match(TokenType::L_BRACE)) { // Assuming L_PAREN for grouping, but let's use L_BRACE for now if no L_PAREN exists
+    if (match(TokenType::L_BRACE)) {
         auto expr = parseExpression();
-        consume(TokenType::R_BRACE, "Expect ')' after expression.");
+        consume(TokenType::R_BRACE, "Expected '}' after expression.");
         return expr;
     }
 

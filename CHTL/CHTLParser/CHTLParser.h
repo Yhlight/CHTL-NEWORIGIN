@@ -4,46 +4,52 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <stack>
 #include "../CHTLLexer/Token.h"
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/StyleNode.h"
-#include "../CHTLNode/ScriptNode.h"
-#include "../CHTLNode/ExpressionNode.h"
 
 namespace CHTL {
+
+class ParsingState; // Forward-declaration
 
 class CHTLParser {
 public:
     CHTLParser(const std::vector<Token>& tokens);
+    ~CHTLParser(); // Declare the destructor
     std::unique_ptr<BaseNode> parse();
 
-private:
-    const std::vector<Token>& tokens;
-    size_t current = 0;
+    // State management
+    void setState(std::unique_ptr<ParsingState> newState);
 
-    // Token manipulation helpers
+    // Token manipulation helpers (for states)
     Token peek() const;
+    Token peekNext() const;
     Token advance();
     bool isAtEnd() const;
     bool check(TokenType type) const;
     bool match(TokenType type);
     Token consume(TokenType type, const std::string& message);
 
-    // Statement-level parsing
-    std::unique_ptr<BaseNode> parseStatement();
-    std::unique_ptr<ElementNode> parseElementNode();
-    std::unique_ptr<BaseNode> parseTextNode();
-    std::unique_ptr<StyleNode> parseStyleNode();
-    std::unique_ptr<ScriptNode> parseScriptNode();
-    void parseAttribute(ElementNode* element);
+    // AST construction helpers (for states)
+    ElementNode* getCurrentNode();
+    void openNode(std::unique_ptr<ElementNode> node);
+    void closeNode();
+    void addNode(std::unique_ptr<BaseNode> node);
 
-    // Expression parsing (Pratt/Precedence Climbing)
+    // Expression parsing helpers (for strategies)
     std::unique_ptr<ExpressionNode> parseExpression();
-    std::unique_ptr<ExpressionNode> parseTerm();      // Addition and Subtraction
-    std::unique_ptr<ExpressionNode> parseFactor();    // Multiplication, Division, Modulo
-    std::unique_ptr<ExpressionNode> parsePower();     // Exponentiation (right-associative)
-    std::unique_ptr<ExpressionNode> parsePrimary();   // Literals and grouping
+
+private:
+    std::unique_ptr<ExpressionNode> parseTerm();
+    std::unique_ptr<ExpressionNode> parseFactor();
+    std::unique_ptr<ExpressionNode> parsePower();
+    std::unique_ptr<ExpressionNode> parsePrimary();
+    const std::vector<Token>& tokens;
+    size_t current = 0;
+    std::unique_ptr<ParsingState> state;
+    std::unique_ptr<ElementNode> root;
+    std::stack<ElementNode*> nodeStack;
 };
 
 } // namespace CHTL
