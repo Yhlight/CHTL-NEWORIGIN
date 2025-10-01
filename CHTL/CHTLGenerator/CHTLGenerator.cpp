@@ -4,6 +4,7 @@
 #include "CHTLNode/TextNode.h"
 #include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLNode/SelectorBlockNode.h"
 #include <sstream>
 #include <iomanip>
 
@@ -15,7 +16,19 @@ std::string CHTLGenerator::generate(const BaseNode* root) {
     if (!root) {
         return "";
     }
-    return generateNode(root);
+    std::string body_content = generateNode(root);
+
+    if (!m_global_styles.str().empty()) {
+        std::stringstream final_html;
+        final_html << "<html><head><style>"
+                   << m_global_styles.str()
+                   << "</style></head><body>"
+                   << body_content
+                   << "</body></html>";
+        return final_html.str();
+    }
+
+    return body_content;
 }
 
 std::string CHTLGenerator::generateNode(const BaseNode* node) {
@@ -28,7 +41,6 @@ std::string CHTLGenerator::generateNode(const BaseNode* node) {
      if (const auto* scriptNode = dynamic_cast<const ScriptNode*>(node)) {
         return generateScriptNode(scriptNode);
     }
-    // Note: StyleNode is handled within generateElementNode
     return "";
 }
 
@@ -40,19 +52,22 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         ss << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
-    if (node->getStyle() && !node->getStyle()->getProperties().empty()) {
-        ss << " style=\"";
-        for (const auto& prop : node->getStyle()->getProperties()) {
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue());
-            ss << prop->getKey() << ": ";
-            if (val.type == EvaluatedValue::Type::NUMBER) {
-                ss << val.number_value << val.unit;
-            } else {
-                ss << val.string_value;
+    if (node->getStyle()) {
+        if (!node->getStyle()->getProperties().empty()) {
+            ss << " style=\"";
+            for (const auto& prop : node->getStyle()->getProperties()) {
+                EvaluatedValue val = m_evaluator.evaluate(prop->getValue());
+                ss << prop->getKey() << ": ";
+                if (val.type == EvaluatedValue::Type::NUMBER) {
+                    ss << val.number_value << val.unit;
+                } else {
+                    ss << val.string_value;
+                }
+                ss << ";";
             }
-            ss << ";";
+            ss << "\"";
         }
-        ss << "\"";
+        generateStyleNode(node->getStyle());
     }
 
     ss << ">";
@@ -66,8 +81,20 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
 }
 
 std::string CHTLGenerator::generateStyleNode(const StyleNode* node) {
-    // This will eventually generate the global style sheet from selector blocks.
-    // For now, it does nothing, as inline styles are handled in generateElementNode.
+    for (const auto& block : node->getSelectorBlocks()) {
+        m_global_styles << block->getSelector() << " {";
+        for (const auto& prop : block->getProperties()) {
+            m_global_styles << prop->getKey() << ":";
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue());
+            if (val.type == EvaluatedValue::Type::NUMBER) {
+                m_global_styles << val.number_value << val.unit;
+            } else {
+                m_global_styles << val.string_value;
+            }
+            m_global_styles << ";";
+        }
+        m_global_styles << "}";
+    }
     return "";
 }
 

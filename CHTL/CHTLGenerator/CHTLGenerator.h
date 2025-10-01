@@ -5,6 +5,7 @@
 #include <memory>
 #include "CHTLNode/BaseNode.h"
 #include "CHTLEvaluator/ExpressionEvaluator.h"
+#include <sstream>
 
 namespace CHTL {
 
@@ -20,6 +21,7 @@ public:
 
 private:
     ExpressionEvaluator m_evaluator;
+    std::stringstream m_global_styles;
     std::string generateNode(const BaseNode* node);
     std::string generateElementNode(const ElementNode* node);
     std::string generateStyleNode(const StyleNode* node);

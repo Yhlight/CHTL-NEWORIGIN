@@ -41,9 +41,11 @@ TEST_CASE("Generator handles nested elements and mixed content", "[generator]") 
     REQUIRE(result == "<main id=\"app\"><section class=\"container\"><h1>Title</h1><p>Content</p></section></main>");
 }
 
-TEST_CASE("Generator handles selector blocks by ignoring them for now", "[generator]") {
+TEST_CASE("Generator creates global stylesheet from selector blocks", "[generator]") {
     std::string input = "div { style { .my-class { color: blue; } width: 100px; } }";
     std::string result = generate_from_string(input);
-    // Note: The global style part (.my-class) is not generated yet, only inline styles.
-    REQUIRE(result == "<div class=\"my-class\" style=\"width: 100px;\"></div>");
+    std::string expected_css = ".my-class {color:blue;}";
+    std::string expected_body = "<div class=\"my-class\" style=\"width: 100px;\"></div>";
+    std::string expected_html = "<html><head><style>" + expected_css + "</style></head><body>" + expected_body + "</body></html>";
+    REQUIRE(result == expected_html);
 }
