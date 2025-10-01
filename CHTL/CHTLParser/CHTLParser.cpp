@@ -6,6 +6,7 @@
 #include "../CHTLNode/StylePropertyNode.h"
 #include "../CHTLNode/LiteralNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
+#include "../CHTLNode/CssRuleNode.h"
 #include <stdexcept>
 
 namespace CHTL {
@@ -157,15 +158,43 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode() {
     consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-        consume(TokenType::COLON, "Expect ':' after style property key.");
-        auto value_expr = parseExpression();
-        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        // Lookahead to differentiate between a CSS rule and an inline property.
+        if (check(TokenType::SELECTOR) || (check(TokenType::IDENTIFIER) && current + 1 < tokens.size() && tokens[current + 1].type == TokenType::L_BRACE)) {
+            styleNode->addRule(parseCssRuleNode());
+        } else {
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+            consume(TokenType::COLON, "Expect ':' after style property key.");
+            auto value_expr = parseExpression();
+            styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        }
     }
 
     consume(TokenType::R_BRACE, "Expect '}' after style block.");
     return styleNode;
+}
+
+std::unique_ptr<CssRuleNode> CHTLParser::parseCssRuleNode() {
+    Token selector;
+    if (match(TokenType::SELECTOR) || match(TokenType::IDENTIFIER)) {
+        selector = tokens[current - 1];
+    } else {
+        throw std::runtime_error("Expect selector for CSS rule.");
+    }
+
+    auto ruleNode = std::make_unique<CssRuleNode>(selector.value);
+    consume(TokenType::L_BRACE, "Expect '{' after selector.");
+
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+        consume(TokenType::COLON, "Expect ':' after style property key.");
+        auto value_expr = parseExpression();
+        ruleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+    }
+
+    consume(TokenType::R_BRACE, "Expect '}' after CSS rule block.");
+    return ruleNode;
 }
 
 std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {

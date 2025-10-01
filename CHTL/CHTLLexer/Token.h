@@ -20,6 +20,9 @@ enum class TokenType {
     STYLE_KEYWORD,
     SCRIPT_KEYWORD,
 
+    // CSS
+    SELECTOR,
+
     // Punctuation
     L_BRACE,
     R_BRACE,

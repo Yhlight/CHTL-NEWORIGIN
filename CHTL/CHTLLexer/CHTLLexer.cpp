@@ -104,6 +104,17 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
+        if (input[pos] == '.' || input[pos] == '#') {
+            std::string::size_type selector_start = pos;
+            pos++; // Consume the '.' or '#'
+            while (pos < input.length() && (std::isalnum(input[pos]) || input[pos] == '-')) {
+                pos++;
+            }
+            std::string value = input.substr(selector_start, pos - selector_start);
+            tokens.push_back({TokenType::SELECTOR, value});
+            continue;
+        }
+
         if (std::isalpha(input[pos])) {
             std::string::size_type ident_start = pos;
             while (pos < input.length() && (std::isalnum(input[pos]) || input[pos] == '-')) {

@@ -13,6 +13,10 @@ void StyleNode::print(int indent) const {
         prop->print(indent + 1);
     }
 
+    for (const auto& rule : rules) {
+        rule->print(indent + 1);
+    }
+
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";
     }

@@ -296,3 +296,27 @@ TEST_CASE("Parse Text Block in Element", "[parser]") {
     REQUIRE(textNode != nullptr);
     REQUIRE(textNode->getValue() == "hello world");
 }
+
+TEST_CASE("Parse Style Block with CSS Rule", "[parser]") {
+    std::string input = "div { style { .box { color: red; } } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().empty());
+    REQUIRE(styleNode->getRules().size() == 1);
+
+    const CHTL::CssRuleNode* ruleNode = styleNode->getRules()[0].get();
+    REQUIRE(ruleNode->getSelector() == ".box");
+    REQUIRE(ruleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = ruleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "color");
+}
