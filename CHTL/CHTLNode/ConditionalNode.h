@@ -11,6 +11,9 @@ public:
     ConditionalNode(std::unique_ptr<ExpressionNode> condition,
                     std::unique_ptr<ExpressionNode> trueExpression,
                     std::unique_ptr<ExpressionNode> falseExpression);
+    ~ConditionalNode() override = default;
+    ConditionalNode(ConditionalNode&&) noexcept = default;
+    ConditionalNode& operator=(ConditionalNode&&) noexcept = default;
 
     ExpressionType getType() const override;
     void print(int indent = 0) const override;

@@ -102,6 +102,12 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->setStyle(parseStyleNode(element.get()));
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
+        } else if (check(TokenType::AT)) {
+            consume(TokenType::AT, "Expect '@' for template usage.");
+            Token templateType = consume(TokenType::IDENTIFIER, "Expect template type.");
+            Token templateName = consume(TokenType::IDENTIFIER, "Expect template name.");
+            consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
+            element->addChild(std::make_unique<TemplateUsageNode>(templateType.value, templateName.value));
         } else if (check(TokenType::L_BRACKET)) {
             if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::IDENTIFIER && tokens[current + 1].value == "Origin") {
                  element->addChild(parseOriginNode());
@@ -286,12 +292,20 @@ std::unique_ptr<TemplateNode> CHTLParser::parseTemplateNode() {
 
     consume(TokenType::L_BRACE, "Expect '{' after template name.");
 
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-        consume(TokenType::COLON, "Expect ':' after style property key.");
-        auto value_expr = parseExpression();
-        templateNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+    if (type.value == "Style") {
+        while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+            consume(TokenType::COLON, "Expect ':' after style property key.");
+            auto value_expr = parseExpression();
+            templateNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        }
+    } else if (type.value == "Element") {
+        while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+            templateNode->addChild(parseStatement());
+        }
+    } else {
+        throw std::runtime_error("Unknown template type: " + type.value);
     }
 
     consume(TokenType::R_BRACE, "Expect '}' after template block.");

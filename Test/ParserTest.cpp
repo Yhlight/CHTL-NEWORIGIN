@@ -533,3 +533,34 @@ TEST_CASE("Parse Style Template Definition and Usage", "[parser]") {
     REQUIRE(templateUsage->getTemplateType() == "Style");
     REQUIRE(templateUsage->getTemplateName() == "DefaultText");
 }
+
+TEST_CASE("Parse Element Template Definition and Usage", "[parser]") {
+    std::string input =
+        "[Template] @Element MyComponent { span { text{'hello'} } }"
+        "body { @Element MyComponent; }";
+
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    auto ast = parser.parseProgram();
+
+    REQUIRE(ast.size() == 2);
+
+    // 1. Check the Template Definition
+    const auto* templateDef = dynamic_cast<const CHTL::TemplateNode*>(ast[0].get());
+    REQUIRE(templateDef != nullptr);
+    REQUIRE(templateDef->getTemplateType() == "Element");
+    REQUIRE(templateDef->getTemplateName() == "MyComponent");
+    REQUIRE(templateDef->getChildren().size() == 1); // Check for the span
+
+    // 2. Check the Element and Template Usage
+    const auto* bodyNode = dynamic_cast<const CHTL::ElementNode*>(ast[1].get());
+    REQUIRE(bodyNode != nullptr);
+    REQUIRE(bodyNode->getTagName() == "body");
+    REQUIRE(bodyNode->getChildren().size() == 1); // The usage node
+
+    const auto* templateUsage = dynamic_cast<const CHTL::TemplateUsageNode*>(bodyNode->getChildren()[0].get());
+    REQUIRE(templateUsage != nullptr);
+    REQUIRE(templateUsage->getTemplateType() == "Element");
+    REQUIRE(templateUsage->getTemplateName() == "MyComponent");
+}

@@ -9,6 +9,9 @@ namespace CHTL {
 class PropertyAccessNode : public ExpressionNode {
 public:
     PropertyAccessNode(const std::string& selector, const std::string& propertyName);
+    ~PropertyAccessNode() override = default;
+    PropertyAccessNode(PropertyAccessNode&&) noexcept = default;
+    PropertyAccessNode& operator=(PropertyAccessNode&&) noexcept = default;
 
     ExpressionType getType() const override;
     void print(int indent = 0) const override;

@@ -12,6 +12,9 @@ namespace CHTL {
 class StyleRuleNode : public BaseNode {
 public:
     StyleRuleNode(const std::string& selector);
+    ~StyleRuleNode() override = default;
+    StyleRuleNode(StyleRuleNode&&) noexcept = default;
+    StyleRuleNode& operator=(StyleRuleNode&&) noexcept = default;
 
     void print(int indent = 0) const override;
     std::string getSelector() const;

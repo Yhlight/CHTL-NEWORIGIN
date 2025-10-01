@@ -9,6 +9,9 @@ namespace CHTL {
 class OriginNode : public BaseNode {
 public:
     OriginNode(const std::string& type, const std::string& content);
+    ~OriginNode() override = default;
+    OriginNode(OriginNode&&) noexcept = default;
+    OriginNode& operator=(OriginNode&&) noexcept = default;
 
     void print(int indent = 0) const override;
     std::string getType() const;

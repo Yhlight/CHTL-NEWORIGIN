@@ -9,9 +9,17 @@ TemplateNode::TemplateNode(const std::string& type, const std::string& name)
 void TemplateNode::print(int indent) const {
     for (int i = 0; i < indent; ++i) std::cout << "  ";
     std::cout << "TemplateDefinition: @" << templateType << " " << templateName << " {\n";
+
+    // Print properties for Style Templates
     for (const auto& prop : properties) {
         prop->print(indent + 1);
     }
+
+    // Print children for Element Templates
+    for (const auto& child : children) {
+        child->print(indent + 1);
+    }
+
     for (int i = 0; i < indent; ++i) std::cout << "  ";
     std::cout << "}\n";
 }
@@ -30,6 +38,14 @@ const std::vector<std::unique_ptr<StylePropertyNode>>& TemplateNode::getProperti
 
 void TemplateNode::addProperty(std::unique_ptr<StylePropertyNode> property) {
     properties.push_back(std::move(property));
+}
+
+const std::vector<std::unique_ptr<BaseNode>>& TemplateNode::getChildren() const {
+    return children;
+}
+
+void TemplateNode::addChild(std::unique_ptr<BaseNode> child) {
+    children.push_back(std::move(child));
 }
 
 } // namespace CHTL
