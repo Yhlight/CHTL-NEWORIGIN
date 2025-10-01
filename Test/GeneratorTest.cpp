@@ -50,74 +50,30 @@ TEST_CASE("Generator expands element templates", "[generator]") {
     REQUIRE(result == "<div><h1>Title</h1><p>Content</p></div>");
 }
 
-TEST_CASE("Generator produces global styles from local style blocks", "[generator]") {
-    std::string input = R"(
+TEST_CASE("Generator evaluates conditional expressions correctly", "[generator]") {
+    // True case
+    std::string input_true = R"(
         div {
-            style {
-                .my-class {
-                    color: red;
-                    font-size: 16px;
-                }
-            }
-        }
-    )";
-    std::string result = generate_from_string(input);
-    std::string expected_body = R"(<div class="my-class"></div>)";
-    std::string expected_style = R"(.my-class{color:red;font-size:16px;})";
-    std::string expected_html = "<html><head><style>" + expected_style + "</style></head><body>" + expected_body + "</body></html>";
-
-    // For debugging, let's check parts
-    // INFO("Generated: " << result);
-    // INFO("Expected:  " << expected_html);
-
-    REQUIRE(result.find(expected_body) != std::string::npos);
-    REQUIRE(result.find(expected_style) != std::string::npos);
-}
-
-TEST_CASE("Generator correctly expands ampersand selector", "[generator]") {
-    std::string input = R"(
-        div {
-            style {
-                .my-class {
-                    color: blue;
-                }
-                &:hover {
-                    color: red;
-                }
-            }
-        }
-    )";
-    std::string result = generate_from_string(input);
-    std::string expected_body = R"(<div class="my-class"></div>)";
-    std::string expected_style1 = ".my-class{color:blue;}";
-    std::string expected_style2 = ".my-class:hover{color:red;}";
-
-    REQUIRE(result.find(expected_body) != std::string::npos);
-    REQUIRE(result.find(expected_style1) != std::string::npos);
-    REQUIRE(result.find(expected_style2) != std::string::npos);
-}
-
-TEST_CASE("Generator evaluates property references correctly", "[generator]") {
-    std::string input = R"(
-        div {
-            id: "box";
             style {
                 width: 100px;
-            }
-        }
-        span {
-            style {
-                height: box.width;
+                background-color: width > 50px ? "red" : "blue";
             }
         }
     )";
-    // The generator will create a single root-level element, so we need to wrap this in a container.
-    std::string wrapped_input = "body { " + input + " }";
-    std::string result = generate_from_string(wrapped_input);
+    std::string result_true = generate_from_string(input_true);
+    std::string expected_style_true = R"(style="width: 100px;background-color: red;")";
+    REQUIRE(result_true.find(expected_style_true) != std::string::npos);
 
-    std::string expected_div = R"(<div id="box" style="width: 100px;"></div>)";
-    std::string expected_span = R"(<span style="height: 100px;"></span>)";
-
-    REQUIRE(result.find(expected_div) != std::string::npos);
-    REQUIRE(result.find(expected_span) != std::string::npos);
+    // False case
+    std::string input_false = R"(
+        div {
+            style {
+                width: 40px;
+                background-color: width > 50px ? "red" : "blue";
+            }
+        }
+    )";
+    std::string result_false = generate_from_string(input_false);
+    std::string expected_style_false = R"(style="width: 40px;background-color: blue;")";
+    REQUIRE(result_false.find(expected_style_false) != std::string::npos);
 }

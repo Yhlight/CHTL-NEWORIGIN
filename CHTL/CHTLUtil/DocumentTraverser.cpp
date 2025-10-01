@@ -18,12 +18,8 @@ const ElementNode* DocumentTraverser::find(const BaseNode* root, const std::stri
             if (element->getAttribute("id") == selector.substr(1)) {
                 match = true;
             }
-        } else { // Inferred selector (tag -> id -> class)
+        } else { // Tag selector
             if (element->getTagName() == selector) {
-                match = true;
-            } else if (element->getAttribute("id") == selector) {
-                match = true;
-            } else if (element->getAttribute("class") == selector) {
                 match = true;
             }
         }

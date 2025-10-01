@@ -13,7 +13,6 @@
 #include "../CHTLNode/ConditionalExpressionNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
-#include "../CHTLNode/ValueListNode.h"
 
 namespace CHTL {
 
@@ -46,7 +45,6 @@ private:
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();
-    std::unique_ptr<ExpressionNode> parseValueList();
     std::unique_ptr<ExpressionNode> parseTernary();
     std::unique_ptr<ExpressionNode> parseLogicalOr();
     std::unique_ptr<ExpressionNode> parseLogicalAnd();
