@@ -305,3 +305,23 @@ TEST_CASE("Parse Style Block with Automatic Class Name", "[parser]") {
     const CHTL::StylePropertyNode* propNode = ruleNode->getProperties()[0].get();
     REQUIRE(propNode->getKey() == "color");
 }
+
+TEST_CASE("Parse Style Block with Context Deduction (&)", "[parser]") {
+    std::string input = "div { class: box; style { &:hover { color: blue; } } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getRules().size() == 1);
+
+    const CHTL::StyleRuleNode* ruleNode = styleNode->getRules()[0].get();
+    REQUIRE(ruleNode->getSelector() == ".box:hover");
+    REQUIRE(ruleNode->getProperties().size() == 1);
+}

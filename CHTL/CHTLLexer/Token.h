@@ -35,7 +35,10 @@ enum class TokenType {
     STAR,
     SLASH,
     PERCENT,
-    STAR_STAR
+    STAR_STAR,
+
+    // Logical/Contextual
+    AMPERSAND
 };
 
 class Token {

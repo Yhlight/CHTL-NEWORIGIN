@@ -150,16 +150,39 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
     consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (check(TokenType::DOT) || check(TokenType::HASH)) { // It's a class or ID selector
-            Token selector_start = advance(); // Consume '.' or '#'
-            Token selector_name = consume(TokenType::IDENTIFIER, "Expect selector name.");
-            std::string full_selector = selector_start.value + selector_name.value;
+        if (check(TokenType::DOT) || check(TokenType::HASH) || check(TokenType::AMPERSAND)) { // It's a style rule
+            std::string full_selector;
 
-            // Automatically add attribute to parent element
-            if (selector_start.type == TokenType::DOT) {
-                parent->addAttribute("class", selector_name.value);
-            } else { // HASH
-                parent->addAttribute("id", selector_name.value);
+            if (match(TokenType::AMPERSAND)) {
+                std::string baseSelector;
+                std::string classAttr = parent->getAttribute("class");
+                if (!classAttr.empty()) {
+                    baseSelector = "." + classAttr;
+                } else {
+                    std::string idAttr = parent->getAttribute("id");
+                    if (!idAttr.empty()) {
+                        baseSelector = "#" + idAttr;
+                    } else {
+                        throw std::runtime_error("Contextual selector '&' used without a parent class or id.");
+                    }
+                }
+
+                std::string selectorSuffix;
+                while(!isAtEnd() && !check(TokenType::L_BRACE)) {
+                    selectorSuffix += advance().value;
+                }
+                full_selector = baseSelector + selectorSuffix;
+            } else { // It's a .class or #id selector
+                 Token selector_start = advance(); // Consume '.' or '#'
+                 Token selector_name = consume(TokenType::IDENTIFIER, "Expect selector name.");
+                 full_selector = selector_start.value + selector_name.value;
+
+                 // Automatically add attribute to parent element
+                 if (selector_start.type == TokenType::DOT) {
+                     parent->addAttribute("class", selector_name.value);
+                 } else { // HASH
+                     parent->addAttribute("id", selector_name.value);
+                 }
             }
 
             auto ruleNode = std::make_unique<StyleRuleNode>(full_selector);

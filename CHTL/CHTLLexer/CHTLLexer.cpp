@@ -70,6 +70,7 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
         if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
         if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
+        if (input[pos] == '&') { tokens.push_back({TokenType::AMPERSAND, "&"}); pos++; continue; }
 
         if (input[pos] == '"') {
             std::string::size_type literal_start = pos + 1;
