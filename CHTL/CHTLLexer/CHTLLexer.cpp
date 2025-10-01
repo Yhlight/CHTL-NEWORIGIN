@@ -87,7 +87,20 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             while (pos < input.length() && std::isdigit(input[pos])) {
                 pos++;
             }
-            tokens.push_back({TokenType::NUMBER, input.substr(num_start, pos - num_start)});
+
+            // Check for a unit suffix (e.g., px, em, %)
+            std::string::size_type unit_start = pos;
+            while (pos < input.length() && (std::isalpha(input[pos]) || input[pos] == '%')) {
+                pos++;
+            }
+
+            if (pos > unit_start) {
+                // Found a unit, so it's a DIMENSION token
+                tokens.push_back({TokenType::DIMENSION, input.substr(num_start, pos - num_start)});
+            } else {
+                // No unit, just a NUMBER token
+                tokens.push_back({TokenType::NUMBER, input.substr(num_start, pos - num_start)});
+            }
             continue;
         }
 

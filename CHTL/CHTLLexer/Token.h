@@ -12,6 +12,7 @@ enum class TokenType {
     IDENTIFIER,
     STRING_LITERAL,
     NUMBER,
+    DIMENSION,
     COMMENT,
 
     // Keywords

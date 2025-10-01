@@ -156,15 +156,31 @@ TEST_CASE("Parse Simple Style Block", "[parser]") {
     REQUIRE(litNode->getValue().value == "red");
 }
 
-TEST_CASE("Parse Numeric Style Property", "[parser]") {
+TEST_CASE("Parse Style Property with Dimension", "[parser]") {
     std::string input = "div { style { width: 100px; } }";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
     std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
-    // This test is expected to fail until the expression parser is implemented
-    // For now, it will fail because the placeholder parser only consumes one token.
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "width");
+
+    const CHTL::ExpressionNode* valueExpr = propNode->getValue();
+    REQUIRE(valueExpr != nullptr);
+    REQUIRE(valueExpr->getType() == CHTL::ExpressionType::LITERAL);
+    const CHTL::LiteralNode* litNode = dynamic_cast<const CHTL::LiteralNode*>(valueExpr);
+    REQUIRE(litNode != nullptr);
+    REQUIRE(litNode->getValue().type == CHTL::TokenType::DIMENSION);
+    REQUIRE(litNode->getValue().value == "100px");
 }
 
 TEST_CASE("Parse Simple Script Block", "[parser]") {
