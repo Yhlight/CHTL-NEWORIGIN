@@ -10,16 +10,13 @@
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/ExpressionNode.h"
-#include "../CHTLNode/ConditionalNode.h"
-#include "../CHTLNode/TemplateNode.h"
-#include "../CHTLNode/TemplateUsageNode.h"
 
 namespace CHTL {
 
 class CHTLParser {
 public:
     CHTLParser(const std::vector<Token>& tokens);
-    std::vector<std::unique_ptr<BaseNode>> parseProgram();
+    std::unique_ptr<BaseNode> parse();
 
 private:
     const std::vector<Token>& tokens;
@@ -35,20 +32,14 @@ private:
 
     // Statement-level parsing
     std::unique_ptr<BaseNode> parseStatement();
-    std::unique_ptr<TemplateNode> parseTemplateNode();
     std::unique_ptr<ElementNode> parseElementNode();
     std::unique_ptr<BaseNode> parseTextNode();
-    std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);
+    std::unique_ptr<StyleNode> parseStyleNode();
     std::unique_ptr<ScriptNode> parseScriptNode();
-    std::unique_ptr<BaseNode> parseOriginNode();
     void parseAttribute(ElementNode* element);
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();
-    std::unique_ptr<ExpressionNode> parseTernary();
-    std::unique_ptr<ExpressionNode> parseLogicalOr();
-    std::unique_ptr<ExpressionNode> parseLogicalAnd();
-    std::unique_ptr<ExpressionNode> parseRelational();
     std::unique_ptr<ExpressionNode> parseTerm();      // Addition and Subtraction
     std::unique_ptr<ExpressionNode> parseFactor();    // Multiplication, Division, Modulo
     std::unique_ptr<ExpressionNode> parsePower();     // Exponentiation (right-associative)

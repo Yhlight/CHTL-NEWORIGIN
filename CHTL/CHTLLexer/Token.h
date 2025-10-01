@@ -23,15 +23,8 @@ enum class TokenType {
     // Punctuation
     L_BRACE,
     R_BRACE,
-    L_PAREN,
-    R_PAREN,
-    L_BRACKET,
-    R_BRACKET,
-    AT,
     COLON,
     EQUAL,
-    DOT,
-    HASH,
     SEMICOLON,
 
     // Arithmetic Operators
@@ -40,19 +33,7 @@ enum class TokenType {
     STAR,
     SLASH,
     PERCENT,
-    STAR_STAR,
-
-    // Logical/Contextual
-    AMPERSAND,
-    LOGICAL_AND,
-    LOGICAL_OR,
-
-    // Relational
-    GREATER_THAN,
-    LESS_THAN,
-
-    // Ternary
-    QUESTION
+    STAR_STAR
 };
 
 class Token {

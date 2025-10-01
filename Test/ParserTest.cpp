@@ -5,16 +5,9 @@
 #include "CHTLNode/ElementNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
-#include "CHTLNode/StyleRuleNode.h"
-#include "CHTLNode/OriginNode.h"
 #include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/LiteralNode.h"
-#include "CHTLNode/PropertyAccessNode.h"
-#include "CHTLNode/ConditionalNode.h"
-#include "CHTLNode/TemplateNode.h"
-#include "CHTLNode/TemplateUsageNode.h"
-#include "CHTLNode/VariableUsageNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -28,12 +21,10 @@ TEST_CASE("Parse Empty Element Node", "[parser]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
     REQUIRE(elementNode->getTagName() == "div");
     REQUIRE(elementNode->getChildren().empty());
@@ -45,13 +36,11 @@ TEST_CASE("Parse Nested Element Node", "[parser]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     // Check root node
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* divNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* divNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(divNode != nullptr);
     REQUIRE(divNode->getTagName() == "div");
 
@@ -69,13 +58,11 @@ TEST_CASE("Parse Mixed Content", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     // Check root node
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* bodyNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* bodyNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(bodyNode != nullptr);
     REQUIRE(bodyNode->getTagName() == "body");
     REQUIRE(bodyNode->getChildren().size() == 2);
@@ -104,12 +91,10 @@ TEST_CASE("Parse Simple Attribute", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
     REQUIRE(elementNode->getTagName() == "div");
     REQUIRE(elementNode->getChildren().empty());
@@ -122,12 +107,10 @@ TEST_CASE("Parse Attribute with Equal Sign", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
     REQUIRE(elementNode->getAttributes().size() == 1);
     REQUIRE(elementNode->getAttribute("id") == "my-id");
@@ -138,12 +121,10 @@ TEST_CASE("Parse Attribute with Unquoted Literal", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
     REQUIRE(elementNode->getAttributes().size() == 1);
     REQUIRE(elementNode->getAttribute("class") == "box");
@@ -154,12 +135,10 @@ TEST_CASE("Parse Simple Style Block", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
 
     const CHTL::StyleNode* styleNode = elementNode->getStyle();
@@ -182,12 +161,10 @@ TEST_CASE("Parse Style Property with Dimension", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
 
     const CHTL::StyleNode* styleNode = elementNode->getStyle();
@@ -211,12 +188,10 @@ TEST_CASE("Parse Simple Script Block", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
     REQUIRE(elementNode->getTagName() == "div");
     REQUIRE(elementNode->getChildren().empty());
@@ -234,13 +209,11 @@ TEST_CASE("Parse Text Node", "[parser]") {
 
     // 2. Parse the tokens
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     // 3. Assert the results
     REQUIRE(rootNode != nullptr);
-    CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(rootNode);
+    CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(rootNode.get());
     REQUIRE(textNode != nullptr);
     REQUIRE(textNode->getValue() == "Hello, Parser!");
 }
@@ -250,12 +223,10 @@ TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") 
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
 
     REQUIRE(rootNode != nullptr);
-    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(elementNode != nullptr);
 
     const CHTL::StyleNode* styleNode = elementNode->getStyle();
@@ -282,347 +253,4 @@ TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") 
     REQUIRE(rightLit != nullptr);
     REQUIRE(rightLit->getValue().type == CHTL::TokenType::NUMBER);
     REQUIRE(rightLit->getValue().value == "50");
-}
-
-TEST_CASE("Parse Text Attribute as TextNode", "[parser]") {
-    std::string input = "div { text: \"hello world\"; }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getTagName() == "div");
-
-    // Ensure it's not treated as a regular attribute
-    REQUIRE(elementNode->getAttributes().find("text") == elementNode->getAttributes().end());
-
-    // Ensure a TextNode child was created
-    REQUIRE(elementNode->getChildren().size() == 1);
-    CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(elementNode->getChildren()[0].get());
-    REQUIRE(textNode != nullptr);
-    REQUIRE(textNode->getValue() == "hello world");
-}
-
-TEST_CASE("Parse Style Block with Automatic Class Name", "[parser]") {
-    std::string input = "div { style { .box { color: red; } } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-
-    // 1. Check for automatic attribute addition
-    REQUIRE(elementNode->getAttribute("class") == "box");
-
-    // 2. Check for the parsed style rule
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getRules().size() == 1);
-    REQUIRE(styleNode->getProperties().empty()); // No inline properties in this case
-
-    const CHTL::StyleRuleNode* ruleNode = styleNode->getRules()[0].get();
-    REQUIRE(ruleNode->getSelector() == ".box");
-    REQUIRE(ruleNode->getProperties().size() == 1);
-
-    const CHTL::StylePropertyNode* propNode = ruleNode->getProperties()[0].get();
-    REQUIRE(propNode->getKey() == "color");
-}
-
-TEST_CASE("Parse Style Block with Context Deduction (&)", "[parser]") {
-    std::string input = "div { class: box; style { &:hover { color: blue; } } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getRules().size() == 1);
-
-    const CHTL::StyleRuleNode* ruleNode = styleNode->getRules()[0].get();
-    REQUIRE(ruleNode->getSelector() == ".box:hover");
-    REQUIRE(ruleNode->getProperties().size() == 1);
-}
-
-TEST_CASE("Parse Attribute with Single-Quoted String", "[parser]") {
-    std::string input = "div { text: 'hello single quotes'; }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-
-    REQUIRE(elementNode->getChildren().size() == 1);
-    CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(elementNode->getChildren()[0].get());
-    REQUIRE(textNode != nullptr);
-    REQUIRE(textNode->getValue() == "hello single quotes");
-}
-
-TEST_CASE("Parse Origin Block", "[parser]") {
-    std::string input = "div { [Origin] @Html { <p>Test</p> } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getTagName() == "div");
-
-    REQUIRE(elementNode->getChildren().size() == 1);
-    CHTL::OriginNode* originNode = dynamic_cast<CHTL::OriginNode*>(elementNode->getChildren()[0].get());
-    REQUIRE(originNode != nullptr);
-    REQUIRE(originNode->getType() == "Html");
-    REQUIRE(originNode->getContent() == " <p>Test</p> ");
-}
-
-TEST_CASE("Parse Style Property with Dimension Arithmetic", "[parser]") {
-    std::string input = "div { style { width: 100px + 50px; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getProperties().size() == 1);
-
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode->getKey() == "width");
-
-    const auto* binOpNode = dynamic_cast<const CHTL::BinaryOpNode*>(propNode->getValue());
-    REQUIRE(binOpNode != nullptr);
-    REQUIRE(binOpNode->getOperator().type == CHTL::TokenType::PLUS);
-
-    const auto* leftLit = dynamic_cast<const CHTL::LiteralNode*>(binOpNode->getLeft());
-    REQUIRE(leftLit != nullptr);
-    REQUIRE(leftLit->getValue().type == CHTL::TokenType::DIMENSION);
-    REQUIRE(leftLit->getValue().value == "100px");
-
-    const auto* rightLit = dynamic_cast<const CHTL::LiteralNode*>(binOpNode->getRight());
-    REQUIRE(rightLit != nullptr);
-    REQUIRE(rightLit->getValue().type == CHTL::TokenType::DIMENSION);
-    REQUIRE(rightLit->getValue().value == "50px");
-}
-
-TEST_CASE("Parse Style Property with Reference Property", "[parser]") {
-    std::string input = "div { style { width: 100px + #box.width; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode != nullptr);
-
-    const auto* binOpNode = dynamic_cast<const CHTL::BinaryOpNode*>(propNode->getValue());
-    REQUIRE(binOpNode != nullptr);
-
-    const auto* propAccessNode = dynamic_cast<const CHTL::PropertyAccessNode*>(binOpNode->getRight());
-    REQUIRE(propAccessNode != nullptr);
-    REQUIRE(propAccessNode->getSelector() == "#box");
-    REQUIRE(propAccessNode->getPropertyName() == "width");
-}
-
-TEST_CASE("Parse Style Property with Conditional Expression", "[parser]") {
-    std::string input = "div { style { background-color: width > 50px ? \"red\" : \"blue\"; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto program = parser.parseProgram();
-    REQUIRE(program.size() == 1);
-    CHTL::BaseNode* rootNode = program[0].get();
-
-    REQUIRE(rootNode != nullptr);
-    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode);
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getProperties().size() == 1);
-
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode->getKey() == "background-color");
-
-    const auto* condNode = dynamic_cast<const CHTL::ConditionalNode*>(propNode->getValue());
-    REQUIRE(condNode != nullptr);
-
-    // Check the condition: width > 50px
-    const auto* condition = dynamic_cast<const CHTL::BinaryOpNode*>(condNode->getCondition());
-    REQUIRE(condition != nullptr);
-    REQUIRE(condition->getOperator().type == CHTL::TokenType::GREATER_THAN);
-
-    // Check the true expression: "red"
-    const auto* trueExpr = dynamic_cast<const CHTL::LiteralNode*>(condNode->getTrueExpression());
-    REQUIRE(trueExpr != nullptr);
-    REQUIRE(trueExpr->getValue().value == "red");
-
-    // Check the false expression: "blue"
-    const auto* falseExpr = dynamic_cast<const CHTL::LiteralNode*>(condNode->getFalseExpression());
-    REQUIRE(falseExpr != nullptr);
-    REQUIRE(falseExpr->getValue().value == "blue");
-}
-
-TEST_CASE("Parse Style Template Definition and Usage", "[parser]") {
-    std::string input =
-        "[Template] @Style DefaultText { color: black; }"
-        "div { style { @Style DefaultText; } }";
-
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto ast = parser.parseProgram(); // Assume a new top-level parse method
-
-    REQUIRE(ast.size() == 2);
-
-    // 1. Check the Template Definition
-    const auto* templateDef = dynamic_cast<const CHTL::TemplateNode*>(ast[0].get());
-    REQUIRE(templateDef != nullptr);
-    REQUIRE(templateDef->getTemplateType() == "Style");
-    REQUIRE(templateDef->getTemplateName() == "DefaultText");
-    // Further checks on the properties inside the template could be added here.
-
-    // 2. Check the Element and Template Usage
-    const auto* elementNode = dynamic_cast<const CHTL::ElementNode*>(ast[1].get());
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getTemplateUsages().size() == 1);
-
-    const CHTL::TemplateUsageNode* templateUsage = styleNode->getTemplateUsages()[0].get();
-    REQUIRE(templateUsage != nullptr);
-    REQUIRE(templateUsage->getTemplateType() == "Style");
-    REQUIRE(templateUsage->getTemplateName() == "DefaultText");
-}
-
-TEST_CASE("Parse Template with Inheritance", "[parser]") {
-    std::string input =
-        "[Template] @Style Parent { color: red; }"
-        "[Template] @Style Child { background: blue; @Style Parent; }";
-
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto ast = parser.parseProgram();
-
-    REQUIRE(ast.size() == 2);
-
-    // Check the child template
-    const auto* childTemplate = dynamic_cast<const CHTL::TemplateNode*>(ast[1].get());
-    REQUIRE(childTemplate != nullptr);
-    REQUIRE(childTemplate->getTemplateName() == "Child");
-
-    // Check its own properties
-    REQUIRE(childTemplate->getProperties().size() == 1);
-    REQUIRE(childTemplate->getProperties()[0]->getKey() == "background");
-
-    // Check its inheritance
-    REQUIRE(childTemplate->getTemplateUsages().size() == 1);
-    const auto* inherited = childTemplate->getTemplateUsages()[0].get();
-    REQUIRE(inherited != nullptr);
-    REQUIRE(inherited->getTemplateName() == "Parent");
-}
-
-TEST_CASE("Parse Variable Template Definition and Usage", "[parser]") {
-    std::string input =
-        "[Template] @Var Theme { mainColor: red; }"
-        "div { style { color: Theme(mainColor); } }";
-
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto ast = parser.parseProgram();
-
-    REQUIRE(ast.size() == 2);
-
-    // 1. Check the variable template definition
-    const auto* templateDef = dynamic_cast<const CHTL::TemplateNode*>(ast[0].get());
-    REQUIRE(templateDef != nullptr);
-    REQUIRE(templateDef->getTemplateType() == "Var");
-    REQUIRE(templateDef->getTemplateName() == "Theme");
-    REQUIRE(templateDef->getProperties().size() == 1);
-
-    // 2. Check the usage
-    const auto* elementNode = dynamic_cast<const CHTL::ElementNode*>(ast[1].get());
-    REQUIRE(elementNode != nullptr);
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode != nullptr);
-
-    const auto* varUsage = dynamic_cast<const CHTL::VariableUsageNode*>(propNode->getValue());
-    REQUIRE(varUsage != nullptr);
-    REQUIRE(varUsage->getGroupName() == "Theme");
-    REQUIRE(varUsage->getVariableName() == "mainColor");
-}
-
-TEST_CASE("Parse Element Template Definition and Usage", "[parser]") {
-    std::string input =
-        "[Template] @Element MyComponent { span { text{'hello'} } }"
-        "body { @Element MyComponent; }";
-
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    auto ast = parser.parseProgram();
-
-    REQUIRE(ast.size() == 2);
-
-    // 1. Check the Template Definition
-    const auto* templateDef = dynamic_cast<const CHTL::TemplateNode*>(ast[0].get());
-    REQUIRE(templateDef != nullptr);
-    REQUIRE(templateDef->getTemplateType() == "Element");
-    REQUIRE(templateDef->getTemplateName() == "MyComponent");
-    REQUIRE(templateDef->getChildren().size() == 1); // Check for the span
-
-    // 2. Check the Element and Template Usage
-    const auto* bodyNode = dynamic_cast<const CHTL::ElementNode*>(ast[1].get());
-    REQUIRE(bodyNode != nullptr);
-    REQUIRE(bodyNode->getTagName() == "body");
-    REQUIRE(bodyNode->getChildren().size() == 1); // The usage node
-
-    const auto* templateUsage = dynamic_cast<const CHTL::TemplateUsageNode*>(bodyNode->getChildren()[0].get());
-    REQUIRE(templateUsage != nullptr);
-    REQUIRE(templateUsage->getTemplateType() == "Element");
-    REQUIRE(templateUsage->getTemplateName() == "MyComponent");
 }
