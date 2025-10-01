@@ -32,3 +32,39 @@ TEST_CASE("Generator handles complex conditional expressions", "[generator]") {
     std::string result = generate_from_string(input);
     REQUIRE(result == "<div style=\"width: 60px;height: 120px;border: 1px solid green;\"></div>");
 }
+
+TEST_CASE("Generator handles property references", "[generator]") {
+    std::string input = R"(
+        body {
+            div {
+                class: "box";
+                style { width: 100px; }
+            }
+            span {
+                style {
+                    width: .box.width + 50px;
+                }
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<body><div class=\"box\" style=\"width: 100px;\"></div><span style=\"width: 150px;\"></span></body>");
+}
+
+TEST_CASE("Generator handles property references in conditionals", "[generator]") {
+    std::string input = R"(
+        body {
+            div {
+                class: "box";
+                style { width: 100px; }
+            }
+            span {
+                style {
+                    color: .box.width > 50px ? 'green' : 'red';
+                }
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<body><div class=\"box\" style=\"width: 100px;\"></div><span style=\"color: green;\"></span></body>");
+}

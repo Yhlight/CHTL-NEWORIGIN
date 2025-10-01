@@ -7,6 +7,7 @@
 #include "../CHTLNode/SelectorBlockNode.h"
 #include "../CHTLNode/LiteralNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
+#include "../CHTLNode/ReferenceNode.h"
 #include <stdexcept>
 
 namespace CHTL {
@@ -303,6 +304,23 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
             }
         }
         return std::make_unique<LiteralNode>(num_token, unit);
+    }
+
+    if (check(TokenType::DOT) || check(TokenType::HASH)) {
+        Token prefix = advance();
+        Token name = consume(TokenType::IDENTIFIER, "Expect selector name.");
+        consume(TokenType::DOT, "Expect '.' after selector.");
+        Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
+        return std::make_unique<ReferenceNode>(prefix.value + name.value, prop.value);
+    }
+
+    if (check(TokenType::IDENTIFIER)) {
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::DOT) {
+            Token selector = advance();
+            advance(); // consume dot
+            Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
+            return std::make_unique<ReferenceNode>(selector.value, prop.value);
+        }
     }
 
     if (match(TokenType::IDENTIFIER) || match(TokenType::STRING_LITERAL)) {

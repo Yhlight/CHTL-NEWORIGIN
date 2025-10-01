@@ -4,8 +4,6 @@
 #include <string>
 #include <memory>
 #include "CHTLNode/ExpressionNode.h"
-#include "CHTLNode/LiteralNode.h"
-#include "CHTLNode/BinaryOpNode.h"
 
 namespace CHTL {
 
@@ -30,7 +28,7 @@ struct EvaluatedValue {
 
 class ExpressionEvaluator {
 public:
-    EvaluatedValue evaluate(const ExpressionNode* expression, const StyleNode* style_context = nullptr);
+    EvaluatedValue evaluate(const ExpressionNode* expression, const BaseNode* root, const StyleNode* style_context = nullptr);
 };
 
 }

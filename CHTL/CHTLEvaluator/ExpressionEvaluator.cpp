@@ -1,13 +1,17 @@
 #include "ExpressionEvaluator.h"
 #include "CHTLNode/ConditionalExpressionNode.h"
+#include "CHTLNode/ReferenceNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLNode/LiteralNode.h"
+#include "CHTLNode/BinaryOpNode.h"
+#include "CHTLUtil/DocumentTraverser.h"
 #include <stdexcept>
 #include <cmath>
 
 namespace CHTL {
 
-EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, const StyleNode* style_context) {
+EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, const BaseNode* root, const StyleNode* style_context) {
     if (!expression) {
         throw std::runtime_error("Cannot evaluate a null expression.");
     }
@@ -23,7 +27,7 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
                         if (prop->getValue() == expression) {
                              throw std::runtime_error("Circular property reference detected: " + prop->getKey());
                         }
-                        return evaluate(prop->getValue(), style_context);
+                        return evaluate(prop->getValue(), root, style_context);
                     }
                 }
                  return {EvaluatedValue::Type::STRING, 0.0, literal->getValue().value, ""};
@@ -34,8 +38,8 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
         }
         case ExpressionType::BINARY_OP: {
             const auto* binaryOp = static_cast<const BinaryOpNode*>(expression);
-            EvaluatedValue left = evaluate(binaryOp->getLeft(), style_context);
-            EvaluatedValue right = evaluate(binaryOp->getRight(), style_context);
+            EvaluatedValue left = evaluate(binaryOp->getLeft(), root, style_context);
+            EvaluatedValue right = evaluate(binaryOp->getRight(), root, style_context);
 
             if (left.type == EvaluatedValue::Type::STRING || right.type == EvaluatedValue::Type::STRING) {
                  if (binaryOp->getOperator().type != TokenType::EQUAL_EQUAL && binaryOp->getOperator().type != TokenType::BANG_EQUAL)
@@ -92,15 +96,35 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
         }
         case ExpressionType::CONDITIONAL: {
             const auto* condNode = static_cast<const ConditionalExpressionNode*>(expression);
-            EvaluatedValue condition = evaluate(condNode->getCondition(), style_context);
+            EvaluatedValue condition = evaluate(condNode->getCondition(), root, style_context);
             if (condition.type != EvaluatedValue::Type::NUMBER) {
                 throw std::runtime_error("Condition must evaluate to a number.");
             }
             if (condition.number_value != 0.0) {
-                return evaluate(condNode->getTrueExpression(), style_context);
+                return evaluate(condNode->getTrueExpression(), root, style_context);
             } else {
-                return evaluate(condNode->getFalseExpression(), style_context);
+                return evaluate(condNode->getFalseExpression(), root, style_context);
             }
+        }
+        case ExpressionType::REFERENCE: {
+            const auto* refNode = static_cast<const ReferenceNode*>(expression);
+            if (!root) {
+                throw std::runtime_error("Cannot resolve property reference without a document root.");
+            }
+            const ElementNode* referencedElement = DocumentTraverser::find(root, refNode->getSelector());
+            if (!referencedElement) {
+                throw std::runtime_error("Could not find element with selector: " + refNode->getSelector());
+            }
+            const StyleNode* referencedStyle = referencedElement->getStyle();
+            if (!referencedStyle) {
+                throw std::runtime_error("Referenced element has no style block.");
+            }
+            for (const auto& prop : referencedStyle->getProperties()) {
+                if (prop->getKey() == refNode->getPropertyName()) {
+                    return evaluate(prop->getValue(), root, referencedStyle);
+                }
+            }
+            throw std::runtime_error("Property '" + refNode->getPropertyName() + "' not found on element with selector '" + refNode->getSelector() + "'");
         }
         default:
             throw std::runtime_error("Unsupported expression type.");

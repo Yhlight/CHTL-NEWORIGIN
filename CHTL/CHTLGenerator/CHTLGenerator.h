@@ -22,6 +22,7 @@ public:
 private:
     ExpressionEvaluator m_evaluator;
     std::stringstream m_global_styles;
+    const BaseNode* m_root = nullptr;
 
     std::string generateNode(const BaseNode* node);
     std::string generateElementNode(const ElementNode* node);

@@ -16,6 +16,7 @@ std::string CHTLGenerator::generate(const BaseNode* root) {
     if (!root) {
         return "";
     }
+    m_root = root;
     std::string body_content = generateNode(root);
 
     if (!m_global_styles.str().empty()) {
@@ -56,7 +57,7 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         if (!node->getStyle()->getProperties().empty()) {
             ss << " style=\"";
             for (const auto& prop : node->getStyle()->getProperties()) {
-                EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), node->getStyle());
+                EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
                 ss << prop->getKey() << ": ";
                 if (val.type == EvaluatedValue::Type::NUMBER) {
                     ss << val.number_value << val.unit;
@@ -85,7 +86,7 @@ void CHTLGenerator::generateStyleNode(const StyleNode* node) {
         m_global_styles << block->getSelector() << " {";
         for (const auto& prop : block->getProperties()) {
             m_global_styles << prop->getKey() << ":";
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), node);
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node);
             if (val.type == EvaluatedValue::Type::NUMBER) {
                 m_global_styles << val.number_value << val.unit;
             } else {

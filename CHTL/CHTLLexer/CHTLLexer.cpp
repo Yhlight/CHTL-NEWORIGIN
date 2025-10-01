@@ -64,6 +64,8 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
         if (input[pos] == '?') { tokens.push_back({TokenType::QUESTION_MARK, "?"}); pos++; continue; }
+        if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
+        if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
 
         if (input[pos] == '>') {
             if (pos + 1 < input.length() && input[pos + 1] == '=') {
@@ -101,7 +103,7 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             if (pos + 1 < input.length() && input[pos + 1] == '&') {
                 tokens.push_back({TokenType::AMPERSAND_AMPERSAND, "&&"}); pos += 2;
             } else {
-                tokens.push_back({TokenType::UNKNOWN, "&"}); pos++;
+                tokens.push_back({TokenType::AMPERSAND, "&"}); pos++;
             }
             continue;
         }
