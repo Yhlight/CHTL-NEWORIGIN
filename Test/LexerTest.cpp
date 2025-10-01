@@ -142,3 +142,13 @@ TEST_CASE("Tokenize Parentheses", "[lexer]") {
     REQUIRE(tokens[0].type == CHTL::TokenType::L_PAREN);
     REQUIRE(tokens[1].type == CHTL::TokenType::R_PAREN);
 }
+
+TEST_CASE("Tokenize Origin Keyword", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "Origin";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 1);
+    REQUIRE(tokens[0].type == CHTL::TokenType::ORIGIN_KEYWORD);
+    REQUIRE(tokens[0].value == "Origin");
+}

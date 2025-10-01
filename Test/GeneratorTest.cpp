@@ -10,7 +10,7 @@
 std::string generate_from_string(const std::string& chtl_input) {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(chtl_input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(chtl_input, tokens);
     std::unique_ptr<CHTL::DocumentNode> root = parser.parse();
     CHTL::CHTLGenerator generator;
     return generator.generate(root.get());
@@ -103,4 +103,17 @@ TEST_CASE("Generator handles delete specialization", "[generator]") {
     )";
     std::string result = generate_from_string(input);
     REQUIRE(result == "<div style=\\\"color: red;\\\"></div>");
+}
+
+TEST_CASE("Generator handles [Origin] blocks", "[generator]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Origin] @Html {<p>Raw HTML</p>}
+        [Origin] @Style {body { margin: 0; }}
+        [Origin] @JavaScript {console.log("raw js");}
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.find("<p>Raw HTML</p>") != std::string::npos);
+    REQUIRE(result.find("body { margin: 0; }") != std::string::npos);
+    REQUIRE(result.find("<script>console.log(\"raw js\");</script>") != std::string::npos);
 }

@@ -6,6 +6,7 @@
 #include <sstream>
 #include "CHTLNode/BaseNode.h"
 #include "CHTLNode/DocumentNode.h"
+#include "CHTLNode/OriginNode.h"
 #include "CHTLEvaluator/ExpressionEvaluator.h"
 #include "CHTLManager/TemplateManager.h"
 
@@ -18,6 +19,7 @@ class ScriptNode;
 class TemplateDefinitionNode;
 class TemplateUsageNode;
 class CustomDefinitionNode;
+class OriginNode;
 
 class CHTLGenerator {
 public:
@@ -36,6 +38,7 @@ private:
     void expandStyleTemplate(std::stringstream& ss, const TemplateUsageNode* usage);
     void collectProperties(const BaseNode* templateDef, std::map<std::string, std::string>& properties);
     std::string generateTextNode(const TextNode* node);
+    std::string generateOriginNode(const OriginNode* node);
     std::string generateScriptNode(const ScriptNode* node);
     void generateTemplateDefinition(const TemplateDefinitionNode* node);
     std::string generateTemplateUsage(const TemplateUsageNode* node);

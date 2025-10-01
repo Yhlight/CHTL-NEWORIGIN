@@ -2,6 +2,7 @@
 #define CHTL_TOKEN_H
 
 #include <string>
+#include <cstddef>
 
 namespace CHTL {
 
@@ -23,6 +24,7 @@ enum class TokenType {
     HTML5_KEYWORD,
     INHERIT_KEYWORD,
     CUSTOM_KEYWORD,
+    ORIGIN_KEYWORD,
     DELETE_KEYWORD,
     INSERT_KEYWORD,
     AFTER_KEYWORD,
@@ -72,6 +74,7 @@ class Token {
 public:
     TokenType type;
     std::string value;
+    size_t pos;
 
     // Helper for debugging
     bool operator==(const Token& other) const {

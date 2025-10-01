@@ -15,11 +15,13 @@
 #include "CHTLNode/VariableAccessNode.h"
 #include "CHTLNode/DeleteNode.h"
 #include "CHTLNode/InsertNode.h"
+#include "CHTLNode/OriginNode.h"
 #include "CHTLManager/TemplateManager.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
+    std::string input = "";
     std::vector<CHTL::Token> tokens;
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     SUCCEED("Parser can be initialized.");
 }
 
@@ -27,7 +29,7 @@ TEST_CASE("Parser correctly handles 'use html5;' directive", "[parser]") {
     std::string input = "use html5; div {}";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     std::unique_ptr<CHTL::DocumentNode> doc = parser.parse();
 
     REQUIRE(doc != nullptr);
@@ -44,7 +46,7 @@ TEST_CASE("Parse Var Template Definition", "[parser]") {
     )";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     auto doc = parser.parse();
 
     REQUIRE(doc != nullptr);
@@ -61,7 +63,7 @@ TEST_CASE("Parse Variable Access", "[parser]") {
     std::string input = "div { style { color: MyVars(mainColor); } }";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     auto doc = parser.parse();
 
     REQUIRE(doc != nullptr);
@@ -94,7 +96,7 @@ TEST_CASE("Parse Style Template with Inheritance", "[parser]") {
     )";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     parser.parse(); // This will register the templates
 
     const auto* derivedTemplate = dynamic_cast<const CHTL::TemplateDefinitionNode*>(CHTL::TemplateManager::getInstance().getTemplate("Derived"));
@@ -119,7 +121,7 @@ TEST_CASE("Parse Custom Style Template with Delete", "[parser]") {
     )";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     parser.parse();
 
     const auto* customDef = dynamic_cast<const CHTL::CustomDefinitionNode*>(CHTL::TemplateManager::getInstance().getTemplate("MyCustomStyle"));
@@ -144,7 +146,7 @@ TEST_CASE("Parse Specialized Template Usage", "[parser]") {
     )";
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(input, tokens);
     auto doc = parser.parse();
 
     REQUIRE(doc != nullptr);
@@ -159,4 +161,21 @@ TEST_CASE("Parse Specialized Template Usage", "[parser]") {
     REQUIRE(deleteNode != nullptr);
     REQUIRE(deleteNode->getTargets().size() == 1);
     REQUIRE(deleteNode->getTargets()[0] == "color");
+}
+
+TEST_CASE("Parse Origin Block", "[parser]") {
+    std::string input = R"(
+        [Origin] @Html {<div class="raw">Raw HTML</div>}
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(input, tokens);
+    auto doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    REQUIRE(doc->children.size() == 1);
+    auto* originNode = dynamic_cast<CHTL::OriginNode*>(doc->children[0].get());
+    REQUIRE(originNode != nullptr);
+    REQUIRE(originNode->getOriginType() == CHTL::OriginType::HTML);
+    REQUIRE(originNode->getContent() == "<div class=\"raw\">Raw HTML</div>");
 }

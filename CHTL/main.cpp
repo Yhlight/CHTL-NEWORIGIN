@@ -3,10 +3,15 @@
 #include <memory>
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
-#include "CHTLNode/BaseNode.h"
+#include "CHTLGenerator/CHTLGenerator.h"
+#include "CHTLNode/DocumentNode.h"
 
 int main() {
     std::string chtl_source = R"(
+        use html5;
+        [Origin] @Html {
+            <p>This is some raw HTML.</p>
+        }
         // This is a demonstration of the CHTL parser.
         html {
             head {
@@ -34,13 +39,20 @@ int main() {
     }
     std::cout << "--------------" << std::endl;
 
-    CHTLParser parser(tokens);
-    std::unique_ptr<BaseNode> ast = parser.parse();
+    CHTLParser parser(chtl_source, tokens);
+    std::unique_ptr<DocumentNode> ast = parser.parse();
 
     if (ast) {
         std::cout << "\n--- AST ---" << std::endl;
         ast->print();
         std::cout << "-------------" << std::endl;
+
+        CHTLGenerator generator;
+        std::string html = generator.generate(ast.get());
+        std::cout << "\n--- Generated HTML ---" << std::endl;
+        std::cout << html << std::endl;
+        std::cout << "----------------------" << std::endl;
+
     } else {
         std::cout << "Failed to parse CHTL source." << std::endl;
     }

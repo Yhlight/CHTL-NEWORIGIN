@@ -11,6 +11,7 @@
 #include "CHTLNode/TemplateUsageNode.h"
 #include "CHTLNode/DeleteNode.h"
 #include "CHTLNode/InsertNode.h"
+#include "CHTLNode/OriginNode.h"
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
@@ -60,6 +61,9 @@ std::string CHTLGenerator::generateNode(const BaseNode* node) {
     }
     if (const auto* scriptNode = dynamic_cast<const ScriptNode*>(node)) {
         return generateScriptNode(scriptNode);
+    }
+    if (const auto* originNode = dynamic_cast<const OriginNode*>(node)) {
+        return generateOriginNode(originNode);
     }
     if (dynamic_cast<const TemplateDefinitionNode*>(node) || dynamic_cast<const CustomDefinitionNode*>(node)) {
         return "";
@@ -187,6 +191,19 @@ void CHTLGenerator::generateStyleNode(const StyleNode* node) {
 
 std::string CHTLGenerator::generateTextNode(const TextNode* node) {
     return node->getValue();
+}
+
+std::string CHTLGenerator::generateOriginNode(const OriginNode* node) {
+    switch (node->getOriginType()) {
+        case OriginType::HTML:
+            return node->getContent();
+        case OriginType::STYLE:
+            m_global_styles << node->getContent();
+            return "";
+        case OriginType::JAVASCRIPT:
+            return "<script>" + node->getContent() + "</script>";
+    }
+    return "";
 }
 
 std::string CHTLGenerator::generateScriptNode(const ScriptNode* node) {

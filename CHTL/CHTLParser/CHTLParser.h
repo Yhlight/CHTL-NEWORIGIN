@@ -17,15 +17,17 @@
 #include "../CHTLNode/CustomDefinitionNode.h"
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
+#include "../CHTLNode/OriginNode.h"
 
 namespace CHTL {
 
 class CHTLParser {
 public:
-    CHTLParser(const std::vector<Token>& tokens);
+    CHTLParser(const std::string& input, const std::vector<Token>& tokens);
     std::unique_ptr<DocumentNode> parse();
 
 private:
+    const std::string& m_input;
     const std::vector<Token>& tokens;
     size_t current = 0;
 
@@ -50,6 +52,7 @@ private:
     std::unique_ptr<TemplateDefinitionNode> parseTemplateDefinition();
     std::unique_ptr<CustomDefinitionNode> parseCustomDefinition();
     std::unique_ptr<TemplateUsageNode> parseTemplateUsage();
+    std::unique_ptr<OriginNode> parseOriginNode();
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();

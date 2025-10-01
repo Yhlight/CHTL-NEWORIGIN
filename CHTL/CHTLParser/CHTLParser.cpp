@@ -15,13 +15,14 @@
 #include "../CHTLNode/CustomDefinitionNode.h"
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include "../CHTLManager/TemplateManager.h"
 #include <stdexcept>
 #include <vector>
 
 namespace CHTL {
 
-CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
+CHTLParser::CHTLParser(const std::string& input, const std::vector<Token>& tokens) : m_input(input), tokens(tokens) {}
 
 // --- Core Parsing Logic ---
 
@@ -53,7 +54,7 @@ bool CHTLParser::isAtEnd() const {
 }
 
 Token CHTLParser::peek() const {
-    if (current >= tokens.size()) return {TokenType::EndOfFile, ""};
+    if (current >= tokens.size()) return {TokenType::EndOfFile, "", 0};
     return tokens[current];
 }
 
@@ -106,6 +107,9 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     if (match(TokenType::L_BRACKET)) {
         if (peek().type == TokenType::CUSTOM_KEYWORD) {
             return parseCustomDefinition();
+        }
+        if (peek().type == TokenType::ORIGIN_KEYWORD) {
+            return parseOriginNode();
         }
         return parseTemplateDefinition();
     }
@@ -362,6 +366,42 @@ std::unique_ptr<CustomDefinitionNode> CHTLParser::parseCustomDefinition() {
 
     consume(TokenType::R_BRACE, "Expect '}' after custom block.");
     return customNode;
+}
+
+std::unique_ptr<OriginNode> CHTLParser::parseOriginNode() {
+    consume(TokenType::ORIGIN_KEYWORD, "Expect 'Origin' keyword.");
+    consume(TokenType::R_BRACKET, "Expect ']' after 'Origin'.");
+    consume(TokenType::AT_SIGN, "Expect '@' after '[Origin]'.");
+
+    Token typeToken = consume(TokenType::IDENTIFIER, "Expect origin type (Html, Style, or JavaScript).");
+    OriginType type;
+    if (typeToken.value == "Html") type = OriginType::HTML;
+    else if (typeToken.value == "Style") type = OriginType::STYLE;
+    else if (typeToken.value == "JavaScript") type = OriginType::JAVASCRIPT;
+    else throw std::runtime_error("Unknown origin type: " + typeToken.value);
+
+    consume(TokenType::L_BRACE, "Expect '{' after origin type.");
+    size_t content_start = peek().pos;
+    int brace_level = 1;
+    size_t content_end = content_start;
+    while (!isAtEnd()) {
+        if (peek().type == TokenType::L_BRACE) brace_level++;
+        else if (peek().type == TokenType::R_BRACE) {
+            brace_level--;
+            if (brace_level == 0) {
+                 content_end = peek().pos;
+                 advance();
+                 break;
+            }
+        }
+        advance();
+    }
+
+    if (brace_level != 0) {
+        throw std::runtime_error("Unmatched '{' in origin block.");
+    }
+
+    return std::make_unique<OriginNode>(type, m_input.substr(content_start, content_end - content_start));
 }
 
 std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
