@@ -268,10 +268,17 @@ std::unique_ptr<TemplateDefinitionNode> CHTLParser::parseTemplateDefinition() {
         if (type == TemplateType::ELEMENT) {
             templateNode->addChild(parseStatement());
         } else if (type == TemplateType::STYLE || type == TemplateType::VAR) {
-            Token key = consume(TokenType::IDENTIFIER, "Expect property or variable key.");
-            consume(TokenType::COLON, "Expect ':' after key.");
-            templateNode->addChild(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
-            consume(TokenType::SEMICOLON, "Expect ';' after value.");
+            if (match(TokenType::INHERIT_KEYWORD)) {
+                consume(TokenType::AT_SIGN, "Expect '@' after 'inherit' keyword.");
+                templateNode->addChild(parseTemplateUsage());
+            } else if (match(TokenType::AT_SIGN)) {
+                templateNode->addChild(parseTemplateUsage());
+            } else {
+                Token key = consume(TokenType::IDENTIFIER, "Expect property or variable key.");
+                consume(TokenType::COLON, "Expect ':' after key.");
+                templateNode->addChild(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
+                consume(TokenType::SEMICOLON, "Expect ';' after value.");
+            }
         }
     }
 
@@ -284,6 +291,7 @@ std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
     TemplateType type;
     if (typeToken.value == "Style") type = TemplateType::STYLE;
     else if (typeToken.value == "Element") type = TemplateType::ELEMENT;
+    else if (typeToken.value == "Var") type = TemplateType::VAR;
     else throw std::runtime_error("Unsupported template usage type: " + typeToken.value);
 
     Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");

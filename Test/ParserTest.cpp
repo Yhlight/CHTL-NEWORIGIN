@@ -407,3 +407,30 @@ TEST_CASE("Parse Variable Access", "[parser]") {
     REQUIRE(varAccess->getGroupName() == "MyVars");
     REQUIRE(varAccess->getVariableName() == "mainColor");
 }
+
+TEST_CASE("Parse Style Template with Inheritance", "[parser]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Template] @Style Base { color: red; }
+        [Template] @Style Derived {
+            inherit @Style Base;
+            font-size: 16px;
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    parser.parse(); // This will register the templates
+
+    const auto* derivedTemplate = CHTL::TemplateManager::getInstance().getTemplate("Derived");
+    REQUIRE(derivedTemplate != nullptr);
+    REQUIRE(derivedTemplate->getChildren().size() == 2);
+
+    const auto* usageNode = dynamic_cast<const CHTL::TemplateUsageNode*>(derivedTemplate->getChildren()[0].get());
+    REQUIRE(usageNode != nullptr);
+    REQUIRE(usageNode->getName() == "Base");
+
+    const auto* propNode = dynamic_cast<const CHTL::StylePropertyNode*>(derivedTemplate->getChildren()[1].get());
+    REQUIRE(propNode != nullptr);
+    REQUIRE(propNode->getKey() == "font-size");
+}

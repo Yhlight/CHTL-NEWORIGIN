@@ -76,22 +76,11 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         std::stringstream style_ss;
         // 1. Expand style templates first
         for (const auto& usage : node->getStyle()->getTemplateUsages()) {
-             const auto* def = m_template_manager.getTemplate(usage->getName());
+            const auto* def = m_template_manager.getTemplate(usage->getName());
             if (!def || def->getTemplateType() != TemplateType::STYLE) {
                 throw std::runtime_error("Style template not found: " + usage->getName());
             }
-            for (const auto& child : def->getChildren()) {
-                if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
-                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                     style_ss << prop->getKey() << ": ";
-                    if (val.type == EvaluatedValue::Type::NUMBER) {
-                        style_ss << val.number_value << val.unit;
-                    } else {
-                        style_ss << val.string_value;
-                    }
-                    style_ss << ";";
-                }
-            }
+            expandStyleTemplate(style_ss, def);
         }
         // 2. Add inline properties (will override template properties)
         for (const auto& prop : node->getStyle()->getProperties()) {
@@ -120,6 +109,27 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
 
     ss << "</" << node->getTagName() << ">";
     return ss.str();
+}
+
+void CHTLGenerator::expandStyleTemplate(std::stringstream& ss, const TemplateDefinitionNode* templateDef) {
+    for (const auto& child : templateDef->getChildren()) {
+        if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, nullptr);
+            ss << prop->getKey() << ": ";
+            if (val.type == EvaluatedValue::Type::NUMBER) {
+                ss << val.number_value << val.unit;
+            } else {
+                ss << val.string_value;
+            }
+            ss << ";";
+        } else if (const auto* usage = dynamic_cast<const TemplateUsageNode*>(child.get())) {
+            const auto* nestedDef = m_template_manager.getTemplate(usage->getName());
+            if (!nestedDef || (nestedDef->getTemplateType() != TemplateType::STYLE && nestedDef->getTemplateType() != TemplateType::VAR)) {
+                throw std::runtime_error("Inherited template not found or is not a style/var template: " + usage->getName());
+            }
+            expandStyleTemplate(ss, nestedDef);
+        }
+    }
 }
 
 void CHTLGenerator::generateStyleNode(const StyleNode* node) {

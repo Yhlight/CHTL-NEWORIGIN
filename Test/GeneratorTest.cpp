@@ -90,3 +90,68 @@ TEST_CASE("Generator handles variable substitution", "[generator]") {
     std::string result = generate_from_string(input);
     REQUIRE(result == "<div style=\"color: #3498db;padding: 20px;\"></div>");
 }
+
+TEST_CASE("Generator handles single-level style template inheritance", "[generator]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Template] @Style BaseStyle {
+            color: red;
+        }
+        [Template] @Style DerivedStyle {
+            inherit @Style BaseStyle;
+            font-size: 16px;
+        }
+        div {
+            style {
+                @Style DerivedStyle;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<div style=\"color: red;font-size: 16px;\"></div>");
+}
+
+TEST_CASE("Generator handles multi-level style template inheritance", "[generator]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Template] @Style GrandBase {
+            padding: 10px;
+        }
+        [Template] @Style Base {
+            inherit @Style GrandBase;
+            color: blue;
+        }
+        [Template] @Style Derived {
+            inherit @Style Base;
+            font-weight: bold;
+        }
+        p {
+            style {
+                @Style Derived;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<p style=\"padding: 10px;color: blue;font-weight: bold;\"></p>");
+}
+
+TEST_CASE("Generator handles property override in template inheritance", "[generator]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Template] @Style Base {
+            color: red;
+            font-size: 12px;
+        }
+        [Template] @Style Derived {
+            inherit @Style Base;
+            color: green;
+        }
+        div {
+            style {
+                @Style Derived;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<div style=\"color: red;font-size: 12px;color: green;\"></div>");
+}

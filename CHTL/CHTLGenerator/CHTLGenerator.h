@@ -32,6 +32,7 @@ private:
     std::string generateNode(const BaseNode* node);
     std::string generateElementNode(const ElementNode* node);
     void generateStyleNode(const StyleNode* node);
+    void expandStyleTemplate(std::stringstream& ss, const TemplateDefinitionNode* templateDef);
     std::string generateTextNode(const TextNode* node);
     std::string generateScriptNode(const ScriptNode* node);
     void generateTemplateDefinition(const TemplateDefinitionNode* node);
