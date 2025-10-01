@@ -10,6 +10,7 @@
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
+#include "CHTLManager/TemplateManager.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -23,7 +24,10 @@ TEST_CASE("Parse Empty Element Node", "[parser]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -38,7 +42,10 @@ TEST_CASE("Parse Nested Element Node", "[parser]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     // Check root node
     REQUIRE(rootNode != nullptr);
@@ -60,7 +67,10 @@ TEST_CASE("Parse Mixed Content", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     // Check root node
     REQUIRE(rootNode != nullptr);
@@ -93,7 +103,10 @@ TEST_CASE("Parse Simple Attribute", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -109,7 +122,10 @@ TEST_CASE("Parse Attribute with Equal Sign", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -123,7 +139,10 @@ TEST_CASE("Parse Attribute with Unquoted Literal", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -137,7 +156,10 @@ TEST_CASE("Parse Simple Style Block", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -163,10 +185,29 @@ TEST_CASE("Parse Numeric Style Property", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
-    // This test is expected to fail until the expression parser is implemented
-    // For now, it will fail because the placeholder parser only consumes one token.
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "width");
+
+    const CHTL::ExpressionNode* valueExpr = propNode->getValue();
+    REQUIRE(valueExpr != nullptr);
+    REQUIRE(valueExpr->getType() == CHTL::ExpressionType::LITERAL);
+    const CHTL::LiteralNode* litNode = dynamic_cast<const CHTL::LiteralNode*>(valueExpr);
+    REQUIRE(litNode != nullptr);
+    REQUIRE(litNode->getValue().value == "100");
+    REQUIRE(litNode->getUnit() == "px");
 }
 
 TEST_CASE("Parse Simple Script Block", "[parser]") {
@@ -174,7 +215,10 @@ TEST_CASE("Parse Simple Script Block", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -195,7 +239,10 @@ TEST_CASE("Parse Text Node", "[parser]") {
 
     // 2. Parse the tokens
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     // 3. Assert the results
     REQUIRE(rootNode != nullptr);
@@ -209,7 +256,10 @@ TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") 
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
 
     REQUIRE(rootNode != nullptr);
     auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
@@ -241,10 +291,6 @@ TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") 
     REQUIRE(rightLit->getValue().value == "50");
 }
 
-#include "CHTLManager/TemplateManager.h"
-
-#include "CHTLManager/TemplateManager.h"
-
 TEST_CASE("Parse Style Template Definition", "[parser]") {
     std::string input = R"(
         [Template] @Style MyTemplate {
@@ -255,10 +301,11 @@ TEST_CASE("Parse Style Template Definition", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+    parser.parse();
+    auto ast_nodes = parser.getAST();
 
     // A file with only a template definition should not produce a root node
-    REQUIRE(root == nullptr);
+    REQUIRE(ast_nodes.empty());
 
     // But it should register the template
     const auto* templateDef = CHTL::TemplateManager::getInstance().getTemplate("MyTemplate");
@@ -287,7 +334,10 @@ TEST_CASE("Parse Style Template Usage", "[parser]") {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> root = std::move(rootNodes[0]);
 
     REQUIRE(root != nullptr);
     auto* elementNode = dynamic_cast<CHTL::ElementNode*>(root.get());

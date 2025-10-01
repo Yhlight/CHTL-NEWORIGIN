@@ -35,14 +35,19 @@ int main() {
     std::cout << "--------------" << std::endl;
 
     CHTLParser parser(tokens);
-    std::unique_ptr<BaseNode> ast = parser.parse();
+    parser.parse();
+    std::vector<std::unique_ptr<BaseNode>> ast_nodes = parser.getAST();
 
-    if (ast) {
+    if (!ast_nodes.empty()) {
         std::cout << "\n--- AST ---" << std::endl;
-        ast->print();
+        for (const auto& ast : ast_nodes) {
+            if (ast) {
+                ast->print();
+            }
+        }
         std::cout << "-------------" << std::endl;
     } else {
-        std::cout << "Failed to parse CHTL source." << std::endl;
+        std::cout << "Failed to parse CHTL source or source is empty." << std::endl;
     }
 
     return 0;

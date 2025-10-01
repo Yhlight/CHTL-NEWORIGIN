@@ -13,38 +13,47 @@
 #include "../CHTLNode/ConditionalExpressionNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/ElementNode.h"
+#include "../CHTLState/State.h"
+#include <stack>
 
 namespace CHTL {
 
 class CHTLParser {
 public:
     CHTLParser(const std::vector<Token>& tokens);
-    std::unique_ptr<BaseNode> parse();
+    void parse();
+    std::vector<std::unique_ptr<BaseNode>> getAST();
 
-private:
-    const std::vector<Token>& tokens;
-    size_t current = 0;
+    void setState(std::unique_ptr<State> newState);
+    void addNodeToCurrent(std::unique_ptr<BaseNode> node);
 
-    // Token manipulation helpers
+    // Context stack management
+    void pushNode(BaseNode* node);
+    void popNode();
+    BaseNode* currentNode() const;
+
+    // Public token manipulation helpers for strategies
     Token peek() const;
+    Token peekNext() const;
     Token advance();
     bool isAtEnd() const;
     bool check(TokenType type) const;
     bool match(TokenType type);
     Token consume(TokenType type, const std::string& message);
 
-    // Statement-level parsing
-    std::unique_ptr<BaseNode> parseStatement();
-    std::unique_ptr<ElementNode> parseElementNode();
-    std::unique_ptr<BaseNode> parseTextNode();
-    std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);
-    std::unique_ptr<ScriptNode> parseScriptNode();
-    void parseAttribute(ElementNode* element);
-    std::unique_ptr<TemplateDefinitionNode> parseTemplateDefinition();
-    std::unique_ptr<TemplateUsageNode> parseTemplateUsage();
+    // Keep expression parsing public for strategies that need it.
+    std::unique_ptr<ExpressionNode> parseExpression();
+
+private:
+    const std::vector<Token>& tokens;
+    size_t current = 0;
+    std::unique_ptr<State> currentState;
+    std::stack<BaseNode*> nodeStack;
+    std::vector<std::unique_ptr<BaseNode>> ast;
+
 
     // Expression parsing (Pratt/Precedence Climbing)
-    std::unique_ptr<ExpressionNode> parseExpression();
     std::unique_ptr<ExpressionNode> parseTernary();
     std::unique_ptr<ExpressionNode> parseLogicalOr();
     std::unique_ptr<ExpressionNode> parseLogicalAnd();

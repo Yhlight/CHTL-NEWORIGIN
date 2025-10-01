@@ -4,13 +4,21 @@
 #include "CHTLGenerator/CHTLGenerator.h"
 #include "CHTLNode/BaseNode.h"
 #include <memory>
+#include <vector>
 
 // Helper to get the generated string from a CHTL snippet
 std::string generate_from_string(const std::string& chtl_input) {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(chtl_input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+    parser.parse();
+    auto ast_nodes = parser.getAST();
+    if (ast_nodes.empty()) {
+        return "";
+    }
+
+    // For the purpose of these tests, we assume a single root node to generate from.
+    std::unique_ptr<CHTL::BaseNode> root = std::move(ast_nodes[0]);
     CHTL::CHTLGenerator generator;
     return generator.generate(root.get());
 }
