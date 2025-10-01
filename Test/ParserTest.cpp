@@ -301,3 +301,41 @@ TEST_CASE("Parse Style Template Usage", "[parser]") {
     REQUIRE(templateUsage->getTemplateType() == CHTL::TemplateType::STYLE);
     REQUIRE(templateUsage->getName() == "MyTemplate");
 }
+
+TEST_CASE("Parse Style Block with Tag and Pseudo-class Selector", "[parser]") {
+    std::string input = R"(
+        div {
+            style {
+                div:hover {
+                    color: blue;
+                }
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(root.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getSelectorBlocks().size() == 1);
+
+    const auto* selectorBlock = styleNode->getSelectorBlocks()[0].get();
+    REQUIRE(selectorBlock->getSelector() == "div:hover");
+    REQUIRE(selectorBlock->getProperties().size() == 1);
+
+    const auto* propNode = selectorBlock->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "color");
+    const CHTL::ExpressionNode* valueExpr = propNode->getValue();
+    REQUIRE(valueExpr != nullptr);
+    REQUIRE(valueExpr->getType() == CHTL::ExpressionType::LITERAL);
+    const CHTL::LiteralNode* litNode = dynamic_cast<const CHTL::LiteralNode*>(valueExpr);
+    REQUIRE(litNode != nullptr);
+    REQUIRE(litNode->getValue().value == "blue");
+}
