@@ -6,6 +6,7 @@
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/StyleRuleNode.h"
+#include "CHTLNode/OriginNode.h"
 #include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/LiteralNode.h"
@@ -341,4 +342,23 @@ TEST_CASE("Parse Attribute with Single-Quoted String", "[parser]") {
     CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(elementNode->getChildren()[0].get());
     REQUIRE(textNode != nullptr);
     REQUIRE(textNode->getValue() == "hello single quotes");
+}
+
+TEST_CASE("Parse Origin Block", "[parser]") {
+    std::string input = "div { [Origin] @Html { <p>Test</p> } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+
+    REQUIRE(elementNode->getChildren().size() == 1);
+    CHTL::OriginNode* originNode = dynamic_cast<CHTL::OriginNode*>(elementNode->getChildren()[0].get());
+    REQUIRE(originNode != nullptr);
+    REQUIRE(originNode->getType() == "Html");
+    REQUIRE(originNode->getContent() == " <p>Test</p> ");
 }

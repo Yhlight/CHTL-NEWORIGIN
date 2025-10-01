@@ -17,6 +17,52 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
+        // Special case for [Origin] blocks to consume raw content
+        if (input[pos] == '[' && pos + 8 <= input.length() && input.substr(pos, 8) == "[Origin]") {
+            tokens.push_back({TokenType::L_BRACKET, "["});
+            pos++;
+            tokens.push_back({TokenType::IDENTIFIER, "Origin"});
+            pos += 6;
+            tokens.push_back({TokenType::R_BRACKET, "]"});
+            pos++;
+
+            while (pos < input.length() && std::isspace(input[pos])) pos++;
+
+            if (pos < input.length() && input[pos] == '@') {
+                tokens.push_back({TokenType::AT, "@"});
+                pos++;
+            }
+
+            while (pos < input.length() && std::isspace(input[pos])) pos++;
+
+            std::string::size_type type_start = pos;
+            while (pos < input.length() && std::isalnum(input[pos])) pos++;
+            tokens.push_back({TokenType::IDENTIFIER, input.substr(type_start, pos - type_start)});
+
+            while (pos < input.length() && std::isspace(input[pos])) pos++;
+
+            if (pos < input.length() && input[pos] == '{') {
+                tokens.push_back({TokenType::L_BRACE, "{"});
+                pos++;
+                int brace_level = 1;
+                std::string::size_type content_start = pos;
+                while (pos < input.length()) {
+                    if (input[pos] == '{') brace_level++;
+                    else if (input[pos] == '}') {
+                        brace_level--;
+                        if (brace_level == 0) break;
+                    }
+                    pos++;
+                }
+                if (brace_level == 0) {
+                    tokens.push_back({TokenType::STRING_LITERAL, input.substr(content_start, pos - content_start)});
+                    tokens.push_back({TokenType::R_BRACE, "}"});
+                    pos++;
+                }
+            }
+            continue;
+        }
+
         if (pos + 1 < input.length() && input[pos] == '/') {
             if (input[pos + 1] == '/') {
                 std::string::size_type comment_start = pos + 2;
@@ -46,7 +92,7 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             continue;
         }
 
-        // --- Arithmetic Operators ---
+        // --- Punctuation & Operators ---
         if (input[pos] == '+') { tokens.push_back({TokenType::PLUS, "+"}); pos++; continue; }
         if (input[pos] == '-') { tokens.push_back({TokenType::MINUS, "-"}); pos++; continue; }
         if (input[pos] == '*') {
@@ -61,10 +107,11 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         }
         if (input[pos] == '/') { tokens.push_back({TokenType::SLASH, "/"}); pos++; continue; }
         if (input[pos] == '%') { tokens.push_back({TokenType::PERCENT, "%"}); pos++; continue; }
-
-
         if (input[pos] == '{') { tokens.push_back({TokenType::L_BRACE, "{"}); pos++; continue; }
         if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
+        if (input[pos] == '[') { tokens.push_back({TokenType::L_BRACKET, "["}); pos++; continue; }
+        if (input[pos] == ']') { tokens.push_back({TokenType::R_BRACKET, "]"}); pos++; continue; }
+        if (input[pos] == '@') { tokens.push_back({TokenType::AT, "@"}); pos++; continue; }
         if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
         if (input[pos] == '=') { tokens.push_back({TokenType::EQUAL, "="}); pos++; continue; }
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
@@ -91,18 +138,13 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             while (pos < input.length() && std::isdigit(input[pos])) {
                 pos++;
             }
-
-            // Check for a unit suffix (e.g., px, em, %)
             std::string::size_type unit_start = pos;
             while (pos < input.length() && (std::isalpha(input[pos]) || input[pos] == '%')) {
                 pos++;
             }
-
             if (pos > unit_start) {
-                // Found a unit, so it's a DIMENSION token
                 tokens.push_back({TokenType::DIMENSION, input.substr(num_start, pos - num_start)});
             } else {
-                // No unit, just a NUMBER token
                 tokens.push_back({TokenType::NUMBER, input.substr(num_start, pos - num_start)});
             }
             continue;

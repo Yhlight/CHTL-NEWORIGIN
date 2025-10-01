@@ -1,6 +1,7 @@
 #include "CHTLParser.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
+#include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/StylePropertyNode.h"
@@ -84,6 +85,8 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->setStyle(parseStyleNode(element.get()));
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
+        } else if (check(TokenType::L_BRACKET)) {
+            element->addChild(parseOriginNode());
         } else if (check(TokenType::TEXT_KEYWORD)) { // Use check() to peek
             // Look ahead to see if it's an attribute `text:` or a block `text {`
             if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
@@ -220,6 +223,25 @@ std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {
     Token content = consume(TokenType::STRING_LITERAL, "Expect script content.");
     consume(TokenType::R_BRACE, "Expect '}' after script block.");
     return std::make_unique<ScriptNode>(content.value);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseOriginNode() {
+    consume(TokenType::L_BRACKET, "Expect '[' to start origin block.");
+    Token keyword = consume(TokenType::IDENTIFIER, "Expect 'Origin' keyword.");
+    if (keyword.value != "Origin") {
+        throw std::runtime_error("Expected 'Origin' keyword, but found " + keyword.value);
+    }
+    consume(TokenType::R_BRACKET, "Expect ']' to end origin block tag.");
+    consume(TokenType::AT, "Expect '@' before origin type.");
+    Token type = consume(TokenType::IDENTIFIER, "Expect origin type.");
+    consume(TokenType::L_BRACE, "Expect '{' after origin type.");
+
+    // The lexer is expected to provide the content as a single string literal
+    Token content = consume(TokenType::STRING_LITERAL, "Expect origin content.");
+
+    consume(TokenType::R_BRACE, "Expect '}' after origin content.");
+
+    return std::make_unique<OriginNode>(type.value, content.value);
 }
 
 // --- Expression Parsing (Precedence Climbing) ---

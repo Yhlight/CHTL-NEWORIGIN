@@ -36,6 +36,7 @@ private:
     std::unique_ptr<BaseNode> parseTextNode();
     std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);
     std::unique_ptr<ScriptNode> parseScriptNode();
+    std::unique_ptr<BaseNode> parseOriginNode();
     void parseAttribute(ElementNode* element);
 
     // Expression parsing (Pratt/Precedence Climbing)
