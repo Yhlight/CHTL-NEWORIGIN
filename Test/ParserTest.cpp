@@ -301,3 +301,111 @@ TEST_CASE("Parse Style Template Usage", "[parser]") {
     REQUIRE(templateUsage->getTemplateType() == CHTL::TemplateType::STYLE);
     REQUIRE(templateUsage->getName() == "MyTemplate");
 }
+
+TEST_CASE("Parse Deeply Nested Elements with Mixed Content", "[parser]") {
+    std::string input = R"(
+        main {
+            id: "main-content";
+            class: "container";
+
+            header {
+                h1 {
+                    text { "Welcome to CHTL" }
+                }
+            }
+
+            section {
+                class: "intro";
+                p {
+                    text { "This is a paragraph." }
+                }
+                div {
+                    p {
+                        text { "Another paragraph inside a div." }
+                    }
+                }
+            }
+
+            footer {
+                text { "Copyright 2024" }
+            }
+        }
+    )";
+
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* mainNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(mainNode != nullptr);
+    REQUIRE(mainNode->getTagName() == "main");
+    REQUIRE(mainNode->getAttribute("id") == "main-content");
+    REQUIRE(mainNode->getAttribute("class") == "container");
+    REQUIRE(mainNode->getChildren().size() == 3);
+
+    // Check header
+    auto* headerNode = dynamic_cast<CHTL::ElementNode*>(mainNode->getChildren()[0].get());
+    REQUIRE(headerNode != nullptr);
+    REQUIRE(headerNode->getTagName() == "header");
+    REQUIRE(headerNode->getChildren().size() == 1);
+    auto* h1Node = dynamic_cast<CHTL::ElementNode*>(headerNode->getChildren()[0].get());
+    REQUIRE(h1Node != nullptr);
+    REQUIRE(h1Node->getTagName() == "h1");
+    auto* h1Text = dynamic_cast<CHTL::TextNode*>(h1Node->getChildren()[0].get());
+    REQUIRE(h1Text != nullptr);
+    REQUIRE(h1Text->getValue() == "Welcome to CHTL");
+
+    // Check section
+    auto* sectionNode = dynamic_cast<CHTL::ElementNode*>(mainNode->getChildren()[1].get());
+    REQUIRE(sectionNode != nullptr);
+    REQUIRE(sectionNode->getTagName() == "section");
+    REQUIRE(sectionNode->getAttribute("class") == "intro");
+    REQUIRE(sectionNode->getChildren().size() == 2);
+
+    // Check first paragraph in section
+    auto* p1Node = dynamic_cast<CHTL::ElementNode*>(sectionNode->getChildren()[0].get());
+    REQUIRE(p1Node != nullptr);
+    REQUIRE(p1Node->getTagName() == "p");
+    auto* p1Text = dynamic_cast<CHTL::TextNode*>(p1Node->getChildren()[0].get());
+    REQUIRE(p1Text != nullptr);
+    REQUIRE(p1Text->getValue() == "This is a paragraph.");
+
+    // Check div in section
+    auto* divNode = dynamic_cast<CHTL::ElementNode*>(sectionNode->getChildren()[1].get());
+    REQUIRE(divNode != nullptr);
+    REQUIRE(divNode->getTagName() == "div");
+    REQUIRE(divNode->getChildren().size() == 1);
+    auto* p2Node = dynamic_cast<CHTL::ElementNode*>(divNode->getChildren()[0].get());
+    REQUIRE(p2Node != nullptr);
+    REQUIRE(p2Node->getTagName() == "p");
+    auto* p2Text = dynamic_cast<CHTL::TextNode*>(p2Node->getChildren()[0].get());
+    REQUIRE(p2Text != nullptr);
+    REQUIRE(p2Text->getValue() == "Another paragraph inside a div.");
+
+    // Check footer
+    auto* footerNode = dynamic_cast<CHTL::ElementNode*>(mainNode->getChildren()[2].get());
+    REQUIRE(footerNode != nullptr);
+    REQUIRE(footerNode->getTagName() == "footer");
+    REQUIRE(footerNode->getChildren().size() == 1);
+    auto* footerText = dynamic_cast<CHTL::TextNode*>(footerNode->getChildren()[0].get());
+    REQUIRE(footerText != nullptr);
+    REQUIRE(footerText->getValue() == "Copyright 2024");
+}
+
+TEST_CASE("Parse element with a 'text' attribute instead of a block", "[parser]") {
+    std::string input = "div { text: \"An attribute, not a block\"; }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+    REQUIRE(elementNode->getAttributes().size() == 1);
+    REQUIRE(elementNode->getAttribute("text") == "An attribute, not a block");
+    REQUIRE(elementNode->getChildren().empty());
+}

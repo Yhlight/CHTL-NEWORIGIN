@@ -115,7 +115,15 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
         } else if (match(TokenType::TEXT_KEYWORD)) {
-            element->addChild(parseTextNode());
+             if (check(TokenType::COLON) || check(TokenType::EQUAL)) {
+                // It's a text attribute, not a text block.
+                // We matched TEXT_KEYWORD, so we need to manually handle it as an identifier for parseAttribute.
+                // Backtrack once so parseAttribute can consume the "text" identifier.
+                current--;
+                parseAttribute(element.get());
+            } else {
+                element->addChild(parseTextNode());
+            }
         } else if (match(TokenType::AT_SIGN)) {
             element->addChild(parseTemplateUsage());
         }
@@ -135,7 +143,13 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
 }
 
 void CHTLParser::parseAttribute(ElementNode* element) {
-    Token key = consume(TokenType::IDENTIFIER, "Expect attribute key.");
+    Token key;
+    if (check(TokenType::IDENTIFIER) || check(TokenType::TEXT_KEYWORD)) {
+        key = advance();
+    } else {
+        throw std::runtime_error("Expect attribute key.");
+    }
+
     if (match(TokenType::COLON) || match(TokenType::EQUAL)) {
         std::string value_str;
         while (!isAtEnd() && peek().type != TokenType::SEMICOLON) {
