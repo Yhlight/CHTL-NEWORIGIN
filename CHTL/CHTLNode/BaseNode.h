@@ -16,6 +16,9 @@ enum class NodeType {
     LITERAL,
     BINARY_OP,
     STYLE_PROPERTY,
+    CUSTOM,
+    DELETE_ACTION,
+    INSERT_ACTION,
 };
 
 class BaseNode {

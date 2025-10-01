@@ -11,6 +11,7 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/ExpressionNode.h"
 #include "../CHTLNode/TemplateNode.h"
+#include "../CHTLNode/CustomNode.h"
 #include "../CHTLNode/StylePropertyNode.h"
 #include "../CHTLContext/CHTLContext.h"
 
@@ -41,6 +42,7 @@ private:
     std::unique_ptr<StyleNode> parseStyleNode();
     std::unique_ptr<ScriptNode> parseScriptNode();
     std::unique_ptr<TemplateNode> parseTemplateNode();
+    std::unique_ptr<CustomNode> parseCustomNode();
     void parseAttribute(ElementNode* element);
     std::unique_ptr<StylePropertyNode> parseStyleProperty();
 

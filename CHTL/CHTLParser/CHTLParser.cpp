@@ -6,7 +6,9 @@
 #include "../CHTLNode/StylePropertyNode.h"
 #include "../CHTLNode/LiteralNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
+#include "../CHTLNode/InsertNode.h"
 #include <stdexcept>
+#include <algorithm>
 
 namespace CHTL {
 
@@ -66,7 +68,14 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     while (match(TokenType::COMMENT)) {}
 
     if (check(TokenType::L_BRACKET)) {
-        return parseTemplateNode();
+        // Peek ahead to see if it's a Template or Custom
+        if (current + 1 < tokens.size()) {
+            if (tokens[current + 1].type == TokenType::KEYWORD_TEMPLATE) {
+                return parseTemplateNode();
+            } else if (tokens[current + 1].type == TokenType::KEYWORD_CUSTOM) {
+                return parseCustomNode();
+            }
+        }
     }
     if (check(TokenType::IDENTIFIER)) {
         return parseElementNode();
@@ -92,14 +101,92 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->addChild(parseTextNode());
         } else if (match(TokenType::AT_SIGN)) {
             if (match(TokenType::KEYWORD_ELEMENT)) {
-                Token name = consume(TokenType::IDENTIFIER, "Expect template name after @Element.");
-                consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
-                const TemplateNode* tmpl = context.getTemplate(name.value);
-                if (!tmpl || tmpl->getTemplateType() != TemplateType::ELEMENT) {
-                    throw std::runtime_error("Attempt to use an undefined or non-element template: " + name.value);
-                }
-                for (const auto& child : tmpl->getChildren()) {
-                    element->addChild(child->clone());
+                Token name = consume(TokenType::IDENTIFIER, "Expect template or custom unit name after @Element.");
+
+                if (match(TokenType::SEMICOLON)) { // Template usage
+                    const TemplateNode* tmpl = context.getTemplate(name.value);
+                    if (!tmpl || tmpl->getTemplateType() != TemplateType::ELEMENT) {
+                        throw std::runtime_error("Attempt to use an undefined or non-element template: " + name.value);
+                    }
+                    for (const auto& child : tmpl->getChildren()) {
+                        element->addChild(child->clone());
+                    }
+                } else if (check(TokenType::L_BRACE)) { // Custom unit usage
+                    consume(TokenType::L_BRACE, "Expect '{' for custom unit specialization.");
+
+                    const CustomNode* custom = context.getCustom(name.value);
+                    if (!custom || custom->getCustomType() != TemplateType::ELEMENT) {
+                        throw std::runtime_error("Attempt to use an undefined or non-element custom unit: " + name.value);
+                    }
+
+                    // Clone the children from the custom unit to be modified
+                    std::vector<std::unique_ptr<BaseNode>> clonedChildren;
+                    for (const auto& child : custom->getChildren()) {
+                        clonedChildren.push_back(child->clone());
+                    }
+
+                    // Parse the specialization block
+                    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                        if (match(TokenType::KEYWORD_DELETE)) {
+                            Token target = consume(TokenType::IDENTIFIER, "Expect element tag name after 'delete'.");
+                            consume(TokenType::SEMICOLON, "Expect ';' after delete statement.");
+
+                            clonedChildren.erase(std::remove_if(clonedChildren.begin(), clonedChildren.end(),
+                                [&](const std::unique_ptr<BaseNode>& node) {
+                                    if (auto* el = dynamic_cast<ElementNode*>(node.get())) {
+                                        return el->getTagName() == target.value;
+                                    }
+                                    return false;
+                                }), clonedChildren.end());
+                        } else if (match(TokenType::KEYWORD_INSERT)) {
+                            InsertPosition pos;
+                            if (match(TokenType::KEYWORD_AFTER)) {
+                                pos = InsertPosition::AFTER;
+                            } else if (match(TokenType::KEYWORD_BEFORE)) {
+                                pos = InsertPosition::BEFORE;
+                            } else {
+                                throw std::runtime_error("Unsupported insert position. Only 'after' and 'before' are currently supported.");
+                            }
+
+                            Token target = consume(TokenType::IDENTIFIER, "Expect target element name after insert position.");
+                            consume(TokenType::L_BRACE, "Expect '{' to begin insert block.");
+
+                            std::vector<std::unique_ptr<BaseNode>> newChildren;
+                            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                                newChildren.push_back(parseStatement());
+                            }
+                            consume(TokenType::R_BRACE, "Expect '}' to end insert block.");
+
+                            auto it = std::find_if(clonedChildren.begin(), clonedChildren.end(),
+                                [&](const std::unique_ptr<BaseNode>& node) {
+                                    if (auto* el = dynamic_cast<ElementNode*>(node.get())) {
+                                        return el->getTagName() == target.value;
+                                    }
+                                    return false;
+                                });
+
+                            if (it == clonedChildren.end()) {
+                                throw std::runtime_error("Target element for insert not found: " + target.value);
+                            }
+
+                            if (pos == InsertPosition::BEFORE) {
+                                clonedChildren.insert(it, std::make_move_iterator(newChildren.begin()), std::make_move_iterator(newChildren.end()));
+                            } else { // AFTER
+                                clonedChildren.insert(std::next(it), std::make_move_iterator(newChildren.begin()), std::make_move_iterator(newChildren.end()));
+                            }
+                        } else {
+                            throw std::runtime_error("Unsupported specialization rule.");
+                        }
+                    }
+
+                    consume(TokenType::R_BRACE, "Expect '}' after custom unit specialization.");
+
+                    // Add the modified cloned nodes to the element
+                    for (auto& child : clonedChildren) {
+                        element->addChild(std::move(child));
+                    }
+                } else {
+                    throw std::runtime_error("Expect ';' for template usage or '{' for custom unit usage after @Element name.");
                 }
             } else {
                 throw std::runtime_error("Unsupported template type in this context.");
@@ -233,6 +320,42 @@ std::unique_ptr<TemplateNode> CHTLParser::parseTemplateNode() {
     consume(TokenType::R_BRACE, "Expect '}' after template body.");
 
     context.addTemplate(name.value, std::move(templateNode));
+    return nullptr;
+}
+
+std::unique_ptr<CustomNode> CHTLParser::parseCustomNode() {
+    consume(TokenType::L_BRACKET, "Expect '[' at the start of a custom definition.");
+    consume(TokenType::KEYWORD_CUSTOM, "Expect 'Custom' keyword.");
+    consume(TokenType::R_BRACKET, "Expect ']' after 'Custom' keyword.");
+    consume(TokenType::AT_SIGN, "Expect '@' before custom type.");
+
+    TemplateType type;
+    if (match(TokenType::KEYWORD_STYLE)) {
+        type = TemplateType::STYLE;
+    } else if (match(TokenType::KEYWORD_ELEMENT)) {
+        type = TemplateType::ELEMENT;
+    } else if (match(TokenType::KEYWORD_VAR)) {
+        type = TemplateType::VAR;
+    } else {
+        throw std::runtime_error("Unknown custom type.");
+    }
+
+    Token name = consume(TokenType::IDENTIFIER, "Expect custom unit name.");
+    auto customNode = std::make_unique<CustomNode>(type, name.value);
+
+    consume(TokenType::L_BRACE, "Expect '{' after custom unit name.");
+
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        if (type == TemplateType::STYLE) {
+            customNode->addChild(parseStyleProperty());
+        } else {
+            customNode->addChild(parseStatement());
+        }
+    }
+
+    consume(TokenType::R_BRACE, "Expect '}' after custom unit body.");
+
+    context.addCustom(name.value, std::move(customNode));
     return nullptr;
 }
 

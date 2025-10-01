@@ -31,6 +31,8 @@ enum class TokenType {
     KEYWORD_DELETE,
     KEYWORD_INSERT,
     KEYWORD_INHERIT,
+    KEYWORD_AFTER,
+    KEYWORD_BEFORE,
 
 
     // Punctuation

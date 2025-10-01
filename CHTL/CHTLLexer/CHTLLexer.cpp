@@ -119,6 +119,8 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             else if (value == "delete") { type = TokenType::KEYWORD_DELETE; }
             else if (value == "insert") { type = TokenType::KEYWORD_INSERT; }
             else if (value == "inherit") { type = TokenType::KEYWORD_INHERIT; }
+            else if (value == "after") { type = TokenType::KEYWORD_AFTER; }
+            else if (value == "before") { type = TokenType::KEYWORD_BEFORE; }
 
             tokens.push_back({type, value});
             continue;

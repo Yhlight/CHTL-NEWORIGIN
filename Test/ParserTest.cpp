@@ -380,3 +380,119 @@ TEST_CASE("Parse and Use Style Template", "[parser]") {
     const CHTL::StylePropertyNode* prop3 = styleNode->getProperties()[2].get();
     REQUIRE(prop3->getKey() == "background-color");
 }
+
+TEST_CASE("Parse Custom Definition Node", "[parser]") {
+    std::string input = "[Custom] @Element MyComponent {}";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLContext context;
+    CHTL::CHTLParser parser(tokens, context);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode == nullptr);
+    const auto* customNode = context.getCustom("MyComponent");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getCustomType() == CHTL::TemplateType::ELEMENT);
+    REQUIRE(customNode->getName() == "MyComponent");
+    REQUIRE(customNode->getChildren().empty());
+}
+
+TEST_CASE("Parse and Use Custom Element with Empty Specialization", "[parser]") {
+    std::string input = R"(
+        [Custom] @Element MyComponent {
+            p { text { "First" } }
+        }
+
+        body {
+            @Element MyComponent {}
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLContext context;
+    CHTL::CHTLParser parser(tokens, context);
+
+    // Parse the custom definition
+    parser.parse();
+
+    // Parse the body element
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    REQUIRE(rootNode != nullptr);
+
+    auto* bodyNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(bodyNode != nullptr);
+    REQUIRE(bodyNode->getChildren().size() == 1);
+
+    auto* pNode = dynamic_cast<CHTL::ElementNode*>(bodyNode->getChildren()[0].get());
+    REQUIRE(pNode != nullptr);
+    REQUIRE(pNode->getTagName() == "p");
+}
+
+TEST_CASE("Parse and Use Custom Element with Insert Specialization", "[parser]") {
+    std::string input = R"(
+        [Custom] @Element MyComponent {
+            p { text { "Second" } }
+        }
+
+        body {
+            @Element MyComponent {
+                insert before p {
+                    span { text { "First" } }
+                }
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLContext context;
+    CHTL::CHTLParser parser(tokens, context);
+
+    parser.parse(); // Parse custom definition
+
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    REQUIRE(rootNode != nullptr);
+
+    auto* bodyNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(bodyNode != nullptr);
+    REQUIRE(bodyNode->getChildren().size() == 2);
+
+    auto* spanNode = dynamic_cast<CHTL::ElementNode*>(bodyNode->getChildren()[0].get());
+    REQUIRE(spanNode != nullptr);
+    REQUIRE(spanNode->getTagName() == "span");
+
+    auto* pNode = dynamic_cast<CHTL::ElementNode*>(bodyNode->getChildren()[1].get());
+    REQUIRE(pNode != nullptr);
+    REQUIRE(pNode->getTagName() == "p");
+}
+
+TEST_CASE("Parse and Use Custom Element with Delete Specialization", "[parser]") {
+    std::string input = R"(
+        [Custom] @Element MyComponent {
+            p { text { "First" } }
+            span { text { "Second" } }
+        }
+
+        body {
+            @Element MyComponent {
+                delete span;
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLContext context;
+    CHTL::CHTLParser parser(tokens, context);
+
+    parser.parse(); // Parse custom definition
+
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+    REQUIRE(rootNode != nullptr);
+
+    auto* bodyNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(bodyNode != nullptr);
+    REQUIRE(bodyNode->getChildren().size() == 1);
+
+    auto* pNode = dynamic_cast<CHTL::ElementNode*>(bodyNode->getChildren()[0].get());
+    REQUIRE(pNode != nullptr);
+    REQUIRE(pNode->getTagName() == "p");
+}
