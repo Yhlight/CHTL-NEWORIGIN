@@ -66,6 +66,9 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == '?') { tokens.push_back({TokenType::QUESTION_MARK, "?"}); pos++; continue; }
         if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
         if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
+        if (input[pos] == '[') { tokens.push_back({TokenType::L_BRACKET, "["}); pos++; continue; }
+        if (input[pos] == ']') { tokens.push_back({TokenType::R_BRACKET, "]"}); pos++; continue; }
+        if (input[pos] == '@') { tokens.push_back({TokenType::AT_SIGN, "@"}); pos++; continue; }
 
         if (input[pos] == '>') {
             if (pos + 1 < input.length() && input[pos + 1] == '=') {

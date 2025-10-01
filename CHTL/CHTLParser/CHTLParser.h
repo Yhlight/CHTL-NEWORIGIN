@@ -11,6 +11,8 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/ExpressionNode.h"
 #include "../CHTLNode/ConditionalExpressionNode.h"
+#include "../CHTLNode/TemplateDefinitionNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 
 namespace CHTL {
 
@@ -38,6 +40,8 @@ private:
     std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);
     std::unique_ptr<ScriptNode> parseScriptNode();
     void parseAttribute(ElementNode* element);
+    std::unique_ptr<TemplateDefinitionNode> parseTemplateDefinition();
+    std::unique_ptr<TemplateUsageNode> parseTemplateUsage();
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();

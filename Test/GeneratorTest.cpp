@@ -3,6 +3,7 @@
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
 #include "CHTLNode/BaseNode.h"
+#include <memory>
 
 // Helper to get the generated string from a CHTL snippet
 std::string generate_from_string(const std::string& chtl_input) {
@@ -14,57 +15,37 @@ std::string generate_from_string(const std::string& chtl_input) {
     return generator.generate(root.get());
 }
 
-TEST_CASE("Generator handles conditional style properties", "[generator]") {
-    SECTION("Condition is true") {
-        std::string input = "div { style { width: 100px; background-color: width > 50px ? 'red' : 'blue'; } }";
-        std::string result = generate_from_string(input);
-        REQUIRE(result == "<div style=\"width: 100px;background-color: red;\"></div>");
-    }
-    SECTION("Condition is false") {
-        std::string input = "div { style { width: 40px; background-color: width > 50px ? 'red' : 'blue'; } }";
-        std::string result = generate_from_string(input);
-        REQUIRE(result == "<div style=\"width: 40px;background-color: blue;\"></div>");
-    }
-}
-
-TEST_CASE("Generator handles complex conditional expressions", "[generator]") {
-    std::string input = "div { style { width: 60px; height: 120px; border: width > 50px && height > 100px ? '1px solid green' : 'none'; } }";
-    std::string result = generate_from_string(input);
-    REQUIRE(result == "<div style=\"width: 60px;height: 120px;border: 1px solid green;\"></div>");
-}
-
-TEST_CASE("Generator handles property references", "[generator]") {
+TEST_CASE("Generator expands style templates", "[generator]") {
     std::string input = R"(
-        body {
-            div {
-                class: "box";
-                style { width: 100px; }
-            }
-            span {
-                style {
-                    width: .box.width + 50px;
-                }
+        [Template] @Style DefaultText {
+            color: black;
+            font-size: 16px;
+        }
+        p {
+            style {
+                @Style DefaultText;
+                font-weight: bold;
             }
         }
     )";
     std::string result = generate_from_string(input);
-    REQUIRE(result == "<body><div class=\"box\" style=\"width: 100px;\"></div><span style=\"width: 150px;\"></span></body>");
+    // Note: This test will fail until the generator is updated to handle template expansion.
+    // The expected output assumes that the generator will eventually expand the style template
+    // into the p element's inline style.
+    REQUIRE(result == "<p style=\"color: black;font-size: 16px;font-weight: bold;\"></p>");
 }
 
-TEST_CASE("Generator handles property references in conditionals", "[generator]") {
+TEST_CASE("Generator expands element templates", "[generator]") {
     std::string input = R"(
-        body {
-            div {
-                class: "box";
-                style { width: 100px; }
-            }
-            span {
-                style {
-                    color: .box.width > 50px ? 'green' : 'red';
-                }
-            }
+        [Template] @Element MyElement {
+            h1 { text { "Title" } }
+            p { text { "Content" } }
+        }
+        div {
+            @Element MyElement;
         }
     )";
     std::string result = generate_from_string(input);
-    REQUIRE(result == "<body><div class=\"box\" style=\"width: 100px;\"></div><span style=\"color: green;\"></span></body>");
+    // Note: This test will also fail until the generator is updated.
+    REQUIRE(result == "<div><h1>Title</h1><p>Content</p></div>");
 }

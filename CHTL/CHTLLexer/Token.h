@@ -28,6 +28,9 @@ enum class TokenType {
     DOT,
     HASH,
     AMPERSAND,
+    L_BRACKET,
+    R_BRACKET,
+    AT_SIGN,
 
     // Arithmetic Operators
     PLUS,
