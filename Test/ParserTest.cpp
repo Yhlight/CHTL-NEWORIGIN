@@ -3,6 +3,8 @@
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLNode/ElementNode.h"
 #include "CHTLNode/TextNode.h"
+#include "CHTLNode/CommentNode.h"
+#include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/LiteralNode.h"
@@ -30,6 +32,50 @@ TEST_CASE("Parse Single Empty Element with State Machine", "[parser_state_machin
     auto rootElement = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
     REQUIRE(rootElement != nullptr);
     REQUIRE(rootElement->getTagName() == "<root>");
+    REQUIRE(rootElement->getChildren().size() == 1);
+
+    auto divNode = dynamic_cast<CHTL::ElementNode*>(rootElement->getChildren()[0].get());
+    REQUIRE(divNode != nullptr);
+    REQUIRE(divNode->getTagName() == "div");
+    REQUIRE(divNode->getChildren().empty());
+}
+
+TEST_CASE("Parse Generator-Aware Comment", "[parser_features]") {
+    std::string input = "div { # This is a generator comment }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto rootElement = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(rootElement->getChildren().size() == 1);
+
+    auto divNode = dynamic_cast<CHTL::ElementNode*>(rootElement->getChildren()[0].get());
+    REQUIRE(divNode != nullptr);
+    REQUIRE(divNode->getChildren().size() == 1);
+
+    auto commentNode = dynamic_cast<CHTL::CommentNode*>(divNode->getChildren()[0].get());
+    REQUIRE(commentNode != nullptr);
+    REQUIRE(commentNode->getValue() == "This is a generator comment ");
+}
+
+TEST_CASE("Parser Ignores Multi-Line Block Comments", "[parser_features]") {
+    std::string input = R"(
+        /* This is a
+           multi-line comment. */
+        div {
+            /* Another comment */
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto rootElement = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(rootElement != nullptr);
     REQUIRE(rootElement->getChildren().size() == 1);
 
     auto divNode = dynamic_cast<CHTL::ElementNode*>(rootElement->getChildren()[0].get());
@@ -114,6 +160,25 @@ TEST_CASE("Parse Element with a Local Style Block", "[parser_features]") {
     const auto* valueNode = dynamic_cast<const CHTL::LiteralNode*>(propNode->getValue());
     REQUIRE(valueNode != nullptr);
     REQUIRE(valueNode->getValue().value == "red");
+}
+
+TEST_CASE("Parse Element with a Local Script Block", "[parser_features]") {
+    std::string input = "div { script { let x = 1; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto rootElement = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(rootElement->getChildren().size() == 1);
+
+    auto divNode = dynamic_cast<CHTL::ElementNode*>(rootElement->getChildren()[0].get());
+    REQUIRE(divNode != nullptr);
+
+    const CHTL::ScriptNode* scriptNode = divNode->getScript();
+    REQUIRE(scriptNode != nullptr);
+    REQUIRE(scriptNode->getContent() == " let x = 1; ");
 }
 
 TEST_CASE("Parse Nested Elements with State Machine", "[parser_state_machine]") {

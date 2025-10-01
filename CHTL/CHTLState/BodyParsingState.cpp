@@ -3,10 +3,13 @@
 #include "InitialState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLStrategy/AttributeStrategy.h"
+#include "../CHTLStrategy/CommentStrategy.h"
+#include "../CHTLStrategy/ScriptStrategy.h"
 #include "../CHTLStrategy/StyleStrategy.h"
 #include "../CHTLStrategy/TextNodeStrategy.h"
 #include <stdexcept>
 #include <iostream>
+#include <memory>
 
 namespace CHTL {
 
@@ -22,13 +25,10 @@ void BodyParsingState::handle(CHTLParser& parser) {
             {
                 Token nextToken = parser.peekNext();
                 if (nextToken.type == TokenType::COLON || nextToken.type == TokenType::EQUAL) {
-                    // It's an attribute
                     AttributeStrategy strategy;
                     strategy.execute(parser);
-                    // Stay in the body state to parse more content
                     parser.setState(std::make_unique<BodyParsingState>());
                 } else {
-                    // It's a nested element
                     parser.setState(std::make_unique<ElementParsingState>());
                 }
             }
@@ -40,7 +40,6 @@ void BodyParsingState::handle(CHTLParser& parser) {
                 TextNodeStrategy strategy;
                 strategy.execute(parser);
             }
-            // After parsing a text node, we remain in the body of the current element.
             parser.setState(std::make_unique<BodyParsingState>());
             break;
 
@@ -50,17 +49,32 @@ void BodyParsingState::handle(CHTLParser& parser) {
                 StyleStrategy strategy;
                 strategy.execute(parser);
             }
-            // After parsing a style block, we remain in the body of the current element.
+            parser.setState(std::make_unique<BodyParsingState>());
+            break;
+
+        case TokenType::SCRIPT_KEYWORD:
+            parser.consume(TokenType::SCRIPT_KEYWORD, "Expected 'script' keyword.");
+            {
+                ScriptStrategy strategy;
+                strategy.execute(parser);
+            }
+            parser.setState(std::make_unique<BodyParsingState>());
+            break;
+
+        case TokenType::GENERATOR_COMMENT:
+            {
+                CommentStrategy strategy;
+                strategy.execute(parser);
+            }
             parser.setState(std::make_unique<BodyParsingState>());
             break;
 
         case TokenType::R_BRACE:
-            // The end of the current element is handled by the InitialState.
             parser.setState(std::make_unique<InitialState>());
             break;
 
         case TokenType::EndOfFile:
-            parser.setState(nullptr); // Parsing is done
+            parser.setState(nullptr);
             break;
 
         default:

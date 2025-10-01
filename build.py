@@ -40,19 +40,17 @@ def main():
 
     print("Build successful!")
 
-    # Go back to the root directory
-    os.chdir("..")
-
-    # Run tests
+    # Run tests using ctest
     print("\nRunning tests...")
-    test_executable = os.path.join(build_dir, "Test", "run_tests")
-    if os.path.exists(test_executable):
-        if run_command([test_executable]) != 0:
-            print("Tests failed.")
-            sys.exit(1)
-        print("Tests passed!")
-    else:
-        print("Test executable not found, skipping tests.")
+    ctest_command = ["ctest", "--output-on-failure"]
+    if run_command(ctest_command) != 0:
+        print("Tests failed.")
+        sys.exit(1)
+
+    print("Tests passed!")
+
+    # Go back to the root directory at the end
+    os.chdir("..")
 
 
 if __name__ == "__main__":

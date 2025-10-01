@@ -33,7 +33,7 @@ TEST_CASE("Tokenize Generator Comment", "[lexer]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::COMMENT);
+    REQUIRE(tokens[0].type == CHTL::TokenType::GENERATOR_COMMENT);
     // As per spec, the space after '#' is a delimiter and not part of the value.
     REQUIRE(tokens[0].value == "this is a generator comment");
 }

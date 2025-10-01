@@ -1,5 +1,6 @@
 #include "CHTLLexer.h"
 #include <cctype>
+#include <algorithm>
 
 namespace CHTL {
 
@@ -40,9 +41,28 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         }
         if (input[pos] == '#' && pos + 1 < input.length() && input[pos + 1] == ' ') {
             std::string::size_type comment_start = pos + 2;
-            std::string::size_type comment_end = input.find('\n', comment_start);
-            tokens.push_back({TokenType::COMMENT, (comment_end == std::string::npos) ? input.substr(comment_start) : input.substr(comment_start, comment_end - comment_start)});
-            pos = (comment_end == std::string::npos) ? input.length() : comment_end;
+            std::string::size_type newline_pos = input.find('\n', comment_start);
+            std::string::size_type brace_pos = input.find('}', comment_start);
+
+            std::string::size_type comment_end;
+
+            if (newline_pos != std::string::npos && brace_pos != std::string::npos) {
+                comment_end = std::min(newline_pos, brace_pos);
+            } else if (newline_pos != std::string::npos) {
+                comment_end = newline_pos;
+            } else if (brace_pos != std::string::npos) {
+                comment_end = brace_pos;
+            } else {
+                comment_end = std::string::npos;
+            }
+
+            if (comment_end == std::string::npos) {
+                tokens.push_back({TokenType::GENERATOR_COMMENT, input.substr(comment_start)});
+                pos = input.length();
+            } else {
+                tokens.push_back({TokenType::GENERATOR_COMMENT, input.substr(comment_start, comment_end - comment_start)});
+                pos = comment_end;
+            }
             continue;
         }
 

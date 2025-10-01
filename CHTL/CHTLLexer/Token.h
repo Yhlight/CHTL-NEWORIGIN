@@ -13,6 +13,7 @@ enum class TokenType {
     STRING_LITERAL,
     NUMBER,
     COMMENT,
+    GENERATOR_COMMENT,
 
     // Keywords
     TEXT_KEYWORD,

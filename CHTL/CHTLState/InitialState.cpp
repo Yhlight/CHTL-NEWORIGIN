@@ -4,6 +4,7 @@
 #include "../CHTLParser/CHTLParser.h"
 #include <stdexcept>
 #include <iostream>
+#include <memory>
 
 namespace CHTL {
 
