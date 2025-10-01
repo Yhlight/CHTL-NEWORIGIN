@@ -325,3 +325,20 @@ TEST_CASE("Parse Style Block with Context Deduction (&)", "[parser]") {
     REQUIRE(ruleNode->getSelector() == ".box:hover");
     REQUIRE(ruleNode->getProperties().size() == 1);
 }
+
+TEST_CASE("Parse Attribute with Single-Quoted String", "[parser]") {
+    std::string input = "div { text: 'hello single quotes'; }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    REQUIRE(elementNode->getChildren().size() == 1);
+    CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(elementNode->getChildren()[0].get());
+    REQUIRE(textNode != nullptr);
+    REQUIRE(textNode->getValue() == "hello single quotes");
+}

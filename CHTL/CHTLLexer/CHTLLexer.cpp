@@ -72,9 +72,10 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
         if (input[pos] == '&') { tokens.push_back({TokenType::AMPERSAND, "&"}); pos++; continue; }
 
-        if (input[pos] == '"') {
+        if (input[pos] == '"' || input[pos] == '\'') {
+            char quote_char = input[pos];
             std::string::size_type literal_start = pos + 1;
-            std::string::size_type literal_end = input.find('"', literal_start);
+            std::string::size_type literal_end = input.find(quote_char, literal_start);
             if (literal_end == std::string::npos) {
                 tokens.push_back({TokenType::UNKNOWN, input.substr(pos)});
                 pos = input.length();
