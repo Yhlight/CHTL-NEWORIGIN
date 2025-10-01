@@ -24,4 +24,8 @@ const ExpressionNode* StylePropertyNode::getValue() const {
     return value.get();
 }
 
+ExpressionNode* StylePropertyNode::releaseValue() {
+    return value.release();
+}
+
 } // namespace CHTL

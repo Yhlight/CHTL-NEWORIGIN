@@ -15,6 +15,7 @@ public:
 
     const std::string& getKey() const;
     const ExpressionNode* getValue() const;
+    ExpressionNode* releaseValue();
 
 private:
     std::string key;

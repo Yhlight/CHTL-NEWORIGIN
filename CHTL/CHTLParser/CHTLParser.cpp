@@ -253,8 +253,18 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
     if (match(TokenType::NUMBER)) {
         Token num_token = tokens[current - 1];
         std::string unit;
-        if (check(TokenType::IDENTIFIER) || check(TokenType::PERCENT)) {
+        if (check(TokenType::IDENTIFIER)) {
             unit = advance().value;
+        } else if (check(TokenType::PERCENT)) {
+            // If what follows '%' is not the start of another expression,
+            // it's a unit. Otherwise, it's the modulo operator.
+            size_t next_token_idx = current + 1;
+            if (next_token_idx >= tokens.size() ||
+                (tokens[next_token_idx].type != TokenType::NUMBER &&
+                 tokens[next_token_idx].type != TokenType::IDENTIFIER &&
+                 tokens[next_token_idx].type != TokenType::L_BRACE)) {
+                unit = advance().value;
+            }
         }
         return std::make_unique<LiteralNode>(num_token, unit);
     }
