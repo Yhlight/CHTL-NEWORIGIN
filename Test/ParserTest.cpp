@@ -534,6 +534,34 @@ TEST_CASE("Parse Style Template Definition and Usage", "[parser]") {
     REQUIRE(templateUsage->getTemplateName() == "DefaultText");
 }
 
+TEST_CASE("Parse Template with Inheritance", "[parser]") {
+    std::string input =
+        "[Template] @Style Parent { color: red; }"
+        "[Template] @Style Child { background: blue; @Style Parent; }";
+
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    auto ast = parser.parseProgram();
+
+    REQUIRE(ast.size() == 2);
+
+    // Check the child template
+    const auto* childTemplate = dynamic_cast<const CHTL::TemplateNode*>(ast[1].get());
+    REQUIRE(childTemplate != nullptr);
+    REQUIRE(childTemplate->getTemplateName() == "Child");
+
+    // Check its own properties
+    REQUIRE(childTemplate->getProperties().size() == 1);
+    REQUIRE(childTemplate->getProperties()[0]->getKey() == "background");
+
+    // Check its inheritance
+    REQUIRE(childTemplate->getTemplateUsages().size() == 1);
+    const auto* inherited = childTemplate->getTemplateUsages()[0].get();
+    REQUIRE(inherited != nullptr);
+    REQUIRE(inherited->getTemplateName() == "Parent");
+}
+
 TEST_CASE("Parse Element Template Definition and Usage", "[parser]") {
     std::string input =
         "[Template] @Element MyComponent { span { text{'hello'} } }"

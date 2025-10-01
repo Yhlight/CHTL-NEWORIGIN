@@ -20,6 +20,11 @@ void TemplateNode::print(int indent) const {
         child->print(indent + 1);
     }
 
+    // Print inherited templates
+    for (const auto& usage : templateUsages) {
+        usage->print(indent + 1);
+    }
+
     for (int i = 0; i < indent; ++i) std::cout << "  ";
     std::cout << "}\n";
 }
@@ -46,6 +51,14 @@ const std::vector<std::unique_ptr<BaseNode>>& TemplateNode::getChildren() const 
 
 void TemplateNode::addChild(std::unique_ptr<BaseNode> child) {
     children.push_back(std::move(child));
+}
+
+const std::vector<std::unique_ptr<TemplateUsageNode>>& TemplateNode::getTemplateUsages() const {
+    return templateUsages;
+}
+
+void TemplateNode::addTemplateUsage(std::unique_ptr<TemplateUsageNode> usage) {
+    templateUsages.push_back(std::move(usage));
 }
 
 } // namespace CHTL

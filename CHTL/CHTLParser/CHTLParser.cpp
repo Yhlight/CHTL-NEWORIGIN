@@ -294,11 +294,19 @@ std::unique_ptr<TemplateNode> CHTLParser::parseTemplateNode() {
 
     if (type.value == "Style") {
         while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-            consume(TokenType::COLON, "Expect ':' after style property key.");
-            auto value_expr = parseExpression();
-            templateNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            if (check(TokenType::AT)) {
+                consume(TokenType::AT, "Expect '@' for template usage.");
+                Token templateType = consume(TokenType::IDENTIFIER, "Expect template type.");
+                Token templateName = consume(TokenType::IDENTIFIER, "Expect template name.");
+                consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
+                templateNode->addTemplateUsage(std::make_unique<TemplateUsageNode>(templateType.value, templateName.value));
+            } else {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                consume(TokenType::COLON, "Expect ':' after style property key.");
+                auto value_expr = parseExpression();
+                templateNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
         }
     } else if (type.value == "Element") {
         while (!check(TokenType::R_BRACE) && !isAtEnd()) {
