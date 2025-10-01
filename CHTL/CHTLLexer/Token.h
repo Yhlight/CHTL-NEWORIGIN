@@ -11,6 +11,7 @@ enum class TokenType {
     EndOfFile,
     IDENTIFIER,
     STRING_LITERAL,
+    HEX_LITERAL,
     NUMBER,
     COMMENT,
 
@@ -33,6 +34,8 @@ enum class TokenType {
     L_BRACKET,
     R_BRACKET,
     AT_SIGN,
+    L_PAREN,
+    R_PAREN,
 
     // Arithmetic Operators
     PLUS,

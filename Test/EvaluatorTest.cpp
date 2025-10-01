@@ -5,6 +5,7 @@
 #include "CHTLNode/ExpressionNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLManager/TemplateManager.h"
 #include "CHTLUtil/DocumentTraverser.h"
 #include <memory>
 
@@ -14,8 +15,10 @@ CHTL::EvaluatedValue evaluate_with_context(const std::string& style_block_str, c
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto root = parser.parse();
-    auto element = static_cast<CHTL::ElementNode*>(root.get());
+    auto doc = parser.parse();
+    REQUIRE(doc != nullptr);
+    REQUIRE(doc->children.size() == 1);
+    auto element = static_cast<CHTL::ElementNode*>(doc->children[0].get());
     const auto* style = element->getStyle();
 
     const CHTL::ExpressionNode* expr_to_eval = nullptr;
@@ -28,7 +31,7 @@ CHTL::EvaluatedValue evaluate_with_context(const std::string& style_block_str, c
     REQUIRE(expr_to_eval != nullptr);
 
     CHTL::ExpressionEvaluator evaluator;
-    return evaluator.evaluate(expr_to_eval, root.get(), style);
+    return evaluator.evaluate(expr_to_eval, doc.get(), style);
 }
 
 // Helper to evaluate a property reference expression
@@ -36,7 +39,7 @@ CHTL::EvaluatedValue evaluate_reference_expression(const std::string& document_s
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(document_str);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+    auto root = parser.parse();
 
     const auto* target_element = CHTL::DocumentTraverser::find(root.get(), target_selector);
     REQUIRE(target_element != nullptr);
@@ -112,5 +115,51 @@ TEST_CASE("ExpressionEvaluator with property references", "[evaluator]") {
         auto result = evaluate_reference_expression(input, "span", "color");
         REQUIRE(result.type == CHTL::EvaluatedValue::Type::STRING);
         REQUIRE(result.string_value == "green");
+    }
+}
+
+TEST_CASE("ExpressionEvaluator with variable substitution", "[evaluator]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Template] @Var MyTheme {
+            primaryColor: #3498db;
+            fontSize: 16px;
+        }
+        div {
+            style {
+                color: MyTheme(primaryColor);
+                font-size: MyTheme(fontSize) + 2px;
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    auto doc = parser.parse();
+    REQUIRE(doc != nullptr);
+    REQUIRE(doc->children.size() == 1);
+
+    auto element = static_cast<CHTL::ElementNode*>(doc->children[0].get());
+    const auto* style = element->getStyle();
+    REQUIRE(style != nullptr);
+    REQUIRE(style->getProperties().size() == 2);
+
+    CHTL::ExpressionEvaluator evaluator;
+
+    SECTION("Simple variable substitution") {
+        const auto* colorProp = style->getProperties()[0].get();
+        REQUIRE(colorProp->getKey() == "color");
+        auto result = evaluator.evaluate(colorProp->getValue(), doc.get(), style);
+        REQUIRE(result.type == CHTL::EvaluatedValue::Type::STRING);
+        REQUIRE(result.string_value == "#3498db");
+    }
+
+    SECTION("Variable substitution in arithmetic expression") {
+        const auto* fontProp = style->getProperties()[1].get();
+        REQUIRE(fontProp->getKey() == "font-size");
+        auto result = evaluator.evaluate(fontProp->getValue(), doc.get(), style);
+        REQUIRE(result.type == CHTL::EvaluatedValue::Type::NUMBER);
+        REQUIRE(result.number_value == 18.0);
+        REQUIRE(result.unit == "px");
     }
 }

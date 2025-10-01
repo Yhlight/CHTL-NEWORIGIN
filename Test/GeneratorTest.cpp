@@ -3,6 +3,7 @@
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
 #include "CHTLNode/DocumentNode.h"
+#include "CHTLManager/TemplateManager.h"
 #include <memory>
 
 // Helper to get the generated string from a CHTL snippet
@@ -70,4 +71,22 @@ TEST_CASE("Generator expands element templates", "[generator]") {
     std::string result = generate_from_string(input);
     // Note: This test will also fail until the generator is updated.
     REQUIRE(result == "<div><h1>Title</h1><p>Content</p></div>");
+}
+
+TEST_CASE("Generator handles variable substitution", "[generator]") {
+    CHTL::TemplateManager::getInstance().clear();
+    std::string input = R"(
+        [Template] @Var MyTheme {
+            primaryColor: #3498db;
+            basePadding: 10px;
+        }
+        div {
+            style {
+                color: MyTheme(primaryColor);
+                padding: MyTheme(basePadding) * 2;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<div style=\"color: #3498db;padding: 20px;\"></div>");
 }

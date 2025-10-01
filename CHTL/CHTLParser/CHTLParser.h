@@ -13,6 +13,7 @@
 #include "../CHTLNode/ConditionalExpressionNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/VariableAccessNode.h"
 #include "../CHTLNode/DocumentNode.h"
 
 namespace CHTL {

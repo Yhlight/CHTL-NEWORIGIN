@@ -11,6 +11,7 @@
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
+#include "CHTLNode/VariableAccessNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -349,4 +350,60 @@ TEST_CASE("Parse Style Template Usage", "[parser]") {
     const auto* templateUsage = styleNode->getTemplateUsages()[0].get();
     REQUIRE(templateUsage->getTemplateType() == CHTL::TemplateType::STYLE);
     REQUIRE(templateUsage->getName() == "MyTemplate");
+}
+
+TEST_CASE("Parse Var Template Definition", "[parser]") {
+    std::string input = R"(
+        [Template] @Var MyVars {
+            mainColor: #ff0000;
+            secondaryColor: blue;
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    auto doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    REQUIRE(doc->children.empty());
+
+    const auto* templateDef = CHTL::TemplateManager::getInstance().getTemplate("MyVars");
+    REQUIRE(templateDef != nullptr);
+    REQUIRE(templateDef->getTemplateType() == CHTL::TemplateType::VAR);
+    REQUIRE(templateDef->getName() == "MyVars");
+    REQUIRE(templateDef->getChildren().size() == 2);
+
+    auto* prop1 = dynamic_cast<const CHTL::StylePropertyNode*>(templateDef->getChildren()[0].get());
+    REQUIRE(prop1 != nullptr);
+    REQUIRE(prop1->getKey() == "mainColor");
+
+    auto* prop2 = dynamic_cast<const CHTL::StylePropertyNode*>(templateDef->getChildren()[1].get());
+    REQUIRE(prop2 != nullptr);
+    REQUIRE(prop2->getKey() == "secondaryColor");
+}
+
+TEST_CASE("Parse Variable Access", "[parser]") {
+    std::string input = "div { style { color: MyVars(mainColor); } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    auto doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    REQUIRE(doc->children.size() == 1);
+    auto* root = doc->children[0].get();
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(root);
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    const CHTL::ExpressionNode* valueExpr = propNode->getValue();
+    REQUIRE(valueExpr->getType() == CHTL::ExpressionType::VARIABLE_ACCESS);
+
+    const auto* varAccess = static_cast<const CHTL::VariableAccessNode*>(valueExpr);
+    REQUIRE(varAccess->getGroupName() == "MyVars");
+    REQUIRE(varAccess->getVariableName() == "mainColor");
 }

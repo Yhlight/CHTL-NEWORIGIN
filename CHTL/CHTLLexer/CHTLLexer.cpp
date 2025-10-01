@@ -65,10 +65,27 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
         if (input[pos] == '?') { tokens.push_back({TokenType::QUESTION_MARK, "?"}); pos++; continue; }
         if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
-        if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
+        if (input[pos] == '#') {
+            size_t start_pos = pos + 1;
+            size_t end_pos = start_pos;
+            while (end_pos < input.length() && std::isxdigit(input[end_pos])) {
+                end_pos++;
+            }
+            size_t len = end_pos - start_pos;
+            if (len == 3 || len == 6 || len == 8) {
+                tokens.push_back({TokenType::HEX_LITERAL, input.substr(pos, len + 1)});
+                pos = end_pos;
+            } else {
+                tokens.push_back({TokenType::HASH, "#"});
+                pos++;
+            }
+            continue;
+        }
         if (input[pos] == '[') { tokens.push_back({TokenType::L_BRACKET, "["}); pos++; continue; }
         if (input[pos] == ']') { tokens.push_back({TokenType::R_BRACKET, "]"}); pos++; continue; }
         if (input[pos] == '@') { tokens.push_back({TokenType::AT_SIGN, "@"}); pos++; continue; }
+        if (input[pos] == '(') { tokens.push_back({TokenType::L_PAREN, "("}); pos++; continue; }
+        if (input[pos] == ')') { tokens.push_back({TokenType::R_PAREN, ")"}); pos++; continue; }
 
         if (input[pos] == '>') {
             if (pos + 1 < input.length() && input[pos + 1] == '=') {

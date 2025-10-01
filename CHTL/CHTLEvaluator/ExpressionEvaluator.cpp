@@ -5,6 +5,8 @@
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/BinaryOpNode.h"
+#include "CHTLNode/VariableAccessNode.h"
+#include "CHTLManager/TemplateManager.h"
 #include "CHTLUtil/DocumentTraverser.h"
 #include <stdexcept>
 #include <cmath>
@@ -125,6 +127,29 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
                 }
             }
             throw std::runtime_error("Property '" + refNode->getPropertyName() + "' not found on element with selector '" + refNode->getSelector() + "'");
+        }
+        case ExpressionType::VARIABLE_ACCESS: {
+            const auto* varAccessNode = static_cast<const VariableAccessNode*>(expression);
+            const auto& groupName = varAccessNode->getGroupName();
+            const auto& variableName = varAccessNode->getVariableName();
+            const auto* templateDef = TemplateManager::getInstance().getTemplate(groupName);
+
+            if (!templateDef) {
+                throw std::runtime_error("Variable group template not found: " + groupName);
+            }
+            if (templateDef->getTemplateType() != TemplateType::VAR) {
+                throw std::runtime_error("Template '" + groupName + "' is not a variable group.");
+            }
+
+            for (const auto& child : templateDef->getChildren()) {
+                if (const auto* propNode = dynamic_cast<const StylePropertyNode*>(child.get())) {
+                    if (propNode->getKey() == variableName) {
+                        return evaluate(propNode->getValue(), root, nullptr);
+                    }
+                }
+            }
+
+            throw std::runtime_error("Variable '" + variableName + "' not found in group '" + groupName + "'.");
         }
         default:
             throw std::runtime_error("Unsupported expression type.");

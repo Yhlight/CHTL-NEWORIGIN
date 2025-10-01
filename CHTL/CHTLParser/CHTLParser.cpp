@@ -11,6 +11,7 @@
 #include "../CHTLNode/ReferenceNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/VariableAccessNode.h"
 #include "../CHTLManager/TemplateManager.h"
 #include <stdexcept>
 #include <vector>
@@ -379,6 +380,16 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
 }
 
 std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
+    if (match(TokenType::L_PAREN)) {
+        auto expr = parseExpression();
+        consume(TokenType::R_PAREN, "Expect ')' after expression.");
+        return expr;
+    }
+
+    if (match(TokenType::HEX_LITERAL)) {
+        return std::make_unique<LiteralNode>(tokens[current - 1], "");
+    }
+
     if (match(TokenType::NUMBER)) {
         Token num_token = tokens[current - 1];
         std::string unit;
@@ -389,25 +400,41 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
             if (next_token_idx >= tokens.size() ||
                 (tokens[next_token_idx].type != TokenType::NUMBER &&
                  tokens[next_token_idx].type != TokenType::IDENTIFIER &&
-                 tokens[next_token_idx].type != TokenType::L_BRACE)) {
+                 tokens[next_token_idx].type != TokenType::L_PAREN)) {
                 unit = advance().value;
             }
         }
         return std::make_unique<LiteralNode>(num_token, unit);
     }
 
-    if (check(TokenType::DOT) || check(TokenType::HASH)) {
-        Token prefix = advance();
-        Token name = consume(TokenType::IDENTIFIER, "Expect selector name.");
-        consume(TokenType::DOT, "Expect '.' after selector.");
+    if (match(TokenType::HASH)) {
+        Token name = consume(TokenType::IDENTIFIER, "Expect id name.");
+        consume(TokenType::DOT, "Expect '.' after id name.");
         Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
-        return std::make_unique<ReferenceNode>(prefix.value + name.value, prop.value);
+        return std::make_unique<ReferenceNode>("#" + name.value, prop.value);
+    }
+
+    if (check(TokenType::DOT)) {
+         if (current + 2 < tokens.size() && tokens[current+1].type == TokenType::IDENTIFIER && tokens[current+2].type == TokenType::DOT) {
+            advance(); // consume dot
+            Token name = consume(TokenType::IDENTIFIER, "Expect class name.");
+            consume(TokenType::DOT, "Expect '.' after class name.");
+            Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
+            return std::make_unique<ReferenceNode>("." + name.value, prop.value);
+        }
     }
 
     if (check(TokenType::IDENTIFIER)) {
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::L_PAREN) {
+            Token groupName = consume(TokenType::IDENTIFIER, "Expect variable group name.");
+            consume(TokenType::L_PAREN, "Expect '(' after variable group name.");
+            Token variableName = consume(TokenType::IDENTIFIER, "Expect variable name.");
+            consume(TokenType::R_PAREN, "Expect ')' after variable name.");
+            return std::make_unique<VariableAccessNode>(groupName.value, variableName.value);
+        }
         if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::DOT) {
             Token selector = advance();
-            advance(); // consume dot
+            consume(TokenType::DOT, "Expect '.' after tag name.");
             Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
             return std::make_unique<ReferenceNode>(selector.value, prop.value);
         }
@@ -417,13 +444,7 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
         return std::make_unique<LiteralNode>(tokens[current - 1], "");
     }
 
-    if (match(TokenType::L_BRACE)) {
-        auto expr = parseExpression();
-        consume(TokenType::R_BRACE, "Expect '}' after expression.");
-        return expr;
-    }
-
-    throw std::runtime_error("Expected expression, but found " + peek().value);
+    throw std::runtime_error("Expected expression, but found token: " + peek().value);
 }
 
 } // namespace CHTL
