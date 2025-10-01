@@ -76,20 +76,35 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         std::stringstream style_ss;
         // 1. Expand style templates first
         for (const auto& usage : node->getStyle()->getTemplateUsages()) {
-             const auto* def = m_template_manager.getTemplate(usage->getName());
+            const auto* def = m_template_manager.getTemplate(usage->getName());
             if (!def || def->getTemplateType() != TemplateType::STYLE) {
                 throw std::runtime_error("Style template not found: " + usage->getName());
             }
             for (const auto& child : def->getChildren()) {
                 if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
                     EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                     style_ss << prop->getKey() << ": ";
+                    style_ss << prop->getKey() << ": ";
                     if (val.type == EvaluatedValue::Type::NUMBER) {
                         style_ss << val.number_value << val.unit;
                     } else {
                         style_ss << val.string_value;
                     }
                     style_ss << ";";
+                } else if (const auto* block = dynamic_cast<const SelectorBlockNode*>(child.get())) {
+                    m_global_styles << block->getSelector() << "{";
+                    for (const auto& prop : block->getProperties()) {
+                        m_global_styles << prop->getKey() << ":";
+                        EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                        if (val.type == EvaluatedValue::Type::NUMBER) {
+                            std::stringstream temp_ss;
+                            temp_ss << val.number_value;
+                            m_global_styles << temp_ss.str() << val.unit;
+                        } else {
+                            m_global_styles << val.string_value;
+                        }
+                        m_global_styles << ";";
+                    }
+                    m_global_styles << "}";
                 }
             }
         }
@@ -124,12 +139,14 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
 
 void CHTLGenerator::generateStyleNode(const StyleNode* node) {
     for (const auto& block : node->getSelectorBlocks()) {
-        m_global_styles << block->getSelector() << " {";
+        m_global_styles << block->getSelector() << "{";
         for (const auto& prop : block->getProperties()) {
-            m_global_styles << prop->getKey() << ": ";
+            m_global_styles << prop->getKey() << ":";
             EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node);
             if (val.type == EvaluatedValue::Type::NUMBER) {
-                m_global_styles << val.number_value << val.unit;
+                std::stringstream temp_ss;
+                temp_ss << val.number_value;
+                m_global_styles << temp_ss.str() << val.unit;
             } else {
                 m_global_styles << val.string_value;
             }

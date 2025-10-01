@@ -387,3 +387,31 @@ TEST_CASE("Parse Style Property with Comma-Separated Value List", "[parser]") {
     REQUIRE(val2->getValue().type == CHTL::TokenType::IDENTIFIER);
     REQUIRE(val2->getValue().value == "sans-serif");
 }
+
+TEST_CASE("Parse Style Block with Automatic Attribute Generation", "[parser]") {
+    std::string input = R"(
+        div {
+            style {
+                .my-class {
+                    color: blue;
+                }
+                #my-id {
+                    font-weight: bold;
+                }
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getTagName() == "div");
+
+    REQUIRE(elementNode->getAttributes().size() == 2);
+    REQUIRE(elementNode->getAttribute("class") == "my-class");
+    REQUIRE(elementNode->getAttribute("id") == "my-id");
+}
