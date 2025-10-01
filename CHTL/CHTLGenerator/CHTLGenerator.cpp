@@ -74,6 +74,63 @@ std::string CHTLGenerator::generateNode(const BaseNode* node) {
     return "";
 }
 
+std::string CHTLGenerator::generateIfNode(const IfNode* node, const StyleNode* style_context) {
+    const BaseNode* current_node = node;
+    while(current_node) {
+        if (const auto* if_node = dynamic_cast<const IfNode*>(current_node)) {
+            EvaluatedValue condition_result = m_evaluator.evaluate(if_node->condition.get(), m_root, style_context);
+            if (condition_result.isTruthy()) {
+                std::stringstream ss;
+                for (const auto& prop : if_node->body) {
+                    ss << prop->getKey() << ": ";
+                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, style_context);
+                     if (val.type == EvaluatedValue::Type::NUMBER) {
+                        ss << val.number_value << val.unit;
+                    } else {
+                        ss << val.string_value;
+                    }
+                    ss << ";";
+                }
+                return ss.str();
+            }
+            current_node = if_node->else_branch.get();
+        } else if (const auto* else_if_node = dynamic_cast<const ElseIfNode*>(current_node)) {
+            EvaluatedValue condition_result = m_evaluator.evaluate(else_if_node->condition.get(), m_root, style_context);
+            if (condition_result.isTruthy()) {
+                std::stringstream ss;
+                for (const auto& prop : else_if_node->body) {
+                    ss << prop->getKey() << ": ";
+                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, style_context);
+                     if (val.type == EvaluatedValue::Type::NUMBER) {
+                        ss << val.number_value << val.unit;
+                    } else {
+                        ss << val.string_value;
+                    }
+                    ss << ";";
+                }
+                return ss.str();
+            }
+            current_node = else_if_node->next_else_branch.get();
+        } else if (const auto* else_node = dynamic_cast<const ElseNode*>(current_node)) {
+            std::stringstream ss;
+            for (const auto& prop : else_node->body) {
+                ss << prop->getKey() << ": ";
+                EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, style_context);
+                if (val.type == EvaluatedValue::Type::NUMBER) {
+                    ss << val.number_value << val.unit;
+                } else {
+                    ss << val.string_value;
+                }
+                ss << ";";
+            }
+            return ss.str();
+        } else {
+            break;
+        }
+    }
+    return "";
+}
+
 std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
     std::stringstream ss;
     ss << "<" << node->getTagName();
@@ -82,8 +139,8 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         ss << " " << attr.first << "=\\\"" << attr.second << "\\\"";
     }
 
+    std::stringstream style_ss;
     if (node->getStyle()) {
-        std::stringstream style_ss;
         for (const auto& usage : node->getStyle()->getTemplateUsages()) {
             expandStyleTemplate(style_ss, usage.get());
         }
@@ -98,11 +155,15 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
             style_ss << ";";
         }
 
-        if (!style_ss.str().empty()) {
-            ss << " style=\\\"" << style_ss.str() << "\\\"";
-        }
-
         generateStyleNode(node->getStyle());
+    }
+
+    for (const auto& ifBlock : node->getIfBlocks()) {
+        style_ss << generateIfNode(ifBlock.get(), node->getStyle());
+    }
+
+    if (!style_ss.str().empty()) {
+        ss << " style=\\\"" << style_ss.str() << "\\\"";
     }
 
     ss << ">";

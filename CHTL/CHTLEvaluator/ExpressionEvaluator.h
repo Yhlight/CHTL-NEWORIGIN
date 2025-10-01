@@ -24,6 +24,13 @@ struct EvaluatedValue {
         }
         return string_value == other.string_value;
     }
+
+    bool isTruthy() const {
+        if (type == Type::NUMBER) {
+            return number_value != 0;
+        }
+        return !string_value.empty();
+    }
 };
 
 class ExpressionEvaluator {

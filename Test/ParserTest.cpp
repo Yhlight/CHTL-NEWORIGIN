@@ -179,3 +179,69 @@ TEST_CASE("Parse Origin Block", "[parser]") {
     REQUIRE(originNode->getOriginType() == CHTL::OriginType::HTML);
     REQUIRE(originNode->getContent() == "<div class=\"raw\">Raw HTML</div>");
 }
+
+TEST_CASE("Parse simple if statement", "[parser]") {
+    std::string input = R"(
+        div {
+            if {
+                condition: width > 100px,
+                color: red;
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(input, tokens);
+    auto doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    REQUIRE(doc->children.size() == 1);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(doc->children[0].get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getIfBlocks().size() == 1);
+
+    const auto* ifNode = elementNode->getIfBlocks()[0].get();
+    REQUIRE(ifNode != nullptr);
+    REQUIRE(ifNode->body.size() == 1);
+
+    const auto* propNode = ifNode->body[0].get();
+    REQUIRE(propNode->getKey() == "color");
+}
+
+TEST_CASE("Parse if-else-if-else chain", "[parser]") {
+    std::string input = R"(
+        div {
+            if {
+                condition: width > 200px,
+                color: blue;
+            } else if {
+                condition: width > 100px,
+                color: green;
+            } else {
+                color: red;
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(input, tokens);
+    auto doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(doc->children[0].get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getIfBlocks().size() == 1);
+
+    const auto* ifNode = elementNode->getIfBlocks()[0].get();
+    REQUIRE(ifNode != nullptr);
+    REQUIRE(ifNode->else_branch != nullptr);
+
+    const auto* elseIfNode = dynamic_cast<const CHTL::ElseIfNode*>(ifNode->else_branch.get());
+    REQUIRE(elseIfNode != nullptr);
+    REQUIRE(elseIfNode->body.size() == 1);
+    REQUIRE(elseIfNode->next_else_branch != nullptr);
+
+    const auto* elseNode = dynamic_cast<const CHTL::ElseNode*>(elseIfNode->next_else_branch.get());
+    REQUIRE(elseNode != nullptr);
+    REQUIRE(elseNode->body.size() == 1);
+}

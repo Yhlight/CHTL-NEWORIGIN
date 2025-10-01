@@ -135,6 +135,8 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->setStyle(parseStyleNode(element.get()));
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
+        } else if (match(TokenType::IF_KEYWORD)) {
+            element->addIfBlock(parseIfStatement());
         } else if (match(TokenType::TEXT_KEYWORD)) {
             element->addChild(parseTextNode());
         } else if (match(TokenType::AT_SIGN)) {
@@ -614,6 +616,86 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
     }
 
     throw std::runtime_error("Expected expression, but found token: " + peek().value);
+}
+
+std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
+    consume(TokenType::L_BRACE, "Expect '{' after 'if' keyword.");
+
+    consume(TokenType::CONDITION_KEYWORD, "Expect 'condition' keyword in if block.");
+    consume(TokenType::COLON, "Expect ':' after 'condition' keyword.");
+    auto condition = parseExpression();
+    consume(TokenType::COMMA, "Expect ',' after if condition.");
+
+    std::vector<std::unique_ptr<StylePropertyNode>> body;
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+        consume(TokenType::COLON, "Expect ':' after style property key.");
+        auto value_expr = parseExpression();
+        body.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+    }
+
+    consume(TokenType::R_BRACE, "Expect '}' after if block.");
+
+    auto ifNode = std::make_unique<IfNode>(std::move(condition), std::move(body));
+
+    // Handle else and else if chain
+    BaseNode* current_branch_owner = ifNode.get();
+
+    while (match(TokenType::ELSE_KEYWORD)) {
+        if (match(TokenType::IF_KEYWORD)) {
+            // This is an 'else if' block
+            consume(TokenType::L_BRACE, "Expect '{' after 'else if' keyword.");
+            consume(TokenType::CONDITION_KEYWORD, "Expect 'condition' keyword in else if block.");
+            consume(TokenType::COLON, "Expect ':' after 'condition' keyword.");
+            auto elseIfCondition = parseExpression();
+            consume(TokenType::COMMA, "Expect ',' after else if condition.");
+
+            std::vector<std::unique_ptr<StylePropertyNode>> elseIfBody;
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                consume(TokenType::COLON, "Expect ':' after style property key.");
+                auto value_expr = parseExpression();
+                elseIfBody.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after else if block.");
+
+            auto elseIfNode = std::make_unique<ElseIfNode>(std::move(elseIfCondition), std::move(elseIfBody));
+
+            if (auto* parentIf = dynamic_cast<IfNode*>(current_branch_owner)) {
+                parentIf->else_branch = std::move(elseIfNode);
+                current_branch_owner = parentIf->else_branch.get();
+            } else if (auto* parentElseIf = dynamic_cast<ElseIfNode*>(current_branch_owner)) {
+                parentElseIf->next_else_branch = std::move(elseIfNode);
+                current_branch_owner = parentElseIf->next_else_branch.get();
+            }
+
+        } else {
+            // This is a final 'else' block
+            consume(TokenType::L_BRACE, "Expect '{' after 'else' keyword.");
+            std::vector<std::unique_ptr<StylePropertyNode>> elseBody;
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                 Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                 consume(TokenType::COLON, "Expect ':' after style property key.");
+                 auto value_expr = parseExpression();
+                 elseBody.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                 consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after else block.");
+            auto elseNode = std::make_unique<ElseNode>(std::move(elseBody));
+
+            if (auto* parentIf = dynamic_cast<IfNode*>(current_branch_owner)) {
+                parentIf->else_branch = std::move(elseNode);
+            } else if (auto* parentElseIf = dynamic_cast<ElseIfNode*>(current_branch_owner)) {
+                parentElseIf->next_else_branch = std::move(elseNode);
+            }
+
+            break;
+        }
+    }
+
+    return ifNode;
 }
 
 } // namespace CHTL

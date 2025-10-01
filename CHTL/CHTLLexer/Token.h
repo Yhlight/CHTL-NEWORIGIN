@@ -33,6 +33,9 @@ enum class TokenType {
     AT_KEYWORD,
     TOP_KEYWORD,
     BOTTOM_KEYWORD,
+    IF_KEYWORD,
+    ELSE_KEYWORD,
+    CONDITION_KEYWORD,
 
     // Punctuation
     L_BRACE,

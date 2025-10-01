@@ -18,6 +18,7 @@
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
 #include "../CHTLNode/OriginNode.h"
+#include "../CHTLNode/ConditionalNode.h"
 
 namespace CHTL {
 
@@ -53,6 +54,7 @@ private:
     std::unique_ptr<CustomDefinitionNode> parseCustomDefinition();
     std::unique_ptr<TemplateUsageNode> parseTemplateUsage();
     std::unique_ptr<OriginNode> parseOriginNode();
+    std::unique_ptr<IfNode> parseIfStatement();
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();

@@ -182,6 +182,9 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             else if (value == "at") { tokens.push_back({TokenType::AT_KEYWORD, value, ident_start}); }
             else if (value == "top") { tokens.push_back({TokenType::TOP_KEYWORD, value, ident_start}); }
             else if (value == "bottom") { tokens.push_back({TokenType::BOTTOM_KEYWORD, value, ident_start}); }
+            else if (value == "if") { tokens.push_back({TokenType::IF_KEYWORD, value, ident_start}); }
+            else if (value == "else") { tokens.push_back({TokenType::ELSE_KEYWORD, value, ident_start}); }
+            else if (value == "condition") { tokens.push_back({TokenType::CONDITION_KEYWORD, value, ident_start}); }
             else if (value == "script") {
                 tokens.push_back({TokenType::SCRIPT_KEYWORD, value, ident_start});
                 while (pos < input.length() && std::isspace(input[pos])) {

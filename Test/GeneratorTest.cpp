@@ -117,3 +117,82 @@ TEST_CASE("Generator handles [Origin] blocks", "[generator]") {
     REQUIRE(result.find("body { margin: 0; }") != std::string::npos);
     REQUIRE(result.find("<script>console.log(\"raw js\");</script>") != std::string::npos);
 }
+
+TEST_CASE("Generator handles simple if statement (true)", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                width: 200px;
+            }
+            if {
+                condition: width > 100px,
+                color: red;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.find("style=\\\"width: 200px;color: red;\\\"") != std::string::npos);
+}
+
+TEST_CASE("Generator handles simple if statement (false)", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                width: 50px;
+            }
+            if {
+                condition: width > 100px,
+                color: red;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.find("style=\\\"width: 50px;\\\"") != std::string::npos);
+    REQUIRE(result.find("color: red;") == std::string::npos);
+}
+
+TEST_CASE("Generator handles if-else-if-else chain", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                width: 150px;
+            }
+            if {
+                condition: width > 200px,
+                color: blue;
+            } else if {
+                condition: width > 100px,
+                color: green;
+            } else {
+                color: red;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.find("style=\\\"width: 150px;color: green;\\\"") != std::string::npos);
+    REQUIRE(result.find("color: blue;") == std::string::npos);
+    REQUIRE(result.find("color: red;") == std::string::npos);
+}
+
+TEST_CASE("Generator handles the else block in a chain", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                width: 50px;
+            }
+            if {
+                condition: width > 200px,
+                color: blue;
+            } else if {
+                condition: width > 100px,
+                color: green;
+            } else {
+                color: red;
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.find("style=\\\"width: 50px;color: red;\\\"") != std::string::npos);
+    REQUIRE(result.find("color: blue;") == std::string::npos);
+    REQUIRE(result.find("color: green;") == std::string::npos);
+}

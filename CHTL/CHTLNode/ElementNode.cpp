@@ -21,6 +21,10 @@ void ElementNode::setScript(std::unique_ptr<ScriptNode> scriptNode) {
     script = std::move(scriptNode);
 }
 
+void ElementNode::addIfBlock(std::unique_ptr<IfNode> ifNode) {
+    ifBlocks.push_back(std::move(ifNode));
+}
+
 void ElementNode::print(int indent) const {
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";
@@ -36,6 +40,9 @@ void ElementNode::print(int indent) const {
     }
     if (script) {
         script->print(indent + 1);
+    }
+    for (const auto& ifBlock : ifBlocks) {
+        ifBlock->print(indent + 1);
     }
 
     for (const auto& child : children) {
@@ -74,6 +81,10 @@ const StyleNode* ElementNode::getStyle() const {
 
 const ScriptNode* ElementNode::getScript() const {
     return script.get();
+}
+
+const std::vector<std::unique_ptr<IfNode>>& ElementNode::getIfBlocks() const {
+    return ifBlocks;
 }
 
 } // namespace CHTL

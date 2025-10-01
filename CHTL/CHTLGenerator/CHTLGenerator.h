@@ -7,6 +7,7 @@
 #include "CHTLNode/BaseNode.h"
 #include "CHTLNode/DocumentNode.h"
 #include "CHTLNode/OriginNode.h"
+#include "CHTLNode/ConditionalNode.h"
 #include "CHTLEvaluator/ExpressionEvaluator.h"
 #include "CHTLManager/TemplateManager.h"
 
@@ -20,6 +21,9 @@ class TemplateDefinitionNode;
 class TemplateUsageNode;
 class CustomDefinitionNode;
 class OriginNode;
+class IfNode;
+class ElseIfNode;
+class ElseNode;
 
 class CHTLGenerator {
 public:
@@ -42,6 +46,7 @@ private:
     std::string generateScriptNode(const ScriptNode* node);
     void generateTemplateDefinition(const TemplateDefinitionNode* node);
     std::string generateTemplateUsage(const TemplateUsageNode* node);
+    std::string generateIfNode(const IfNode* node, const StyleNode* style_context);
 };
 
 }
