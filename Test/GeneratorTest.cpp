@@ -2,7 +2,7 @@
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
-#include "CHTLNode/BaseNode.h"
+#include "CHTLNode/DocumentNode.h"
 #include <memory>
 
 // Helper to get the generated string from a CHTL snippet
@@ -10,10 +10,32 @@ std::string generate_from_string(const std::string& chtl_input) {
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(chtl_input);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+    std::unique_ptr<CHTL::DocumentNode> root = parser.parse();
     CHTL::CHTLGenerator generator;
     return generator.generate(root.get());
 }
+
+TEST_CASE("Generator produces DOCTYPE with 'use html5;'", "[generator]") {
+    std::string input = R"(
+        use html5;
+        p {
+            text { "Hello" }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.rfind("<!DOCTYPE html>", 0) == 0);
+}
+
+TEST_CASE("Generator does not produce DOCTYPE without 'use html5;'", "[generator]") {
+    std::string input = R"(
+        p {
+            text { "Hello" }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result.rfind("<!DOCTYPE html>", 0) != 0);
+}
+
 
 TEST_CASE("Generator expands style templates", "[generator]") {
     std::string input = R"(

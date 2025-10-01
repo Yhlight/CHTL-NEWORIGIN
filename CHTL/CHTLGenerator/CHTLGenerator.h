@@ -5,6 +5,7 @@
 #include <memory>
 #include <sstream>
 #include "CHTLNode/BaseNode.h"
+#include "CHTLNode/DocumentNode.h"
 #include "CHTLEvaluator/ExpressionEvaluator.h"
 #include "CHTLManager/TemplateManager.h"
 
@@ -20,7 +21,7 @@ class TemplateUsageNode;
 class CHTLGenerator {
 public:
     CHTLGenerator();
-    std::string generate(const BaseNode* root);
+    std::string generate(const DocumentNode* root);
 
 private:
     ExpressionEvaluator m_evaluator;

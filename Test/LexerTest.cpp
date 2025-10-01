@@ -98,3 +98,17 @@ TEST_CASE("Tokenize Arithmetic Operators", "[lexer]") {
     REQUIRE(tokens[4].type == CHTL::TokenType::PERCENT);
     REQUIRE(tokens[5].type == CHTL::TokenType::STAR_STAR);
 }
+
+TEST_CASE("Tokenize 'use html5;' directive", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "use html5;";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 3);
+    REQUIRE(tokens[0].type == CHTL::TokenType::USE_KEYWORD);
+    REQUIRE(tokens[0].value == "use");
+    REQUIRE(tokens[1].type == CHTL::TokenType::HTML5_KEYWORD);
+    REQUIRE(tokens[1].value == "html5");
+    REQUIRE(tokens[2].type == CHTL::TokenType::SEMICOLON);
+    REQUIRE(tokens[2].value == ";");
+}

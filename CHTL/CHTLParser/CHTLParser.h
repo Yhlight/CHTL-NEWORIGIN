@@ -13,13 +13,14 @@
 #include "../CHTLNode/ConditionalExpressionNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/DocumentNode.h"
 
 namespace CHTL {
 
 class CHTLParser {
 public:
     CHTLParser(const std::vector<Token>& tokens);
-    std::unique_ptr<BaseNode> parse();
+    std::unique_ptr<DocumentNode> parse();
 
 private:
     const std::vector<Token>& tokens;
@@ -32,6 +33,9 @@ private:
     bool check(TokenType type) const;
     bool match(TokenType type);
     Token consume(TokenType type, const std::string& message);
+
+    // Directive parsing
+    void parseUseDirective(DocumentNode* doc);
 
     // Statement-level parsing
     std::unique_ptr<BaseNode> parseStatement();

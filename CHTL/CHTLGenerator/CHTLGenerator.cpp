@@ -15,33 +15,33 @@ namespace CHTL {
 
 CHTLGenerator::CHTLGenerator() : m_template_manager(TemplateManager::getInstance()) {}
 
-std::string CHTLGenerator::generate(const BaseNode* root) {
+std::string CHTLGenerator::generate(const DocumentNode* root) {
     if (!root) {
-        if (!m_global_styles.str().empty()) {
-            std::stringstream final_html;
-            final_html << "<html><head><style>"
-                       << m_global_styles.str()
-                       << "</style></head><body>"
-                       << ""
-                       << "</body></html>";
-            return final_html.str();
-        }
         return "";
     }
+
     m_root = root;
-    std::string body_content = generateNode(root);
+    std::stringstream body_content;
+    for (const auto& child : root->children) {
+        body_content << generateNode(child.get());
+    }
+
+    std::stringstream final_html;
+    if (root->useHtml5) {
+        final_html << "<!DOCTYPE html>\n";
+    }
 
     if (!m_global_styles.str().empty()) {
-        std::stringstream final_html;
         final_html << "<html><head><style>"
                    << m_global_styles.str()
                    << "</style></head><body>"
-                   << body_content
+                   << body_content.str()
                    << "</body></html>";
-        return final_html.str();
+    } else {
+        final_html << body_content.str();
     }
 
-    return body_content;
+    return final_html.str();
 }
 
 std::string CHTLGenerator::generateNode(const BaseNode* node) {

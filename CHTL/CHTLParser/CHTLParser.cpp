@@ -1,4 +1,5 @@
 #include "CHTLParser.h"
+#include "../CHTLNode/DocumentNode.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/StyleNode.h"
@@ -20,28 +21,24 @@ CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
 
 // --- Core Parsing Logic ---
 
-std::unique_ptr<BaseNode> CHTLParser::parse() {
-    std::vector<std::unique_ptr<BaseNode>> top_level_nodes;
-    while (!isAtEnd()) {
-        top_level_nodes.push_back(parseStatement());
-    }
+std::unique_ptr<DocumentNode> CHTLParser::parse() {
+    auto docNode = std::make_unique<DocumentNode>();
+    parseUseDirective(docNode.get());
 
-    std::unique_ptr<BaseNode> main_node = nullptr;
-    for (auto& node : top_level_nodes) {
-        if (auto* def_node = dynamic_cast<TemplateDefinitionNode*>(node.get())) {
-            TemplateManager::getInstance().registerTemplate(
-                std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(node.release()))
-            );
-        } else {
-            if (main_node && node) {
-                 throw std::runtime_error("Multiple root elements are not supported in this version.");
-            }
-            if(node) {
-                main_node = std::move(node);
+    while (!isAtEnd()) {
+        auto statement = parseStatement();
+        if (statement) {
+            if (dynamic_cast<TemplateDefinitionNode*>(statement.get())) {
+                 TemplateManager::getInstance().registerTemplate(
+                    std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(statement.release()))
+                );
+            } else {
+                docNode->children.push_back(std::move(statement));
             }
         }
     }
-    return main_node;
+
+    return docNode;
 }
 
 
@@ -81,6 +78,19 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
         return advance();
     }
     throw std::runtime_error(message);
+}
+
+// --- Directive Parsing ---
+
+void CHTLParser::parseUseDirective(DocumentNode* doc) {
+    if (match(TokenType::USE_KEYWORD)) {
+        if (match(TokenType::HTML5_KEYWORD)) {
+            consume(TokenType::SEMICOLON, "Expect ';' after 'use html5' directive.");
+            doc->useHtml5 = true;
+        } else {
+            throw std::runtime_error("Unknown 'use' directive.");
+        }
+    }
 }
 
 // --- Statement-Level Parsing ---
