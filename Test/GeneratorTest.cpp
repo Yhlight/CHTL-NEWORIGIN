@@ -32,7 +32,7 @@ TEST_CASE("Generator expands style templates", "[generator]") {
     // Note: This test will fail until the generator is updated to handle template expansion.
     // The expected output assumes that the generator will eventually expand the style template
     // into the p element's inline style.
-    REQUIRE(result == "<p style=\"color: black;font-size: 16px;font-weight: bold;\"></p>");
+    REQUIRE(result == R"(<p style="color: black; font-size: 16px; font-weight: bold; "></p>)");
 }
 
 TEST_CASE("Generator expands element templates", "[generator]") {

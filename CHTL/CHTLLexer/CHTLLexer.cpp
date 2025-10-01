@@ -151,6 +151,9 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
 
             if (value == "text") { tokens.push_back({TokenType::TEXT_KEYWORD, value}); }
             else if (value == "style") { tokens.push_back({TokenType::STYLE_KEYWORD, value}); }
+            else if (value == "if") { tokens.push_back({TokenType::IF_KEYWORD, value}); }
+            else if (value == "else") { tokens.push_back({TokenType::ELSE_KEYWORD, value}); }
+            else if (value == "condition") { tokens.push_back({TokenType::CONDITION_KEYWORD, value}); }
             else if (value == "script") {
                 tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
                 while (pos < input.length() && std::isspace(input[pos])) {

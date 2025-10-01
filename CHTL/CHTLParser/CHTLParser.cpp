@@ -116,6 +116,8 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->setScript(parseScriptNode());
         } else if (match(TokenType::TEXT_KEYWORD)) {
             element->addChild(parseTextNode());
+        } else if (match(TokenType::IF_KEYWORD)) {
+            element->addConditional(parseConditionalNode());
         } else if (match(TokenType::AT_SIGN)) {
             element->addChild(parseTemplateUsage());
         }
@@ -278,6 +280,68 @@ std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
     Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");
     consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
     return std::make_unique<TemplateUsageNode>(type, nameToken.value);
+}
+
+std::unique_ptr<ConditionalNode> CHTLParser::parseConditionalNode() {
+    // Assumes 'if' has been consumed.
+    consume(TokenType::L_BRACE, "Expect '{' after 'if' keyword.");
+
+    std::unique_ptr<ExpressionNode> condition = nullptr;
+    std::vector<std::unique_ptr<StylePropertyNode>> body;
+
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        if (match(TokenType::CONDITION_KEYWORD)) {
+            if (condition) {
+                throw std::runtime_error("Multiple 'condition' properties in 'if' block.");
+            }
+            consume(TokenType::COLON, "Expect ':' after 'condition'.");
+            condition = parseExpression();
+            consume(TokenType::SEMICOLON, "Expect ';' after condition expression.");
+        } else if (check(TokenType::IDENTIFIER)) {
+            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+            consume(TokenType::COLON, "Expect ':' after style property key.");
+            auto value_expr = parseExpression();
+            body.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        } else {
+            throw std::runtime_error("Unexpected token in 'if' block: " + peek().value);
+        }
+    }
+    consume(TokenType::R_BRACE, "Expect '}' after 'if' block.");
+
+    if (!condition) {
+        throw std::runtime_error("'if' block must have a 'condition' property.");
+    }
+
+    auto ifNode = std::make_unique<ConditionalNode>(std::move(condition), std::move(body));
+
+    // Check for 'else if' or 'else'
+    if (match(TokenType::ELSE_KEYWORD)) {
+        if (match(TokenType::IF_KEYWORD)) {
+            // 'else if'
+            ifNode->else_branch = parseConditionalNode(); // Recursive call
+        } else {
+            // 'else'
+            consume(TokenType::L_BRACE, "Expect '{' after 'else' keyword.");
+            std::vector<std::unique_ptr<StylePropertyNode>> else_body;
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                if (check(TokenType::IDENTIFIER)) {
+                    Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                    consume(TokenType::COLON, "Expect ':' after style property key.");
+                    auto value_expr = parseExpression();
+                    else_body.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                    consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+                } else {
+                    throw std::runtime_error("Unexpected token in 'else' block: " + peek().value);
+                }
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after 'else' block.");
+
+            ifNode->else_branch = std::make_unique<ConditionalNode>(nullptr, std::move(else_body));
+        }
+    }
+
+    return ifNode;
 }
 
 

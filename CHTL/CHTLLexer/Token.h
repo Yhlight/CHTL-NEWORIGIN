@@ -18,6 +18,9 @@ enum class TokenType {
     TEXT_KEYWORD,
     STYLE_KEYWORD,
     SCRIPT_KEYWORD,
+    IF_KEYWORD,
+    ELSE_KEYWORD,
+    CONDITION_KEYWORD,
 
     // Punctuation
     L_BRACE,

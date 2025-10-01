@@ -4,6 +4,7 @@
 #include "BaseNode.h"
 #include "StyleNode.h"
 #include "ScriptNode.h"
+#include "ConditionalNode.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -21,6 +22,7 @@ public:
     void addAttribute(const std::string& key, const std::string& value);
     void setStyle(std::unique_ptr<StyleNode> styleNode);
     void setScript(std::unique_ptr<ScriptNode> scriptNode);
+    void addConditional(std::unique_ptr<ConditionalNode> conditionalNode);
     void print(int indent = 0) const override;
 
     const std::string& getTagName() const;
@@ -29,6 +31,7 @@ public:
     std::string getAttribute(const std::string& key) const;
     const StyleNode* getStyle() const;
     const ScriptNode* getScript() const;
+    const std::vector<std::unique_ptr<ConditionalNode>>& getConditionals() const;
 
 
 private:
@@ -37,6 +40,7 @@ private:
     std::map<std::string, std::string> attributes;
     std::unique_ptr<StyleNode> style;
     std::unique_ptr<ScriptNode> script;
+    std::vector<std::unique_ptr<ConditionalNode>> conditionals;
 };
 
 } // namespace CHTL
