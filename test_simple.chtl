@@ -1,0 +1,54 @@
+# 这是一个简单的CHTL测试文件
+# 用于验证基础语法功能
+
+html
+{
+    head
+    {
+        title
+        {
+            text: "CHTL Test Page";
+        }
+    }
+
+    body
+    {
+        div
+        {
+            id: main-content;
+            class: container;
+
+            h1
+            {
+                text: "Welcome to CHTL";
+            }
+
+            p
+            {
+                text: "This is a test of the CHTL compiler basic functionality.";
+            }
+
+            style
+            {
+                .container
+                {
+                    width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }
+
+                h1
+                {
+                    color: #333;
+                    font-size: 2em;
+                }
+
+                p
+                {
+                    color: #666;
+                    line-height: 1.6;
+                }
+            }
+        }
+    }
+}
