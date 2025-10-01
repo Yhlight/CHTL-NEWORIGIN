@@ -16,6 +16,7 @@ class TextNode;
 class ScriptNode;
 class TemplateDefinitionNode;
 class TemplateUsageNode;
+class IfNode;
 
 class CHTLGenerator {
 public:
@@ -35,6 +36,7 @@ private:
     std::string generateScriptNode(const ScriptNode* node);
     void generateTemplateDefinition(const TemplateDefinitionNode* node);
     std::string generateTemplateUsage(const TemplateUsageNode* node);
+    void generateIfNode(const IfNode* node, std::stringstream& ss);
 };
 
 }

@@ -118,6 +118,8 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->addChild(parseTextNode());
         } else if (match(TokenType::AT_SIGN)) {
             element->addChild(parseTemplateUsage());
+        } else if (check(TokenType::IF_KEYWORD)) {
+            element->addIfBlock(parseIfStatement());
         }
         else if (check(TokenType::IDENTIFIER)) {
             if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
@@ -278,6 +280,46 @@ std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
     Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");
     consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
     return std::make_unique<TemplateUsageNode>(type, nameToken.value);
+}
+
+std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
+    consume(TokenType::IF_KEYWORD, "Expect 'if' keyword.");
+    consume(TokenType::L_BRACE, "Expect '{' after 'if' keyword.");
+
+    consume(TokenType::CONDITION_KEYWORD, "Expect 'condition' keyword.");
+    consume(TokenType::COLON, "Expect ':' after 'condition' keyword.");
+    auto condition = parseExpression();
+    consume(TokenType::SEMICOLON, "Expect ';' after condition expression.");
+
+    std::vector<std::unique_ptr<StylePropertyNode>> body;
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+        consume(TokenType::COLON, "Expect ':' after style property key.");
+        body.push_back(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
+        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+    }
+    consume(TokenType::R_BRACE, "Expect '}' after if block.");
+
+    auto ifNode = std::make_unique<IfNode>(std::move(condition), std::move(body));
+
+    if (match(TokenType::ELSE_KEYWORD)) {
+        if (check(TokenType::IF_KEYWORD)) {
+            ifNode->setElseBranch(parseIfStatement());
+        } else {
+            consume(TokenType::L_BRACE, "Expect '{' after 'else' keyword.");
+            std::vector<std::unique_ptr<StylePropertyNode>> else_body;
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                consume(TokenType::COLON, "Expect ':' after style property key.");
+                else_body.push_back(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after else block.");
+            ifNode->setElseBranch(std::make_unique<IfNode>(nullptr, std::move(else_body)));
+        }
+    }
+
+    return ifNode;
 }
 
 

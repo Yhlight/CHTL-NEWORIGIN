@@ -7,6 +7,7 @@
 #include "CHTLNode/SelectorBlockNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
+#include "CHTLNode/IfNode.h"
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
@@ -72,44 +73,52 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         ss << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
-    if (node->getStyle()) {
+    if (node->getStyle() || !node->getIfBlocks().empty()) {
         std::stringstream style_ss;
-        // 1. Expand style templates first
-        for (const auto& usage : node->getStyle()->getTemplateUsages()) {
-             const auto* def = m_template_manager.getTemplate(usage->getName());
-            if (!def || def->getTemplateType() != TemplateType::STYLE) {
-                throw std::runtime_error("Style template not found: " + usage->getName());
-            }
-            for (const auto& child : def->getChildren()) {
-                if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
-                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                     style_ss << prop->getKey() << ": ";
-                    if (val.type == EvaluatedValue::Type::NUMBER) {
-                        style_ss << val.number_value << val.unit;
-                    } else {
-                        style_ss << val.string_value;
+        if (node->getStyle()) {
+            // 1. Expand style templates first
+            for (const auto& usage : node->getStyle()->getTemplateUsages()) {
+                 const auto* def = m_template_manager.getTemplate(usage->getName());
+                if (!def || def->getTemplateType() != TemplateType::STYLE) {
+                    throw std::runtime_error("Style template not found: " + usage->getName());
+                }
+                for (const auto& child : def->getChildren()) {
+                    if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
+                        EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                         style_ss << prop->getKey() << ": ";
+                        if (val.type == EvaluatedValue::Type::NUMBER) {
+                            style_ss << val.number_value << val.unit;
+                        } else {
+                            style_ss << val.string_value;
+                        }
+                        style_ss << ";";
                     }
-                    style_ss << ";";
                 }
             }
-        }
-        // 2. Add inline properties (will override template properties)
-        for (const auto& prop : node->getStyle()->getProperties()) {
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-            style_ss << prop->getKey() << ": ";
-            if (val.type == EvaluatedValue::Type::NUMBER) {
-                style_ss << val.number_value << val.unit;
-            } else {
-                style_ss << val.string_value;
+            // 2. Add inline properties (will override template properties)
+            for (const auto& prop : node->getStyle()->getProperties()) {
+                EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                style_ss << prop->getKey() << ": ";
+                if (val.type == EvaluatedValue::Type::NUMBER) {
+                    style_ss << val.number_value << val.unit;
+                } else {
+                    style_ss << val.string_value;
+                }
+                style_ss << ";";
             }
-            style_ss << ";";
+        }
+
+        for (const auto& if_block : node->getIfBlocks()) {
+            generateIfNode(if_block.get(), style_ss);
         }
 
         if (!style_ss.str().empty()) {
             ss << " style=\"" << style_ss.str() << "\"";
         }
 
-        generateStyleNode(node->getStyle());
+        if (node->getStyle()) {
+            generateStyleNode(node->getStyle());
+        }
     }
 
     ss << ">";
@@ -168,6 +177,39 @@ std::string CHTLGenerator::generateTemplateUsage(const TemplateUsageNode* node) 
         // This is handled in generateElementNode via its style node
     }
     return ss.str();
+}
+
+void CHTLGenerator::generateIfNode(const IfNode* node, std::stringstream& ss) {
+    if (!node) return;
+
+    if (node->getCondition()) {
+        EvaluatedValue condition_result = m_evaluator.evaluate(node->getCondition(), m_root, nullptr);
+        if (condition_result.isTruthy()) {
+            for (const auto& prop : node->getBody()) {
+                EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, nullptr);
+                ss << prop->getKey() << ": ";
+                if (val.type == EvaluatedValue::Type::NUMBER) {
+                    ss << val.number_value << val.unit;
+                } else {
+                    ss << val.string_value;
+                }
+                ss << ";";
+            }
+        } else {
+            generateIfNode(node->getElseBranch(), ss);
+        }
+    } else { // This is an 'else' block
+        for (const auto& prop : node->getBody()) {
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, nullptr);
+            ss << prop->getKey() << ": ";
+            if (val.type == EvaluatedValue::Type::NUMBER) {
+                ss << val.number_value << val.unit;
+            } else {
+                ss << val.string_value;
+            }
+            ss << ";";
+        }
+    }
 }
 
 } // namespace CHTL
