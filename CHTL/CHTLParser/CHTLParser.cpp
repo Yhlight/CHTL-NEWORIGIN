@@ -64,18 +64,34 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     while (match(TokenType::COMMENT)) {}
 
-    if (check(TokenType::IDENTIFIER)) {
-        return parseElementNode();
+    // Check for a text block first, as it's more specific.
+    if (check(TokenType::TEXT_KEYWORD)) {
+        // A text block is specifically `text { STRING_LITERAL }`.
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::L_BRACE &&
+            current + 2 < tokens.size() && tokens[current + 2].type == TokenType::STRING_LITERAL &&
+            current + 3 < tokens.size() && tokens[current + 3].type == TokenType::R_BRACE)
+        {
+            advance(); // Consume TEXT_KEYWORD
+            return parseTextNode();
+        }
     }
-    if (match(TokenType::TEXT_KEYWORD)) {
-        return parseTextNode();
+
+    // Otherwise, try to parse an element. This handles `div {}` and `text {}` (as an element).
+    if (check(TokenType::IDENTIFIER) || check(TokenType::TEXT_KEYWORD)) {
+        return parseElementNode();
     }
 
     return nullptr;
 }
 
 std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
-    Token tag = consume(TokenType::IDENTIFIER, "Expect element tag name.");
+    Token tag;
+    if (check(TokenType::IDENTIFIER) || check(TokenType::TEXT_KEYWORD)) {
+        tag = advance();
+    } else {
+        // Will throw error with correct message
+        consume(TokenType::IDENTIFIER, "Expect element tag name.");
+    }
     auto element = std::make_unique<ElementNode>(tag.value);
     consume(TokenType::L_BRACE, "Expect '{' after element tag name.");
 
@@ -91,19 +107,32 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
                 advance(); // Consume TEXT_KEYWORD
                 advance(); // Consume COLON or EQUAL
 
-                Token value;
-                if (match(TokenType::STRING_LITERAL) || match(TokenType::IDENTIFIER)) {
-                    value = tokens[current - 1];
-                } else {
-                    throw std::runtime_error("Expect string or literal for text attribute value.");
+                std::string value_str;
+                // Text attributes can have unquoted literals, so we just consume tokens until the semicolon.
+                while (!isAtEnd() && peek().type != TokenType::SEMICOLON) {
+                    value_str += advance().value;
+                }
+
+                if (value_str.empty()) {
+                    throw std::runtime_error("Expect attribute value for text.");
                 }
 
                 consume(TokenType::SEMICOLON, "Expect ';' after text attribute.");
-                element->addChild(std::make_unique<TextNode>(value.value));
+                element->addChild(std::make_unique<TextNode>(value_str));
             } else {
-                // It's a text block.
-                advance(); // Consume TEXT_KEYWORD
-                element->addChild(parseTextNode());
+                // It's a text block OR a text element. Look ahead to distinguish.
+                // A text block is `text { STRING_LITERAL }`.
+                if (current + 2 < tokens.size() &&
+                    tokens[current + 2].type == TokenType::STRING_LITERAL &&
+                    current + 3 < tokens.size() &&
+                    tokens[current + 3].type == TokenType::R_BRACE) {
+                    // It's a text block: text { "..." }
+                    advance(); // Consume TEXT_KEYWORD
+                    element->addChild(parseTextNode());
+                } else {
+                    // It's a text element.
+                    element->addChild(parseElementNode());
+                }
             }
         } else if (check(TokenType::IDENTIFIER)) {
             // Lookahead to differentiate between an attribute and a child element.

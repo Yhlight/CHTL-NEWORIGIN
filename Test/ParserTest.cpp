@@ -276,3 +276,24 @@ TEST_CASE("Parse Text Attribute as TextNode", "[parser]") {
     REQUIRE(textNode != nullptr);
     REQUIRE(textNode->getValue() == "hello world");
 }
+
+TEST_CASE("Parse 'text' as an element tag with attributes", "[parser]") {
+    std::string input = "div { text { id: \"my-text\"; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* divNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(divNode != nullptr);
+    REQUIRE(divNode->getTagName() == "div");
+
+    REQUIRE(divNode->getChildren().size() == 1);
+    CHTL::ElementNode* textElementNode = dynamic_cast<CHTL::ElementNode*>(divNode->getChildren()[0].get());
+    REQUIRE(textElementNode != nullptr);
+    REQUIRE(textElementNode->getTagName() == "text");
+    REQUIRE(textElementNode->getAttributes().size() == 1);
+    REQUIRE(textElementNode->getAttribute("id") == "my-text");
+}
