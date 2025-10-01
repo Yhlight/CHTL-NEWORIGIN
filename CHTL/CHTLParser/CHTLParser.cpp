@@ -8,6 +8,8 @@
 #include "../CHTLNode/LiteralNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
 #include "../CHTLNode/PropertyAccessNode.h"
+#include "../CHTLNode/TemplateNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 #include <stdexcept>
 
 namespace CHTL {
@@ -16,11 +18,13 @@ CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
 
 // --- Core Parsing Logic ---
 
-std::unique_ptr<BaseNode> CHTLParser::parse() {
-    if (isAtEnd()) {
-        return nullptr;
+std::vector<std::unique_ptr<BaseNode>> CHTLParser::parseProgram() {
+    std::vector<std::unique_ptr<BaseNode>> program;
+    while (!isAtEnd()) {
+        program.push_back(parseStatement());
+        while (match(TokenType::COMMENT)) {}
     }
-    return parseStatement();
+    return program;
 }
 
 // --- Token Manipulation Helpers ---
@@ -66,6 +70,17 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     while (match(TokenType::COMMENT)) {}
 
+    if (check(TokenType::L_BRACKET)) {
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::IDENTIFIER) {
+            const std::string& keyword = tokens[current + 1].value;
+            if (keyword == "Template") {
+                return parseTemplateNode();
+            } else if (keyword == "Origin") {
+                return parseOriginNode();
+            }
+        }
+    }
+
     if (check(TokenType::IDENTIFIER)) {
         return parseElementNode();
     }
@@ -73,7 +88,8 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
         return parseTextNode();
     }
 
-    return nullptr;
+    if (isAtEnd()) return nullptr;
+    throw std::runtime_error("Unexpected token at top level: " + peek().value);
 }
 
 std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
@@ -87,7 +103,11 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
         } else if (check(TokenType::L_BRACKET)) {
-            element->addChild(parseOriginNode());
+            if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::IDENTIFIER && tokens[current + 1].value == "Origin") {
+                 element->addChild(parseOriginNode());
+            } else {
+                 throw std::runtime_error("Unexpected block type inside element.");
+            }
         } else if (check(TokenType::TEXT_KEYWORD)) { // Use check() to peek
             // Look ahead to see if it's an attribute `text:` or a block `text {`
             if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
@@ -154,7 +174,13 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
     consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (check(TokenType::DOT) || check(TokenType::HASH) || check(TokenType::AMPERSAND)) { // It's a style rule
+        if (check(TokenType::AT)) {
+            consume(TokenType::AT, "Expect '@' for template usage.");
+            Token templateType = consume(TokenType::IDENTIFIER, "Expect template type.");
+            Token templateName = consume(TokenType::IDENTIFIER, "Expect template name.");
+            consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
+            styleNode->addTemplateUsage(std::make_unique<TemplateUsageNode>(templateType.value, templateName.value));
+        } else if (check(TokenType::DOT) || check(TokenType::HASH) || check(TokenType::AMPERSAND)) { // It's a style rule
             std::string full_selector;
 
             if (match(TokenType::AMPERSAND)) {
@@ -243,6 +269,33 @@ std::unique_ptr<BaseNode> CHTLParser::parseOriginNode() {
     consume(TokenType::R_BRACE, "Expect '}' after origin content.");
 
     return std::make_unique<OriginNode>(type.value, content.value);
+}
+
+std::unique_ptr<TemplateNode> CHTLParser::parseTemplateNode() {
+    consume(TokenType::L_BRACKET, "Expect '[' to start template block.");
+    Token keyword = consume(TokenType::IDENTIFIER, "Expect 'Template' keyword.");
+    if (keyword.value != "Template") {
+        throw std::runtime_error("Expected 'Template' keyword, but found " + keyword.value);
+    }
+    consume(TokenType::R_BRACKET, "Expect ']' to end template block tag.");
+    consume(TokenType::AT, "Expect '@' before template type.");
+    Token type = consume(TokenType::IDENTIFIER, "Expect template type.");
+    Token name = consume(TokenType::IDENTIFIER, "Expect template name.");
+
+    auto templateNode = std::make_unique<TemplateNode>(type.value, name.value);
+
+    consume(TokenType::L_BRACE, "Expect '{' after template name.");
+
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+        consume(TokenType::COLON, "Expect ':' after style property key.");
+        auto value_expr = parseExpression();
+        templateNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+    }
+
+    consume(TokenType::R_BRACE, "Expect '}' after template block.");
+    return templateNode;
 }
 
 // --- Expression Parsing (Precedence Climbing) ---

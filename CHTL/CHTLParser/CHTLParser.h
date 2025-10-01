@@ -11,13 +11,15 @@
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/ExpressionNode.h"
 #include "../CHTLNode/ConditionalNode.h"
+#include "../CHTLNode/TemplateNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 
 namespace CHTL {
 
 class CHTLParser {
 public:
     CHTLParser(const std::vector<Token>& tokens);
-    std::unique_ptr<BaseNode> parse();
+    std::vector<std::unique_ptr<BaseNode>> parseProgram();
 
 private:
     const std::vector<Token>& tokens;
@@ -33,6 +35,7 @@ private:
 
     // Statement-level parsing
     std::unique_ptr<BaseNode> parseStatement();
+    std::unique_ptr<TemplateNode> parseTemplateNode();
     std::unique_ptr<ElementNode> parseElementNode();
     std::unique_ptr<BaseNode> parseTextNode();
     std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);

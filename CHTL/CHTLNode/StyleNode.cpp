@@ -19,6 +19,11 @@ void StyleNode::print(int indent) const {
         rule->print(indent + 1);
     }
 
+    // Print template usages
+    for (const auto& usage : templateUsages) {
+        usage->print(indent + 1);
+    }
+
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";
     }
