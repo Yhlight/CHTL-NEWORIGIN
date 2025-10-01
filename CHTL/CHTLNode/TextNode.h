@@ -8,8 +8,11 @@ namespace CHTL {
 
 class TextNode : public BaseNode {
 public:
-    TextNode(const std::string& text);
+    explicit TextNode(const std::string& text) : BaseNode(NodeType::TEXT), text(text) {}
     void print(int indent = 0) const override;
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<TextNode>(text);
+    }
     const std::string& getValue() const;
 
 private:

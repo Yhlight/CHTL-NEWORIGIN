@@ -16,12 +16,15 @@ class ScriptNode;
 
 class ElementNode : public BaseNode {
 public:
-    ElementNode(const std::string& tagName);
+    explicit ElementNode(const std::string& tagName)
+        : BaseNode(NodeType::ELEMENT), tagName(tagName) {}
+
     void addChild(std::unique_ptr<BaseNode> child);
     void addAttribute(const std::string& key, const std::string& value);
     void setStyle(std::unique_ptr<StyleNode> styleNode);
     void setScript(std::unique_ptr<ScriptNode> scriptNode);
     void print(int indent = 0) const override;
+    std::unique_ptr<BaseNode> clone() const override;
 
     const std::string& getTagName() const;
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const;

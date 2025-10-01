@@ -44,7 +44,7 @@ TEST_CASE("Tokenize Text Block", "[lexer]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     REQUIRE(tokens.size() == 4);
-    REQUIRE(tokens[0].type == CHTL::TokenType::TEXT_KEYWORD);
+    REQUIRE(tokens[0].type == CHTL::TokenType::KEYWORD_TEXT);
     REQUIRE(tokens[0].value == "text");
     REQUIRE(tokens[1].type == CHTL::TokenType::L_BRACE);
     REQUIRE(tokens[1].value == "{");
@@ -81,7 +81,7 @@ TEST_CASE("Tokenize Script Keyword", "[lexer]") {
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::SCRIPT_KEYWORD);
+    REQUIRE(tokens[0].type == CHTL::TokenType::KEYWORD_SCRIPT);
     REQUIRE(tokens[0].value == "script");
 }
 
@@ -97,4 +97,24 @@ TEST_CASE("Tokenize Arithmetic Operators", "[lexer]") {
     REQUIRE(tokens[3].type == CHTL::TokenType::SLASH);
     REQUIRE(tokens[4].type == CHTL::TokenType::PERCENT);
     REQUIRE(tokens[5].type == CHTL::TokenType::STAR_STAR);
+}
+
+TEST_CASE("Tokenize Template Definition", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "[Template] @Style DefaultText";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 6);
+    REQUIRE(tokens[0].type == CHTL::TokenType::L_BRACKET);
+    REQUIRE(tokens[0].value == "[");
+    REQUIRE(tokens[1].type == CHTL::TokenType::KEYWORD_TEMPLATE);
+    REQUIRE(tokens[1].value == "Template");
+    REQUIRE(tokens[2].type == CHTL::TokenType::R_BRACKET);
+    REQUIRE(tokens[2].value == "]");
+    REQUIRE(tokens[3].type == CHTL::TokenType::AT_SIGN);
+    REQUIRE(tokens[3].value == "@");
+    REQUIRE(tokens[4].type == CHTL::TokenType::KEYWORD_STYLE);
+    REQUIRE(tokens[4].value == "Style");
+    REQUIRE(tokens[5].type == CHTL::TokenType::IDENTIFIER);
+    REQUIRE(tokens[5].value == "DefaultText");
 }

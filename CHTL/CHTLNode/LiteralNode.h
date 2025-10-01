@@ -8,10 +8,15 @@ namespace CHTL {
 
 class LiteralNode : public ExpressionNode {
 public:
-    explicit LiteralNode(const Token& value);
+    explicit LiteralNode(const Token& value)
+        : ExpressionNode(NodeType::LITERAL), value(value) {}
+
     void print(int indent = 0) const override;
-    ExpressionType getType() const override;
-    const Token& getValue() const;
+    ExpressionType getExpressionType() const override { return ExpressionType::LITERAL; }
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<LiteralNode>(value);
+    }
+    const Token& getValue() const { return value; }
 
 private:
     Token value;

@@ -3,8 +3,6 @@
 
 namespace CHTL {
 
-TextNode::TextNode(const std::string& text) : text(text) {}
-
 void TextNode::print(int indent) const {
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";

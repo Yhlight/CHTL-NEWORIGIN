@@ -12,8 +12,9 @@ enum class ExpressionType {
 
 class ExpressionNode : public BaseNode {
 public:
+    explicit ExpressionNode(NodeType type) : BaseNode(type) {}
     virtual ~ExpressionNode() = default;
-    virtual ExpressionType getType() const = 0;
+    virtual ExpressionType getExpressionType() const = 0;
 };
 
 } // namespace CHTL

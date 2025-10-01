@@ -10,16 +10,20 @@
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/ExpressionNode.h"
+#include "../CHTLNode/TemplateNode.h"
+#include "../CHTLNode/StylePropertyNode.h"
+#include "../CHTLContext/CHTLContext.h"
 
 namespace CHTL {
 
 class CHTLParser {
 public:
-    CHTLParser(const std::vector<Token>& tokens);
+    CHTLParser(const std::vector<Token>& tokens, CHTLContext& context);
     std::unique_ptr<BaseNode> parse();
 
 private:
     const std::vector<Token>& tokens;
+    CHTLContext& context;
     size_t current = 0;
 
     // Token manipulation helpers
@@ -36,7 +40,9 @@ private:
     std::unique_ptr<BaseNode> parseTextNode();
     std::unique_ptr<StyleNode> parseStyleNode();
     std::unique_ptr<ScriptNode> parseScriptNode();
+    std::unique_ptr<TemplateNode> parseTemplateNode();
     void parseAttribute(ElementNode* element);
+    std::unique_ptr<StylePropertyNode> parseStyleProperty();
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();

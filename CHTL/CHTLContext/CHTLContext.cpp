@@ -1,37 +1,21 @@
 #include "CHTLContext.h"
-#include "../CHTLState/CHTLState.h"
-#include "../CHTLStrategy/CHTLStrategy.h"
 
 namespace CHTL {
 
-CHTLContext::CHTLContext(CHTLState* state, CHTLStrategy* strategy)
-    : _state(state), _strategy(strategy) {}
+CHTLContext::CHTLContext() {}
 
-CHTLContext::~CHTLContext() {
-    delete _state;
-    delete _strategy;
+CHTLContext::~CHTLContext() {}
+
+void CHTLContext::addTemplate(const std::string& name, std::unique_ptr<TemplateNode> node) {
+    templates[name] = std::move(node);
 }
 
-void CHTLContext::setState(CHTLState* state) {
-    delete _state;
-    _state = state;
-}
-
-void CHTLContext::setStrategy(CHTLStrategy* strategy) {
-    delete _strategy;
-    _strategy = strategy;
-}
-
-void CHTLContext::request() {
-    if (_state) {
-        _state->handle(this);
+const TemplateNode* CHTLContext::getTemplate(const std::string& name) const {
+    auto it = templates.find(name);
+    if (it != templates.end()) {
+        return it->second.get();
     }
-}
-
-void CHTLContext::executeStrategy() {
-    if (_strategy) {
-        _strategy->execute(this);
-    }
+    return nullptr;
 }
 
 } // namespace CHTL

@@ -65,9 +65,12 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
 
         if (input[pos] == '{') { tokens.push_back({TokenType::L_BRACE, "{"}); pos++; continue; }
         if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
+        if (input[pos] == '[') { tokens.push_back({TokenType::L_BRACKET, "["}); pos++; continue; }
+        if (input[pos] == ']') { tokens.push_back({TokenType::R_BRACKET, "]"}); pos++; continue; }
         if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
         if (input[pos] == '=') { tokens.push_back({TokenType::EQUAL, "="}); pos++; continue; }
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
+        if (input[pos] == '@') { tokens.push_back({TokenType::AT_SIGN, "@"}); pos++; continue; }
 
         if (input[pos] == '"') {
             std::string::size_type literal_start = pos + 1;
@@ -97,35 +100,27 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
                 pos++;
             }
             std::string value = input.substr(ident_start, pos - ident_start);
+            TokenType type = TokenType::IDENTIFIER;
 
-            if (value == "text") { tokens.push_back({TokenType::TEXT_KEYWORD, value}); }
-            else if (value == "style") { tokens.push_back({TokenType::STYLE_KEYWORD, value}); }
-            else if (value == "script") {
-                tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
-                while (pos < input.length() && std::isspace(input[pos])) {
-                    pos++;
-                }
-                if (pos < input.length() && input[pos] == '{') {
-                    tokens.push_back({TokenType::L_BRACE, "{"});
-                    pos++;
-                    int brace_level = 1;
-                    std::string::size_type content_start = pos;
-                    while (pos < input.length()) {
-                        if (input[pos] == '{') brace_level++;
-                        else if (input[pos] == '}') {
-                            brace_level--;
-                            if (brace_level == 0) break;
-                        }
-                        pos++;
-                    }
-                    if (brace_level == 0) {
-                        tokens.push_back({TokenType::STRING_LITERAL, input.substr(content_start, pos - content_start)});
-                        tokens.push_back({TokenType::R_BRACE, "}"});
-                        pos++;
-                    }
-                }
-            }
-            else { tokens.push_back({TokenType::IDENTIFIER, value}); }
+            if (value == "Template") { type = TokenType::KEYWORD_TEMPLATE; }
+            else if (value == "Style") { type = TokenType::KEYWORD_STYLE; }
+            else if (value == "Element") { type = TokenType::KEYWORD_ELEMENT; }
+            else if (value == "Var") { type = TokenType::KEYWORD_VAR; }
+            else if (value == "text") { type = TokenType::KEYWORD_TEXT; }
+            else if (value == "style") { type = TokenType::KEYWORD_STYLE; }
+            else if (value == "script") { type = TokenType::KEYWORD_SCRIPT; }
+            else if (value == "Custom") { type = TokenType::KEYWORD_CUSTOM; }
+            else if (value == "Origin") { type = TokenType::KEYWORD_ORIGIN; }
+            else if (value == "Import") { type = TokenType::KEYWORD_IMPORT; }
+            else if (value == "Namespace") { type = TokenType::KEYWORD_NAMESPACE; }
+            else if (value == "use") { type = TokenType::KEYWORD_USE; }
+            else if (value == "from") { type = TokenType::KEYWORD_FROM; }
+            else if (value == "as") { type = TokenType::KEYWORD_AS; }
+            else if (value == "delete") { type = TokenType::KEYWORD_DELETE; }
+            else if (value == "insert") { type = TokenType::KEYWORD_INSERT; }
+            else if (value == "inherit") { type = TokenType::KEYWORD_INHERIT; }
+
+            tokens.push_back({type, value});
             continue;
         }
 

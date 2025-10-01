@@ -4,6 +4,7 @@
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLNode/BaseNode.h"
+#include "CHTLContext/CHTLContext.h"
 
 int main() {
     std::string chtl_source = R"(
@@ -34,7 +35,8 @@ int main() {
     }
     std::cout << "--------------" << std::endl;
 
-    CHTLParser parser(tokens);
+    CHTLContext context;
+    CHTLParser parser(tokens, context);
     std::unique_ptr<BaseNode> ast = parser.parse();
 
     if (ast) {

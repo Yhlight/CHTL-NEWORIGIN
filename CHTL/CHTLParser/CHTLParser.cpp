@@ -10,7 +10,8 @@
 
 namespace CHTL {
 
-CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
+CHTLParser::CHTLParser(const std::vector<Token>& tokens, CHTLContext& context)
+    : tokens(tokens), context(context) {}
 
 // --- Core Parsing Logic ---
 
@@ -64,10 +65,13 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     while (match(TokenType::COMMENT)) {}
 
+    if (check(TokenType::L_BRACKET)) {
+        return parseTemplateNode();
+    }
     if (check(TokenType::IDENTIFIER)) {
         return parseElementNode();
     }
-    if (match(TokenType::TEXT_KEYWORD)) {
+    if (match(TokenType::KEYWORD_TEXT)) {
         return parseTextNode();
     }
 
@@ -80,12 +84,26 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
     consume(TokenType::L_BRACE, "Expect '{' after element tag name.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (match(TokenType::STYLE_KEYWORD)) {
+        if (match(TokenType::KEYWORD_STYLE)) {
             element->setStyle(parseStyleNode());
-        } else if (match(TokenType::SCRIPT_KEYWORD)) {
+        } else if (match(TokenType::KEYWORD_SCRIPT)) {
             element->setScript(parseScriptNode());
-        } else if (match(TokenType::TEXT_KEYWORD)) {
+        } else if (match(TokenType::KEYWORD_TEXT)) {
             element->addChild(parseTextNode());
+        } else if (match(TokenType::AT_SIGN)) {
+            if (match(TokenType::KEYWORD_ELEMENT)) {
+                Token name = consume(TokenType::IDENTIFIER, "Expect template name after @Element.");
+                consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
+                const TemplateNode* tmpl = context.getTemplate(name.value);
+                if (!tmpl || tmpl->getTemplateType() != TemplateType::ELEMENT) {
+                    throw std::runtime_error("Attempt to use an undefined or non-element template: " + name.value);
+                }
+                for (const auto& child : tmpl->getChildren()) {
+                    element->addChild(child->clone());
+                }
+            } else {
+                throw std::runtime_error("Unsupported template type in this context.");
+            }
         } else if (check(TokenType::IDENTIFIER)) {
             // Lookahead to differentiate between an attribute and a child element.
             if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
@@ -131,23 +149,93 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode() {
     consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
 
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-        consume(TokenType::COLON, "Expect ':' after style property key.");
-        auto value_expr = parseExpression();
-        styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+        if (match(TokenType::AT_SIGN)) {
+            if (match(TokenType::KEYWORD_STYLE)) {
+                Token name = consume(TokenType::IDENTIFIER, "Expect template name after @Style.");
+                consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
+                const TemplateNode* tmpl = context.getTemplate(name.value);
+                if (!tmpl || tmpl->getTemplateType() != TemplateType::STYLE) {
+                    throw std::runtime_error("Attempt to use an undefined or non-style template: " + name.value);
+                }
+                for (const auto& child : tmpl->getChildren()) {
+                    // We expect children of a style template to be StylePropertyNodes
+                    if (auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
+                        styleNode->addProperty(std::unique_ptr<StylePropertyNode>(static_cast<StylePropertyNode*>(prop->clone().release())));
+                    }
+                }
+            } else {
+                throw std::runtime_error("Unsupported template type in this context.");
+            }
+        } else {
+            styleNode->addProperty(parseStyleProperty());
+        }
     }
 
     consume(TokenType::R_BRACE, "Expect '}' after style block.");
     return styleNode;
 }
 
+std::unique_ptr<StylePropertyNode> CHTLParser::parseStyleProperty() {
+    Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+    consume(TokenType::COLON, "Expect ':' after style property key.");
+    auto value_expr = parseExpression();
+    consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+    return std::make_unique<StylePropertyNode>(key.value, std::move(value_expr));
+}
+
 std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {
     consume(TokenType::L_BRACE, "Expect '{' after 'script' keyword.");
-    Token content = consume(TokenType::STRING_LITERAL, "Expect script content.");
+    std::string content;
+    bool first = true;
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        if (!first) {
+            if (peek().type != TokenType::SEMICOLON) {
+                 content += " ";
+            }
+        }
+        content += advance().value;
+        first = false;
+    }
     consume(TokenType::R_BRACE, "Expect '}' after script block.");
-    return std::make_unique<ScriptNode>(content.value);
+    return std::make_unique<ScriptNode>(content);
 }
+
+std::unique_ptr<TemplateNode> CHTLParser::parseTemplateNode() {
+    consume(TokenType::L_BRACKET, "Expect '[' at the start of a template definition.");
+    consume(TokenType::KEYWORD_TEMPLATE, "Expect 'Template' keyword.");
+    consume(TokenType::R_BRACKET, "Expect ']' after 'Template' keyword.");
+    consume(TokenType::AT_SIGN, "Expect '@' before template type.");
+
+    TemplateType type;
+    if (match(TokenType::KEYWORD_STYLE)) {
+        type = TemplateType::STYLE;
+    } else if (match(TokenType::KEYWORD_ELEMENT)) {
+        type = TemplateType::ELEMENT;
+    } else if (match(TokenType::KEYWORD_VAR)) {
+        type = TemplateType::VAR;
+    } else {
+        throw std::runtime_error("Unknown template type.");
+    }
+
+    Token name = consume(TokenType::IDENTIFIER, "Expect template name.");
+    auto templateNode = std::make_unique<TemplateNode>(type, name.value);
+
+    consume(TokenType::L_BRACE, "Expect '{' after template name.");
+
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        if (type == TemplateType::STYLE) {
+            templateNode->addChild(parseStyleProperty());
+        } else {
+            templateNode->addChild(parseStatement());
+        }
+    }
+
+    consume(TokenType::R_BRACE, "Expect '}' after template body.");
+
+    context.addTemplate(name.value, std::move(templateNode));
+    return nullptr;
+}
+
 
 // --- Expression Parsing (Precedence Climbing) ---
 

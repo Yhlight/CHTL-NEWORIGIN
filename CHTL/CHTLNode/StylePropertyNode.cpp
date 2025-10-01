@@ -3,9 +3,6 @@
 
 namespace CHTL {
 
-StylePropertyNode::StylePropertyNode(const std::string& key, std::unique_ptr<ExpressionNode> value)
-    : key(key), value(std::move(value)) {}
-
 void StylePropertyNode::print(int indent) const {
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";
@@ -22,6 +19,11 @@ const std::string& StylePropertyNode::getKey() const {
 
 const ExpressionNode* StylePropertyNode::getValue() const {
     return value.get();
+}
+
+std::unique_ptr<BaseNode> StylePropertyNode::clone() const {
+    auto cloned_value = value ? std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(value->clone().release())) : nullptr;
+    return std::make_unique<StylePropertyNode>(key, std::move(cloned_value));
 }
 
 } // namespace CHTL

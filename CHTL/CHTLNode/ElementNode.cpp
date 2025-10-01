@@ -3,8 +3,6 @@
 
 namespace CHTL {
 
-ElementNode::ElementNode(const std::string& tagName) : tagName(tagName) {}
-
 void ElementNode::addChild(std::unique_ptr<BaseNode> child) {
     children.push_back(std::move(child));
 }
@@ -74,6 +72,23 @@ const StyleNode* ElementNode::getStyle() const {
 
 const ScriptNode* ElementNode::getScript() const {
     return script.get();
+}
+
+std::unique_ptr<BaseNode> ElementNode::clone() const {
+    auto clonedNode = std::make_unique<ElementNode>(tagName);
+    for (const auto& attr : attributes) {
+        clonedNode->addAttribute(attr.first, attr.second);
+    }
+    if (style) {
+        clonedNode->setStyle(std::unique_ptr<StyleNode>(static_cast<StyleNode*>(style->clone().release())));
+    }
+    if (script) {
+        clonedNode->setScript(std::unique_ptr<ScriptNode>(static_cast<ScriptNode*>(script->clone().release())));
+    }
+    for (const auto& child : children) {
+        clonedNode->addChild(child->clone());
+    }
+    return clonedNode;
 }
 
 } // namespace CHTL

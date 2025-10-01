@@ -15,16 +15,33 @@ enum class TokenType {
     COMMENT,
 
     // Keywords
-    TEXT_KEYWORD,
-    STYLE_KEYWORD,
-    SCRIPT_KEYWORD,
+    KEYWORD_TEMPLATE,
+    KEYWORD_STYLE,
+    KEYWORD_ELEMENT,
+    KEYWORD_VAR,
+    KEYWORD_TEXT,
+    KEYWORD_SCRIPT,
+    KEYWORD_CUSTOM,
+    KEYWORD_ORIGIN,
+    KEYWORD_IMPORT,
+    KEYWORD_NAMESPACE,
+    KEYWORD_USE,
+    KEYWORD_FROM,
+    KEYWORD_AS,
+    KEYWORD_DELETE,
+    KEYWORD_INSERT,
+    KEYWORD_INHERIT,
+
 
     // Punctuation
-    L_BRACE,
-    R_BRACE,
-    COLON,
-    EQUAL,
-    SEMICOLON,
+    L_BRACE,    // {
+    R_BRACE,    // }
+    L_BRACKET,  // [
+    R_BRACKET,  // ]
+    COLON,      // :
+    EQUAL,      // =
+    SEMICOLON,  // ;
+    AT_SIGN,    // @
 
     // Arithmetic Operators
     PLUS,
@@ -32,7 +49,7 @@ enum class TokenType {
     STAR,
     SLASH,
     PERCENT,
-    STAR_STAR
+    STAR_STAR,
 };
 
 class Token {

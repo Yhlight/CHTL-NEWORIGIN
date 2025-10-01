@@ -3,9 +3,6 @@
 
 namespace CHTL {
 
-BinaryOpNode::BinaryOpNode(std::unique_ptr<ExpressionNode> left, const Token& op, std::unique_ptr<ExpressionNode> right)
-    : left(std::move(left)), op(op), right(std::move(right)) {}
-
 void BinaryOpNode::print(int indent) const {
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";
@@ -20,10 +17,6 @@ void BinaryOpNode::print(int indent) const {
     }
 }
 
-ExpressionType BinaryOpNode::getType() const {
-    return ExpressionType::BINARY_OP;
-}
-
 const ExpressionNode* BinaryOpNode::getLeft() const {
     return left.get();
 }
@@ -34,6 +27,12 @@ const Token& BinaryOpNode::getOperator() const {
 
 const ExpressionNode* BinaryOpNode::getRight() const {
     return right.get();
+}
+
+std::unique_ptr<BaseNode> BinaryOpNode::clone() const {
+    auto cloned_left = left ? std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(left->clone().release())) : nullptr;
+    auto cloned_right = right ? std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(right->clone().release())) : nullptr;
+    return std::make_unique<BinaryOpNode>(std::move(cloned_left), op, std::move(cloned_right));
 }
 
 } // namespace CHTL

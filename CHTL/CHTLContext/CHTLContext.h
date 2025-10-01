@@ -1,28 +1,23 @@
 #ifndef CHTL_CONTEXT_H
 #define CHTL_CONTEXT_H
 
-#include "../CHTLState/CHTLState.h"
-#include "../CHTLStrategy/CHTLStrategy.h"
+#include <string>
+#include <map>
+#include <memory>
+#include "../CHTLNode/TemplateNode.h"
 
 namespace CHTL {
 
-class CHTLState;
-class CHTLStrategy;
-
 class CHTLContext {
 public:
-    CHTLContext(CHTLState* state, CHTLStrategy* strategy);
+    CHTLContext();
     ~CHTLContext();
 
-    void setState(CHTLState* state);
-    void setStrategy(CHTLStrategy* strategy);
-
-    void request();
-    void executeStrategy();
+    void addTemplate(const std::string& name, std::unique_ptr<TemplateNode> node);
+    const TemplateNode* getTemplate(const std::string& name) const;
 
 private:
-    CHTLState* _state;
-    CHTLStrategy* _strategy;
+    std::map<std::string, std::unique_ptr<TemplateNode>> templates;
 };
 
 } // namespace CHTL

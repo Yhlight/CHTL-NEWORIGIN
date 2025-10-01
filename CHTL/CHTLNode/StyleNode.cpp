@@ -19,4 +19,12 @@ void StyleNode::print(int indent) const {
     std::cout << "}" << std::endl;
 }
 
+std::unique_ptr<BaseNode> StyleNode::clone() const {
+    auto clonedNode = std::make_unique<StyleNode>();
+    for (const auto& prop : properties) {
+        clonedNode->addProperty(std::unique_ptr<StylePropertyNode>(static_cast<StylePropertyNode*>(prop->clone().release())));
+    }
+    return clonedNode;
+}
+
 } // namespace CHTL
