@@ -14,6 +14,7 @@ public:
 
     void registerTemplate(std::unique_ptr<TemplateDefinitionNode> template_node);
     const TemplateDefinitionNode* getTemplate(const std::string& name) const;
+    void clear();
 
 private:
     TemplateManager() = default;

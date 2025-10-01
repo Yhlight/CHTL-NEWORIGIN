@@ -2,11 +2,13 @@
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
+#include "CHTLManager/TemplateManager.h"
 #include "CHTLNode/BaseNode.h"
 #include <memory>
 
 // Helper to get the generated string from a CHTL snippet
 std::string generate_from_string(const std::string& chtl_input) {
+    CHTL::TemplateManager::getInstance().clear();
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(chtl_input);
     CHTL::CHTLParser parser(tokens);

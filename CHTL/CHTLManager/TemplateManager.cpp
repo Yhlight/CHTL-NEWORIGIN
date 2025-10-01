@@ -19,4 +19,8 @@ const TemplateDefinitionNode* TemplateManager::getTemplate(const std::string& na
     return nullptr;
 }
 
+void TemplateManager::clear() {
+    m_templates.clear();
+}
+
 } // namespace CHTL
