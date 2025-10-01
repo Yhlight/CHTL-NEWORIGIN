@@ -1280,6 +1280,8 @@ CHTL不具有处理JS的能力，CHTL只服务于HTML + CSS，不服务于JS，�
 这些动态特征皆通过盐桥，CHTL JS编译器等组件，让CHTL JS去处理  
 盐桥是CHTL与CHTL JS之间的通信桥梁  
 
+通常情况下，script块由CHTL JS编译器解析，必要时会通过盐桥请求CHTL编译器，反之CHTL编译器也会通过盐桥请求CHTL JS编译器  
+
 ## CHTL JS
 CHTL JS是CHTL项目的扩展语法(不是CHTL的JS，而是CHTL项目能够使用这一门编程语言)，并不是JS的超集，也不支持JS的语法  
 CHTL JS完全独立于JS，是一门独立的编程语言，与JS毫无关系，只是最终转变为JS代码  
