@@ -86,6 +86,7 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == '@') { tokens.push_back({TokenType::AT_SIGN, "@"}); pos++; continue; }
         if (input[pos] == '(') { tokens.push_back({TokenType::L_PAREN, "("}); pos++; continue; }
         if (input[pos] == ')') { tokens.push_back({TokenType::R_PAREN, ")"}); pos++; continue; }
+        if (input[pos] == ',') { tokens.push_back({TokenType::COMMA, ","}); pos++; continue; }
 
         if (input[pos] == '>') {
             if (pos + 1 < input.length() && input[pos + 1] == '=') {
@@ -171,6 +172,15 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             else if (value == "use") { tokens.push_back({TokenType::USE_KEYWORD, value}); }
             else if (value == "html5") { tokens.push_back({TokenType::HTML5_KEYWORD, value}); }
             else if (value == "inherit") { tokens.push_back({TokenType::INHERIT_KEYWORD, value}); }
+            else if (value == "Custom") { tokens.push_back({TokenType::CUSTOM_KEYWORD, value}); }
+            else if (value == "delete") { tokens.push_back({TokenType::DELETE_KEYWORD, value}); }
+            else if (value == "insert") { tokens.push_back({TokenType::INSERT_KEYWORD, value}); }
+            else if (value == "after") { tokens.push_back({TokenType::AFTER_KEYWORD, value}); }
+            else if (value == "before") { tokens.push_back({TokenType::BEFORE_KEYWORD, value}); }
+            else if (value == "replace") { tokens.push_back({TokenType::REPLACE_KEYWORD, value}); }
+            else if (value == "at") { tokens.push_back({TokenType::AT_KEYWORD, value}); }
+            else if (value == "top") { tokens.push_back({TokenType::TOP_KEYWORD, value}); }
+            else if (value == "bottom") { tokens.push_back({TokenType::BOTTOM_KEYWORD, value}); }
             else if (value == "script") {
                 tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
                 while (pos < input.length() && std::isspace(input[pos])) {

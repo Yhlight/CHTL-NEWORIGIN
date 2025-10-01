@@ -12,6 +12,9 @@
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/VariableAccessNode.h"
+#include "../CHTLNode/CustomDefinitionNode.h"
+#include "../CHTLNode/DeleteNode.h"
+#include "../CHTLNode/InsertNode.h"
 #include "../CHTLManager/TemplateManager.h"
 #include <stdexcept>
 #include <vector>
@@ -29,11 +32,11 @@ std::unique_ptr<DocumentNode> CHTLParser::parse() {
     while (!isAtEnd()) {
         auto statement = parseStatement();
         if (statement) {
-            if (dynamic_cast<TemplateDefinitionNode*>(statement.get())) {
-                 TemplateManager::getInstance().registerTemplate(
-                    std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(statement.release()))
-                );
-            } else {
+            if (auto* def_node = dynamic_cast<TemplateDefinitionNode*>(statement.get())) {
+                TemplateManager::getInstance().registerTemplate(def_node->getName(), std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(statement.release())));
+            } else if (auto* custom_def_node = dynamic_cast<CustomDefinitionNode*>(statement.get())) {
+                 TemplateManager::getInstance().registerTemplate(custom_def_node->getName(), std::unique_ptr<CustomDefinitionNode>(static_cast<CustomDefinitionNode*>(statement.release())));
+            }else {
                 docNode->children.push_back(std::move(statement));
             }
         }
@@ -101,6 +104,9 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     if(isAtEnd()) return nullptr;
 
     if (match(TokenType::L_BRACKET)) {
+        if (peek().type == TokenType::CUSTOM_KEYWORD) {
+            return parseCustomDefinition();
+        }
         return parseTemplateDefinition();
     }
     if (check(TokenType::IDENTIFIER)) {
@@ -247,8 +253,7 @@ std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {
 }
 
 std::unique_ptr<TemplateDefinitionNode> CHTLParser::parseTemplateDefinition() {
-    Token keyword = consume(TokenType::IDENTIFIER, "Expect 'Template' keyword.");
-    if (keyword.value != "Template") throw std::runtime_error("Expected 'Template' keyword.");
+    consume(TokenType::IDENTIFIER, "Expect 'Template' keyword.");
     consume(TokenType::R_BRACKET, "Expect ']' after 'Template'.");
     consume(TokenType::AT_SIGN, "Expect '@' after '[Template]'.");
 
@@ -286,6 +291,79 @@ std::unique_ptr<TemplateDefinitionNode> CHTLParser::parseTemplateDefinition() {
     return templateNode;
 }
 
+std::unique_ptr<CustomDefinitionNode> CHTLParser::parseCustomDefinition() {
+    consume(TokenType::CUSTOM_KEYWORD, "Expect 'Custom' keyword.");
+    consume(TokenType::R_BRACKET, "Expect ']' after 'Custom'.");
+    consume(TokenType::AT_SIGN, "Expect '@' after '[Custom]'.");
+
+    Token typeToken = consume(TokenType::IDENTIFIER, "Expect template type (Style, Element, or Var).");
+    TemplateType type;
+    if (typeToken.value == "Style") type = TemplateType::STYLE;
+    else if (typeToken.value == "Element") type = TemplateType::ELEMENT;
+    else if (typeToken.value == "Var") type = TemplateType::VAR;
+    else throw std::runtime_error("Unknown template type: " + typeToken.value);
+
+    Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");
+    auto customNode = std::make_unique<CustomDefinitionNode>(type, nameToken.value);
+
+    consume(TokenType::L_BRACE, "Expect '{' after custom definition.");
+
+    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+        if (match(TokenType::DELETE_KEYWORD)) {
+            std::vector<std::string> targets;
+            do {
+                targets.push_back(consume(TokenType::IDENTIFIER, "Expect target for delete.").value);
+            } while (match(TokenType::COMMA));
+            customNode->addChild(std::make_unique<DeleteNode>(targets));
+            consume(TokenType::SEMICOLON, "Expect ';' after delete statement.");
+        } else if (match(TokenType::INSERT_KEYWORD)) {
+            InsertPosition position;
+            if (match(TokenType::AFTER_KEYWORD)) position = InsertPosition::AFTER;
+            else if (match(TokenType::BEFORE_KEYWORD)) position = InsertPosition::BEFORE;
+            else if (match(TokenType::REPLACE_KEYWORD)) position = InsertPosition::REPLACE;
+            else if (match(TokenType::AT_KEYWORD)) {
+                if (match(TokenType::TOP_KEYWORD)) position = InsertPosition::AT_TOP;
+                else if (match(TokenType::BOTTOM_KEYWORD)) position = InsertPosition::AT_BOTTOM;
+                else throw std::runtime_error("Expected 'top' or 'bottom' after 'at'.");
+            } else {
+                throw std::runtime_error("Invalid insert position.");
+            }
+
+            std::string selector;
+            if (position != InsertPosition::AT_TOP && position != InsertPosition::AT_BOTTOM) {
+                selector = consume(TokenType::IDENTIFIER, "Expect selector for insert.").value;
+            }
+
+            consume(TokenType::L_BRACE, "Expect '{' after insert statement.");
+            std::vector<std::unique_ptr<BaseNode>> children;
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                children.push_back(parseStatement());
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after insert block.");
+            customNode->addChild(std::make_unique<InsertNode>(position, selector, std::move(children)));
+        } else {
+             if (type == TemplateType::ELEMENT) {
+                customNode->addChild(parseStatement());
+            } else if (type == TemplateType::STYLE || type == TemplateType::VAR) {
+                if (match(TokenType::INHERIT_KEYWORD)) {
+                    consume(TokenType::AT_SIGN, "Expect '@' after 'inherit' keyword.");
+                    customNode->addChild(parseTemplateUsage());
+                } else if (match(TokenType::AT_SIGN)) {
+                    customNode->addChild(parseTemplateUsage());
+                } else {
+                    Token key = consume(TokenType::IDENTIFIER, "Expect property or variable key.");
+                    consume(TokenType::COLON, "Expect ':' after key.");
+                    customNode->addChild(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
+                    consume(TokenType::SEMICOLON, "Expect ';' after value.");
+                }
+            }
+        }
+    }
+
+    consume(TokenType::R_BRACE, "Expect '}' after custom block.");
+    return customNode;
+}
+
 std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
     Token typeToken = consume(TokenType::IDENTIFIER, "Expect template type (Style, Element, or Var).");
     TemplateType type;
@@ -295,6 +373,49 @@ std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
     else throw std::runtime_error("Unsupported template usage type: " + typeToken.value);
 
     Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");
+
+    if (match(TokenType::L_BRACE)) {
+        std::vector<std::unique_ptr<BaseNode>> specializations;
+        while(!check(TokenType::R_BRACE) && !isAtEnd()) {
+            if (match(TokenType::DELETE_KEYWORD)) {
+                std::vector<std::string> targets;
+                do {
+                    targets.push_back(consume(TokenType::IDENTIFIER, "Expect target for delete.").value);
+                } while (match(TokenType::COMMA));
+                specializations.push_back(std::make_unique<DeleteNode>(targets));
+                consume(TokenType::SEMICOLON, "Expect ';' after delete statement.");
+            } else if (match(TokenType::INSERT_KEYWORD)) {
+                 InsertPosition position;
+                if (match(TokenType::AFTER_KEYWORD)) position = InsertPosition::AFTER;
+                else if (match(TokenType::BEFORE_KEYWORD)) position = InsertPosition::BEFORE;
+                else if (match(TokenType::REPLACE_KEYWORD)) position = InsertPosition::REPLACE;
+                else if (match(TokenType::AT_KEYWORD)) {
+                    if (match(TokenType::TOP_KEYWORD)) position = InsertPosition::AT_TOP;
+                    else if (match(TokenType::BOTTOM_KEYWORD)) position = InsertPosition::AT_BOTTOM;
+                    else throw std::runtime_error("Expected 'top' or 'bottom' after 'at'.");
+                } else {
+                    throw std::runtime_error("Invalid insert position.");
+                }
+
+                std::string selector;
+                if (position != InsertPosition::AT_TOP && position != InsertPosition::AT_BOTTOM) {
+                    selector = consume(TokenType::IDENTIFIER, "Expect selector for insert.").value;
+                }
+
+                consume(TokenType::L_BRACE, "Expect '{' after insert statement.");
+                std::vector<std::unique_ptr<BaseNode>> children;
+                while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                    children.push_back(parseStatement());
+                }
+                consume(TokenType::R_BRACE, "Expect '}' after insert block.");
+                specializations.push_back(std::make_unique<InsertNode>(position, selector, std::move(children)));
+            }
+        }
+        consume(TokenType::R_BRACE, "Expect '}' after specialization block.");
+        return std::make_unique<TemplateUsageNode>(type, nameToken.value, std::move(specializations));
+    }
+
+
     consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
     return std::make_unique<TemplateUsageNode>(type, nameToken.value);
 }

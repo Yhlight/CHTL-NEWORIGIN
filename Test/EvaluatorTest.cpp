@@ -2,6 +2,8 @@
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLEvaluator/ExpressionEvaluator.h"
+#include "CHTLNode/DocumentNode.h"
+#include "CHTLNode/ElementNode.h"
 #include "CHTLNode/ExpressionNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
@@ -18,7 +20,7 @@ CHTL::EvaluatedValue evaluate_with_context(const std::string& style_block_str, c
     auto doc = parser.parse();
     REQUIRE(doc != nullptr);
     REQUIRE(doc->children.size() == 1);
-    auto element = static_cast<CHTL::ElementNode*>(doc->children[0].get());
+    auto element = dynamic_cast<CHTL::ElementNode*>(doc->children[0].get());
     const auto* style = element->getStyle();
 
     const CHTL::ExpressionNode* expr_to_eval = nullptr;
@@ -139,7 +141,7 @@ TEST_CASE("ExpressionEvaluator with variable substitution", "[evaluator]") {
     REQUIRE(doc != nullptr);
     REQUIRE(doc->children.size() == 1);
 
-    auto element = static_cast<CHTL::ElementNode*>(doc->children[0].get());
+    auto element = dynamic_cast<CHTL::ElementNode*>(doc->children[0].get());
     const auto* style = element->getStyle();
     REQUIRE(style != nullptr);
     REQUIRE(style->getProperties().size() == 2);

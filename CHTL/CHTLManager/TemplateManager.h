@@ -4,7 +4,7 @@
 #include <string>
 #include <memory>
 #include <map>
-#include "CHTLNode/TemplateDefinitionNode.h"
+#include "CHTLNode/BaseNode.h"
 
 namespace CHTL {
 
@@ -12,13 +12,13 @@ class TemplateManager {
 public:
     static TemplateManager& getInstance();
 
-    void registerTemplate(std::unique_ptr<TemplateDefinitionNode> template_node);
-    const TemplateDefinitionNode* getTemplate(const std::string& name) const;
+    void registerTemplate(const std::string& name, std::unique_ptr<BaseNode> template_node);
+    const BaseNode* getTemplate(const std::string& name) const;
     void clear();
 
 private:
     TemplateManager() = default;
-    std::map<std::string, std::unique_ptr<TemplateDefinitionNode>> m_templates;
+    std::map<std::string, std::unique_ptr<BaseNode>> m_templates;
 };
 
 } // namespace CHTL

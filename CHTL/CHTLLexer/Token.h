@@ -22,6 +22,15 @@ enum class TokenType {
     USE_KEYWORD,
     HTML5_KEYWORD,
     INHERIT_KEYWORD,
+    CUSTOM_KEYWORD,
+    DELETE_KEYWORD,
+    INSERT_KEYWORD,
+    AFTER_KEYWORD,
+    BEFORE_KEYWORD,
+    REPLACE_KEYWORD,
+    AT_KEYWORD,
+    TOP_KEYWORD,
+    BOTTOM_KEYWORD,
 
     // Punctuation
     L_BRACE,
@@ -37,6 +46,7 @@ enum class TokenType {
     AT_SIGN,
     L_PAREN,
     R_PAREN,
+    COMMA,
 
     // Arithmetic Operators
     PLUS,

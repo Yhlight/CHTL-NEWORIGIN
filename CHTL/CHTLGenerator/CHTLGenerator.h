@@ -17,6 +17,7 @@ class TextNode;
 class ScriptNode;
 class TemplateDefinitionNode;
 class TemplateUsageNode;
+class CustomDefinitionNode;
 
 class CHTLGenerator {
 public:
@@ -32,7 +33,8 @@ private:
     std::string generateNode(const BaseNode* node);
     std::string generateElementNode(const ElementNode* node);
     void generateStyleNode(const StyleNode* node);
-    void expandStyleTemplate(std::stringstream& ss, const TemplateDefinitionNode* templateDef);
+    void expandStyleTemplate(std::stringstream& ss, const TemplateUsageNode* usage);
+    void collectProperties(const BaseNode* templateDef, std::map<std::string, std::string>& properties);
     std::string generateTextNode(const TextNode* node);
     std::string generateScriptNode(const ScriptNode* node);
     void generateTemplateDefinition(const TemplateDefinitionNode* node);

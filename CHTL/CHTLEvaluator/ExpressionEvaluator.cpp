@@ -132,12 +132,15 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
             const auto* varAccessNode = static_cast<const VariableAccessNode*>(expression);
             const auto& groupName = varAccessNode->getGroupName();
             const auto& variableName = varAccessNode->getVariableName();
-            const auto* templateDef = TemplateManager::getInstance().getTemplate(groupName);
+            const auto* templateBase = TemplateManager::getInstance().getTemplate(groupName);
 
-            if (!templateDef) {
+            if (!templateBase) {
                 throw std::runtime_error("Variable group template not found: " + groupName);
             }
-            if (templateDef->getTemplateType() != TemplateType::VAR) {
+
+            const auto* templateDef = dynamic_cast<const TemplateDefinitionNode*>(templateBase);
+
+            if (!templateDef || templateDef->getTemplateType() != TemplateType::VAR) {
                 throw std::runtime_error("Template '" + groupName + "' is not a variable group.");
             }
 

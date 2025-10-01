@@ -99,16 +99,46 @@ TEST_CASE("Tokenize Arithmetic Operators", "[lexer]") {
     REQUIRE(tokens[5].type == CHTL::TokenType::STAR_STAR);
 }
 
-TEST_CASE("Tokenize 'use html5;' directive", "[lexer]") {
+TEST_CASE("Tokenize All New Keywords", "[lexer]") {
     CHTL::CHTLLexer lexer;
-    std::string input = "use html5;";
+    std::string input = "use html5 inherit Custom delete insert after before replace at top bottom";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 12);
+    REQUIRE(tokens[0].type == CHTL::TokenType::USE_KEYWORD);
+    REQUIRE(tokens[1].type == CHTL::TokenType::HTML5_KEYWORD);
+    REQUIRE(tokens[2].type == CHTL::TokenType::INHERIT_KEYWORD);
+    REQUIRE(tokens[3].type == CHTL::TokenType::CUSTOM_KEYWORD);
+    REQUIRE(tokens[4].type == CHTL::TokenType::DELETE_KEYWORD);
+    REQUIRE(tokens[5].type == CHTL::TokenType::INSERT_KEYWORD);
+    REQUIRE(tokens[6].type == CHTL::TokenType::AFTER_KEYWORD);
+    REQUIRE(tokens[7].type == CHTL::TokenType::BEFORE_KEYWORD);
+    REQUIRE(tokens[8].type == CHTL::TokenType::REPLACE_KEYWORD);
+    REQUIRE(tokens[9].type == CHTL::TokenType::AT_KEYWORD);
+    REQUIRE(tokens[10].type == CHTL::TokenType::TOP_KEYWORD);
+    REQUIRE(tokens[11].type == CHTL::TokenType::BOTTOM_KEYWORD);
+}
+
+TEST_CASE("Tokenize Hex Literals", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "#fff #123456 #12345678";
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
 
     REQUIRE(tokens.size() == 3);
-    REQUIRE(tokens[0].type == CHTL::TokenType::USE_KEYWORD);
-    REQUIRE(tokens[0].value == "use");
-    REQUIRE(tokens[1].type == CHTL::TokenType::HTML5_KEYWORD);
-    REQUIRE(tokens[1].value == "html5");
-    REQUIRE(tokens[2].type == CHTL::TokenType::SEMICOLON);
-    REQUIRE(tokens[2].value == ";");
+    REQUIRE(tokens[0].type == CHTL::TokenType::HEX_LITERAL);
+    REQUIRE(tokens[0].value == "#fff");
+    REQUIRE(tokens[1].type == CHTL::TokenType::HEX_LITERAL);
+    REQUIRE(tokens[1].value == "#123456");
+    REQUIRE(tokens[2].type == CHTL::TokenType::HEX_LITERAL);
+    REQUIRE(tokens[2].value == "#12345678");
+}
+
+TEST_CASE("Tokenize Parentheses", "[lexer]") {
+    CHTL::CHTLLexer lexer;
+    std::string input = "()";
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+
+    REQUIRE(tokens.size() == 2);
+    REQUIRE(tokens[0].type == CHTL::TokenType::L_PAREN);
+    REQUIRE(tokens[1].type == CHTL::TokenType::R_PAREN);
 }
