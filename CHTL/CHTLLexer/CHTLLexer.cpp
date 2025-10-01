@@ -159,20 +159,51 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
                 if (pos < input.length() && input[pos] == '{') {
                     tokens.push_back({TokenType::L_BRACE, "{"});
                     pos++;
+
                     int brace_level = 1;
                     std::string::size_type content_start = pos;
+
                     while (pos < input.length()) {
-                        if (input[pos] == '{') brace_level++;
-                        else if (input[pos] == '}') {
+                        if (input.substr(pos, 2) == "{{") {
+                            if (pos > content_start) {
+                                tokens.push_back({TokenType::RAW_SCRIPT, input.substr(content_start, pos - content_start)});
+                            }
+                            tokens.push_back({TokenType::L_DOUBLE_BRACE, "{{"});
+                            pos += 2;
+                            std::string::size_type selector_start = pos;
+                            std::string::size_type selector_end = input.find("}}", selector_start);
+                            if (selector_end == std::string::npos) {
+                                tokens.push_back({TokenType::UNKNOWN, input.substr(selector_start)});
+                                pos = input.length();
+                                break;
+                            }
+                            tokens.push_back({TokenType::IDENTIFIER, input.substr(selector_start, selector_end - selector_start)});
+                            tokens.push_back({TokenType::R_DOUBLE_BRACE, "}}"});
+                            pos = selector_end + 2;
+                            content_start = pos;
+                        } else if (input[pos] == '{') {
+                            brace_level++;
+                            pos++;
+                        } else if (input[pos] == '}') {
                             brace_level--;
-                            if (brace_level == 0) break;
+                            if (brace_level == 0) {
+                                break;
+                            }
+                            pos++;
+                        } else {
+                            pos++;
                         }
-                        pos++;
                     }
+
                     if (brace_level == 0) {
-                        tokens.push_back({TokenType::STRING_LITERAL, input.substr(content_start, pos - content_start)});
+                        if (pos > content_start) {
+                            tokens.push_back({TokenType::RAW_SCRIPT, input.substr(content_start, pos - content_start)});
+                        }
                         tokens.push_back({TokenType::R_BRACE, "}"});
                         pos++;
+                    } else {
+                        tokens.push_back({TokenType::UNKNOWN, input.substr(content_start)});
+                        pos = input.length();
                     }
                 }
             }

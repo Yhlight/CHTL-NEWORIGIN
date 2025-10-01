@@ -6,6 +6,7 @@
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/ScriptNode.h"
+#include "CHTLNode/RawScriptNode.h"
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
@@ -228,7 +229,10 @@ TEST_CASE("Parse Simple Script Block", "[parser]") {
 
     const CHTL::ScriptNode* scriptNode = elementNode->getScript();
     REQUIRE(scriptNode != nullptr);
-    REQUIRE(scriptNode->getContent() == " let a = 1; ");
+    REQUIRE(scriptNode->getChildren().size() == 1);
+    const auto* rawScript = dynamic_cast<const CHTL::RawScriptNode*>(scriptNode->getChildren()[0].get());
+    REQUIRE(rawScript != nullptr);
+    REQUIRE(rawScript->getScript() == " let a = 1; ");
 }
 
 TEST_CASE("Parse Text Node", "[parser]") {

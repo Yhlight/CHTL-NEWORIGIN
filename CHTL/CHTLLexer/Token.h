@@ -12,6 +12,7 @@ enum class TokenType {
     IDENTIFIER,
     STRING_LITERAL,
     NUMBER,
+    RAW_SCRIPT,
     COMMENT,
 
     // Keywords
@@ -31,6 +32,8 @@ enum class TokenType {
     L_BRACKET,
     R_BRACKET,
     AT_SIGN,
+    L_DOUBLE_BRACE,
+    R_DOUBLE_BRACE,
 
     // Arithmetic Operators
     PLUS,

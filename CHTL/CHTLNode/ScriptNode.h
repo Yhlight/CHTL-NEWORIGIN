@@ -3,18 +3,21 @@
 
 #include "BaseNode.h"
 #include <string>
+#include <vector>
+#include <memory>
 
 namespace CHTL {
 
 class ScriptNode : public BaseNode {
 public:
-    explicit ScriptNode(const std::string& content) : content(content) {}
+    ScriptNode() = default;
 
-    const std::string& getContent() const { return content; }
+    void addChild(std::unique_ptr<BaseNode> child);
+    const std::vector<std::unique_ptr<BaseNode>>& getChildren() const;
     void print(int indent = 0) const override;
 
 private:
-    std::string content;
+    std::vector<std::unique_ptr<BaseNode>> m_children;
 };
 
 } // namespace CHTL

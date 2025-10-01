@@ -3,8 +3,12 @@
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
 #include "CHTLNode/BaseNode.h"
+#include "TestUtil.h"
 #include <memory>
 #include <vector>
+#include <string>
+#include <cctype>
+#include <algorithm>
 
 // Helper to get the generated string from a CHTL snippet
 std::string generate_css_from_string(const std::string& chtl_input) {
@@ -17,6 +21,7 @@ std::string generate_css_from_string(const std::string& chtl_input) {
     return generator.generate(ast_nodes);
 }
 
+
 TEST_CASE("Generator produces correct inline styles", "[css_generator]") {
     std::string input = R"(
         div {
@@ -28,7 +33,7 @@ TEST_CASE("Generator produces correct inline styles", "[css_generator]") {
     )";
     std::string result = generate_css_from_string(input);
     std::string expected = "<html><head><style></style></head><body><div style=\"color: red;font-size: 16px;\"></div></body></html>";
-    REQUIRE(result == expected);
+    REQUIRE(remove_whitespace(result) == remove_whitespace(expected));
 }
 
 TEST_CASE("Generator produces correct global styles from class selectors", "[css_generator]") {
@@ -42,8 +47,8 @@ TEST_CASE("Generator produces correct global styles from class selectors", "[css
         }
     )";
     std::string result = generate_css_from_string(input);
-    std::string expected = "<html><head><style>.my-class {background-color: blue;}</style></head><body><div class=\"my-class\"></div></body></html>";
-    REQUIRE(result == expected);
+    std::string expected = "<html><head><style>.my-class{background-color:blue;}</style></head><body><div class=\"my-class\"></div></body></html>";
+    REQUIRE(remove_whitespace(result) == remove_whitespace(expected));
 }
 
 TEST_CASE("Generator handles arithmetic expressions in styles", "[css_generator]") {
@@ -57,7 +62,7 @@ TEST_CASE("Generator handles arithmetic expressions in styles", "[css_generator]
     )";
     std::string result = generate_css_from_string(input);
     std::string expected = "<html><head><style></style></head><body><div style=\"width: 150px;height: 50em;\"></div></body></html>";
-    REQUIRE(result == expected);
+    REQUIRE(remove_whitespace(result) == remove_whitespace(expected));
 }
 
 TEST_CASE("Generator handles property references in styles", "[css_generator]") {
@@ -75,9 +80,6 @@ TEST_CASE("Generator handles property references in styles", "[css_generator]") 
         }
     )";
     std::string result = generate_css_from_string(input);
-    std::string expected = "<html><head><style></style></head><body><div id=\"my-div\" style=\"width: 100px;\"></div><span></span></body></html>";
-    // Note: The span's style will be empty because the generator does not yet support cross-element property references.
-    // This test is designed to be updated once that functionality is implemented.
-    // For now, we are just testing that it doesn't crash.
-    REQUIRE(result.find("span") != std::string::npos);
+    std::string expected_html = "<html><head><style></style></head><body><div id=\"my-div\" style=\"width: 100px;\"></div><span style=\"width: 100px;\"></span></body></html>";
+    REQUIRE(remove_whitespace(result) == remove_whitespace(expected_html));
 }

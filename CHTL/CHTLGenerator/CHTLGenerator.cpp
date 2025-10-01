@@ -3,6 +3,8 @@
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/TextNode.h"
 #include "CHTLNode/ScriptNode.h"
+#include "CHTLNode/RawScriptNode.h"
+#include "CHTLNode/EnhancedSelectorNode.h"
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/SelectorBlockNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
@@ -127,6 +129,10 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         ss << generateNode(child.get());
     }
 
+    if (node->getScript()) {
+        ss << generateScriptNode(node->getScript());
+    }
+
     ss << "</" << node->getTagName() << ">";
     return ss.str();
 }
@@ -153,8 +159,25 @@ std::string CHTLGenerator::generateTextNode(const TextNode* node) {
 }
 
 std::string CHTLGenerator::generateScriptNode(const ScriptNode* node) {
+    std::stringstream script_content_ss;
+    for (const auto& child : node->getChildren()) {
+        if (const auto* rawNode = dynamic_cast<const RawScriptNode*>(child.get())) {
+            script_content_ss << rawNode->getScript();
+        } else if (const auto* selectorNode = dynamic_cast<const EnhancedSelectorNode*>(child.get())) {
+            std::string selector_str = selectorNode->getSelector();
+            size_t bracket_pos = selector_str.find_last_of('[');
+            if (bracket_pos != std::string::npos && selector_str.back() == ']') {
+                std::string selector = selector_str.substr(0, bracket_pos);
+                std::string index = selector_str.substr(bracket_pos);
+                script_content_ss << "document.querySelectorAll('" << selector << "')" << index;
+            } else {
+                script_content_ss << "document.querySelector('" << selector_str << "')";
+            }
+        }
+    }
+
     std::stringstream ss;
-    ss << "<script>" << node->getContent() << "</script>";
+    ss << "<script>" << script_content_ss.str() << "</script>";
     return ss.str();
 }
 
