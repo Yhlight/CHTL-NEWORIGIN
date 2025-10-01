@@ -10,6 +10,7 @@
 #include "../CHTLNode/ReferenceNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/ValueListNode.h"
 #include "../CHTLManager/TemplateManager.h"
 #include <stdexcept>
 #include <vector>
@@ -284,7 +285,25 @@ std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
 // --- Expression Parsing (Precedence Climbing) ---
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
-    return parseTernary();
+    return parseValueList();
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseValueList() {
+    std::vector<std::unique_ptr<ExpressionNode>> values;
+    values.push_back(parseTernary());
+
+    while (peek().type != TokenType::SEMICOLON && peek().type != TokenType::R_BRACE && !isAtEnd()) {
+        // If there's a comma, consume it.
+        if (peek().type == TokenType::COMMA) {
+            advance();
+        }
+        values.push_back(parseTernary());
+    }
+
+    if (values.size() == 1) {
+        return std::move(values[0]);
+    }
+    return std::make_unique<ValueListNode>(std::move(values));
 }
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseTernary() {

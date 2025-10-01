@@ -5,6 +5,7 @@
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/BinaryOpNode.h"
+#include "CHTLNode/ValueListNode.h"
 #include "CHTLUtil/DocumentTraverser.h"
 #include <stdexcept>
 #include <cmath>
@@ -125,6 +126,27 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
                 }
             }
             throw std::runtime_error("Property '" + refNode->getPropertyName() + "' not found on element with selector '" + refNode->getSelector() + "'");
+        }
+        case ExpressionType::VALUE_LIST: {
+            const auto* listNode = static_cast<const ValueListNode*>(expression);
+            std::string result_str;
+            for (const auto& value : listNode->values) {
+                EvaluatedValue v = evaluate(value.get(), root, style_context);
+                if (v.type == EvaluatedValue::Type::NUMBER) {
+                    result_str += std::to_string(v.number_value);
+                    // Remove trailing zeros
+                    result_str.erase ( result_str.find_last_not_of('0') + 1, std::string::npos );
+                    if(result_str.back() == '.') result_str.pop_back();
+                    result_str += v.unit;
+                } else {
+                    result_str += v.string_value;
+                }
+                result_str += " ";
+            }
+            if (!result_str.empty()) {
+                result_str.pop_back(); // Remove trailing space
+            }
+            return {EvaluatedValue::Type::STRING, 0.0, result_str, ""};
         }
         default:
             throw std::runtime_error("Unsupported expression type.");

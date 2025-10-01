@@ -31,6 +31,7 @@ enum class TokenType {
     L_BRACKET,
     R_BRACKET,
     AT_SIGN,
+    COMMA,
 
     // Arithmetic Operators
     PLUS,

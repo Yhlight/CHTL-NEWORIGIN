@@ -10,6 +10,7 @@
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
+#include "CHTLNode/ValueListNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -300,4 +301,89 @@ TEST_CASE("Parse Style Template Usage", "[parser]") {
     const auto* templateUsage = styleNode->getTemplateUsages()[0].get();
     REQUIRE(templateUsage->getTemplateType() == CHTL::TemplateType::STYLE);
     REQUIRE(templateUsage->getName() == "MyTemplate");
+}
+
+TEST_CASE("Parse Style Property with Value List", "[parser]") {
+    std::string input = "div { style { border: 1px solid black; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "border");
+
+    const CHTL::ExpressionNode* exprNode = propNode->getValue();
+    REQUIRE(exprNode != nullptr);
+    REQUIRE(exprNode->getType() == CHTL::ExpressionType::VALUE_LIST);
+
+    const auto* valueListNode = dynamic_cast<const CHTL::ValueListNode*>(exprNode);
+    REQUIRE(valueListNode != nullptr);
+    REQUIRE(valueListNode->values.size() == 3);
+
+    // Check first value: 1px
+    const auto* val1 = dynamic_cast<const CHTL::LiteralNode*>(valueListNode->values[0].get());
+    REQUIRE(val1 != nullptr);
+    REQUIRE(val1->getValue().type == CHTL::TokenType::NUMBER);
+    REQUIRE(val1->getValue().value == "1");
+    REQUIRE(val1->getUnit() == "px");
+
+    // Check second value: solid
+    const auto* val2 = dynamic_cast<const CHTL::LiteralNode*>(valueListNode->values[1].get());
+    REQUIRE(val2 != nullptr);
+    REQUIRE(val2->getValue().type == CHTL::TokenType::IDENTIFIER);
+    REQUIRE(val2->getValue().value == "solid");
+
+    // Check third value: black
+    const auto* val3 = dynamic_cast<const CHTL::LiteralNode*>(valueListNode->values[2].get());
+    REQUIRE(val3 != nullptr);
+    REQUIRE(val3->getValue().type == CHTL::TokenType::IDENTIFIER);
+    REQUIRE(val3->getValue().value == "black");
+}
+
+TEST_CASE("Parse Style Property with Comma-Separated Value List", "[parser]") {
+    std::string input = "div { style { font-family: Arial, sans-serif; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "font-family");
+
+    const CHTL::ExpressionNode* exprNode = propNode->getValue();
+    REQUIRE(exprNode != nullptr);
+    REQUIRE(exprNode->getType() == CHTL::ExpressionType::VALUE_LIST);
+
+    const auto* valueListNode = dynamic_cast<const CHTL::ValueListNode*>(exprNode);
+    REQUIRE(valueListNode != nullptr);
+    REQUIRE(valueListNode->values.size() == 2);
+
+    // Check first value: Arial
+    const auto* val1 = dynamic_cast<const CHTL::LiteralNode*>(valueListNode->values[0].get());
+    REQUIRE(val1 != nullptr);
+    REQUIRE(val1->getValue().type == CHTL::TokenType::IDENTIFIER);
+    REQUIRE(val1->getValue().value == "Arial");
+
+    // Check second value: sans-serif
+    const auto* val2 = dynamic_cast<const CHTL::LiteralNode*>(valueListNode->values[1].get());
+    REQUIRE(val2 != nullptr);
+    REQUIRE(val2->getValue().type == CHTL::TokenType::IDENTIFIER);
+    REQUIRE(val2->getValue().value == "sans-serif");
 }
