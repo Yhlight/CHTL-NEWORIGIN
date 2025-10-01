@@ -117,7 +117,29 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
         if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
         if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
-        if (input[pos] == '&') { tokens.push_back({TokenType::AMPERSAND, "&"}); pos++; continue; }
+        if (input[pos] == '&') {
+            if (pos + 1 < input.length() && input[pos + 1] == '&') {
+                tokens.push_back({TokenType::LOGICAL_AND, "&&"});
+                pos += 2;
+            } else {
+                tokens.push_back({TokenType::AMPERSAND, "&"});
+                pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '|') {
+            if (pos + 1 < input.length() && input[pos + 1] == '|') {
+                tokens.push_back({TokenType::LOGICAL_OR, "||"});
+                pos += 2;
+            } else {
+                tokens.push_back({TokenType::UNKNOWN, "|"});
+                pos++;
+            }
+            continue;
+        }
+        if (input[pos] == '>') { tokens.push_back({TokenType::GREATER_THAN, ">"}); pos++; continue; }
+        if (input[pos] == '<') { tokens.push_back({TokenType::LESS_THAN, "<"}); pos++; continue; }
+        if (input[pos] == '?') { tokens.push_back({TokenType::QUESTION, "?"}); pos++; continue; }
 
         if (input[pos] == '"' || input[pos] == '\'') {
             char quote_char = input[pos];

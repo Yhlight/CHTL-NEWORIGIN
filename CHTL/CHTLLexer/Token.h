@@ -41,7 +41,16 @@ enum class TokenType {
     STAR_STAR,
 
     // Logical/Contextual
-    AMPERSAND
+    AMPERSAND,
+    LOGICAL_AND,
+    LOGICAL_OR,
+
+    // Relational
+    GREATER_THAN,
+    LESS_THAN,
+
+    // Ternary
+    QUESTION
 };
 
 class Token {

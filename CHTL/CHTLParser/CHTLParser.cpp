@@ -248,7 +248,50 @@ std::unique_ptr<BaseNode> CHTLParser::parseOriginNode() {
 // --- Expression Parsing (Precedence Climbing) ---
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
-    return parseTerm();
+    return parseTernary();
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseTernary() {
+    auto condition = parseLogicalOr();
+
+    if (match(TokenType::QUESTION)) {
+        auto trueExpr = parseTernary(); // Allow nested ternaries
+        consume(TokenType::COLON, "Expect ':' after true expression in ternary operator.");
+        auto falseExpr = parseTernary();
+        return std::make_unique<ConditionalNode>(std::move(condition), std::move(trueExpr), std::move(falseExpr));
+    }
+
+    return condition;
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseLogicalOr() {
+    auto expr = parseLogicalAnd();
+    while (match(TokenType::LOGICAL_OR)) {
+        Token op = tokens[current - 1];
+        auto right = parseLogicalAnd();
+        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
+    }
+    return expr;
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseLogicalAnd() {
+    auto expr = parseRelational();
+    while (match(TokenType::LOGICAL_AND)) {
+        Token op = tokens[current - 1];
+        auto right = parseRelational();
+        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
+    }
+    return expr;
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseRelational() {
+    auto expr = parseTerm();
+    while (match(TokenType::GREATER_THAN) || match(TokenType::LESS_THAN)) {
+        Token op = tokens[current - 1];
+        auto right = parseTerm();
+        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
+    }
+    return expr;
 }
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseTerm() {
@@ -282,7 +325,7 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
 }
 
 std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
-    if (match(TokenType::NUMBER) || match(TokenType::DIMENSION)) {
+    if (match(TokenType::NUMBER) || match(TokenType::DIMENSION) || match(TokenType::STRING_LITERAL)) {
         return std::make_unique<LiteralNode>(tokens[current - 1]);
     }
 

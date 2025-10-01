@@ -11,6 +11,7 @@
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/PropertyAccessNode.h"
+#include "CHTLNode/ConditionalNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -421,4 +422,41 @@ TEST_CASE("Parse Style Property with Reference Property", "[parser]") {
     REQUIRE(propAccessNode != nullptr);
     REQUIRE(propAccessNode->getSelector() == "#box");
     REQUIRE(propAccessNode->getPropertyName() == "width");
+}
+
+TEST_CASE("Parse Style Property with Conditional Expression", "[parser]") {
+    std::string input = "div { style { background-color: width > 50px ? \"red\" : \"blue\"; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "background-color");
+
+    const auto* condNode = dynamic_cast<const CHTL::ConditionalNode*>(propNode->getValue());
+    REQUIRE(condNode != nullptr);
+
+    // Check the condition: width > 50px
+    const auto* condition = dynamic_cast<const CHTL::BinaryOpNode*>(condNode->getCondition());
+    REQUIRE(condition != nullptr);
+    REQUIRE(condition->getOperator().type == CHTL::TokenType::GREATER_THAN);
+
+    // Check the true expression: "red"
+    const auto* trueExpr = dynamic_cast<const CHTL::LiteralNode*>(condNode->getTrueExpression());
+    REQUIRE(trueExpr != nullptr);
+    REQUIRE(trueExpr->getValue().value == "red");
+
+    // Check the false expression: "blue"
+    const auto* falseExpr = dynamic_cast<const CHTL::LiteralNode*>(condNode->getFalseExpression());
+    REQUIRE(falseExpr != nullptr);
+    REQUIRE(falseExpr->getValue().value == "blue");
 }
