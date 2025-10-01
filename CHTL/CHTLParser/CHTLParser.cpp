@@ -84,8 +84,27 @@ std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
             element->setStyle(parseStyleNode());
         } else if (match(TokenType::SCRIPT_KEYWORD)) {
             element->setScript(parseScriptNode());
-        } else if (match(TokenType::TEXT_KEYWORD)) {
-            element->addChild(parseTextNode());
+        } else if (check(TokenType::TEXT_KEYWORD)) { // Use check() to peek
+            // Look ahead to see if it's an attribute `text:` or a block `text {`
+            if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
+                // It's a text attribute.
+                advance(); // Consume TEXT_KEYWORD
+                advance(); // Consume COLON or EQUAL
+
+                Token value;
+                if (match(TokenType::STRING_LITERAL) || match(TokenType::IDENTIFIER)) {
+                    value = tokens[current - 1];
+                } else {
+                    throw std::runtime_error("Expect string or literal for text attribute value.");
+                }
+
+                consume(TokenType::SEMICOLON, "Expect ';' after text attribute.");
+                element->addChild(std::make_unique<TextNode>(value.value));
+            } else {
+                // It's a text block.
+                advance(); // Consume TEXT_KEYWORD
+                element->addChild(parseTextNode());
+            }
         } else if (check(TokenType::IDENTIFIER)) {
             // Lookahead to differentiate between an attribute and a child element.
             if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
