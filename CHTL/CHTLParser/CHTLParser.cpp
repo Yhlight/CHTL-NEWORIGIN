@@ -133,13 +133,16 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
     auto styleNode = std::make_unique<StyleNode>();
     consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
 
+    std::string last_selector;
+
     while (!check(TokenType::R_BRACE) && !isAtEnd()) {
         if (match(TokenType::DOT)) { // Class selector
             Token name = consume(TokenType::IDENTIFIER, "Expect class name after '.'.");
             std::string selector_name = name.value;
-            parent->addAttribute("class", selector_name); // Will be handled in ElementNode
+            parent->addAttribute("class", selector_name);
+            last_selector = "." + selector_name;
 
-            auto selectorBlock = std::make_unique<SelectorBlockNode>("." + selector_name);
+            auto selectorBlock = std::make_unique<SelectorBlockNode>(last_selector);
             consume(TokenType::L_BRACE, "Expect '{' after selector name.");
             while (!check(TokenType::R_BRACE) && !isAtEnd()) {
                 Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
@@ -154,8 +157,9 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
             Token name = consume(TokenType::IDENTIFIER, "Expect id name after '#'.");
             std::string selector_name = name.value;
             parent->addAttribute("id", selector_name);
+            last_selector = "#" + selector_name;
 
-            auto selectorBlock = std::make_unique<SelectorBlockNode>("#" + selector_name);
+            auto selectorBlock = std::make_unique<SelectorBlockNode>(last_selector);
             consume(TokenType::L_BRACE, "Expect '{' after selector name.");
             while (!check(TokenType::R_BRACE) && !isAtEnd()) {
                 Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
@@ -166,7 +170,28 @@ std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
             }
             consume(TokenType::R_BRACE, "Expect '}' after selector block.");
             styleNode->addSelectorBlock(std::move(selectorBlock));
-        } else if (check(TokenType::IDENTIFIER)) { // Inline property
+        } else if (match(TokenType::AMPERSAND)) {
+            if (last_selector.empty()) {
+                throw std::runtime_error("Found '&' without a preceding selector context.");
+            }
+            std::string pseudo_selector_part;
+            while (!check(TokenType::L_BRACE) && !isAtEnd()) {
+                pseudo_selector_part += advance().value;
+            }
+            std::string full_selector = last_selector + pseudo_selector_part;
+            auto selectorBlock = std::make_unique<SelectorBlockNode>(full_selector);
+            consume(TokenType::L_BRACE, "Expect '{' after selector.");
+            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
+                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
+                consume(TokenType::COLON, "Expect ':' after style property key.");
+                auto value_expr = parseExpression();
+                selectorBlock->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
+                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
+            }
+            consume(TokenType::R_BRACE, "Expect '}' after selector block.");
+            styleNode->addSelectorBlock(std::move(selectorBlock));
+        }
+        else if (check(TokenType::IDENTIFIER)) { // Inline property
             Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
             consume(TokenType::COLON, "Expect ':' after style property key.");
             auto value_expr = parseExpression();

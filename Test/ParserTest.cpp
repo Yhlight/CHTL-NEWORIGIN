@@ -300,3 +300,28 @@ TEST_CASE("Parse Style Block with ID Selector", "[parser]") {
     REQUIRE(selectorBlock->getProperties().size() == 1);
     REQUIRE(selectorBlock->getProperties()[0]->getKey() == "background-color");
 }
+
+TEST_CASE("Parse Style Block with & context selector", "[parser]") {
+    std::string input = "div { style { .my-class { color: blue; } &:hover { color: red; } } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+    REQUIRE(elementNode->getAttribute("class") == "my-class");
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getSelectorBlocks().size() == 2);
+
+    const auto* selectorBlock1 = styleNode->getSelectorBlocks()[0].get();
+    REQUIRE(selectorBlock1->getSelector() == ".my-class");
+
+    const auto* selectorBlock2 = styleNode->getSelectorBlocks()[1].get();
+    REQUIRE(selectorBlock2->getSelector() == ".my-class:hover");
+    REQUIRE(selectorBlock2->getProperties().size() == 1);
+    REQUIRE(selectorBlock2->getProperties()[0]->getKey() == "color");
+}
