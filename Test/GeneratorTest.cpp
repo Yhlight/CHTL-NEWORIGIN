@@ -96,3 +96,28 @@ TEST_CASE("Generator correctly expands ampersand selector", "[generator]") {
     REQUIRE(result.find(expected_style1) != std::string::npos);
     REQUIRE(result.find(expected_style2) != std::string::npos);
 }
+
+TEST_CASE("Generator evaluates property references correctly", "[generator]") {
+    std::string input = R"(
+        div {
+            id: "box";
+            style {
+                width: 100px;
+            }
+        }
+        span {
+            style {
+                height: box.width;
+            }
+        }
+    )";
+    // The generator will create a single root-level element, so we need to wrap this in a container.
+    std::string wrapped_input = "body { " + input + " }";
+    std::string result = generate_from_string(wrapped_input);
+
+    std::string expected_div = R"(<div id="box" style="width: 100px;"></div>)";
+    std::string expected_span = R"(<span style="height: 100px;"></span>)";
+
+    REQUIRE(result.find(expected_div) != std::string::npos);
+    REQUIRE(result.find(expected_span) != std::string::npos);
+}

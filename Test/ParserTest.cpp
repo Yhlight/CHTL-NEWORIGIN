@@ -11,6 +11,7 @@
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
 #include "CHTLNode/ValueListNode.h"
+#include "CHTLNode/ReferenceNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -445,4 +446,32 @@ TEST_CASE("Parse Style Block with Ampersand Selector", "[parser]") {
     const auto* hoverBlock = styleNode->getSelectorBlocks()[1].get();
     REQUIRE(hoverBlock != nullptr);
     REQUIRE(hoverBlock->getSelector() == ".my-class:hover");
+}
+
+TEST_CASE("Parse Style Property with Property Reference", "[parser]") {
+    std::string input = "div { style { width: box.width; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "width");
+
+    const CHTL::ExpressionNode* exprNode = propNode->getValue();
+    REQUIRE(exprNode != nullptr);
+    REQUIRE(exprNode->getType() == CHTL::ExpressionType::REFERENCE);
+
+    const auto* refNode = dynamic_cast<const CHTL::ReferenceNode*>(exprNode);
+    REQUIRE(refNode != nullptr);
+    REQUIRE(refNode->getSelector() == "box");
+    REQUIRE(refNode->getPropertyName() == "width");
 }

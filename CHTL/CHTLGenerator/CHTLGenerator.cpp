@@ -85,7 +85,9 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
                     EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
                     style_ss << prop->getKey() << ": ";
                     if (val.type == EvaluatedValue::Type::NUMBER) {
-                        style_ss << val.number_value << val.unit;
+                        std::stringstream temp_ss;
+                        temp_ss << val.number_value;
+                        style_ss << temp_ss.str() << val.unit;
                     } else {
                         style_ss << val.string_value;
                     }
@@ -113,7 +115,9 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
             EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
             style_ss << prop->getKey() << ": ";
             if (val.type == EvaluatedValue::Type::NUMBER) {
-                style_ss << val.number_value << val.unit;
+                std::stringstream temp_ss;
+                temp_ss << val.number_value;
+                style_ss << temp_ss.str() << val.unit;
             } else {
                 style_ss << val.string_value;
             }
