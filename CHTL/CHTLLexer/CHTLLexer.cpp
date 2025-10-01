@@ -47,7 +47,6 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         }
 
         // --- Operators and Punctuation ---
-        if (input[pos] == ',') { tokens.push_back({TokenType::COMMA, ","}); pos++; continue; }
         if (input[pos] == '+') { tokens.push_back({TokenType::PLUS, "+"}); pos++; continue; }
         if (input[pos] == '-') { tokens.push_back({TokenType::MINUS, "-"}); pos++; continue; }
         if (input[pos] == '*') {
@@ -64,6 +63,7 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
         if (input[pos] == ':') { tokens.push_back({TokenType::COLON, ":"}); pos++; continue; }
         if (input[pos] == ';') { tokens.push_back({TokenType::SEMICOLON, ";"}); pos++; continue; }
+        if (input[pos] == ',') { tokens.push_back({TokenType::COMMA, ","}); pos++; continue; }
         if (input[pos] == '?') { tokens.push_back({TokenType::QUESTION_MARK, "?"}); pos++; continue; }
         if (input[pos] == '.') { tokens.push_back({TokenType::DOT, "."}); pos++; continue; }
         if (input[pos] == '#') { tokens.push_back({TokenType::HASH, "#"}); pos++; continue; }
@@ -152,21 +152,6 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
 
             if (value == "text") { tokens.push_back({TokenType::TEXT_KEYWORD, value}); }
             else if (value == "style") { tokens.push_back({TokenType::STYLE_KEYWORD, value}); }
-            else if (value == "if") { tokens.push_back({TokenType::IF_KEYWORD, value}); }
-            else if (value == "else") {
-                std::string::size_type next_pos = pos;
-                while (next_pos < input.length() && std::isspace(input[next_pos])) {
-                    next_pos++;
-                }
-                if (next_pos + 1 < input.length() && input.substr(next_pos, 2) == "if") {
-                    if (next_pos + 2 >= input.length() || !std::isalnum(input[next_pos + 2])) {
-                        tokens.push_back({TokenType::ELSE_IF_KEYWORD, "else if"});
-                        pos = next_pos + 2;
-                        continue;
-                    }
-                }
-                tokens.push_back({TokenType::ELSE_KEYWORD, value});
-            }
             else if (value == "script") {
                 tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
                 while (pos < input.length() && std::isspace(input[pos])) {
@@ -175,23 +160,57 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
                 if (pos < input.length() && input[pos] == '{') {
                     tokens.push_back({TokenType::L_BRACE, "{"});
                     pos++;
+
                     int brace_level = 1;
                     std::string::size_type content_start = pos;
+
                     while (pos < input.length()) {
-                        if (input[pos] == '{') brace_level++;
-                        else if (input[pos] == '}') {
+                        if (input.substr(pos, 2) == "{{") {
+                            if (pos > content_start) {
+                                tokens.push_back({TokenType::RAW_SCRIPT, input.substr(content_start, pos - content_start)});
+                            }
+                            tokens.push_back({TokenType::L_DOUBLE_BRACE, "{{"});
+                            pos += 2;
+                            std::string::size_type selector_start = pos;
+                            std::string::size_type selector_end = input.find("}}", selector_start);
+                            if (selector_end == std::string::npos) {
+                                tokens.push_back({TokenType::UNKNOWN, input.substr(selector_start)});
+                                pos = input.length();
+                                break;
+                            }
+                            tokens.push_back({TokenType::IDENTIFIER, input.substr(selector_start, selector_end - selector_start)});
+                            tokens.push_back({TokenType::R_DOUBLE_BRACE, "}}"});
+                            pos = selector_end + 2;
+                            content_start = pos;
+                        } else if (input[pos] == '{') {
+                            brace_level++;
+                            pos++;
+                        } else if (input[pos] == '}') {
                             brace_level--;
-                            if (brace_level == 0) break;
+                            if (brace_level == 0) {
+                                break;
+                            }
+                            pos++;
+                        } else {
+                            pos++;
                         }
-                        pos++;
                     }
+
                     if (brace_level == 0) {
-                        tokens.push_back({TokenType::STRING_LITERAL, input.substr(content_start, pos - content_start)});
+                        if (pos > content_start) {
+                            tokens.push_back({TokenType::RAW_SCRIPT, input.substr(content_start, pos - content_start)});
+                        }
                         tokens.push_back({TokenType::R_BRACE, "}"});
                         pos++;
+                    } else {
+                        tokens.push_back({TokenType::UNKNOWN, input.substr(content_start)});
+                        pos = input.length();
                     }
                 }
             }
+            else if (value == "if") { tokens.push_back({TokenType::IF_KEYWORD, value}); }
+            else if (value == "else") { tokens.push_back({TokenType::ELSE_KEYWORD, value}); }
+            else if (value == "condition") { tokens.push_back({TokenType::CONDITION_KEYWORD, value}); }
             else { tokens.push_back({TokenType::IDENTIFIER, value}); }
             continue;
         }

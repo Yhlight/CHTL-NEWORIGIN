@@ -1,4 +1,4 @@
-#include "IfNode.h"
+#include "ConditionalNode.h"
 
 namespace CHTL {
 // Currently no implementation needed in the .cpp file

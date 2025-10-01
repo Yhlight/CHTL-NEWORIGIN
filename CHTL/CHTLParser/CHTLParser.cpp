@@ -10,45 +10,87 @@
 #include "../CHTLNode/ReferenceNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
-#include "../CHTLNode/IfNode.h"
-#include "../CHTLNode/ElseIfNode.h"
-#include "../CHTLNode/ElseNode.h"
 #include "../CHTLManager/TemplateManager.h"
+#include "../CHTLState/GlobalState.h"
 #include <stdexcept>
 #include <vector>
 
 namespace CHTL {
 
-CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {}
+CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {
+    // Start in the global state
+    currentState = std::make_unique<GlobalState>();
+}
+
+void CHTLParser::setState(std::unique_ptr<State> newState) {
+    currentState = std::move(newState);
+}
+
+// --- Context Stack Management ---
+
+void CHTLParser::pushNode(BaseNode* node) {
+    nodeStack.push(node);
+}
+
+void CHTLParser::popNode() {
+    if (!nodeStack.empty()) {
+        nodeStack.pop();
+    }
+}
+
+BaseNode* CHTLParser::currentNode() const {
+    if (nodeStack.empty()) {
+        return nullptr;
+    }
+    return nodeStack.top();
+}
+
+void CHTLParser::addNodeToCurrent(std::unique_ptr<BaseNode> node) {
+    if (!node) return;
+
+    if (nodeStack.empty()) {
+        ast.push_back(std::move(node));
+    } else {
+        BaseNode* parent = currentNode();
+        if (auto* element_parent = dynamic_cast<ElementNode*>(parent)) {
+            element_parent->addChild(std::move(node));
+        } else if (auto* template_parent = dynamic_cast<TemplateDefinitionNode*>(parent)) {
+            template_parent->addChild(std::move(node));
+        }
+    }
+}
 
 // --- Core Parsing Logic ---
 
-std::unique_ptr<BaseNode> CHTLParser::parse() {
-    std::vector<std::unique_ptr<BaseNode>> top_level_nodes;
+void CHTLParser::parse() {
     while (!isAtEnd()) {
-        top_level_nodes.push_back(parseStatement());
+        if (currentState) {
+            currentState->handle(*this);
+        } else {
+            advance(); // Safeguard
+        }
     }
+}
 
-    std::unique_ptr<BaseNode> main_node = nullptr;
-    for (auto& node : top_level_nodes) {
+std::vector<std::unique_ptr<BaseNode>> CHTLParser::getAST() {
+    std::vector<std::unique_ptr<BaseNode>> main_nodes;
+    for (auto& node : ast) {
         if (auto* def_node = dynamic_cast<TemplateDefinitionNode*>(node.get())) {
             TemplateManager::getInstance().registerTemplate(
                 std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(node.release()))
             );
         } else {
-            if (main_node && node) {
-                 throw std::runtime_error("Multiple root elements are not supported in this version.");
-            }
-            if(node) {
-                main_node = std::move(node);
+            if (node) {
+                main_nodes.push_back(std::move(node));
             }
         }
     }
-    return main_node;
+    ast.clear();
+    return main_nodes;
 }
 
 
-// --- Token Manipulation Helpers ---
+// --- Public Token Manipulation Helpers ---
 
 bool CHTLParser::isAtEnd() const {
     return current >= tokens.size() || peek().type == TokenType::EndOfFile;
@@ -57,6 +99,11 @@ bool CHTLParser::isAtEnd() const {
 Token CHTLParser::peek() const {
     if (current >= tokens.size()) return {TokenType::EndOfFile, ""};
     return tokens[current];
+}
+
+Token CHTLParser::peekNext() const {
+    if (current + 1 >= tokens.size()) return {TokenType::EndOfFile, ""};
+    return tokens[current + 1];
 }
 
 Token CHTLParser::advance() {
@@ -86,205 +133,6 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
     throw std::runtime_error(message);
 }
 
-// --- Statement-Level Parsing ---
-
-std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
-    while (match(TokenType::COMMENT)) {}
-    if(isAtEnd()) return nullptr;
-
-    if (match(TokenType::L_BRACKET)) {
-        return parseTemplateDefinition();
-    }
-    if (check(TokenType::IDENTIFIER)) {
-        return parseElementNode();
-    }
-    if (match(TokenType::TEXT_KEYWORD)) {
-        return parseTextNode();
-    }
-    if (match(TokenType::AT_SIGN)) {
-        return parseTemplateUsage();
-    }
-    return nullptr;
-}
-
-std::unique_ptr<ElementNode> CHTLParser::parseElementNode() {
-    Token tag = consume(TokenType::IDENTIFIER, "Expect element tag name.");
-    auto element = std::make_unique<ElementNode>(tag.value);
-    consume(TokenType::L_BRACE, "Expect '{' after element tag name.");
-
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (match(TokenType::STYLE_KEYWORD)) {
-            element->setStyle(parseStyleNode(element.get()));
-        } else if (match(TokenType::SCRIPT_KEYWORD)) {
-            element->setScript(parseScriptNode());
-        } else if (match(TokenType::TEXT_KEYWORD)) {
-            element->addChild(parseTextNode());
-        } else if (match(TokenType::AT_SIGN)) {
-            element->addChild(parseTemplateUsage());
-        }
-        else if (match(TokenType::IF_KEYWORD)) {
-             element->addChild(parseIfStatement());
-        }
-        else if (check(TokenType::IDENTIFIER)) {
-            if (current + 1 < tokens.size() && (tokens[current + 1].type == TokenType::COLON || tokens[current + 1].type == TokenType::EQUAL)) {
-                parseAttribute(element.get());
-            } else {
-                element->addChild(parseElementNode());
-            }
-        } else {
-            throw std::runtime_error("Unexpected token in element block: " + peek().value);
-        }
-    }
-
-    consume(TokenType::R_BRACE, "Expect '}' after element block.");
-    return element;
-}
-
-void CHTLParser::parseAttribute(ElementNode* element) {
-    Token key = consume(TokenType::IDENTIFIER, "Expect attribute key.");
-    if (match(TokenType::COLON) || match(TokenType::EQUAL)) {
-        std::string value_str;
-        while (!isAtEnd() && peek().type != TokenType::SEMICOLON) {
-            value_str += advance().value;
-        }
-        if (value_str.empty()) throw std::runtime_error("Expect attribute value.");
-        element->addAttribute(key.value, value_str);
-        consume(TokenType::SEMICOLON, "Expect ';' after attribute.");
-    } else {
-        throw std::runtime_error("Expect ':' or '=' after attribute key.");
-    }
-}
-
-std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
-    consume(TokenType::L_BRACE, "Expect '{' after 'text' keyword.");
-    Token text = consume(TokenType::STRING_LITERAL, "Expect string literal inside text block.");
-    consume(TokenType::R_BRACE, "Expect '}' after text block.");
-    return std::make_unique<TextNode>(text.value);
-}
-
-std::unique_ptr<StyleNode> CHTLParser::parseStyleNode(ElementNode* parent) {
-    auto styleNode = std::make_unique<StyleNode>();
-    consume(TokenType::L_BRACE, "Expect '{' after 'style' keyword.");
-
-    std::string last_selector;
-
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (match(TokenType::AT_SIGN)) {
-             styleNode->addTemplateUsage(parseTemplateUsage());
-        }
-        else if (match(TokenType::DOT)) {
-            Token name = consume(TokenType::IDENTIFIER, "Expect class name after '.'.");
-            last_selector = "." + name.value;
-            parent->addAttribute("class", name.value);
-            auto selectorBlock = std::make_unique<SelectorBlockNode>(last_selector);
-            consume(TokenType::L_BRACE, "Expect '{' after selector name.");
-            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-                consume(TokenType::COLON, "Expect ':' after style property key.");
-                selectorBlock->addProperty(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
-                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-            }
-            consume(TokenType::R_BRACE, "Expect '}' after selector block.");
-            styleNode->addSelectorBlock(std::move(selectorBlock));
-        } else if (match(TokenType::HASH)) {
-            Token name = consume(TokenType::IDENTIFIER, "Expect id name after '#'.");
-            last_selector = "#" + name.value;
-            parent->addAttribute("id", name.value);
-            auto selectorBlock = std::make_unique<SelectorBlockNode>(last_selector);
-            consume(TokenType::L_BRACE, "Expect '{' after selector name.");
-            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-                consume(TokenType::COLON, "Expect ':' after style property key.");
-                selectorBlock->addProperty(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
-                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-            }
-            consume(TokenType::R_BRACE, "Expect '}' after selector block.");
-            styleNode->addSelectorBlock(std::move(selectorBlock));
-        } else if (match(TokenType::AMPERSAND)) {
-            if (last_selector.empty()) throw std::runtime_error("Found '&' without a preceding selector context.");
-            std::string pseudo_selector_part;
-            while (!check(TokenType::L_BRACE) && !isAtEnd()) {
-                pseudo_selector_part += advance().value;
-            }
-            std::string full_selector = last_selector + pseudo_selector_part;
-            auto selectorBlock = std::make_unique<SelectorBlockNode>(full_selector);
-            consume(TokenType::L_BRACE, "Expect '{' after selector.");
-            while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-                Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-                consume(TokenType::COLON, "Expect ':' after style property key.");
-                selectorBlock->addProperty(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
-                consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-            }
-            consume(TokenType::R_BRACE, "Expect '}' after selector block.");
-            styleNode->addSelectorBlock(std::move(selectorBlock));
-        }
-        else if (check(TokenType::IDENTIFIER)) {
-            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-            consume(TokenType::COLON, "Expect ':' after style property key.");
-            auto value_expr = parseExpression();
-            styleNode->addProperty(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-        } else {
-            throw std::runtime_error("Unexpected token in style block: " + peek().value);
-        }
-    }
-
-    consume(TokenType::R_BRACE, "Expect '}' after style block.");
-    return styleNode;
-}
-
-
-std::unique_ptr<ScriptNode> CHTLParser::parseScriptNode() {
-    consume(TokenType::L_BRACE, "Expect '{' after 'script' keyword.");
-    Token content = consume(TokenType::STRING_LITERAL, "Expect script content.");
-    consume(TokenType::R_BRACE, "Expect '}' after script block.");
-    return std::make_unique<ScriptNode>(content.value);
-}
-
-std::unique_ptr<TemplateDefinitionNode> CHTLParser::parseTemplateDefinition() {
-    Token keyword = consume(TokenType::IDENTIFIER, "Expect 'Template' keyword.");
-    if (keyword.value != "Template") throw std::runtime_error("Expected 'Template' keyword.");
-    consume(TokenType::R_BRACKET, "Expect ']' after 'Template'.");
-    consume(TokenType::AT_SIGN, "Expect '@' after '[Template]'.");
-
-    Token typeToken = consume(TokenType::IDENTIFIER, "Expect template type (Style, Element, or Var).");
-    TemplateType type;
-    if (typeToken.value == "Style") type = TemplateType::STYLE;
-    else if (typeToken.value == "Element") type = TemplateType::ELEMENT;
-    else if (typeToken.value == "Var") type = TemplateType::VAR;
-    else throw std::runtime_error("Unknown template type: " + typeToken.value);
-
-    Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");
-    auto templateNode = std::make_unique<TemplateDefinitionNode>(type, nameToken.value);
-
-    consume(TokenType::L_BRACE, "Expect '{' after template definition.");
-
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        if (type == TemplateType::ELEMENT) {
-            templateNode->addChild(parseStatement());
-        } else if (type == TemplateType::STYLE || type == TemplateType::VAR) {
-            Token key = consume(TokenType::IDENTIFIER, "Expect property or variable key.");
-            consume(TokenType::COLON, "Expect ':' after key.");
-            templateNode->addChild(std::make_unique<StylePropertyNode>(key.value, parseExpression()));
-            consume(TokenType::SEMICOLON, "Expect ';' after value.");
-        }
-    }
-
-    consume(TokenType::R_BRACE, "Expect '}' after template block.");
-    return templateNode;
-}
-
-std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
-    Token typeToken = consume(TokenType::IDENTIFIER, "Expect template type (Style, Element, or Var).");
-    TemplateType type;
-    if (typeToken.value == "Style") type = TemplateType::STYLE;
-    else if (typeToken.value == "Element") type = TemplateType::ELEMENT;
-    else throw std::runtime_error("Unsupported template usage type: " + typeToken.value);
-
-    Token nameToken = consume(TokenType::IDENTIFIER, "Expect template name.");
-    consume(TokenType::SEMICOLON, "Expect ';' after template usage.");
-    return std::make_unique<TemplateUsageNode>(type, nameToken.value);
-}
 
 
 // --- Expression Parsing (Precedence Climbing) ---
@@ -420,65 +268,6 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
     }
 
     throw std::runtime_error("Expected expression, but found " + peek().value);
-}
-
-std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
-    consume(TokenType::L_BRACE, "Expect '{' after 'if' keyword.");
-
-    consume(TokenType::IDENTIFIER, "Expect 'condition' keyword."); // "condition"
-    consume(TokenType::COLON, "Expect ':' after 'condition'.");
-    auto condition = parseExpression();
-    consume(TokenType::COMMA, "Expect ',' after if condition.");
-
-    std::vector<std::unique_ptr<StylePropertyNode>> body;
-    while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-        Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-        consume(TokenType::COLON, "Expect ':' after style property key.");
-        auto value_expr = parseExpression();
-        body.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-        consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-    }
-
-    consume(TokenType::R_BRACE, "Expect '}' after if block.");
-
-    auto ifNode = std::make_unique<IfNode>(std::move(condition), std::move(body));
-
-    while (match(TokenType::ELSE_IF_KEYWORD)) {
-        consume(TokenType::L_BRACE, "Expect '{' after 'else if' keyword.");
-
-        consume(TokenType::IDENTIFIER, "Expect 'condition' keyword."); // "condition"
-        consume(TokenType::COLON, "Expect ':' after 'condition'.");
-        auto elseIfCondition = parseExpression();
-        consume(TokenType::COMMA, "Expect ',' after else if condition.");
-
-        std::vector<std::unique_ptr<StylePropertyNode>> elseIfBody;
-        while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-            consume(TokenType::COLON, "Expect ':' after style property key.");
-            auto value_expr = parseExpression();
-            elseIfBody.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-        }
-        consume(TokenType::R_BRACE, "Expect '}' after else if block.");
-        ifNode->addElseIf(std::make_unique<ElseIfNode>(std::move(elseIfCondition), std::move(elseIfBody)));
-    }
-
-    if (match(TokenType::ELSE_KEYWORD)) {
-        consume(TokenType::L_BRACE, "Expect '{' after 'else' keyword.");
-
-        std::vector<std::unique_ptr<StylePropertyNode>> elseBody;
-        while (!check(TokenType::R_BRACE) && !isAtEnd()) {
-            Token key = consume(TokenType::IDENTIFIER, "Expect style property key.");
-            consume(TokenType::COLON, "Expect ':' after style property key.");
-            auto value_expr = parseExpression();
-            elseBody.push_back(std::make_unique<StylePropertyNode>(key.value, std::move(value_expr)));
-            consume(TokenType::SEMICOLON, "Expect ';' after style property value.");
-        }
-        consume(TokenType::R_BRACE, "Expect '}' after else block.");
-        ifNode->setElse(std::make_unique<ElseNode>(std::move(elseBody)));
-    }
-
-    return ifNode;
 }
 
 } // namespace CHTL

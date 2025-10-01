@@ -3,13 +3,13 @@
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/TextNode.h"
 #include "CHTLNode/ScriptNode.h"
+#include "CHTLNode/RawScriptNode.h"
+#include "CHTLNode/EnhancedSelectorNode.h"
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/SelectorBlockNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
-#include "CHTLNode/IfNode.h"
-#include "CHTLNode/ElseIfNode.h"
-#include "CHTLNode/ElseNode.h"
+#include "CHTLNode/ConditionalNode.h"
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
@@ -18,33 +18,31 @@ namespace CHTL {
 
 CHTLGenerator::CHTLGenerator() : m_template_manager(TemplateManager::getInstance()) {}
 
-bool isTruthy(const EvaluatedValue& val) {
-    if (val.type == EvaluatedValue::Type::NUMBER) {
-        return val.number_value != 0.0;
-    }
-    if (val.type == EvaluatedValue::Type::STRING) {
-        return !val.string_value.empty();
-    }
-    return false;
-}
+std::string CHTLGenerator::generate(std::vector<std::unique_ptr<BaseNode>>& nodes) {
+    std::stringstream body_content_ss;
 
-std::string CHTLGenerator::generate(const BaseNode* root) {
-    if (!root) {
-        if (!m_global_styles.str().empty()) {
-            std::stringstream final_html;
-            final_html << "<html><head><style>"
-                       << m_global_styles.str()
-                       << "</style></head><body>"
-                       << ""
-                       << "</body></html>";
-            return final_html.str();
+    // Find the first element node to act as the root for expression evaluation
+    for (const auto& node : nodes) {
+        if (dynamic_cast<const ElementNode*>(node.get())) {
+            m_root_element = node.get();
+            break;
         }
-        return "";
     }
-    m_root = root;
-    std::string body_content = generateNode(root);
 
-    if (!m_global_styles.str().empty()) {
+    // If no root element is found, just use the first node
+    if (!m_root_element && !nodes.empty()) {
+        m_root_element = nodes[0].get();
+    }
+
+    // Generate content for all root-level nodes
+    for (const auto& node : nodes) {
+        body_content_ss << generateNode(node.get());
+    }
+
+    std::string body_content = body_content_ss.str();
+
+    // If there's any content (body or styles), wrap it in a full HTML document
+    if (!body_content.empty() || !m_global_styles.str().empty()) {
         std::stringstream final_html;
         final_html << "<html><head><style>"
                    << m_global_styles.str()
@@ -54,7 +52,7 @@ std::string CHTLGenerator::generate(const BaseNode* root) {
         return final_html.str();
     }
 
-    return body_content;
+    return ""; // Return empty string if no content was generated
 }
 
 std::string CHTLGenerator::generateNode(const BaseNode* node) {
@@ -68,15 +66,15 @@ std::string CHTLGenerator::generateNode(const BaseNode* node) {
     if (const auto* scriptNode = dynamic_cast<const ScriptNode*>(node)) {
         return generateScriptNode(scriptNode);
     }
+    if (const auto* conditionalNode = dynamic_cast<const ConditionalNode*>(node)) {
+        return generateConditionalNode(conditionalNode);
+    }
     if (dynamic_cast<const TemplateDefinitionNode*>(node)) {
+        // Template definitions are handled by the parser/manager and don't produce output here.
         return "";
     }
     if (const auto* templateUsageNode = dynamic_cast<const TemplateUsageNode*>(node)) {
         return generateTemplateUsage(templateUsageNode);
-    }
-    if (dynamic_cast<const IfNode*>(node)) {
-        // If nodes are handled by their parent element, they don't generate output on their own.
-        return "";
     }
     return "";
 }
@@ -89,10 +87,8 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         ss << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
-    std::stringstream style_ss;
-
-    // Process inline styles from style block
     if (node->getStyle()) {
+        std::stringstream style_ss;
         // 1. Expand style templates first
         for (const auto& usage : node->getStyle()->getTemplateUsages()) {
              const auto* def = m_template_manager.getTemplate(usage->getName());
@@ -101,7 +97,7 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
             }
             for (const auto& child : def->getChildren()) {
                 if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
-                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root_element, node->getStyle());
                      style_ss << prop->getKey() << ": ";
                     if (val.type == EvaluatedValue::Type::NUMBER) {
                         style_ss << val.number_value << val.unit;
@@ -114,7 +110,7 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
         }
         // 2. Add inline properties (will override template properties)
         for (const auto& prop : node->getStyle()->getProperties()) {
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root_element, node->getStyle());
             style_ss << prop->getKey() << ": ";
             if (val.type == EvaluatedValue::Type::NUMBER) {
                 style_ss << val.number_value << val.unit;
@@ -124,87 +120,33 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
             style_ss << ";";
         }
 
-        // This part also generates global styles, which is fine.
-        generateStyleNode(node->getStyle());
-    }
-
-    // Process conditional styles from if blocks
-    for (const auto& child : node->getChildren()) {
-        if (const auto* ifNode = dynamic_cast<const IfNode*>(child.get())) {
-            bool conditionMet = false;
-            EvaluatedValue condition_val = m_evaluator.evaluate(ifNode->getCondition().get(), m_root, node->getStyle());
-            if (isTruthy(condition_val)) {
-                conditionMet = true;
-                for (const auto& prop : ifNode->getBody()) {
-                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                    style_ss << prop->getKey() << ": ";
-                    if (val.type == EvaluatedValue::Type::NUMBER) {
-                        style_ss << val.number_value << val.unit;
-                    } else {
-                        style_ss << val.string_value;
-                    }
-                    style_ss << ";";
-                }
-            } else {
-                for (const auto& elseIfClause : ifNode->getElseIfClauses()) {
-                    EvaluatedValue else_if_condition_val = m_evaluator.evaluate(elseIfClause->getCondition().get(), m_root, node->getStyle());
-                    if (isTruthy(else_if_condition_val)) {
-                        conditionMet = true;
-                        for (const auto& prop : elseIfClause->getBody()) {
-                             EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                            style_ss << prop->getKey() << ": ";
-                            if (val.type == EvaluatedValue::Type::NUMBER) {
-                                style_ss << val.number_value << val.unit;
-                            } else {
-                                style_ss << val.string_value;
-                            }
-                            style_ss << ";";
-                        }
-                        break; // Only one clause in the chain can be executed
-                    }
-                }
-
-                if (!conditionMet && ifNode->getElseClause()) {
-                    for (const auto& prop : ifNode->getElseClause()->getBody()) {
-                        EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                        style_ss << prop->getKey() << ": ";
-                        if (val.type == EvaluatedValue::Type::NUMBER) {
-                            style_ss << val.number_value << val.unit;
-                        } else {
-                            style_ss << val.string_value;
-                        }
-                        style_ss << ";";
-                    }
-                }
-            }
+        if (!style_ss.str().empty()) {
+            ss << " style=\"" << style_ss.str() << "\"";
         }
-    }
 
-
-    if (!style_ss.str().empty()) {
-        ss << " style=\"" << style_ss.str() << "\"";
+        generateStyleNode(node->getStyle());
     }
 
     ss << ">";
 
-    // Render non-if children
     for (const auto& child : node->getChildren()) {
-        if (!dynamic_cast<const IfNode*>(child.get())) {
-            ss << generateNode(child.get());
-        }
+        ss << generateNode(child.get());
+    }
+
+    if (node->getScript()) {
+        ss << generateScriptNode(node->getScript());
     }
 
     ss << "</" << node->getTagName() << ">";
     return ss.str();
 }
 
-
 void CHTLGenerator::generateStyleNode(const StyleNode* node) {
     for (const auto& block : node->getSelectorBlocks()) {
         m_global_styles << block->getSelector() << " {";
         for (const auto& prop : block->getProperties()) {
             m_global_styles << prop->getKey() << ": ";
-            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node);
+            EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root_element, node);
             if (val.type == EvaluatedValue::Type::NUMBER) {
                 m_global_styles << val.number_value << val.unit;
             } else {
@@ -221,13 +163,30 @@ std::string CHTLGenerator::generateTextNode(const TextNode* node) {
 }
 
 std::string CHTLGenerator::generateScriptNode(const ScriptNode* node) {
+    std::stringstream script_content_ss;
+    for (const auto& child : node->getChildren()) {
+        if (const auto* rawNode = dynamic_cast<const RawScriptNode*>(child.get())) {
+            script_content_ss << rawNode->getScript();
+        } else if (const auto* selectorNode = dynamic_cast<const EnhancedSelectorNode*>(child.get())) {
+            std::string selector_str = selectorNode->getSelector();
+            size_t bracket_pos = selector_str.find_last_of('[');
+            if (bracket_pos != std::string::npos && selector_str.back() == ']') {
+                std::string selector = selector_str.substr(0, bracket_pos);
+                std::string index = selector_str.substr(bracket_pos);
+                script_content_ss << "document.querySelectorAll('" << selector << "')" << index;
+            } else {
+                script_content_ss << "document.querySelector('" << selector_str << "')";
+            }
+        }
+    }
+
     std::stringstream ss;
-    ss << "<script>" << node->getContent() << "</script>";
+    ss << "<script>" << script_content_ss.str() << "</script>";
     return ss.str();
 }
 
 void CHTLGenerator::generateTemplateDefinition(const TemplateDefinitionNode* node) {
-    // This is handled by the parser.
+    // This is handled by the parser/manager.
 }
 
 std::string CHTLGenerator::generateTemplateUsage(const TemplateUsageNode* node) {
@@ -244,6 +203,38 @@ std::string CHTLGenerator::generateTemplateUsage(const TemplateUsageNode* node) 
     } else if (def->getTemplateType() == TemplateType::STYLE) {
         // This is handled in generateElementNode via its style node
     }
+    return ss.str();
+}
+
+std::string CHTLGenerator::generateConditionalNode(const ConditionalNode* node) {
+    std::stringstream ss;
+
+    // Evaluate each `if` and `else if` clause.
+    for (const auto& ifClause : node->ifClauses) {
+        // Here, we need a proper context for evaluation.
+        // For static analysis, we might need a simplified context or assume global context.
+        // Let's assume m_root_element provides enough context for now.
+        EvaluatedValue result = m_evaluator.evaluate(ifClause->condition.get(), m_root_element, nullptr);
+
+        // A simple truthiness check. This might need to be more robust.
+        // For example, is "false" false? Is 0 false?
+        bool is_truthy = (result.type == EvaluatedValue::Type::NUMBER && result.number_value != 0) ||
+                         (result.type == EvaluatedValue::Type::STRING && !result.string_value.empty() && result.string_value != "false");
+
+        if (is_truthy) {
+            // If the condition is true, generate the children and we're done.
+            for (const auto& child : ifClause->children) {
+                ss << generateNode(child.get());
+            }
+            return ss.str();
+        }
+    }
+
+    // If no `if` or `else if` condition was met, generate the `else` clause if it exists.
+    for (const auto& child : node->elseChildren) {
+        ss << generateNode(child.get());
+    }
+
     return ss.str();
 }
 

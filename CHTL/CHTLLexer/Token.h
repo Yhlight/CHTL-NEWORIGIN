@@ -12,6 +12,7 @@ enum class TokenType {
     IDENTIFIER,
     STRING_LITERAL,
     NUMBER,
+    RAW_SCRIPT,
     COMMENT,
 
     // Keywords
@@ -19,8 +20,8 @@ enum class TokenType {
     STYLE_KEYWORD,
     SCRIPT_KEYWORD,
     IF_KEYWORD,
-    ELSE_IF_KEYWORD,
     ELSE_KEYWORD,
+    CONDITION_KEYWORD,
 
     // Punctuation
     L_BRACE,
@@ -28,13 +29,15 @@ enum class TokenType {
     COLON,
     EQUAL,
     SEMICOLON,
+    COMMA,
     DOT,
     HASH,
     AMPERSAND,
     L_BRACKET,
     R_BRACKET,
     AT_SIGN,
-    COMMA,
+    L_DOUBLE_BRACE,
+    R_DOUBLE_BRACE,
 
     // Arithmetic Operators
     PLUS,
