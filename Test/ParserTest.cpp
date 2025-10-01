@@ -362,3 +362,36 @@ TEST_CASE("Parse Origin Block", "[parser]") {
     REQUIRE(originNode->getType() == "Html");
     REQUIRE(originNode->getContent() == " <p>Test</p> ");
 }
+
+TEST_CASE("Parse Style Property with Dimension Arithmetic", "[parser]") {
+    std::string input = "div { style { width: 100px + 50px; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "width");
+
+    const auto* binOpNode = dynamic_cast<const CHTL::BinaryOpNode*>(propNode->getValue());
+    REQUIRE(binOpNode != nullptr);
+    REQUIRE(binOpNode->getOperator().type == CHTL::TokenType::PLUS);
+
+    const auto* leftLit = dynamic_cast<const CHTL::LiteralNode*>(binOpNode->getLeft());
+    REQUIRE(leftLit != nullptr);
+    REQUIRE(leftLit->getValue().type == CHTL::TokenType::DIMENSION);
+    REQUIRE(leftLit->getValue().value == "100px");
+
+    const auto* rightLit = dynamic_cast<const CHTL::LiteralNode*>(binOpNode->getRight());
+    REQUIRE(rightLit != nullptr);
+    REQUIRE(rightLit->getValue().type == CHTL::TokenType::DIMENSION);
+    REQUIRE(rightLit->getValue().value == "50px");
+}
