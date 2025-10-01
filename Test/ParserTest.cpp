@@ -415,3 +415,34 @@ TEST_CASE("Parse Style Block with Automatic Attribute Generation", "[parser]") {
     REQUIRE(elementNode->getAttribute("class") == "my-class");
     REQUIRE(elementNode->getAttribute("id") == "my-id");
 }
+
+TEST_CASE("Parse Style Block with Ampersand Selector", "[parser]") {
+    std::string input = R"(
+        div {
+            style {
+                .my-class {
+                    color: blue;
+                }
+                &:hover {
+                    color: red;
+                }
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getSelectorBlocks().size() == 2);
+
+    const auto* hoverBlock = styleNode->getSelectorBlocks()[1].get();
+    REQUIRE(hoverBlock != nullptr);
+    REQUIRE(hoverBlock->getSelector() == ".my-class:hover");
+}

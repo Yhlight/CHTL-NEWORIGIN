@@ -73,3 +73,26 @@ TEST_CASE("Generator produces global styles from local style blocks", "[generato
     REQUIRE(result.find(expected_body) != std::string::npos);
     REQUIRE(result.find(expected_style) != std::string::npos);
 }
+
+TEST_CASE("Generator correctly expands ampersand selector", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                .my-class {
+                    color: blue;
+                }
+                &:hover {
+                    color: red;
+                }
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    std::string expected_body = R"(<div class="my-class"></div>)";
+    std::string expected_style1 = ".my-class{color:blue;}";
+    std::string expected_style2 = ".my-class:hover{color:red;}";
+
+    REQUIRE(result.find(expected_body) != std::string::npos);
+    REQUIRE(result.find(expected_style1) != std::string::npos);
+    REQUIRE(result.find(expected_style2) != std::string::npos);
+}
