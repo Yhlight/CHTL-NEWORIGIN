@@ -1,0 +1,1 @@
+/usr/bin/c++ "CMakeFiles/chlt-test.dir/CHTL/LexerTest.cpp.o" -o chlt-test  ../CHTL/libchtl_lib.a

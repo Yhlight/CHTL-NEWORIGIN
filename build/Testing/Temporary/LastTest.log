@@ -1,0 +1,21 @@
+Start testing: Oct 01 18:14 UTC
+----------------------------------------------------------
+1/1 Testing: chtl-test
+1/1 Test: chtl-test
+Command: "/app/build/Test/chlt-test"
+Directory: /app/build/Test
+"chtl-test" start time: Oct 01 18:14 UTC
+Output:
+----------------------------------------------------------
+===============================================================================
+All tests passed (2 assertions in 1 test case)
+
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"chtl-test" end time: Oct 01 18:14 UTC
+"chtl-test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 01 18:14 UTC
