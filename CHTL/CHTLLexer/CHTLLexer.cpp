@@ -109,6 +109,8 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         if (input[pos] == '%') { tokens.push_back({TokenType::PERCENT, "%"}); pos++; continue; }
         if (input[pos] == '{') { tokens.push_back({TokenType::L_BRACE, "{"}); pos++; continue; }
         if (input[pos] == '}') { tokens.push_back({TokenType::R_BRACE, "}"}); pos++; continue; }
+        if (input[pos] == '(') { tokens.push_back({TokenType::L_PAREN, "("}); pos++; continue; }
+        if (input[pos] == ')') { tokens.push_back({TokenType::R_PAREN, ")"}); pos++; continue; }
         if (input[pos] == '[') { tokens.push_back({TokenType::L_BRACKET, "["}); pos++; continue; }
         if (input[pos] == ']') { tokens.push_back({TokenType::R_BRACKET, "]"}); pos++; continue; }
         if (input[pos] == '@') { tokens.push_back({TokenType::AT, "@"}); pos++; continue; }

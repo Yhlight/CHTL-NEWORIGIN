@@ -10,6 +10,7 @@
 #include "../CHTLNode/PropertyAccessNode.h"
 #include "../CHTLNode/TemplateNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/VariableUsageNode.h"
 #include <stdexcept>
 
 namespace CHTL {
@@ -292,7 +293,7 @@ std::unique_ptr<TemplateNode> CHTLParser::parseTemplateNode() {
 
     consume(TokenType::L_BRACE, "Expect '{' after template name.");
 
-    if (type.value == "Style") {
+    if (type.value == "Style" || type.value == "Var") {
         while (!check(TokenType::R_BRACE) && !isAtEnd()) {
             if (check(TokenType::AT)) {
                 consume(TokenType::AT, "Expect '@' for template usage.");
@@ -433,13 +434,22 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
 
 
     if (match(TokenType::IDENTIFIER)) {
+        // Lookahead to see if it's a variable usage (e.g., Theme(mainColor))
+        if (check(TokenType::L_PAREN)) {
+            Token groupName = tokens[current - 1];
+            consume(TokenType::L_PAREN, "Expect '(' after variable group name.");
+            Token varName = consume(TokenType::IDENTIFIER, "Expect variable name.");
+            consume(TokenType::R_PAREN, "Expect ')' after variable name.");
+            return std::make_unique<VariableUsageNode>(groupName.value, varName.value);
+        }
+        // Otherwise, it's just a literal identifier
         return std::make_unique<LiteralNode>(tokens[current - 1]);
     }
 
     // Handle grouped expressions e.g. (10 + 5)
-    if (match(TokenType::L_BRACE)) { // Assuming L_PAREN for grouping, but let's use L_BRACE for now if no L_PAREN exists
+    if (match(TokenType::L_PAREN)) {
         auto expr = parseExpression();
-        consume(TokenType::R_BRACE, "Expect ')' after expression.");
+        consume(TokenType::R_PAREN, "Expect ')' after expression.");
         return expr;
     }
 

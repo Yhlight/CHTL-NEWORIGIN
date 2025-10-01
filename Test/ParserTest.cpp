@@ -14,6 +14,7 @@
 #include "CHTLNode/ConditionalNode.h"
 #include "CHTLNode/TemplateNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
+#include "CHTLNode/VariableUsageNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -560,6 +561,39 @@ TEST_CASE("Parse Template with Inheritance", "[parser]") {
     const auto* inherited = childTemplate->getTemplateUsages()[0].get();
     REQUIRE(inherited != nullptr);
     REQUIRE(inherited->getTemplateName() == "Parent");
+}
+
+TEST_CASE("Parse Variable Template Definition and Usage", "[parser]") {
+    std::string input =
+        "[Template] @Var Theme { mainColor: red; }"
+        "div { style { color: Theme(mainColor); } }";
+
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    auto ast = parser.parseProgram();
+
+    REQUIRE(ast.size() == 2);
+
+    // 1. Check the variable template definition
+    const auto* templateDef = dynamic_cast<const CHTL::TemplateNode*>(ast[0].get());
+    REQUIRE(templateDef != nullptr);
+    REQUIRE(templateDef->getTemplateType() == "Var");
+    REQUIRE(templateDef->getTemplateName() == "Theme");
+    REQUIRE(templateDef->getProperties().size() == 1);
+
+    // 2. Check the usage
+    const auto* elementNode = dynamic_cast<const CHTL::ElementNode*>(ast[1].get());
+    REQUIRE(elementNode != nullptr);
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode != nullptr);
+
+    const auto* varUsage = dynamic_cast<const CHTL::VariableUsageNode*>(propNode->getValue());
+    REQUIRE(varUsage != nullptr);
+    REQUIRE(varUsage->getGroupName() == "Theme");
+    REQUIRE(varUsage->getVariableName() == "mainColor");
 }
 
 TEST_CASE("Parse Element Template Definition and Usage", "[parser]") {
