@@ -133,6 +133,10 @@ Token CHTLParser::consume(TokenType type, const std::string& message) {
     throw std::runtime_error(message);
 }
 
+Token CHTLParser::previous() const {
+    return tokens[current - 1];
+}
+
 
 
 // --- Expression Parsing (Precedence Climbing) ---

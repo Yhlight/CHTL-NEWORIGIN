@@ -41,6 +41,7 @@ public:
     bool check(TokenType type) const;
     bool match(TokenType type);
     Token consume(TokenType type, const std::string& message);
+    Token previous() const;
 
     // Keep expression parsing public for strategies that need it.
     std::unique_ptr<ExpressionNode> parseExpression();
