@@ -31,8 +31,10 @@ void ConditionalExpressionNode::print(int indent) const {
     for (int i = 0; i < indent; ++i) {
         std::cout << "  ";
     }
-    std::cout << "False Branch:" << std::endl;
-    m_false_expression->print(indent + 1);
+    if (m_false_expression) {
+        std::cout << "False Branch:" << std::endl;
+        m_false_expression->print(indent + 1);
+    }
 }
 
 const ExpressionNode* ConditionalExpressionNode::getCondition() const {

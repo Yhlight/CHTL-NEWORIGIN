@@ -9,7 +9,8 @@ enum class ExpressionType {
     LITERAL,
     BINARY_OP,
     CONDITIONAL,
-    REFERENCE
+    REFERENCE,
+    VALUE_LIST
 };
 
 class ExpressionNode : public BaseNode {

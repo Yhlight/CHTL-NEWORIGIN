@@ -77,3 +77,45 @@ TEST_CASE("Generator evaluates conditional expressions correctly", "[generator]"
     std::string expected_style_false = R"(style="width: 40px;background-color: blue;")";
     REQUIRE(result_false.find(expected_style_false) != std::string::npos);
 }
+
+TEST_CASE("Generator evaluates advanced conditional expressions correctly", "[generator]") {
+    // Chained conditional
+    std::string input_chained = R"(
+        div {
+            style {
+                width: 100px;
+                height: 200px;
+                color: width > 200px ? "red", height > 150px ? "green" : "yellow";
+            }
+        }
+    )";
+    std::string result_chained = generate_from_string(input_chained);
+    std::string expected_style_chained = R"(style="width: 100px;height: 200px;color: green;")";
+    REQUIRE(result_chained.find(expected_style_chained) != std::string::npos);
+
+    // Optional else (true case)
+    std::string input_optional_true = R"(
+        div {
+            style {
+                width: 100px;
+                color: width > 50px ? "red";
+            }
+        }
+    )";
+    std::string result_optional_true = generate_from_string(input_optional_true);
+    std::string expected_style_optional_true = R"(style="width: 100px;color: red;")";
+    REQUIRE(result_optional_true.find(expected_style_optional_true) != std::string::npos);
+
+    // Optional else (false case)
+    std::string input_optional_false = R"(
+        div {
+            style {
+                width: 40px;
+                color: width > 50px ? "red";
+            }
+        }
+    )";
+    std::string result_optional_false = generate_from_string(input_optional_false);
+    std::string expected_style_optional_false = R"(style="width: 40px;color: ;")";
+    REQUIRE(result_optional_false.find(expected_style_optional_false) != std::string::npos);
+}

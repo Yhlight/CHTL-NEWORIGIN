@@ -10,6 +10,7 @@
 #include "../CHTLNode/ReferenceNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/ValueListNode.h"
 #include "../CHTLManager/TemplateManager.h"
 #include <stdexcept>
 #include <vector>
@@ -284,15 +285,31 @@ std::unique_ptr<TemplateUsageNode> CHTLParser::parseTemplateUsage() {
 // --- Expression Parsing (Precedence Climbing) ---
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
-    return parseTernary();
+    return parseValueList();
+}
+
+std::unique_ptr<ExpressionNode> CHTLParser::parseValueList() {
+    std::vector<std::unique_ptr<ExpressionNode>> values;
+    values.push_back(parseTernary());
+
+    while (match(TokenType::COMMA)) {
+        values.push_back(parseTernary());
+    }
+
+    if (values.size() == 1) {
+        return std::move(values[0]);
+    }
+    return std::make_unique<ValueListNode>(std::move(values));
 }
 
 std::unique_ptr<ExpressionNode> CHTLParser::parseTernary() {
     auto expr = parseLogicalOr();
     if (match(TokenType::QUESTION_MARK)) {
-        auto true_expr = parseExpression();
-        consume(TokenType::COLON, "Expect ':' after true expression in ternary operator.");
-        auto false_expr = parseExpression();
+        auto true_expr = parseLogicalOr();
+        std::unique_ptr<ExpressionNode> false_expr = nullptr;
+        if (match(TokenType::COLON)) {
+            false_expr = parseTernary();
+        }
         return std::make_unique<ConditionalExpressionNode>(std::move(expr), std::move(true_expr), std::move(false_expr));
     }
     return expr;

@@ -5,6 +5,7 @@
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/BinaryOpNode.h"
+#include "CHTLNode/ValueListNode.h"
 #include "CHTLUtil/DocumentTraverser.h"
 #include <stdexcept>
 #include <cmath>
@@ -102,9 +103,22 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
             }
             if (condition.number_value != 0.0) {
                 return evaluate(condNode->getTrueExpression(), root, style_context);
-            } else {
+            } else if (condNode->getFalseExpression()) {
                 return evaluate(condNode->getFalseExpression(), root, style_context);
+            } else {
+                return {EvaluatedValue::Type::STRING, 0.0, "", ""};
             }
+        }
+        case ExpressionType::VALUE_LIST: {
+            const auto* listNode = static_cast<const ValueListNode*>(expression);
+            for (const auto& expr : listNode->values) {
+                EvaluatedValue result = evaluate(expr.get(), root, style_context);
+                if (result.type == EvaluatedValue::Type::STRING && result.string_value.empty()) {
+                    continue;
+                }
+                return result;
+            }
+            return {EvaluatedValue::Type::STRING, 0.0, "", ""};
         }
         case ExpressionType::REFERENCE: {
             const auto* refNode = static_cast<const ReferenceNode*>(expression);

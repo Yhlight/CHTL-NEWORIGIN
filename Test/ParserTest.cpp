@@ -11,6 +11,7 @@
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
 #include "CHTLNode/ConditionalExpressionNode.h"
+#include "CHTLNode/ValueListNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -342,4 +343,63 @@ TEST_CASE("Parse Style Property with Conditional Expression", "[parser]") {
     const auto* falseExpr = dynamic_cast<const CHTL::LiteralNode*>(condNode->getFalseExpression());
     REQUIRE(falseExpr != nullptr);
     REQUIRE(falseExpr->getValue().value == "blue");
+}
+
+TEST_CASE("Parse Chained Conditional Expressions", "[parser]") {
+    std::string input = "div { style { prop: a > 1 ? 'red', b > 2 ? 'blue'; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "prop");
+
+    const CHTL::ExpressionNode* exprNode = propNode->getValue();
+    REQUIRE(exprNode != nullptr);
+    REQUIRE(exprNode->getType() == CHTL::ExpressionType::VALUE_LIST);
+
+    const auto* valueListNode = dynamic_cast<const CHTL::ValueListNode*>(exprNode);
+    REQUIRE(valueListNode != nullptr);
+    REQUIRE(valueListNode->values.size() == 2);
+
+    const auto* cond1 = dynamic_cast<const CHTL::ConditionalExpressionNode*>(valueListNode->values[0].get());
+    REQUIRE(cond1 != nullptr);
+    const auto* cond2 = dynamic_cast<const CHTL::ConditionalExpressionNode*>(valueListNode->values[1].get());
+    REQUIRE(cond2 != nullptr);
+}
+
+TEST_CASE("Parse Conditional Expression with Optional Else", "[parser]") {
+    std::string input = "div { style { prop: a > 1 ? 'red'; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "prop");
+
+    const CHTL::ExpressionNode* exprNode = propNode->getValue();
+    REQUIRE(exprNode != nullptr);
+    REQUIRE(exprNode->getType() == CHTL::ExpressionType::CONDITIONAL);
+
+    const auto* condNode = dynamic_cast<const CHTL::ConditionalExpressionNode*>(exprNode);
+    REQUIRE(condNode != nullptr);
+    REQUIRE(condNode->getFalseExpression() == nullptr);
 }
