@@ -7,6 +7,7 @@
 #include "../CHTLNode/StylePropertyNode.h"
 #include "../CHTLNode/LiteralNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
+#include "../CHTLNode/PropertyAccessNode.h"
 #include <stdexcept>
 
 namespace CHTL {
@@ -284,6 +285,34 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
     if (match(TokenType::NUMBER) || match(TokenType::DIMENSION)) {
         return std::make_unique<LiteralNode>(tokens[current - 1]);
     }
+
+    // Check for property access: selector.property
+    bool isPropAccess = false;
+    if (check(TokenType::HASH) || check(TokenType::DOT)) {
+        if (current + 2 < tokens.size() && tokens[current + 2].type == TokenType::DOT) {
+            isPropAccess = true;
+        }
+    } else if (check(TokenType::IDENTIFIER)) {
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::DOT) {
+            isPropAccess = true;
+        }
+    }
+
+    if (isPropAccess) {
+        std::string selector_str;
+        if (match(TokenType::HASH) || match(TokenType::DOT)) {
+            Token selector_start = tokens[current - 1];
+            Token selector_name = consume(TokenType::IDENTIFIER, "Expect selector name after # or .");
+            selector_str = selector_start.value + selector_name.value;
+        } else { // IDENTIFIER
+            selector_str = advance().value;
+        }
+
+        consume(TokenType::DOT, "Expect '.' for property access.");
+        Token prop_name = consume(TokenType::IDENTIFIER, "Expect property name after '.'");
+        return std::make_unique<PropertyAccessNode>(selector_str, prop_name.value);
+    }
+
 
     if (match(TokenType::IDENTIFIER)) {
         return std::make_unique<LiteralNode>(tokens[current - 1]);

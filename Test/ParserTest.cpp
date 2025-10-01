@@ -10,6 +10,7 @@
 #include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/LiteralNode.h"
+#include "CHTLNode/PropertyAccessNode.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
     std::vector<CHTL::Token> tokens;
@@ -394,4 +395,30 @@ TEST_CASE("Parse Style Property with Dimension Arithmetic", "[parser]") {
     REQUIRE(rightLit != nullptr);
     REQUIRE(rightLit->getValue().type == CHTL::TokenType::DIMENSION);
     REQUIRE(rightLit->getValue().value == "50px");
+}
+
+TEST_CASE("Parse Style Property with Reference Property", "[parser]") {
+    std::string input = "div { style { width: 100px + #box.width; } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+
+    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode != nullptr);
+
+    const auto* binOpNode = dynamic_cast<const CHTL::BinaryOpNode*>(propNode->getValue());
+    REQUIRE(binOpNode != nullptr);
+
+    const auto* propAccessNode = dynamic_cast<const CHTL::PropertyAccessNode*>(binOpNode->getRight());
+    REQUIRE(propAccessNode != nullptr);
+    REQUIRE(propAccessNode->getSelector() == "#box");
+    REQUIRE(propAccessNode->getPropertyName() == "width");
 }
