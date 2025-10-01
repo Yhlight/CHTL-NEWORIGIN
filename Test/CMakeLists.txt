@@ -1,11 +1,17 @@
-# Add the executable for the tests
-add_executable(chth_tests main.cpp LexerTest.cpp ParserTest.cpp GeneratorTest.cpp CssGeneratorTest.cpp JsGeneratorTest.cpp TestUtil.cpp)
+# Enable testing
+enable_testing()
 
-# Make sure the test executable can find the catch.hpp header in the root directory
-target_include_directories(chth_tests PUBLIC ${CMAKE_SOURCE_DIR})
+# Find all test source files
+file(GLOB_RECURSE TEST_SOURCES "*.cpp")
 
-# Link the test executable against the CHTL library to access its code
-target_link_libraries(chth_tests PRIVATE chtl_lib)
+# Add the test executable
+add_executable(run_tests ${TEST_SOURCES})
 
-# Add a test to be run by CTest
-add_test(NAME RunTests COMMAND chth_tests)
+# Link the test executable against the CHTL library and Catch2
+target_link_libraries(run_tests PRIVATE chtl_lib)
+
+# Add include directories for the test executable
+target_include_directories(run_tests PRIVATE ${CMAKE_SOURCE_DIR})
+
+# Add the test to CTest
+add_test(NAME run_tests COMMAND run_tests)

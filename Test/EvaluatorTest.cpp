@@ -14,8 +14,11 @@ CHTL::EvaluatedValue evaluate_with_context(const std::string& style_block_str, c
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(input);
     CHTL::CHTLParser parser(tokens);
-    auto root = parser.parse();
-    auto element = static_cast<CHTL::ElementNode*>(root.get());
+    parser.parse();
+    auto ast = parser.getAST();
+    REQUIRE(ast.size() == 1);
+    auto* root_node = ast[0].get();
+    auto element = static_cast<CHTL::ElementNode*>(root_node);
     const auto* style = element->getStyle();
 
     const CHTL::ExpressionNode* expr_to_eval = nullptr;
@@ -28,7 +31,7 @@ CHTL::EvaluatedValue evaluate_with_context(const std::string& style_block_str, c
     REQUIRE(expr_to_eval != nullptr);
 
     CHTL::ExpressionEvaluator evaluator;
-    return evaluator.evaluate(expr_to_eval, root.get(), style);
+    return evaluator.evaluate(expr_to_eval, root_node, style);
 }
 
 // Helper to evaluate a property reference expression
@@ -36,9 +39,12 @@ CHTL::EvaluatedValue evaluate_reference_expression(const std::string& document_s
     CHTL::CHTLLexer lexer;
     std::vector<CHTL::Token> tokens = lexer.tokenize(document_str);
     CHTL::CHTLParser parser(tokens);
-    std::unique_ptr<CHTL::BaseNode> root = parser.parse();
+    parser.parse();
+    auto ast = parser.getAST();
+    REQUIRE(ast.size() == 1);
+    auto* root_node = ast[0].get();
 
-    const auto* target_element = CHTL::DocumentTraverser::find(root.get(), target_selector);
+    const auto* target_element = CHTL::DocumentTraverser::find(root_node, target_selector);
     REQUIRE(target_element != nullptr);
 
     const auto* style = target_element->getStyle();
@@ -54,7 +60,7 @@ CHTL::EvaluatedValue evaluate_reference_expression(const std::string& document_s
     REQUIRE(expr_to_eval != nullptr);
 
     CHTL::ExpressionEvaluator evaluator;
-    return evaluator.evaluate(expr_to_eval, root.get(), style);
+    return evaluator.evaluate(expr_to_eval, root_node, style);
 }
 
 

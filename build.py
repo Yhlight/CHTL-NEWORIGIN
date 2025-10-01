@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import argparse
 
 def run_command(command):
     """Runs a command and prints its output in real-time."""
@@ -12,6 +13,10 @@ def run_command(command):
 
 def main():
     """Main function to run the build process."""
+    parser = argparse.ArgumentParser(description="Builds the CHTL project.")
+    parser.add_argument("--run-tests", action="store_true", help="Run tests after building.")
+    args = parser.parse_args()
+
     build_dir = "build"
 
     # Create build directory if it doesn't exist
@@ -41,14 +46,14 @@ def main():
 
         print("\nBuild successful!")
 
-        # Run tests
-        print("\n--- Running Tests ---")
-        ctest_command = ["ctest", "--verbose"]
-        if run_command(ctest_command) != 0:
-            print("Tests failed.")
-            sys.exit(1)
-
-        print("\nAll tests passed!")
+        # Run tests if the flag is provided
+        if args.run_tests:
+            print("\n--- Running Tests ---")
+            ctest_command = ["ctest", "--verbose"]
+            if run_command(ctest_command) != 0:
+                print("Tests failed.")
+                sys.exit(1)
+            print("\nAll tests passed!")
 
     finally:
         # Return to the original directory
