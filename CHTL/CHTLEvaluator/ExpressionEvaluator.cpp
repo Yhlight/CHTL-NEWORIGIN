@@ -20,7 +20,7 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
         case ExpressionType::LITERAL: {
             const auto* literal = static_cast<const LiteralNode*>(expression);
             if (literal->getValue().type == TokenType::NUMBER) {
-                return {EvaluatedValue::Type::NUMBER, std::stod(literal->getValue().value), "", literal->getUnit(), false};
+                return {EvaluatedValue::Type::NUMBER, std::stod(literal->getValue().value), "", literal->getUnit()};
             } else if (literal->getValue().type == TokenType::IDENTIFIER && style_context) {
                 for (const auto& prop : style_context->getProperties()) {
                     if (prop->getKey() == literal->getValue().value) {
@@ -30,10 +30,10 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
                         return evaluate(prop->getValue(), root, style_context);
                     }
                 }
-                 return {EvaluatedValue::Type::STRING, 0.0, literal->getValue().value, "", false};
+                 return {EvaluatedValue::Type::STRING, 0.0, literal->getValue().value, ""};
             }
             else {
-                return {EvaluatedValue::Type::STRING, 0.0, literal->getValue().value, "", false};
+                return {EvaluatedValue::Type::STRING, 0.0, literal->getValue().value, ""};
             }
         }
         case ExpressionType::BINARY_OP: {
@@ -48,64 +48,48 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
 
             switch (binaryOp->getOperator().type) {
                 case TokenType::PLUS:
-                    if (left.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value + right.number_value, "", right.unit, false};
-                    if (right.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value + right.number_value, "", left.unit, false};
-                    if (left.unit == right.unit) return {EvaluatedValue::Type::NUMBER, left.number_value + right.number_value, "", left.unit, false};
+                    if (left.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value + right.number_value, "", right.unit};
+                    if (right.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value + right.number_value, "", left.unit};
+                    if (left.unit == right.unit) return {EvaluatedValue::Type::NUMBER, left.number_value + right.number_value, "", left.unit};
                     throw std::runtime_error("Incompatible units for addition: '" + left.unit + "' and '" + right.unit + "'");
                 case TokenType::MINUS:
                     if (left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot subtract a value with unit from a unit-less value.");
-                    if (right.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value - right.number_value, "", left.unit, false};
-                    if (left.unit == right.unit) return {EvaluatedValue::Type::NUMBER, left.number_value - right.number_value, "", left.unit, false};
+                    if (right.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value - right.number_value, "", left.unit};
+                    if (left.unit == right.unit) return {EvaluatedValue::Type::NUMBER, left.number_value - right.number_value, "", left.unit};
                     throw std::runtime_error("Incompatible units for subtraction: '" + left.unit + "' and '" + right.unit + "'");
                 case TokenType::STAR:
                     if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot multiply two values with units.");
-                    return {EvaluatedValue::Type::NUMBER, left.number_value * right.number_value, "", !left.unit.empty() ? left.unit : right.unit, false};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value * right.number_value, "", !left.unit.empty() ? left.unit : right.unit};
                 case TokenType::SLASH:
-                    if (left.unit == right.unit && !left.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value / right.number_value, "", "", false};
+                    if (left.unit == right.unit && !left.unit.empty()) return {EvaluatedValue::Type::NUMBER, left.number_value / right.number_value, "", ""};
                     if (!right.unit.empty()) throw std::runtime_error("Cannot divide by a value with a unit.");
-                    return {EvaluatedValue::Type::NUMBER, left.number_value / right.number_value, "", left.unit, false};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value / right.number_value, "", left.unit};
                 case TokenType::PERCENT:
                     if (!left.unit.empty() || !right.unit.empty()) throw std::runtime_error("Modulo operator does not support units.");
-                    return {EvaluatedValue::Type::NUMBER, std::fmod(left.number_value, right.number_value), "", "", false};
+                    return {EvaluatedValue::Type::NUMBER, std::fmod(left.number_value, right.number_value), "", ""};
                 case TokenType::STAR_STAR:
                     if (!left.unit.empty() || !right.unit.empty()) throw std::runtime_error("Power operator does not support units.");
-                    return {EvaluatedValue::Type::NUMBER, std::pow(left.number_value, right.number_value), "", "", false};
+                    return {EvaluatedValue::Type::NUMBER, std::pow(left.number_value, right.number_value), "", ""};
                 case TokenType::GREATER:
-                    return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", left.number_value > right.number_value};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value > right.number_value ? 1.0 : 0.0, "", ""};
                 case TokenType::LESS:
-                    return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", left.number_value < right.number_value};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value < right.number_value ? 1.0 : 0.0, "", ""};
                 case TokenType::GREATER_EQUAL:
-                    return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", left.number_value >= right.number_value};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value >= right.number_value ? 1.0 : 0.0, "", ""};
                 case TokenType::LESS_EQUAL:
-                    return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", left.number_value <= right.number_value};
-                case TokenType::EQUAL_EQUAL: {
-                     bool result = false;
-                     if (left.type == right.type) {
-                         if (left.type == EvaluatedValue::Type::STRING) result = (left.string_value == right.string_value);
-                         else if (left.type == EvaluatedValue::Type::NUMBER) result = (left.number_value == right.number_value && left.unit == right.unit);
-                         else if (left.type == EvaluatedValue::Type::BOOLEAN) result = (left.bool_value == right.bool_value);
-                     }
-                     return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", result};
-                }
-                case TokenType::BANG_EQUAL: {
-                     bool result = true;
-                     if (left.type == right.type) {
-                         if (left.type == EvaluatedValue::Type::STRING) result = (left.string_value != right.string_value);
-                         else if (left.type == EvaluatedValue::Type::NUMBER) result = (left.number_value != right.number_value || left.unit != right.unit);
-                         else if (left.type == EvaluatedValue::Type::BOOLEAN) result = (left.bool_value != right.bool_value);
-                     }
-                     return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", result};
-                }
-                case TokenType::AMPERSAND_AMPERSAND: {
-                    bool left_bool = left.type == EvaluatedValue::Type::BOOLEAN ? left.bool_value : (left.number_value != 0.0);
-                    bool right_bool = right.type == EvaluatedValue::Type::BOOLEAN ? right.bool_value : (right.number_value != 0.0);
-                    return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", left_bool && right_bool};
-                }
-                case TokenType::PIPE_PIPE: {
-                    bool left_bool = left.type == EvaluatedValue::Type::BOOLEAN ? left.bool_value : (left.number_value != 0.0);
-                    bool right_bool = right.type == EvaluatedValue::Type::BOOLEAN ? right.bool_value : (right.number_value != 0.0);
-                    return {EvaluatedValue::Type::BOOLEAN, 0.0, "", "", left_bool || right_bool};
-                }
+                    return {EvaluatedValue::Type::NUMBER, left.number_value <= right.number_value ? 1.0 : 0.0, "", ""};
+                case TokenType::EQUAL_EQUAL:
+                     if (left.type != right.type) return {EvaluatedValue::Type::NUMBER, 0.0, "", ""};
+                     if(left.type == EvaluatedValue::Type::STRING) return {EvaluatedValue::Type::NUMBER, left.string_value == right.string_value ? 1.0 : 0.0, "", ""};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value == right.number_value && left.unit == right.unit ? 1.0 : 0.0, "", ""};
+                case TokenType::BANG_EQUAL:
+                     if (left.type != right.type) return {EvaluatedValue::Type::NUMBER, 1.0, "", ""};
+                     if(left.type == EvaluatedValue::Type::STRING) return {EvaluatedValue::Type::NUMBER, left.string_value != right.string_value ? 1.0 : 0.0, "", ""};
+                    return {EvaluatedValue::Type::NUMBER, left.number_value != right.number_value || left.unit != right.unit ? 1.0 : 0.0, "", ""};
+                case TokenType::AMPERSAND_AMPERSAND:
+                    return {EvaluatedValue::Type::NUMBER, (left.number_value != 0.0 && right.number_value != 0.0) ? 1.0 : 0.0, "", ""};
+                case TokenType::PIPE_PIPE:
+                    return {EvaluatedValue::Type::NUMBER, (left.number_value != 0.0 || right.number_value != 0.0) ? 1.0 : 0.0, "", ""};
                 default:
                     throw std::runtime_error("Unsupported binary operator.");
             }
@@ -113,16 +97,10 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
         case ExpressionType::CONDITIONAL: {
             const auto* condNode = static_cast<const ConditionalExpressionNode*>(expression);
             EvaluatedValue condition = evaluate(condNode->getCondition(), root, style_context);
-            bool is_true = false;
-            if (condition.type == EvaluatedValue::Type::BOOLEAN) {
-                is_true = condition.bool_value;
-            } else if (condition.type == EvaluatedValue::Type::NUMBER) {
-                is_true = (condition.number_value != 0.0);
-            } else {
-                 throw std::runtime_error("Condition must evaluate to a boolean or a number.");
+            if (condition.type != EvaluatedValue::Type::NUMBER) {
+                throw std::runtime_error("Condition must evaluate to a number.");
             }
-
-            if (is_true) {
+            if (condition.number_value != 0.0) {
                 return evaluate(condNode->getTrueExpression(), root, style_context);
             } else {
                 return evaluate(condNode->getFalseExpression(), root, style_context);

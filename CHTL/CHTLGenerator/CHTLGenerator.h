@@ -16,6 +16,7 @@ class TextNode;
 class ScriptNode;
 class TemplateDefinitionNode;
 class TemplateUsageNode;
+class IfNode;
 
 class CHTLGenerator {
 public:

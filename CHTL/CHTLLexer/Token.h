@@ -19,8 +19,8 @@ enum class TokenType {
     STYLE_KEYWORD,
     SCRIPT_KEYWORD,
     IF_KEYWORD,
+    ELSE_IF_KEYWORD,
     ELSE_KEYWORD,
-    CONDITION_KEYWORD,
 
     // Punctuation
     L_BRACE,
@@ -34,6 +34,7 @@ enum class TokenType {
     L_BRACKET,
     R_BRACKET,
     AT_SIGN,
+    COMMA,
 
     // Arithmetic Operators
     PLUS,

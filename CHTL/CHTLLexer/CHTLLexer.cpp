@@ -47,6 +47,7 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
         }
 
         // --- Operators and Punctuation ---
+        if (input[pos] == ',') { tokens.push_back({TokenType::COMMA, ","}); pos++; continue; }
         if (input[pos] == '+') { tokens.push_back({TokenType::PLUS, "+"}); pos++; continue; }
         if (input[pos] == '-') { tokens.push_back({TokenType::MINUS, "-"}); pos++; continue; }
         if (input[pos] == '*') {
@@ -152,8 +153,20 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
             if (value == "text") { tokens.push_back({TokenType::TEXT_KEYWORD, value}); }
             else if (value == "style") { tokens.push_back({TokenType::STYLE_KEYWORD, value}); }
             else if (value == "if") { tokens.push_back({TokenType::IF_KEYWORD, value}); }
-            else if (value == "else") { tokens.push_back({TokenType::ELSE_KEYWORD, value}); }
-            else if (value == "condition") { tokens.push_back({TokenType::CONDITION_KEYWORD, value}); }
+            else if (value == "else") {
+                std::string::size_type next_pos = pos;
+                while (next_pos < input.length() && std::isspace(input[next_pos])) {
+                    next_pos++;
+                }
+                if (next_pos + 1 < input.length() && input.substr(next_pos, 2) == "if") {
+                    if (next_pos + 2 >= input.length() || !std::isalnum(input[next_pos + 2])) {
+                        tokens.push_back({TokenType::ELSE_IF_KEYWORD, "else if"});
+                        pos = next_pos + 2;
+                        continue;
+                    }
+                }
+                tokens.push_back({TokenType::ELSE_KEYWORD, value});
+            }
             else if (value == "script") {
                 tokens.push_back({TokenType::SCRIPT_KEYWORD, value});
                 while (pos < input.length() && std::isspace(input[pos])) {

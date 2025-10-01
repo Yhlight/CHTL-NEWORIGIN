@@ -13,7 +13,9 @@
 #include "../CHTLNode/ConditionalExpressionNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
-#include "../CHTLNode/ConditionalNode.h"
+#include "../CHTLNode/IfNode.h"
+#include "../CHTLNode/ElseIfNode.h"
+#include "../CHTLNode/ElseNode.h"
 
 namespace CHTL {
 
@@ -43,7 +45,7 @@ private:
     void parseAttribute(ElementNode* element);
     std::unique_ptr<TemplateDefinitionNode> parseTemplateDefinition();
     std::unique_ptr<TemplateUsageNode> parseTemplateUsage();
-    std::unique_ptr<ConditionalNode> parseConditionalNode();
+    std::unique_ptr<IfNode> parseIfStatement();
 
     // Expression parsing (Pratt/Precedence Climbing)
     std::unique_ptr<ExpressionNode> parseExpression();

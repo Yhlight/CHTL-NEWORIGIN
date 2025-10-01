@@ -7,7 +7,9 @@
 #include "CHTLNode/SelectorBlockNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
-#include "CHTLNode/ConditionalNode.h"
+#include "CHTLNode/IfNode.h"
+#include "CHTLNode/ElseIfNode.h"
+#include "CHTLNode/ElseNode.h"
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
@@ -15,6 +17,16 @@
 namespace CHTL {
 
 CHTLGenerator::CHTLGenerator() : m_template_manager(TemplateManager::getInstance()) {}
+
+bool isTruthy(const EvaluatedValue& val) {
+    if (val.type == EvaluatedValue::Type::NUMBER) {
+        return val.number_value != 0.0;
+    }
+    if (val.type == EvaluatedValue::Type::STRING) {
+        return !val.string_value.empty();
+    }
+    return false;
+}
 
 std::string CHTLGenerator::generate(const BaseNode* root) {
     if (!root) {
@@ -62,6 +74,10 @@ std::string CHTLGenerator::generateNode(const BaseNode* node) {
     if (const auto* templateUsageNode = dynamic_cast<const TemplateUsageNode*>(node)) {
         return generateTemplateUsage(templateUsageNode);
     }
+    if (dynamic_cast<const IfNode*>(node)) {
+        // If nodes are handled by their parent element, they don't generate output on their own.
+        return "";
+    }
     return "";
 }
 
@@ -69,96 +85,119 @@ std::string CHTLGenerator::generateElementNode(const ElementNode* node) {
     std::stringstream ss;
     ss << "<" << node->getTagName();
 
-    auto attributes = node->getAttributes();
-    std::map<std::string, std::string> computed_styles;
+    for (const auto& attr : node->getAttributes()) {
+        ss << " " << attr.first << "=\"" << attr.second << "\"";
+    }
 
-    // 1. Process style templates
+    std::stringstream style_ss;
+
+    // Process inline styles from style block
     if (node->getStyle()) {
+        // 1. Expand style templates first
         for (const auto& usage : node->getStyle()->getTemplateUsages()) {
-            const auto* def = m_template_manager.getTemplate(usage->getName());
+             const auto* def = m_template_manager.getTemplate(usage->getName());
             if (!def || def->getTemplateType() != TemplateType::STYLE) {
                 throw std::runtime_error("Style template not found: " + usage->getName());
             }
             for (const auto& child : def->getChildren()) {
                 if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
                     EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                    std::stringstream prop_val_ss;
-                    if (val.type == EvaluatedValue::Type::NUMBER) prop_val_ss << val.number_value << val.unit;
-                    else prop_val_ss << val.string_value;
-                    computed_styles[prop->getKey()] = prop_val_ss.str();
+                     style_ss << prop->getKey() << ": ";
+                    if (val.type == EvaluatedValue::Type::NUMBER) {
+                        style_ss << val.number_value << val.unit;
+                    } else {
+                        style_ss << val.string_value;
+                    }
+                    style_ss << ";";
                 }
             }
         }
-    }
-
-    // 2. Process conditionals
-    for (const auto& conditional_chain_start : node->getConditionals()) {
-        const ConditionalNode* current_if = conditional_chain_start.get();
-        bool condition_in_chain_met = false;
-        while (current_if != nullptr && !condition_in_chain_met) {
-            bool is_true = false;
-            if (current_if->condition) { // if or else-if
-                EvaluatedValue condition_result = m_evaluator.evaluate(current_if->condition.get(), m_root, node->getStyle());
-                if (condition_result.type == EvaluatedValue::Type::BOOLEAN && condition_result.bool_value) {
-                    is_true = true;
-                }
-            } else { // else
-                is_true = true;
-            }
-
-            if (is_true) {
-                condition_in_chain_met = true;
-                for (const auto& prop : current_if->body) {
-                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-                    std::stringstream prop_val_ss;
-                    if (val.type == EvaluatedValue::Type::NUMBER) prop_val_ss << val.number_value << val.unit;
-                    else prop_val_ss << val.string_value;
-                    computed_styles[prop->getKey()] = prop_val_ss.str();
-                }
-            }
-            current_if = current_if->else_branch.get();
-        }
-    }
-
-    // 3. Process inline properties from style block
-    if (node->getStyle()) {
+        // 2. Add inline properties (will override template properties)
         for (const auto& prop : node->getStyle()->getProperties()) {
             EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
-            std::stringstream prop_val_ss;
-            if (val.type == EvaluatedValue::Type::NUMBER) prop_val_ss << val.number_value << val.unit;
-            else prop_val_ss << val.string_value;
-            computed_styles[prop->getKey()] = prop_val_ss.str();
+            style_ss << prop->getKey() << ": ";
+            if (val.type == EvaluatedValue::Type::NUMBER) {
+                style_ss << val.number_value << val.unit;
+            } else {
+                style_ss << val.string_value;
+            }
+            style_ss << ";";
         }
-    }
 
-    // Add computed styles to attributes map, overwriting if 'style' already exists.
-    if (!computed_styles.empty()) {
-        std::stringstream style_ss;
-        for (const auto& style_pair : computed_styles) {
-            style_ss << style_pair.first << ": " << style_pair.second << "; ";
-        }
-        attributes["style"] = style_ss.str();
-    }
-
-    // Write all attributes
-    for (const auto& attr : attributes) {
-        ss << " " << attr.first << "=\"" << attr.second << "\"";
-    }
-
-    // Generate global styles from selector blocks
-    if (node->getStyle()) {
+        // This part also generates global styles, which is fine.
         generateStyleNode(node->getStyle());
+    }
+
+    // Process conditional styles from if blocks
+    for (const auto& child : node->getChildren()) {
+        if (const auto* ifNode = dynamic_cast<const IfNode*>(child.get())) {
+            bool conditionMet = false;
+            EvaluatedValue condition_val = m_evaluator.evaluate(ifNode->getCondition().get(), m_root, node->getStyle());
+            if (isTruthy(condition_val)) {
+                conditionMet = true;
+                for (const auto& prop : ifNode->getBody()) {
+                    EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                    style_ss << prop->getKey() << ": ";
+                    if (val.type == EvaluatedValue::Type::NUMBER) {
+                        style_ss << val.number_value << val.unit;
+                    } else {
+                        style_ss << val.string_value;
+                    }
+                    style_ss << ";";
+                }
+            } else {
+                for (const auto& elseIfClause : ifNode->getElseIfClauses()) {
+                    EvaluatedValue else_if_condition_val = m_evaluator.evaluate(elseIfClause->getCondition().get(), m_root, node->getStyle());
+                    if (isTruthy(else_if_condition_val)) {
+                        conditionMet = true;
+                        for (const auto& prop : elseIfClause->getBody()) {
+                             EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                            style_ss << prop->getKey() << ": ";
+                            if (val.type == EvaluatedValue::Type::NUMBER) {
+                                style_ss << val.number_value << val.unit;
+                            } else {
+                                style_ss << val.string_value;
+                            }
+                            style_ss << ";";
+                        }
+                        break; // Only one clause in the chain can be executed
+                    }
+                }
+
+                if (!conditionMet && ifNode->getElseClause()) {
+                    for (const auto& prop : ifNode->getElseClause()->getBody()) {
+                        EvaluatedValue val = m_evaluator.evaluate(prop->getValue(), m_root, node->getStyle());
+                        style_ss << prop->getKey() << ": ";
+                        if (val.type == EvaluatedValue::Type::NUMBER) {
+                            style_ss << val.number_value << val.unit;
+                        } else {
+                            style_ss << val.string_value;
+                        }
+                        style_ss << ";";
+                    }
+                }
+            }
+        }
+    }
+
+
+    if (!style_ss.str().empty()) {
+        ss << " style=\"" << style_ss.str() << "\"";
     }
 
     ss << ">";
 
+    // Render non-if children
     for (const auto& child : node->getChildren()) {
-        ss << generateNode(child.get());
+        if (!dynamic_cast<const IfNode*>(child.get())) {
+            ss << generateNode(child.get());
+        }
     }
 
     ss << "</" << node->getTagName() << ">";
     return ss.str();
 }
+
 
 void CHTLGenerator::generateStyleNode(const StyleNode* node) {
     for (const auto& block : node->getSelectorBlocks()) {
