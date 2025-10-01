@@ -25,6 +25,8 @@ enum class TokenType {
     R_BRACE,
     COLON,
     EQUAL,
+    DOT,
+    HASH,
     SEMICOLON,
 
     // Arithmetic Operators

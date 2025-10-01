@@ -9,8 +9,14 @@ void StyleNode::print(int indent) const {
     }
     std::cout << "style {" << std::endl;
 
+    // Print inline properties
     for (const auto& prop : properties) {
         prop->print(indent + 1);
+    }
+
+    // Print nested rules
+    for (const auto& rule : rules) {
+        rule->print(indent + 1);
     }
 
     for (int i = 0; i < indent; ++i) {

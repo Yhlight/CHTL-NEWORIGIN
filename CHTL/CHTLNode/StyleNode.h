@@ -3,6 +3,7 @@
 
 #include "BaseNode.h"
 #include "StylePropertyNode.h"
+#include "StyleRuleNode.h"
 #include <vector>
 #include <memory>
 
@@ -11,15 +12,19 @@ namespace CHTL {
 class StyleNode : public BaseNode {
 public:
     const std::vector<std::unique_ptr<StylePropertyNode>>& getProperties() const { return properties; }
+    const std::vector<std::unique_ptr<StyleRuleNode>>& getRules() const { return rules; }
 
     void addProperty(std::unique_ptr<StylePropertyNode> property) {
         properties.push_back(std::move(property));
     }
+    void addRule(std::unique_ptr<StyleRuleNode> rule) {
+        rules.push_back(std::move(rule));
+    }
     void print(int indent = 0) const override;
-
 
 private:
     std::vector<std::unique_ptr<StylePropertyNode>> properties;
+    std::vector<std::unique_ptr<StyleRuleNode>> rules;
 };
 
 } // namespace CHTL

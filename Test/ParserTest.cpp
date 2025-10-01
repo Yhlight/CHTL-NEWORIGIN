@@ -5,6 +5,7 @@
 #include "CHTLNode/ElementNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLNode/StyleRuleNode.h"
 #include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/LiteralNode.h"
@@ -275,4 +276,32 @@ TEST_CASE("Parse Text Attribute as TextNode", "[parser]") {
     CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(elementNode->getChildren()[0].get());
     REQUIRE(textNode != nullptr);
     REQUIRE(textNode->getValue() == "hello world");
+}
+
+TEST_CASE("Parse Style Block with Automatic Class Name", "[parser]") {
+    std::string input = "div { style { .box { color: red; } } }";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    std::unique_ptr<CHTL::BaseNode> rootNode = parser.parse();
+
+    REQUIRE(rootNode != nullptr);
+    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    REQUIRE(elementNode != nullptr);
+
+    // 1. Check for automatic attribute addition
+    REQUIRE(elementNode->getAttribute("class") == "box");
+
+    // 2. Check for the parsed style rule
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getRules().size() == 1);
+    REQUIRE(styleNode->getProperties().empty()); // No inline properties in this case
+
+    const CHTL::StyleRuleNode* ruleNode = styleNode->getRules()[0].get();
+    REQUIRE(ruleNode->getSelector() == ".box");
+    REQUIRE(ruleNode->getProperties().size() == 1);
+
+    const CHTL::StylePropertyNode* propNode = ruleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "color");
 }
