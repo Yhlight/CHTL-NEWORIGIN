@@ -14,7 +14,7 @@ def run_command(command):
 def main():
     """Main function to run the build process."""
     parser = argparse.ArgumentParser(description="Builds the CHTL project.")
-    parser.add_argument("--run-tests", action="store_true", help="Run tests after building.")
+    parser.add_argument("--no-tests", action="store_true", help="Do not run tests after building.")
     args = parser.parse_args()
 
     build_dir = "build"
@@ -46,8 +46,8 @@ def main():
 
         print("\nBuild successful!")
 
-        # Run tests if the flag is provided
-        if args.run_tests:
+        # Run tests by default
+        if not args.no_tests:
             print("\n--- Running Tests ---")
             ctest_command = ["ctest", "--verbose"]
             if run_command(ctest_command) != 0:

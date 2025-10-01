@@ -11,6 +11,7 @@
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/TemplateDefinitionNode.h"
 #include "CHTLNode/TemplateUsageNode.h"
+#include "CHTLNode/VarTemplateUsageNode.h"
 #include "CHTLManager/TemplateManager.h"
 
 TEST_CASE("Parser Initialization", "[parser]") {
@@ -354,4 +355,102 @@ TEST_CASE("Parse Style Template Usage", "[parser]") {
     const auto* templateUsage = styleNode->getTemplateUsages()[0].get();
     REQUIRE(templateUsage->getTemplateType() == CHTL::TemplateType::STYLE);
     REQUIRE(templateUsage->getName() == "MyTemplate");
+}
+
+TEST_CASE("Parse Element Template Definition", "[parser]") {
+    std::string input = R"(
+        [Template] @Element MyElement {
+            div { class: "container"; }
+            span { text { "hello" } }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    parser.parse();
+    auto ast_nodes = parser.getAST();
+
+    REQUIRE(ast_nodes.empty());
+
+    const auto* templateDef = CHTL::TemplateManager::getInstance().getTemplate("MyElement");
+    REQUIRE(templateDef != nullptr);
+    REQUIRE(templateDef->getTemplateType() == CHTL::TemplateType::ELEMENT);
+    REQUIRE(templateDef->getName() == "MyElement");
+    REQUIRE(templateDef->getChildren().size() == 2);
+
+    auto* div_node = dynamic_cast<const CHTL::ElementNode*>(templateDef->getChildren()[0].get());
+    REQUIRE(div_node != nullptr);
+    REQUIRE(div_node->getTagName() == "div");
+    REQUIRE(div_node->getAttribute("class") == "container");
+
+    auto* span_node = dynamic_cast<const CHTL::ElementNode*>(templateDef->getChildren()[1].get());
+    REQUIRE(span_node != nullptr);
+    REQUIRE(span_node->getTagName() == "span");
+    REQUIRE(span_node->getChildren().size() == 1);
+}
+
+TEST_CASE("Parse Var Template Definition", "[parser]") {
+    std::string input = R"(
+        [Template] @Var MyVars {
+            mainColor: #ff0000;
+            secondaryColor: #00ff00;
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    parser.parse();
+    auto ast_nodes = parser.getAST();
+
+    REQUIRE(ast_nodes.empty());
+
+    const auto* templateDef = CHTL::TemplateManager::getInstance().getTemplate("MyVars");
+    REQUIRE(templateDef != nullptr);
+    REQUIRE(templateDef->getTemplateType() == CHTL::TemplateType::VAR);
+    REQUIRE(templateDef->getName() == "MyVars");
+    REQUIRE(templateDef->getChildren().size() == 2);
+
+    auto* prop1 = dynamic_cast<const CHTL::StylePropertyNode*>(templateDef->getChildren()[0].get());
+    REQUIRE(prop1 != nullptr);
+    REQUIRE(prop1->getKey() == "mainColor");
+
+    auto* prop2 = dynamic_cast<const CHTL::StylePropertyNode*>(templateDef->getChildren()[1].get());
+    REQUIRE(prop2 != nullptr);
+    REQUIRE(prop2->getKey() == "secondaryColor");
+}
+
+TEST_CASE("Parse Var Template Usage in Style Block", "[parser]") {
+    std::string input = R"(
+        div {
+            style {
+                color: MyVars(mainColor);
+            }
+        }
+    )";
+    CHTL::CHTLLexer lexer;
+    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+    CHTL::CHTLParser parser(tokens);
+    parser.parse();
+    auto rootNodes = parser.getAST();
+    REQUIRE(rootNodes.size() == 1);
+    std::unique_ptr<CHTL::BaseNode> root = std::move(rootNodes[0]);
+
+    REQUIRE(root != nullptr);
+    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(root.get());
+    REQUIRE(elementNode != nullptr);
+
+    const CHTL::StyleNode* styleNode = elementNode->getStyle();
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getProperties().size() == 1);
+
+    const auto* propNode = styleNode->getProperties()[0].get();
+    REQUIRE(propNode->getKey() == "color");
+
+    const auto* valueNode = propNode->getValue();
+    REQUIRE(valueNode->getType() == CHTL::ExpressionType::VAR_TEMPLATE_USAGE);
+
+    const auto* varUsageNode = dynamic_cast<const CHTL::VarTemplateUsageNode*>(valueNode);
+    REQUIRE(varUsageNode != nullptr);
+    REQUIRE(varUsageNode->getTemplateName() == "MyVars");
+    REQUIRE(varUsageNode->getVariableName() == "mainColor");
 }

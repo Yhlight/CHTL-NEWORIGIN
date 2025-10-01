@@ -23,6 +23,8 @@ enum class TokenType {
     // Punctuation
     L_BRACE,
     R_BRACE,
+    L_PAREN,
+    R_PAREN,
     COLON,
     EQUAL,
     SEMICOLON,

@@ -10,6 +10,7 @@
 #include "../CHTLNode/ReferenceNode.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLNode/VarTemplateUsageNode.h"
 #include "../CHTLManager/TemplateManager.h"
 #include "../CHTLState/GlobalState.h"
 #include <stdexcept>
@@ -249,7 +250,13 @@ std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
     }
 
     if (check(TokenType::IDENTIFIER)) {
-        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::DOT) {
+        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::L_PAREN) {
+            Token templateName = advance();
+            advance(); // Consume '('
+            Token variableName = consume(TokenType::IDENTIFIER, "Expect variable name in template usage.");
+            consume(TokenType::R_PAREN, "Expect ')' after variable name.");
+            return std::make_unique<VarTemplateUsageNode>(templateName.value, variableName.value);
+        } else if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::DOT) {
             Token selector = advance();
             advance(); // consume dot
             Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");

@@ -5,6 +5,8 @@
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/LiteralNode.h"
 #include "CHTLNode/BinaryOpNode.h"
+#include "CHTLNode/VarTemplateUsageNode.h"
+#include "CHTLManager/TemplateManager.h"
 #include "CHTLUtil/DocumentTraverser.h"
 #include <stdexcept>
 #include <cmath>
@@ -125,6 +127,24 @@ EvaluatedValue ExpressionEvaluator::evaluate(const ExpressionNode* expression, c
                 }
             }
             throw std::runtime_error("Property '" + refNode->getPropertyName() + "' not found on element with selector '" + refNode->getSelector() + "'");
+        }
+        case ExpressionType::VAR_TEMPLATE_USAGE: {
+            const auto* varUsageNode = static_cast<const VarTemplateUsageNode*>(expression);
+            const auto& templateManager = TemplateManager::getInstance();
+            const auto* templateDef = templateManager.getTemplate(varUsageNode->getTemplateName());
+
+            if (!templateDef || (templateDef->getTemplateType() != TemplateType::VAR && templateDef->getTemplateType() != TemplateType::STYLE)) {
+                throw std::runtime_error("Variable or Style template not found: " + varUsageNode->getTemplateName());
+            }
+
+            for (const auto& child : templateDef->getChildren()) {
+                if (const auto* prop = dynamic_cast<const StylePropertyNode*>(child.get())) {
+                    if (prop->getKey() == varUsageNode->getVariableName()) {
+                        return evaluate(prop->getValue(), root, style_context);
+                    }
+                }
+            }
+            throw std::runtime_error("Variable '" + varUsageNode->getVariableName() + "' not found in template '" + varUsageNode->getTemplateName() + "'");
         }
         default:
             throw std::runtime_error("Unsupported expression type.");

@@ -2,6 +2,7 @@
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLNode/TemplateDefinitionNode.h"
 #include "../CHTLNode/StylePropertyNode.h"
+#include "../CHTLNode/LiteralNode.h"
 #include "../CHTLStrategy/ElementStrategy.h"
 #include "../CHTLStrategy/TextNodeStrategy.h"
 #include "../CHTLStrategy/TemplateUsageStrategy.h"
@@ -48,7 +49,26 @@ std::unique_ptr<BaseNode> TemplateDefinitionStrategy::parse(CHTLParser& parser) 
         } else if (type == TemplateType::STYLE || type == TemplateType::VAR) {
             Token key = parser.consume(TokenType::IDENTIFIER, "Expect property or variable key.");
             parser.consume(TokenType::COLON, "Expect ':' after key.");
-            templateNode->addChild(std::make_unique<StylePropertyNode>(key.value, parser.parseExpression()));
+
+            std::unique_ptr<ExpressionNode> valueNode;
+            if (parser.check(TokenType::HASH)) {
+                Token hash = parser.advance();
+                std::string hex_value_str;
+                // Greedily consume adjacent identifier/number tokens to form the hex value
+                while (!parser.isAtEnd() && (parser.check(TokenType::IDENTIFIER) || parser.check(TokenType::NUMBER))) {
+                    hex_value_str += parser.advance().value;
+                }
+
+                if (hex_value_str.empty()) {
+                    throw std::runtime_error("Expect hex value after '#'.");
+                }
+
+                valueNode = std::make_unique<LiteralNode>(Token{TokenType::STRING_LITERAL, hash.value + hex_value_str}, "");
+            } else {
+                valueNode = parser.parseExpression();
+            }
+
+            templateNode->addChild(std::make_unique<StylePropertyNode>(key.value, std::move(valueNode)));
             parser.consume(TokenType::SEMICOLON, "Expect ';' after value.");
         }
     }

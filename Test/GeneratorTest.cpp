@@ -51,3 +51,18 @@ TEST_CASE("Generator expands element templates", "[generator]") {
     // Note: This test will also fail until the generator is updated.
     REQUIRE(result == "<html><head><style></style></head><body><div><h1>Title</h1><p>Content</p></div></body></html>");
 }
+
+TEST_CASE("Generator evaluates var templates", "[generator]") {
+    std::string input = R"(
+        [Template] @Var MyTheme {
+            primaryColor: #007bff;
+        }
+        div {
+            style {
+                background-color: MyTheme(primaryColor);
+            }
+        }
+    )";
+    std::string result = generate_from_string(input);
+    REQUIRE(result == "<html><head><style></style></head><body><div style=\"background-color: #007bff;\"></div></body></html>");
+}
