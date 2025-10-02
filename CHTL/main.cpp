@@ -1,60 +1,30 @@
 #include <iostream>
-#include <vector>
+#include <fstream>
+#include <sstream>
 #include <memory>
-#include "CHTLLexer/CHTLLexer.h"
-#include "CHTLParser/CHTLParser.h"
-#include "CHTLGenerator/CHTLGenerator.h"
+#include "CHTLProcessor/CHTLProcessor.h"
+#include "CHTLGenerator/HtmlGenerator.h"
 #include "CHTLNode/DocumentNode.h"
 
-int main() {
-    std::string chtl_source = R"(
-        use html5;
-        [Origin] @Html {
-            <p>This is some raw HTML.</p>
-        }
-        // This is a demonstration of the CHTL parser.
-        html {
-            head {
-                // The head of the document.
-            }
-            body {
-                div {
-                    text { "Hello, World!" }
-                }
-                span {
-                    // An empty span.
-                }
-            }
-        }
-    )";
-
-    using namespace CHTL;
-
-    CHTLLexer lexer;
-    std::vector<Token> tokens = lexer.tokenize(chtl_source);
-
-    std::cout << "--- Tokens ---" << std::endl;
-    for (const auto& token : tokens) {
-        std::cout << "Type: " << static_cast<int>(token.type) << ", Value: '" << token.value << "'" << std::endl;
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <entry_filename>" << std::endl;
+        return 1;
     }
-    std::cout << "--------------" << std::endl;
 
-    CHTLParser parser(chtl_source, tokens);
-    std::unique_ptr<DocumentNode> ast = parser.parse();
-
-    if (ast) {
-        std::cout << "\n--- AST ---" << std::endl;
-        ast->print();
-        std::cout << "-------------" << std::endl;
-
-        CHTLGenerator generator;
-        std::string html = generator.generate(ast.get());
-        std::cout << "\n--- Generated HTML ---" << std::endl;
-        std::cout << html << std::endl;
-        std::cout << "----------------------" << std::endl;
-
-    } else {
-        std::cout << "Failed to parse CHTL source." << std::endl;
+    try {
+        CHTLProcessor processor(argv[1]);
+        std::unique_ptr<DocumentNode> ast = processor.process();
+        if (ast) {
+            HtmlGenerator generator;
+            ast->accept(generator);
+            std::cout << generator.getResult();
+        } else {
+            std::cerr << "Failed to process the document." << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Processing error: " << e.what() << std::endl;
+        return 1;
     }
 
     return 0;

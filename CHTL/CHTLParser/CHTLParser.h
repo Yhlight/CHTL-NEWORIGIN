@@ -1,74 +1,47 @@
 #ifndef CHTL_PARSER_H
 #define CHTL_PARSER_H
 
-#include <vector>
-#include <memory>
-#include <string>
-#include "../CHTLLexer/Token.h"
-#include "../CHTLNode/BaseNode.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/StyleNode.h"
-#include "../CHTLNode/ScriptNode.h"
-#include "../CHTLNode/ExpressionNode.h"
-#include "../CHTLNode/ConditionalExpressionNode.h"
-#include "../CHTLNode/TemplateDefinitionNode.h"
-#include "../CHTLNode/TemplateUsageNode.h"
+#include "../CHTLLexer/CHTLLexer.h"
 #include "../CHTLNode/DocumentNode.h"
-#include "../CHTLNode/CustomDefinitionNode.h"
-#include "../CHTLNode/DeleteNode.h"
-#include "../CHTLNode/InsertNode.h"
-#include "../CHTLNode/OriginNode.h"
-#include "../CHTLNode/ConditionalNode.h"
-
-namespace CHTL {
+#include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/CustomStyleNode.h"
+#include "../CHTLNode/CustomElementNode.h"
+#include "../CHTLNode/CustomVarNode.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
+#include "../CHTLNode/UseNode.h"
+#include "../CHTLNode/IfNode.h"
+#include "../CHTLContext/CHTLContext.h"
+#include <memory>
 
 class CHTLParser {
 public:
-    CHTLParser(const std::string& input, const std::vector<Token>& tokens);
+    CHTLParser(const std::string& input, CHTLContext& context, bool discoveryMode = false);
     std::unique_ptr<DocumentNode> parse();
 
 private:
-    const std::string& m_input;
-    const std::vector<Token>& tokens;
-    size_t current = 0;
+    CHTLLexer lexer;
+    CHTLContext& context;
+    bool discoveryMode;
+    Token currentToken;
+    Token nextToken;
 
-    // Token manipulation helpers
-    Token peek() const;
-    Token advance();
-    bool isAtEnd() const;
-    bool check(TokenType type) const;
-    bool match(TokenType type);
-    Token consume(TokenType type, const std::string& message);
-
-    // Directive parsing
-    void parseUseDirective(DocumentNode* doc);
-
-    // Statement-level parsing
+    void advance();
+    Token peek();
+    void expect(TokenType type);
     std::unique_ptr<BaseNode> parseStatement();
-    std::unique_ptr<ElementNode> parseElementNode();
+    std::unique_ptr<ElementNode> parseElement();
+    void parseAttribute(ElementNode& node);
     std::unique_ptr<BaseNode> parseTextNode();
-    std::unique_ptr<StyleNode> parseStyleNode(ElementNode* parent);
-    std::unique_ptr<ScriptNode> parseScriptNode();
-    void parseAttribute(ElementNode* element);
-    std::unique_ptr<TemplateDefinitionNode> parseTemplateDefinition();
-    std::unique_ptr<CustomDefinitionNode> parseCustomDefinition();
-    std::unique_ptr<TemplateUsageNode> parseTemplateUsage();
-    std::unique_ptr<OriginNode> parseOriginNode();
+    std::unique_ptr<BaseNode> parseCommentNode();
+    std::unique_ptr<BaseNode> parseStyleNode();
+    std::unique_ptr<BaseNode> parseTextAttribute();
+    std::unique_ptr<BaseNode> parseTemplateDeclaration();
+    std::unique_ptr<BaseNode> parseCustomDeclaration();
+    std::unique_ptr<BaseNode> parseImportDeclaration();
+    std::unique_ptr<BaseNode> parseNamespaceDeclaration();
+    std::unique_ptr<BaseNode> parseUseStatement();
     std::unique_ptr<IfNode> parseIfStatement();
-
-    // Expression parsing (Pratt/Precedence Climbing)
-    std::unique_ptr<ExpressionNode> parseExpression();
-    std::unique_ptr<ExpressionNode> parseTernary();
-    std::unique_ptr<ExpressionNode> parseLogicalOr();
-    std::unique_ptr<ExpressionNode> parseLogicalAnd();
-    std::unique_ptr<ExpressionNode> parseEquality();
-    std::unique_ptr<ExpressionNode> parseComparison();
-    std::unique_ptr<ExpressionNode> parseTerm();
-    std::unique_ptr<ExpressionNode> parseFactor();
-    std::unique_ptr<ExpressionNode> parsePower();
-    std::unique_ptr<ExpressionNode> parsePrimary();
 };
 
-} // namespace CHTL
-
-#endif // CHTL_PARSER_H
+#endif //CHTL_PARSER_H

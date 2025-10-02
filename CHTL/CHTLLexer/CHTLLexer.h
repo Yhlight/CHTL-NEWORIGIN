@@ -1,20 +1,31 @@
 #ifndef CHTL_LEXER_H
 #define CHTL_LEXER_H
 
+#include "Token.h"
 #include <string>
 #include <vector>
-#include "Token.h"
-
-namespace CHTL {
 
 class CHTLLexer {
 public:
-    CHTLLexer();
-    ~CHTLLexer();
+    explicit CHTLLexer(const std::string& input);
+    Token getNextToken();
+    std::vector<Token> getAllTokens();
 
-    std::vector<Token> tokenize(const std::string& input);
+private:
+    std::string input;
+    size_t position;
+    size_t line;
+    size_t column;
+
+    char currentChar();
+    void advance();
+    void skipWhitespace();
+    void skipSingleLineComment();
+    void skipMultiLineComment();
+    Token makeIdentifier();
+    Token makeString(char quote);
+    Token makeComment();
+    Token makeToken(TokenType type, const std::string& value);
 };
 
-} // namespace CHTL
-
-#endif // CHTL_LEXER_H
+#endif //CHTL_LEXER_H

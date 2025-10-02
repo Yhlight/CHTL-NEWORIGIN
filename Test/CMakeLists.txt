@@ -1,11 +1,20 @@
-# Add the executable for the tests
-add_executable(chth_tests main.cpp LexerTest.cpp ParserTest.cpp GeneratorTest.cpp)
+cmake_minimum_required(VERSION 3.10)
 
-# Make sure the test executable can find the catch.hpp header in the root directory
-target_include_directories(chth_tests PUBLIC ${CMAKE_SOURCE_DIR})
+add_executable(run-tests
+    LexerTest.cpp
+    ParserTest.cpp
+    IntegrationTest.cpp
+    UseTest.cpp
+    ExceptTest.cpp
+    ConstraintsTest.cpp
+    LocalStyleTest.cpp
+    ConditionalRenderingTest.cpp
+)
 
-# Link the test executable against the CHTL library to access its code
-target_link_libraries(chth_tests PRIVATE chtl_lib)
+target_include_directories(run-tests PUBLIC
+    ../third-party
+)
 
-# Add a test to be run by CTest
-add_test(NAME RunTests COMMAND chth_tests)
+target_link_libraries(run-tests PRIVATE
+    chtl-lib
+)

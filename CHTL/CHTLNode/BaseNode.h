@@ -1,17 +1,18 @@
-#ifndef BASE_NODE_H
-#define BASE_NODE_H
+#ifndef CHTL_BASE_NODE_H
+#define CHTL_BASE_NODE_H
 
-#include <iostream>
 #include <string>
+#include <vector>
+#include <memory>
 
-namespace CHTL {
+class NodeVisitor; // Forward declaration
 
 class BaseNode {
 public:
     virtual ~BaseNode() = default;
-    virtual void print(int indent = 0) const = 0;
+    virtual std::string toString(int depth = 0) const = 0;
+    virtual std::string getNodeType() const { return "Base"; }
+    virtual void accept(NodeVisitor& visitor) = 0;
 };
 
-} // namespace CHTL
-
-#endif // BASE_NODE_H
+#endif //CHTL_BASE_NODE_H
