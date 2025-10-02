@@ -7,6 +7,7 @@ add_executable(run-tests
     UseTest.cpp
     ExceptTest.cpp
     ConstraintsTest.cpp
+    LocalStyleTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC

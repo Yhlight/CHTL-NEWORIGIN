@@ -1,0 +1,13 @@
+div {
+    style {
+        background-color: blue;
+
+        .nested {
+            color: red;
+        }
+    }
+    div {
+        class: "nested";
+        text: "This should be red.";
+    }
+}

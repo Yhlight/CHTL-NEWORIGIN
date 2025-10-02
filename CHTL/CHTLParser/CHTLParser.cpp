@@ -188,14 +188,16 @@ std::unique_ptr<BaseNode> CHTLParser::parseCustomDeclaration() {
 }
 
 std::unique_ptr<BaseNode> CHTLParser::parseStyleNode() {
-    expect(TokenType::Identifier);
+    expect(TokenType::Identifier); // "style"
     expect(TokenType::LBrace);
     auto styleNode = std::make_unique<StyleNode>();
+
     while (currentToken.type != TokenType::RBrace) {
         if (currentToken.type == TokenType::At) {
-            advance();
+            advance(); // Consume '@'
             expect(TokenType::Identifier); // "Style"
-            std::string templateName = currentToken.value; advance();
+            std::string templateName = currentToken.value;
+            advance();
             if (!discoveryMode) {
                 const TemplateStyleNode* tmpl = nullptr;
                 if (currentToken.type == TokenType::From) {
@@ -224,10 +226,31 @@ std::unique_ptr<BaseNode> CHTLParser::parseStyleNode() {
                 }
             }
             expect(TokenType::Semicolon);
+        } else if (peek().type == TokenType::LBrace) {
+            // This is a nested CSS rule, e.g., ".class { ... }"
+            std::string selector = currentToken.value;
+            advance(); // Consume selector
+            auto ruleNode = std::make_unique<CssRuleNode>(selector);
+
+            expect(TokenType::LBrace);
+            while (currentToken.type != TokenType::RBrace) {
+                std::string propName = currentToken.value;
+                advance();
+                expect(TokenType::Colon);
+                std::string propValue = currentToken.value;
+                advance();
+                expect(TokenType::Semicolon);
+                ruleNode->addProperty(propName, propValue);
+            }
+            expect(TokenType::RBrace);
+            styleNode->addRule(std::move(ruleNode));
         } else {
-            std::string propName = currentToken.value; advance();
+            // This is an inline property
+            std::string propName = currentToken.value;
+            advance();
             expect(TokenType::Colon);
-            std::string propValue = currentToken.value; advance();
+            std::string propValue = currentToken.value;
+            advance();
             expect(TokenType::Semicolon);
             styleNode->addProperty(propName, propValue);
         }

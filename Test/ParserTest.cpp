@@ -10,6 +10,7 @@
 #include "CHTLNode/CustomVarNode.h"
 #include "CHTLNode/ImportNode.h"
 #include "CHTLNode/NamespaceNode.h"
+#include "CHTLNode/StyleNode.h"
 #include "CHTLContext/CHTLContext.h"
 #include <memory>
 
@@ -150,8 +151,16 @@ div {
     ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
-    std::string output = root->toString();
-    REQUIRE(output.find("/* Style Block: color: blue; font-size: 16px; */") != std::string::npos);
+    const auto& styleChildren = root->getChildren();
+    REQUIRE(styleChildren.size() == 1);
+    auto* styleNode = dynamic_cast<StyleNode*>(styleChildren[0].get());
+    REQUIRE(styleNode != nullptr);
+    const auto& props = styleNode->getProperties();
+    REQUIRE(props.size() == 2);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "blue");
+    REQUIRE(props[1].first == "font-size");
+    REQUIRE(props[1].second == "16px");
 }
 
 TEST_CASE("Parser handles comment nodes", "[parser]") {
@@ -308,8 +317,16 @@ div {
     auto* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
-    std::string output = root->toString();
-    REQUIRE(output.find("/* Style Block: color: black; line-height: 1.6; */") != std::string::npos);
+    const auto& styleChildren = root->getChildren();
+    REQUIRE(styleChildren.size() == 1);
+    auto* styleNode = dynamic_cast<StyleNode*>(styleChildren[0].get());
+    REQUIRE(styleNode != nullptr);
+    const auto& props = styleNode->getProperties();
+    REQUIRE(props.size() == 2);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "black");
+    REQUIRE(props[1].first == "line-height");
+    REQUIRE(props[1].second == "1.6");
 }
 
 TEST_CASE("Parser handles custom style declarations with delete", "[parser]") {

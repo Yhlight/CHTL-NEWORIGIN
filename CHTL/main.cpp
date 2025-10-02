@@ -3,7 +3,7 @@
 #include <sstream>
 #include <memory>
 #include "CHTLProcessor/CHTLProcessor.h"
-#include "CHTLNode/DocumentNode.h"
+#include "CHTLGenerator/HtmlGenerator.h"
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -15,10 +15,8 @@ int main(int argc, char* argv[]) {
         CHTLProcessor processor(argv[1]);
         std::unique_ptr<DocumentNode> ast = processor.process();
         if (ast) {
-            if (ast->getHasHtml5Doctype()) {
-                std::cout << "<!DOCTYPE html>\n";
-            }
-            std::cout << ast->toString();
+            HtmlGenerator generator(std::move(ast));
+            std::cout << generator.generate();
         } else {
             std::cerr << "Failed to process the document." << std::endl;
         }

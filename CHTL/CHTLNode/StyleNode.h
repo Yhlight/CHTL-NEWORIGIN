@@ -2,10 +2,12 @@
 #define CHTL_STYLE_NODE_H
 
 #include "BaseNode.h"
+#include "CssRuleNode.h"
 #include <string>
 #include <vector>
 #include <utility>
 #include <sstream>
+#include <memory>
 
 class StyleNode : public BaseNode {
 public:
@@ -15,21 +17,31 @@ public:
         properties.push_back({key, value});
     }
 
+    void addRule(std::unique_ptr<CssRuleNode> rule) {
+        rules.push_back(std::move(rule));
+    }
+
     std::string toString(int depth = 0) const override {
-        std::stringstream ss;
-        ss << std::string(depth * 2, ' ') << "/* Style Block: ";
-        for (size_t i = 0; i < properties.size(); ++i) {
-            ss << properties[i].first << ": " << properties[i].second << ";";
-            if (i < properties.size() - 1) {
-                ss << " ";
-            }
-        }
-        ss << " */" << std::endl;
-        return ss.str();
+        // This will be updated later to handle hoisting.
+        // For now, it only represents inline styles.
+        return "";
+    }
+
+    const std::vector<std::pair<std::string, std::string>>& getProperties() const {
+        return properties;
+    }
+
+    const std::vector<std::unique_ptr<CssRuleNode>>& getRules() const {
+        return rules;
+    }
+
+    std::string getNodeType() const override {
+        return "[Style]";
     }
 
 private:
     std::vector<std::pair<std::string, std::string>> properties;
+    std::vector<std::unique_ptr<CssRuleNode>> rules;
 };
 
 #endif //CHTL_STYLE_NODE_H

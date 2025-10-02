@@ -122,15 +122,18 @@ Token CHTLLexer::getNextToken() {
         }
 
         if (currentChar() == '#') {
-            return makeComment();
+            if (position + 1 < input.length() && input[position + 1] == ' ') {
+                return makeComment();
+            }
         }
 
         if (currentChar() == '\'' || currentChar() == '"') {
             return makeString(currentChar());
         }
 
-        // Allow identifiers to start with a digit for CSS values like '16px'.
-        if (isalpha(currentChar()) || currentChar() == '_' || isdigit(currentChar())) {
+        // Allow identifiers to start with a digit for CSS values like '16px',
+        // and selectors starting with '.', '#', or '&'.
+        if (isalpha(currentChar()) || currentChar() == '_' || isdigit(currentChar()) || currentChar() == '.' || currentChar() == '#') {
             return makeIdentifier();
         }
 

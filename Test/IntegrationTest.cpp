@@ -2,6 +2,7 @@
 #include "CHTLProcessor/CHTLProcessor.h"
 #include "CHTLNode/DocumentNode.h"
 #include "CHTLNode/ElementNode.h"
+#include "CHTLGenerator/HtmlGenerator.h"
 #include <memory>
 #include <string>
 
@@ -14,14 +15,11 @@ TEST_CASE("Processor handles imports and namespaces correctly", "[integration]")
     std::unique_ptr<DocumentNode> doc = processor.process();
 
     REQUIRE(doc != nullptr);
-    const auto& children = doc->getChildren();
-    REQUIRE(children.size() == 2); // The import node and the div node
 
-    auto* divNode = dynamic_cast<ElementNode*>(children[1].get());
-    REQUIRE(divNode != nullptr);
+    HtmlGenerator generator(std::move(doc));
+    std::string result = generator.generate();
 
     // The core of the test: Did the style from the imported module get applied?
-    std::string output = divNode->toString();
-    // This assertion will fail until the context can resolve qualified names.
-    REQUIRE(output.find("/* Style Block: color: red; font-weight: bold; */") != std::string::npos);
+    std::string expected_style = "style=\"color: red; font-weight: bold;\"";
+    REQUIRE(result.find(expected_style) != std::string::npos);
 }
