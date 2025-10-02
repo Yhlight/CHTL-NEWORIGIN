@@ -1,0 +1,30 @@
+# Build artifacts
+/build/
+/dist/
+
+# Compiled files
+*.o
+*.so
+*.a
+*.exe
+*.dll
+*.lib
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+
+# CHTL output files
+*.chtl.html
+*.chtl.css
+*.chtl.js
+
+# Test output
+/Test/lexer_tests
+
+# OS-specific files
+.DS_Store
+Thumbs.db
