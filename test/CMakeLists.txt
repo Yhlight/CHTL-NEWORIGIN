@@ -5,6 +5,7 @@ set(TEST_SOURCES
     test_lexer.cpp
     test_parser.cpp
     test_generator.cpp
+    test_element_parsing.cpp
 )
 
 add_executable(chtl_tests ${TEST_SOURCES})
