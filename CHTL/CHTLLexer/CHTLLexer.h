@@ -21,10 +21,8 @@ namespace CHTL {
         char advance();
         void skipWhitespace();
         Token makeToken(TokenType type, const std::string& lexeme);
-        Token identifier();
-        Token number();
-        Token stringLiteral();
-        Token unquotedLiteral();
+        Token lexIdentifierOrLiteral();
+        Token stringLiteral(char quoteType);
         Token singleLineComment();
         Token multiLineComment();
         Token generatorComment();

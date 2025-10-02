@@ -3,6 +3,7 @@
 #include "../CHTL/CHTLParser/CHTLParser.h"
 #include "../CHTL/CHTLNode/ElementNode.h"
 #include "../CHTL/CHTLNode/TextNode.h"
+#include "../CHTL/CHTLNode/StyleNode.h"
 
 #include <vector>
 #include <string>
@@ -101,4 +102,39 @@ TEST_CASE("Parser handles text nodes", "[parser]") {
     auto text = std::dynamic_pointer_cast<CHTL::TextNode>(p->getChildren()[0]);
     REQUIRE(text != nullptr);
     REQUIRE(text->getContent() == "Hello, World!");
+}
+
+TEST_CASE("Parser handles style blocks", "[parser]") {
+    std::string input = R"(
+div {
+    style {
+        color: red;
+        width: 100px;
+    }
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(root);
+    REQUIRE(element->getTagName() == "div");
+    REQUIRE(element->getChildren().size() == 1);
+
+    auto styleNode = std::dynamic_pointer_cast<CHTL::StyleNode>(element->getChildren()[0]);
+    REQUIRE(styleNode != nullptr);
+    auto properties = styleNode->getProperties();
+    REQUIRE(properties.size() == 2);
+    REQUIRE(properties[0]->getKey() == "color");
+    REQUIRE(properties[0]->getValue() == "red");
+    REQUIRE(properties[1]->getKey() == "width");
+    REQUIRE(properties[1]->getValue() == "100px");
 }

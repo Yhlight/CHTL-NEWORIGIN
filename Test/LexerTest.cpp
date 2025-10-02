@@ -74,3 +74,26 @@ div { # another comment
         REQUIRE(tokens[i].lexeme == expectedTokens[i].second);
     }
 }
+
+TEST_CASE("Lexer handles different literal types", "[lexer]") {
+    std::string input = "id: 'some-id'; class: some-class;";
+    CHTL::CHTLLexer lexer(input);
+
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "some-id"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "class"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_UNQUOTED_LITERAL, "some-class"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+    };
+
+    for (const auto& expected : expectedTokens) {
+        CHTL::Token token = lexer.getNextToken();
+        REQUIRE(token.type == expected.first);
+        REQUIRE(token.lexeme == expected.second);
+    }
+    REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
+}

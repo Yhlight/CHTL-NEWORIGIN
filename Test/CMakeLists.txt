@@ -2,6 +2,7 @@ add_executable(run_tests
     TestMain.cpp
     LexerTest.cpp
     ParserTest.cpp
+    GeneratorTest.cpp
 )
 
 target_link_libraries(run_tests PRIVATE CHTL)

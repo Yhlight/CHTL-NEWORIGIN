@@ -1,5 +1,6 @@
 #include "CHTLLexer.h"
 #include <cctype>
+#include <cstring> // For strchr
 
 namespace CHTL {
 
@@ -43,30 +44,31 @@ Token CHTLLexer::errorToken(const std::string& message) {
 
 Token CHTLLexer::getNextToken() {
     skipWhitespace();
-    char c = advance();
+    char c = peek();
 
     if (c == '\0') {
         return makeToken(TokenType::TOKEN_EOF, "");
     }
 
     switch (c) {
-        case '{': return makeToken(TokenType::TOKEN_LBRACE, "{");
-        case '}': return makeToken(TokenType::TOKEN_RBRACE, "}");
-        case '(': return makeToken(TokenType::TOKEN_LPAREN, "(");
-        case ')': return makeToken(TokenType::TOKEN_RPAREN, ")");
-        case '[': return makeToken(TokenType::TOKEN_LBRACKET, "[");
-        case ']': return makeToken(TokenType::TOKEN_RBRACKET, "]");
-        case ':': return makeToken(TokenType::TOKEN_COLON, ":");
-        case ';': return makeToken(TokenType::TOKEN_SEMICOLON, ";");
-        case ',': return makeToken(TokenType::TOKEN_COMMA, ",");
-        case '.': return makeToken(TokenType::TOKEN_DOT, ".");
-        case '=': return makeToken(TokenType::TOKEN_ASSIGN, "=");
-        case '+': return makeToken(TokenType::TOKEN_PLUS, "+");
-        case '-': return makeToken(TokenType::TOKEN_MINUS, "-");
-        case '*': return makeToken(TokenType::TOKEN_MULTIPLY, "*");
-        case '?': return makeToken(TokenType::TOKEN_QUESTION, "?");
+        case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
+        case '}': advance(); return makeToken(TokenType::TOKEN_RBRACE, "}");
+        case '(': advance(); return makeToken(TokenType::TOKEN_LPAREN, "(");
+        case ')': advance(); return makeToken(TokenType::TOKEN_RPAREN, ")");
+        case '[': advance(); return makeToken(TokenType::TOKEN_LBRACKET, "[");
+        case ']': advance(); return makeToken(TokenType::TOKEN_RBRACKET, "]");
+        case ':': advance(); return makeToken(TokenType::TOKEN_COLON, ":");
+        case ';': advance(); return makeToken(TokenType::TOKEN_SEMICOLON, ";");
+        case ',': advance(); return makeToken(TokenType::TOKEN_COMMA, ",");
+        case '.': advance(); return makeToken(TokenType::TOKEN_DOT, ".");
+        case '=': advance(); return makeToken(TokenType::TOKEN_ASSIGN, "=");
+        case '+': advance(); return makeToken(TokenType::TOKEN_PLUS, "+");
+        case '-': advance(); return makeToken(TokenType::TOKEN_MINUS, "-");
+        case '*': advance(); return makeToken(TokenType::TOKEN_MULTIPLY, "*");
+        case '?': advance(); return makeToken(TokenType::TOKEN_QUESTION, "?");
 
         case '/':
+            advance();
             if (peek() == '/') {
                 advance();
                 return singleLineComment();
@@ -77,53 +79,71 @@ Token CHTLLexer::getNextToken() {
             return makeToken(TokenType::TOKEN_DIVIDE, "/");
 
         case '#':
+            advance();
             return generatorComment();
 
         case '"':
-            return stringLiteral();
+        case '\'':
+            advance();
+            return stringLiteral(c);
 
         default:
-            if (isalpha(c) || c == '_') {
-                position--;
-                column--;
-                return identifier();
-            }
-            if (isdigit(c)) {
-                 position--;
-                 column--;
-                return number();
-            }
-            return errorToken("Unexpected character");
+            return lexIdentifierOrLiteral();
     }
 }
 
-Token CHTLLexer::identifier() {
+Token CHTLLexer::lexIdentifierOrLiteral() {
     std::string lexeme;
-    while (isalnum(peek()) || peek() == '_') {
+    const char* delimiters = "{}()[]:;,.=?# \t\n\r";
+    while (peek() != '\0' && strchr(delimiters, peek()) == nullptr) {
         lexeme += advance();
     }
 
+    if (lexeme.empty()) {
+        return errorToken("Unexpected character");
+    }
+
+    // Check for keywords
     if (lexeme == "text") return makeToken(TokenType::TOKEN_TEXT, lexeme);
     if (lexeme == "style") return makeToken(TokenType::TOKEN_STYLE, lexeme);
     if (lexeme == "script") return makeToken(TokenType::TOKEN_SCRIPT, lexeme);
 
-    return makeToken(TokenType::TOKEN_IDENTIFIER, lexeme);
+    // Check if it's a valid identifier (starts with a letter or underscore)
+    if (isalpha(lexeme[0]) || lexeme[0] == '_') {
+        bool isIdentifier = true;
+        for (char c : lexeme) {
+            if (!isalnum(c) && c != '_') {
+                isIdentifier = false;
+                break;
+            }
+        }
+        if (isIdentifier) {
+            return makeToken(TokenType::TOKEN_IDENTIFIER, lexeme);
+        }
+    }
+
+    // Check if it's a number
+    bool isNumber = true;
+    for (char c : lexeme) {
+        if (!isdigit(c) && c != '.') {
+            isNumber = false;
+            break;
+        }
+    }
+    if (isNumber) {
+        return makeToken(TokenType::TOKEN_NUMERIC_LITERAL, lexeme);
+    }
+
+    // Otherwise, it's an unquoted literal
+    return makeToken(TokenType::TOKEN_UNQUOTED_LITERAL, lexeme);
 }
 
-Token CHTLLexer::number() {
+Token CHTLLexer::stringLiteral(char quoteType) {
     std::string lexeme;
-    while (isdigit(peek()) || peek() == '.') {
+    while (peek() != quoteType && peek() != '\0') {
         lexeme += advance();
     }
-    return makeToken(TokenType::TOKEN_NUMERIC_LITERAL, lexeme);
-}
-
-Token CHTLLexer::stringLiteral() {
-    std::string lexeme;
-    while (peek() != '"' && peek() != '\0') {
-        lexeme += advance();
-    }
-    if (peek() == '"') {
+    if (peek() == quoteType) {
         advance(); // consume the closing quote
     } else {
         return errorToken("Unterminated string literal");
