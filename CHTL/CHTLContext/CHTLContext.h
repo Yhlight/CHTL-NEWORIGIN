@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <stdexcept>
+#include <sstream>
 
 // Forward declaration
 class CHTLContext;
@@ -25,7 +26,6 @@ struct Scope {
     std::map<std::string, std::unique_ptr<CustomElementNode>> customElementTemplates;
     std::map<std::string, std::unique_ptr<CustomVarNode>> customVarTemplates;
 
-    // For nested namespaces
     std::map<std::string, std::unique_ptr<Scope>> nestedScopes;
     Scope* parent = nullptr;
 
@@ -77,74 +77,61 @@ public:
         scopeStack.back()->customVarTemplates[node->getName()] = std::move(node);
     }
 
-    // Getter methods search from the current scope up to the global scope
+    // Unqualified getter methods search from the current scope up to the global scope
     const TemplateStyleNode* getStyleTemplate(const std::string& name) const {
-        for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-            const auto& scope = *it;
-            auto found = scope->styleTemplates.find(name);
-            if (found != scope->styleTemplates.end()) {
-                return found->second.get();
-            }
-        }
-        return nullptr;
+        return getFromScope(name, scopeStack.back(), &Scope::styleTemplates);
     }
-
     const TemplateElementNode* getElementTemplate(const std::string& name) const {
-        for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-            const auto& scope = *it;
-            auto found = scope->elementTemplates.find(name);
-            if (found != scope->elementTemplates.end()) {
-                return found->second.get();
-            }
-        }
-        return nullptr;
+        return getFromScope(name, scopeStack.back(), &Scope::elementTemplates);
     }
-
     const TemplateVarNode* getVarTemplate(const std::string& name) const {
-        for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-            const auto& scope = *it;
-            auto found = scope->varTemplates.find(name);
-            if (found != scope->varTemplates.end()) {
-                return found->second.get();
-            }
-        }
-        return nullptr;
+        return getFromScope(name, scopeStack.back(), &Scope::varTemplates);
     }
-
     const CustomStyleNode* getCustomStyle(const std::string& name) const {
-         for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-            const auto& scope = *it;
-            auto found = scope->customStyleTemplates.find(name);
-            if (found != scope->customStyleTemplates.end()) {
-                return found->second.get();
-            }
-        }
-        return nullptr;
+        return getFromScope(name, scopeStack.back(), &Scope::customStyleTemplates);
     }
-
     const CustomElementNode* getCustomElement(const std::string& name) const {
-         for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-            const auto& scope = *it;
-            auto found = scope->customElementTemplates.find(name);
-            if (found != scope->customElementTemplates.end()) {
-                return found->second.get();
-            }
-        }
-        return nullptr;
+        return getFromScope(name, scopeStack.back(), &Scope::customElementTemplates);
+    }
+    const CustomVarNode* getCustomVar(const std::string& name) const {
+        return getFromScope(name, scopeStack.back(), &Scope::customVarTemplates);
     }
 
-    const CustomVarNode* getCustomVar(const std::string& name) const {
-         for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
-            const auto& scope = *it;
-            auto found = scope->customVarTemplates.find(name);
-            if (found != scope->customVarTemplates.end()) {
-                return found->second.get();
-            }
-        }
-        return nullptr;
+    // Qualified getter methods
+    const TemplateStyleNode* getStyleTemplate(const std::string& name, const std::string& path) const {
+        const Scope* targetScope = findScopeByPath(path);
+        return getFromScope(name, targetScope, &Scope::styleTemplates);
     }
 
 private:
+    template<typename T>
+    const T* getFromScope(const std::string& name, const Scope* startScope, std::map<std::string, std::unique_ptr<T>> Scope::*member) const {
+        const Scope* currentScope = startScope;
+        while (currentScope) {
+            const auto& container = currentScope->*member;
+            auto it = container.find(name);
+            if (it != container.end()) {
+                return it->second.get();
+            }
+            currentScope = currentScope->parent;
+        }
+        return nullptr;
+    }
+
+    Scope* findScopeByPath(const std::string& path) const {
+        Scope* currentScope = globalScope.get();
+        std::stringstream ss(path);
+        std::string segment;
+        while(std::getline(ss, segment, '.')) {
+            auto it = currentScope->nestedScopes.find(segment);
+            if (it == currentScope->nestedScopes.end()) {
+                return nullptr;
+            }
+            currentScope = it->second.get();
+        }
+        return currentScope;
+    }
+
     std::unique_ptr<Scope> globalScope;
     std::vector<Scope*> scopeStack;
 };

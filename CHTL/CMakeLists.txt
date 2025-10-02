@@ -1,6 +1,7 @@
 add_library(chtl-lib STATIC
     CHTLLexer/CHTLLexer.cpp
     CHTLParser/CHTLParser.cpp
+    CHTLProcessor/CHTLProcessor.cpp
 )
 
 target_include_directories(chtl-lib PUBLIC

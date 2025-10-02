@@ -14,12 +14,13 @@
 
 class CHTLParser {
 public:
-    CHTLParser(const std::string& input, CHTLContext& context);
+    CHTLParser(const std::string& input, CHTLContext& context, bool discoveryMode = false);
     std::unique_ptr<DocumentNode> parse();
 
 private:
     CHTLLexer lexer;
     CHTLContext& context;
+    bool discoveryMode;
     Token currentToken;
     Token nextToken;
 
