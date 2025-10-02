@@ -2,6 +2,7 @@
 #define CHTL_CUSTOM_STYLE_NODE_H
 
 #include "TemplateStyleNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 #include <unordered_set>
@@ -17,6 +18,10 @@ public:
 
     const std::unordered_set<std::string>& getDeletedProperties() const {
         return deletedProperties;
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
 private:

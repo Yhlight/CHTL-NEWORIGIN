@@ -10,8 +10,9 @@ TEST_CASE("Local style blocks are parsed and generated correctly", "[local_style
 
     REQUIRE(ast != nullptr);
 
-    HtmlGenerator generator(std::move(ast));
-    std::string result = generator.generate();
+    HtmlGenerator generator;
+    ast->accept(generator);
+    std::string result = generator.getResult();
 
     // Check for hoisted CSS rule in the head
     std::string expected_hoisted_css = ".nested";

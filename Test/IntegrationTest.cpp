@@ -16,8 +16,9 @@ TEST_CASE("Processor handles imports and namespaces correctly", "[integration]")
 
     REQUIRE(doc != nullptr);
 
-    HtmlGenerator generator(std::move(doc));
-    std::string result = generator.generate();
+    HtmlGenerator generator;
+    doc->accept(generator);
+    std::string result = generator.getResult();
 
     // The core of the test: Did the style from the imported module get applied?
     std::string expected_style = "style=\"color: red; font-weight: bold;\"";

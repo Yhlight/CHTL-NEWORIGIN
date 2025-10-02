@@ -2,6 +2,7 @@
 #define CHTL_DECLARATION_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 
 class DeclarationNode : public BaseNode {
@@ -15,6 +16,10 @@ public:
 
     std::string getNodeType() const override {
         return declarationType;
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
 private:

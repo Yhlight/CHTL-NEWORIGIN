@@ -2,6 +2,7 @@
 #define CHTL_DOCUMENT_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <vector>
 #include <memory>
 #include <sstream>
@@ -21,6 +22,10 @@ public:
             ss << child->toString(depth + 1);
         }
         return ss.str();
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const {

@@ -1,119 +1,9 @@
 #include "HtmlGenerator.h"
-#include <iostream>
+#include <vector>
 
-HtmlGenerator::HtmlGenerator(std::unique_ptr<DocumentNode> doc) : document(std::move(doc)) {}
-
-std::string HtmlGenerator::generate() {
-    if (!document) return "";
-
-    std::stringstream ss;
-    if (document->getHasHtml5Doctype()) {
-        ss << "<!DOCTYPE html>\n";
-    }
-
-    ss << "<html>\n";
-
-    std::vector<const StyleNode*> allStyleNodes;
-    findStyleNodes(document.get(), allStyleNodes);
-
-    ss << generateHead(allStyleNodes);
-    ss << generateBody(document->getChildren(), 0);
-
-    ss << "</html>\n";
-
-    return ss.str();
-}
-
-void HtmlGenerator::findStyleNodes(BaseNode* node, std::vector<const StyleNode*>& styleNodes) {
-    if (!node) return;
-
-    if (auto* elementNode = dynamic_cast<ElementNode*>(node)) {
-        for (const auto& child : elementNode->getChildren()) {
-            if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
-                styleNodes.push_back(styleNode);
-            }
-            findStyleNodes(child.get(), styleNodes);
-        }
-    } else if (auto* docNode = dynamic_cast<DocumentNode*>(node)) {
-        for (const auto& child : docNode->getChildren()) {
-            findStyleNodes(child.get(), styleNodes);
-        }
-    }
-}
-
-std::string HtmlGenerator::generateHead(const std::vector<const StyleNode*>& allStyleNodes) {
-    std::stringstream ss;
-    ss << "<head>\n";
-    ss << "  <style>\n";
-
-    for (const auto* styleNode : allStyleNodes) {
-        for (const auto& rule : styleNode->getRules()) {
-            ss << "    " << rule->getSelector() << " {\n";
-            for (const auto& prop : rule->getProperties()) {
-                ss << "      " << prop.first << ": " << prop.second << ";\n";
-            }
-            ss << "    }\n";
-        }
-    }
-
-    ss << "  </style>\n";
-    ss << "</head>\n";
-    return ss.str();
-}
-
-std::string HtmlGenerator::generateBody(const std::vector<std::unique_ptr<BaseNode>>& nodes, int depth) {
-    std::stringstream ss;
-    ss << "<body>\n";
-    for (const auto& node : nodes) {
-        ss << generateNode(node.get(), depth + 1);
-    }
-    ss << "</body>\n";
-    return ss.str();
-}
-
-std::string HtmlGenerator::generateNode(const BaseNode* node, int depth) {
-    if (const auto* elementNode = dynamic_cast<const ElementNode*>(node)) {
-        return generateElement(elementNode, depth);
-    }
-    if (const auto* textNode = dynamic_cast<const TextNode*>(node)) {
-        return std::string(depth * 2, ' ') + textNode->toString(0);
-    }
-    if (const auto* commentNode = dynamic_cast<const CommentNode*>(node)) {
-        return std::string(depth * 2, ' ') + commentNode->toString(0);
-    }
-    return "";
-}
-
-std::string HtmlGenerator::generateElement(const ElementNode* node, int depth) {
-    std::stringstream ss;
-    std::string indent(depth * 2, ' ');
-    ss << indent << "<" << node->getTagName();
-
-    const StyleNode* styleNode = nullptr;
-    for (const auto& child : node->getChildren()) {
-        if (auto* sn = dynamic_cast<StyleNode*>(child.get())) {
-            styleNode = sn;
-            break;
-        }
-    }
-
-    if (styleNode && !styleNode->getProperties().empty()) {
-        ss << " style=\"" << generateInlineStyle(styleNode) << "\"";
-    }
-
-    ss << ">\n";
-
-    for (const auto& child : node->getChildren()) {
-        if (dynamic_cast<StyleNode*>(child.get()) == nullptr) {
-            ss << generateNode(child.get(), depth + 1);
-        }
-    }
-
-    ss << indent << "</" << node->getTagName() << ">\n";
-    return ss.str();
-}
-
-std::string HtmlGenerator::generateInlineStyle(const StyleNode* styleNode) const {
+// Helper to get inline style string from a StyleNode
+std::string getInlineStyle(const StyleNode* styleNode) {
+    if (!styleNode) return "";
     std::stringstream ss;
     const auto& properties = styleNode->getProperties();
     for (size_t i = 0; i < properties.size(); ++i) {
@@ -123,4 +13,117 @@ std::string HtmlGenerator::generateInlineStyle(const StyleNode* styleNode) const
         }
     }
     return ss.str();
+}
+
+std::string HtmlGenerator::getResult() {
+    return resultStream.str();
+}
+
+void HtmlGenerator::visit(DocumentNode& node) {
+    if (node.getHasHtml5Doctype()) {
+        resultStream << "<!DOCTYPE html>\n";
+    }
+    resultStream << "<html>\n";
+
+    // First pass: collect all CSS rules for hoisting
+    std::vector<StyleNode*> styleNodes;
+    findStyleNodes(&node, styleNodes);
+    for (auto* styleNode : styleNodes) {
+        styleNode->accept(*this);
+    }
+
+    // Generate head with hoisted styles
+    resultStream << "<head>\n";
+    if (!hoistedCss.str().empty()) {
+        resultStream << "  <style>\n" << hoistedCss.str() << "  </style>\n";
+    }
+    resultStream << "</head>\n";
+
+    // Generate body
+    resultStream << "<body>\n";
+    depth++;
+    for (const auto& child : node.getChildren()) {
+        child->accept(*this);
+    }
+    depth--;
+    resultStream << "</body>\n";
+
+    resultStream << "</html>\n";
+}
+
+void HtmlGenerator::visit(ElementNode& node) {
+    std::string indent(depth * 2, ' ');
+    resultStream << indent << "<" << node.getTagName();
+
+    // Find associated style node to extract inline styles
+    const StyleNode* styleNode = nullptr;
+    for (const auto& child : node.getChildren()) {
+        if (auto* sn = dynamic_cast<StyleNode*>(child.get())) {
+            styleNode = sn;
+            break;
+        }
+    }
+
+    if (styleNode) {
+        std::string inlineStyle = getInlineStyle(styleNode);
+        if (!inlineStyle.empty()) {
+            resultStream << " style=\"" << inlineStyle << "\"";
+        }
+    }
+
+    resultStream << ">\n";
+    depth++;
+    for (const auto& child : node.getChildren()) {
+        // StyleNodes are processed separately, so we skip them here
+        if (dynamic_cast<StyleNode*>(child.get()) == nullptr) {
+            child->accept(*this);
+        }
+    }
+    depth--;
+    resultStream << indent << "</" << node.getTagName() << ">\n";
+}
+
+void HtmlGenerator::visit(TextNode& node) {
+    std::string indent(depth * 2, ' ');
+    resultStream << indent << node.toString(0); // Use existing simple to string for content
+}
+
+void HtmlGenerator::visit(CommentNode& node) {
+    std::string indent(depth * 2, ' ');
+    resultStream << indent << node.toString(0); // Use existing simple to string for content
+}
+
+void HtmlGenerator::visit(StyleNode& node) {
+    // This visit is for hoisting CSS rules. Inline styles are handled by ElementNode visitor.
+    for (const auto& rule : node.getRules()) {
+        rule->accept(*this);
+    }
+}
+
+void HtmlGenerator::visit(CssRuleNode& node) {
+    std::string indent(depth * 2, ' ');
+    hoistedCss << indent << "  " << node.getSelector() << " {\n";
+    for (const auto& prop : node.getProperties()) {
+        hoistedCss << indent << "    " << prop.first << ": " << prop.second << ";\n";
+    }
+    hoistedCss << indent << "  }\n";
+}
+
+void HtmlGenerator::findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styleNodes) {
+    if (!node) return;
+
+    if (auto* elementNode = dynamic_cast<ElementNode*>(node)) {
+        for (const auto& child : elementNode->getChildren()) {
+            if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
+                styleNodes.push_back(styleNode);
+            }
+            // Recurse into children of elements
+            findStyleNodes(child.get(), styleNodes);
+        }
+    } else if (auto* docNode = dynamic_cast<DocumentNode*>(node)) {
+        for (const auto& child : docNode->getChildren()) {
+            findStyleNodes(child.get(), styleNodes);
+        }
+    }
+    // Other node types (like NamespaceNode) could be handled here if they can contain elements
 }

@@ -4,6 +4,7 @@
 #include <memory>
 #include "CHTLProcessor/CHTLProcessor.h"
 #include "CHTLGenerator/HtmlGenerator.h"
+#include "CHTLNode/DocumentNode.h"
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -15,8 +16,9 @@ int main(int argc, char* argv[]) {
         CHTLProcessor processor(argv[1]);
         std::unique_ptr<DocumentNode> ast = processor.process();
         if (ast) {
-            HtmlGenerator generator(std::move(ast));
-            std::cout << generator.generate();
+            HtmlGenerator generator;
+            ast->accept(generator);
+            std::cout << generator.getResult();
         } else {
             std::cerr << "Failed to process the document." << std::endl;
         }

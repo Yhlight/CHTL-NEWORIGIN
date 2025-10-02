@@ -2,6 +2,7 @@
 #define CHTL_NAMESPACE_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -24,6 +25,10 @@ public:
         }
         ss << indent << "}\n";
         return ss.str();
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
     const std::string& getName() const { return name; }

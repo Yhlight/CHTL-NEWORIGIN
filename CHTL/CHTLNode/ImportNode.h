@@ -2,6 +2,7 @@
 #define CHTL_IMPORT_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 
@@ -18,6 +19,10 @@ public:
         }
         result += "\n";
         return result;
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
     const std::string& getFullType() const { return fullType; }

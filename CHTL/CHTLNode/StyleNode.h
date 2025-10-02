@@ -3,6 +3,7 @@
 
 #include "BaseNode.h"
 #include "CssRuleNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 #include <utility>
@@ -25,6 +26,10 @@ public:
         // This will be updated later to handle hoisting.
         // For now, it only represents inline styles.
         return "";
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
     const std::vector<std::pair<std::string, std::string>>& getProperties() const {

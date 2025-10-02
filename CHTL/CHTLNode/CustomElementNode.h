@@ -2,6 +2,7 @@
 #define CHTL_CUSTOM_ELEMENT_NODE_H
 
 #include "TemplateElementNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 #include <unordered_set>
@@ -17,6 +18,10 @@ public:
 
     const std::unordered_set<std::string>& getDeletedElements() const {
         return deletedElements;
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
 private:

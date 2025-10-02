@@ -2,6 +2,7 @@
 #define CHTL_TEMPLATE_VAR_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -24,6 +25,10 @@ public:
         }
         ss << std::string(depth * 2, ' ') << "}" << std::endl;
         return ss.str();
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
     const std::string& getName() const { return templateName; }

@@ -2,6 +2,7 @@
 #define CHTL_CSS_RULE_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <map>
 #include <sstream>
@@ -29,6 +30,10 @@ public:
 
     std::string getNodeType() const override {
         return "[CssRule]";
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
 private:

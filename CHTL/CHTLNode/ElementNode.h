@@ -2,6 +2,7 @@
 #define CHTL_ELEMENT_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -38,6 +39,10 @@ public:
 
         ss << std::string(depth * 2, ' ') << "</" << tagName << ">" << std::endl;
         return ss.str();
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
 public:

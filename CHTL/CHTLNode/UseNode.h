@@ -2,6 +2,7 @@
 #define CHTL_USE_NODE_H
 
 #include "BaseNode.h"
+#include "NodeVisitor.h"
 #include <string>
 
 class UseNode : public BaseNode {
@@ -10,6 +11,10 @@ public:
 
     std::string toString(int depth = 0) const override {
         return std::string(depth * 2, ' ') + "UseNode: " + directive + "\n";
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
     }
 
     const std::string& getDirective() const {
