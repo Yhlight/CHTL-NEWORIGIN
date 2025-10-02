@@ -1,0 +1,17 @@
+// Simple CHTL test file
+html {
+    head {
+        
+    }
+    
+    body {
+        div {
+            id: container;
+            class: main-box;
+            
+            text {
+                "Hello, CHTL!"
+            }
+        }
+    }
+}
