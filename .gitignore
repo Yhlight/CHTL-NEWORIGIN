@@ -17,7 +17,3 @@ third-party/javascript/
 # OS files
 .DS_Store
 Thumbs.db
-third-party/antlr4/
-third-party/libsass/
-third-party/libzippp/
-third-party/quickjs/

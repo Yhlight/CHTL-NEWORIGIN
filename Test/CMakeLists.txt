@@ -13,8 +13,11 @@ add_executable(run-tests
 
 target_include_directories(run-tests PUBLIC
     ../third-party
+    ../Util
+    ../CHTL
 )
 
 target_link_libraries(run-tests PRIVATE
     chtl-lib
+    chtl-util
 )

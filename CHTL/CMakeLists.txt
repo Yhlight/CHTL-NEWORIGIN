@@ -11,5 +11,9 @@ target_include_directories(chtl-lib PUBLIC
     ../Util
 )
 
+target_link_libraries(chtl-lib PRIVATE
+    chtl-util
+)
+
 add_executable(chtl-compiler main.cpp)
 target_link_libraries(chtl-compiler PRIVATE chtl-lib)

@@ -1,2 +1,7 @@
-# This file is a placeholder for the Util component.
-# Future development will add the necessary targets and sources here.
+add_library(chtl-util STATIC
+    ExpressionEvaluator/ExpressionEvaluator.cpp
+)
+
+target_include_directories(chtl-util PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)

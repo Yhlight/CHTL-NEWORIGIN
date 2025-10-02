@@ -188,6 +188,58 @@ Token CHTLLexer::getNextToken() {
             return makeToken(TokenType::Comma, ",");
         }
 
+        if (currentChar() == '>') {
+            advance();
+            if (currentChar() == '=') {
+                advance();
+                return makeToken(TokenType::GreaterThanOrEqual, ">=");
+            }
+            return makeToken(TokenType::GreaterThan, ">");
+        }
+
+        if (currentChar() == '<') {
+            advance();
+            if (currentChar() == '=') {
+                advance();
+                return makeToken(TokenType::LessThanOrEqual, "<=");
+            }
+            return makeToken(TokenType::LessThan, "<");
+        }
+
+        if (currentChar() == '=') {
+            advance();
+            if (currentChar() == '=') {
+                advance();
+                return makeToken(TokenType::EqualTo, "==");
+            }
+            return makeToken(TokenType::Assign, "=");
+        }
+
+        if (currentChar() == '!') {
+            advance();
+            if (currentChar() == '=') {
+                advance();
+                return makeToken(TokenType::NotEqualTo, "!=");
+            }
+        }
+
+        if (currentChar() == '&') {
+            advance();
+            if (currentChar() == '&') {
+                advance();
+                return makeToken(TokenType::LogicalAnd, "&&");
+            }
+            return makeToken(TokenType::Ampersand, "&");
+        }
+
+        if (currentChar() == '|') {
+            advance();
+            if (currentChar() == '|') {
+                advance();
+                return makeToken(TokenType::LogicalOr, "||");
+            }
+        }
+
         // Unrecognized character
         advance();
         return makeToken(TokenType::Unknown, std::string(1, input[position - 1]));

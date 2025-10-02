@@ -3,6 +3,7 @@
 
 #include "BaseNode.h"
 #include "NodeVisitor.h"
+#include "../CHTLLexer/Token.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -10,7 +11,7 @@
 
 class IfNode : public BaseNode {
 public:
-    explicit IfNode(const std::string& condition) : condition(condition) {}
+    explicit IfNode(const std::vector<Token>& conditionTokens) : conditionTokens(conditionTokens) {}
 
     std::string getNodeType() const override { return "If"; }
 
@@ -24,7 +25,7 @@ public:
 
     std::string toString(int depth = 0) const override {
         std::stringstream ss;
-        ss << std::string(depth * 2, ' ') << "if (" << condition << ") {" << std::endl;
+        ss << std::string(depth * 2, ' ') << "if (condition) {" << std::endl; // Simplified for now
         for (const auto& prop : properties) {
             ss << std::string((depth + 1) * 2, ' ') << prop.first << ": " << prop.second << ";" << std::endl;
         }
@@ -39,8 +40,8 @@ public:
         visitor.visit(*this);
     }
 
-    const std::string& getCondition() const {
-        return condition;
+    const std::vector<Token>& getConditionTokens() const {
+        return conditionTokens;
     }
 
     const std::vector<std::pair<std::string, std::string>>& getProperties() const {
@@ -52,7 +53,7 @@ public:
     }
 
 private:
-    std::string condition;
+    std::vector<Token> conditionTokens;
     std::vector<std::pair<std::string, std::string>> properties;
     std::unique_ptr<BaseNode> elseBranch;
 };

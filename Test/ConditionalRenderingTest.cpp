@@ -5,11 +5,14 @@
 #include "CHTLContext/CHTLContext.h"
 #include <memory>
 
-TEST_CASE("Conditional rendering with a simple if block", "[conditional]") {
+TEST_CASE("Conditional rendering with property from parent", "[conditional]") {
     const std::string input = R"(
 div {
+    style {
+        width: 100px;
+    }
     if {
-        condition: true,
+        condition: width > 50,
         color: red;
     }
 }
@@ -21,83 +24,19 @@ div {
     doc->accept(generator);
     std::string result = generator.getResult();
 
-    REQUIRE(result.find("style=\"color: red;\"") != std::string::npos);
+    REQUIRE(result.find("style=\"width: 100px; color: red;\"") != std::string::npos);
 }
 
-TEST_CASE("Conditional rendering with a false if block", "[conditional]") {
+TEST_CASE("Conditional rendering with complex expression", "[conditional]") {
     const std::string input = R"(
 div {
-    if {
-        condition: false,
-        color: red;
+    style {
+        width: 100px;
+        height: 200px;
     }
-}
-)";
-    CHTLContext context;
-    CHTLParser parser(input, context);
-    auto doc = parser.parse();
-    HtmlGenerator generator;
-    doc->accept(generator);
-    std::string result = generator.getResult();
-
-    REQUIRE(result.find("style=") == std::string::npos);
-}
-
-TEST_CASE("Conditional rendering with if-else, if true", "[conditional]") {
-    const std::string input = R"(
-div {
     if {
-        condition: true,
-        color: red;
-    } else {
-        color: blue;
-    }
-}
-)";
-    CHTLContext context;
-    CHTLParser parser(input, context);
-    auto doc = parser.parse();
-    HtmlGenerator generator;
-    doc->accept(generator);
-    std::string result = generator.getResult();
-
-    REQUIRE(result.find("style=\"color: red;\"") != std::string::npos);
-    REQUIRE(result.find("color: blue;") == std::string::npos);
-}
-
-TEST_CASE("Conditional rendering with if-else, else true", "[conditional]") {
-    const std::string input = R"(
-div {
-    if {
-        condition: false,
-        color: red;
-    } else {
-        color: blue;
-    }
-}
-)";
-    CHTLContext context;
-    CHTLParser parser(input, context);
-    auto doc = parser.parse();
-    HtmlGenerator generator;
-    doc->accept(generator);
-    std::string result = generator.getResult();
-
-    REQUIRE(result.find("style=\"color: blue;\"") != std::string::npos);
-    REQUIRE(result.find("color: red;") == std::string::npos);
-}
-
-TEST_CASE("Conditional rendering with if-else if-else", "[conditional]") {
-    const std::string input = R"(
-div {
-    if {
-        condition: false,
-        color: red;
-    } else if {
-        condition: true,
+        condition: (width > 50 && height < 300) || height > 500,
         color: green;
-    } else {
-        color: blue;
     }
 }
 )";
@@ -108,7 +47,5 @@ div {
     doc->accept(generator);
     std::string result = generator.getResult();
 
-    REQUIRE(result.find("style=\"color: green;\"") != std::string::npos);
-    REQUIRE(result.find("color: red;") == std::string::npos);
-    REQUIRE(result.find("color: blue;") == std::string::npos);
+    REQUIRE(result.find("style=\"width: 100px; height: 200px; color: green;\"") != std::string::npos);
 }

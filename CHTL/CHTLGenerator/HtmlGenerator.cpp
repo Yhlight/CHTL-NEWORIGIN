@@ -1,16 +1,6 @@
 #include "HtmlGenerator.h"
+#include "ExpressionEvaluator/ExpressionEvaluator.h"
 #include <vector>
-#include <iostream>
-
-// Placeholder for static condition evaluation
-bool evaluateStaticCondition(const std::string& condition, ElementNode& context) {
-    // TODO: Implement a proper expression evaluator.
-    // For now, we'll just check for a simple "true" condition to test the flow.
-    if (condition.find("true") != std::string::npos) {
-        return true;
-    }
-    return false;
-}
 
 // Helper to get inline style string from a StyleNode
 std::string getInlineStyle(const StyleNode* styleNode) {
@@ -79,8 +69,9 @@ void HtmlGenerator::visit(ElementNode& node) {
             auto* currentIf = ifNode;
 
             while(currentIf && !conditionMet) {
+                ExpressionEvaluator evaluator(node);
                 // Check for else block (empty condition) or evaluate condition
-                if (currentIf->getCondition().empty() || evaluateStaticCondition(currentIf->getCondition(), node)) {
+                if (currentIf->getConditionTokens().empty() || evaluator.evaluate(currentIf->getConditionTokens())) {
                     conditionMet = true;
                     for (const auto& prop : currentIf->getProperties()) {
                         inlineStyles.push_back(prop);

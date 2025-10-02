@@ -40,6 +40,14 @@ enum class TokenType {
     Comma,
     Dot,
     Ampersand,
+    GreaterThan,
+    LessThan,
+    EqualTo,
+    NotEqualTo,
+    GreaterThanOrEqual,
+    LessThanOrEqual,
+    LogicalAnd,
+    LogicalOr,
 
     // Special
     Comment,

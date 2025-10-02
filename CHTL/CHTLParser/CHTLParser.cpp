@@ -512,16 +512,16 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
     advance(); // consume 'condition'
     expect(TokenType::Colon);
 
-    std::string condition;
+    std::vector<Token> conditionTokens;
     while(currentToken.type != TokenType::Comma && currentToken.type != TokenType::RBrace) {
-        condition += currentToken.value;
+        conditionTokens.push_back(currentToken);
         advance();
     }
      if (currentToken.type == TokenType::Comma) {
         advance();
     }
 
-    auto ifNode = std::make_unique<IfNode>(condition);
+    auto ifNode = std::make_unique<IfNode>(conditionTokens);
 
     while (currentToken.type != TokenType::RBrace) {
         std::string propName = currentToken.value;
@@ -548,7 +548,7 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
             ifNode->setElseBranch(parseIfStatement());
         } else {
             expect(TokenType::LBrace);
-            auto elseNode = std::make_unique<IfNode>(""); // Empty condition for else
+            auto elseNode = std::make_unique<IfNode>(std::vector<Token>{}); // Empty condition for else
             while (currentToken.type != TokenType::RBrace) {
                 std::string propName = currentToken.value;
                 advance();
