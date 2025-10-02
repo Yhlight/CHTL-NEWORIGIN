@@ -14,6 +14,7 @@ public:
     void parse();
     void setState(std::unique_ptr<CHTLState> newState);
     Token getNextToken();
+    void setRawContentMode(bool enabled);
 
     // AST management
     void addNode(std::unique_ptr<BaseNode> node);

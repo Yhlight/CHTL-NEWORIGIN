@@ -8,9 +8,11 @@ class CHTLLexer {
 public:
     CHTLLexer(const std::string& input);
     Token getNextToken();
+    void setRawContentMode(bool enabled);
 
 private:
     std::string input;
+    bool rawContentMode;
     size_t position;
     int line;
     int column;

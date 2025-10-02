@@ -1,6 +1,8 @@
 #include "TagState.h"
 #include "DefaultState.h"
 #include "TextState.h"
+#include "StyleState.h"
+#include "ScriptState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -59,6 +61,16 @@ void TagState::handle(CHTLParser& parser, Token token) {
 
         case TokenType::KEYWORD_TEXT:
             parser.setState(std::make_unique<TextState>());
+            break;
+
+        case TokenType::KEYWORD_STYLE:
+            parser.setRawContentMode(true);
+            parser.setState(std::make_unique<StyleState>());
+            break;
+
+        case TokenType::KEYWORD_SCRIPT:
+            parser.setRawContentMode(true);
+            parser.setState(std::make_unique<ScriptState>());
             break;
 
         case TokenType::SINGLE_LINE_COMMENT:

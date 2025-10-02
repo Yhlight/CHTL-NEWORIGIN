@@ -3,9 +3,35 @@
 #include <iostream>
 
 CHTLLexer::CHTLLexer(const std::string& input)
-    : input(input), position(0), line(1), column(1) {}
+    : input(input), rawContentMode(false), position(0), line(1), column(1) {}
+
+void CHTLLexer::setRawContentMode(bool enabled) {
+    rawContentMode = enabled;
+}
 
 Token CHTLLexer::getNextToken() {
+    if (rawContentMode) {
+        skipWhitespace();
+        if (currentChar() == '{') {
+            advance(); // Consume '{'
+            std::string content;
+            int braceCount = 1;
+            while (position < input.size() && braceCount > 0) {
+                if (currentChar() == '{') {
+                    braceCount++;
+                } else if (currentChar() == '}') {
+                    braceCount--;
+                }
+                if (braceCount > 0) {
+                    content += currentChar();
+                }
+                advance();
+            }
+            rawContentMode = false; // Reset raw content mode
+            return {TokenType::STRING_LITERAL, content, line, column};
+        }
+    }
+
     while (position < input.size()) {
         char current = currentChar();
 
@@ -18,6 +44,9 @@ Token CHTLLexer::getNextToken() {
         switch (current) {
             case '{': advance(); return {TokenType::LEFT_BRACE, "{", line, column};
             case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
+            case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
+            case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
+            case '.': advance(); return {TokenType::DOT, ".", line, column};
             case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
             case ':': advance(); return {TokenType::COLON, ":", line, column};
             case '=': advance(); return {TokenType::EQUALS, "=", line, column};
@@ -37,8 +66,7 @@ Token CHTLLexer::getNextToken() {
             return stringLiteral();
         }
 
-        // If it's none of the above, it's an identifier or an unquoted literal.
-        // We treat them the same at the lexer level.
+        // If it's none of the above, it's an identifier
         if (isgraph(current)) {
             return identifier();
         }
@@ -81,7 +109,7 @@ Token CHTLLexer::identifier() {
     int startLine = line;
     int startColumn = column;
     // Consume characters until a whitespace or a CHTL punctuation character is found.
-    while (position < input.size() && !isspace(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=') {
+    while (position < input.size() && !isspace(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=' && currentChar() != '(' && currentChar() != ')' && currentChar() != '.') {
         value += currentChar();
         advance();
     }

@@ -26,6 +26,10 @@ Token CHTLParser::getNextToken() {
     return lexer.getNextToken();
 }
 
+void CHTLParser::setRawContentMode(bool enabled) {
+    lexer.setRawContentMode(enabled);
+}
+
 void CHTLParser::addNode(std::unique_ptr<BaseNode> node) {
     getCurrentScope()->addChild(std::move(node));
 }

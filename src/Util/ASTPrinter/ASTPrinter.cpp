@@ -2,6 +2,8 @@
 #include "../../CHTL/CHTLNode/ElementNode.h"
 #include "../../CHTL/CHTLNode/TextNode.h"
 #include "../../CHTL/CHTLNode/CommentNode.h"
+#include "../../CHTL/CHTLNode/StyleNode.h"
+#include "../../CHTL/CHTLNode/ScriptNode.h"
 
 void ASTPrinter::print(BaseNode* root) {
     if (!root) {
@@ -33,6 +35,16 @@ void ASTPrinter::printNode(BaseNode* node, int indent) {
         case NodeType::Comment: {
             auto* commentNode = static_cast<CommentNode*>(node);
             std::cout << indentation << "Comment: \"" << commentNode->getComment() << "\"" << std::endl;
+            break;
+        }
+        case NodeType::Style: {
+            auto* styleNode = static_cast<StyleNode*>(node);
+            std::cout << indentation << "Style: \"" << styleNode->getStyle() << "\"" << std::endl;
+            break;
+        }
+        case NodeType::Script: {
+            auto* scriptNode = static_cast<ScriptNode*>(node);
+            std::cout << indentation << "Script: \"" << scriptNode->getScript() << "\"" << std::endl;
             break;
         }
         case NodeType::Base:
