@@ -28,6 +28,8 @@ public:
     const std::string& getName() const { return templateName; }
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const { return children; }
 
+    std::string getNodeType() const override { return "[Template] @Element"; }
+
 private:
     std::string templateName;
     std::vector<std::unique_ptr<BaseNode>> children;

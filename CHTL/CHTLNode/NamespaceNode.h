@@ -29,9 +29,19 @@ public:
     const std::string& getName() const { return name; }
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const { return children; }
 
+public:
+    void addGlobalConstraint(const std::string& constraint) {
+        global_constraints.push_back(constraint);
+    }
+
+    const std::vector<std::string>& getGlobalConstraints() const {
+        return global_constraints;
+    }
+
 private:
     std::string name;
     std::vector<std::unique_ptr<BaseNode>> children;
+    std::vector<std::string> global_constraints;
 };
 
 #endif // CHTL_NAMESPACE_NODE_H

@@ -14,6 +14,8 @@ public:
 
     const std::string& getTagName() const { return tagName; }
 
+    std::string getNodeType() const override { return "@Html"; }
+
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
     }
@@ -51,11 +53,20 @@ public:
         return constraints;
     }
 
+    void addTypeConstraint(const std::string& typeConstraint) {
+        type_constraints.push_back(typeConstraint);
+    }
+
+    const std::vector<std::string>& getTypeConstraints() const {
+        return type_constraints;
+    }
+
 private:
     std::string tagName;
     std::map<std::string, std::string> attributes;
     std::vector<std::unique_ptr<BaseNode>> children;
     std::vector<std::string> constraints;
+    std::vector<std::string> type_constraints;
 };
 
 #endif //CHTL_ELEMENT_NODE_H

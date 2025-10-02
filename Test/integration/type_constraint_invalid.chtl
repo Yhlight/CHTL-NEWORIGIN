@@ -1,0 +1,6 @@
+div {
+    except [Template];
+    [Template] @Style MyStyle {
+        color: red;
+    }
+}

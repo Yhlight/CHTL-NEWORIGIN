@@ -25,6 +25,7 @@ struct Scope {
     std::map<std::string, std::unique_ptr<CustomStyleNode>> customStyleTemplates;
     std::map<std::string, std::unique_ptr<CustomElementNode>> customElementTemplates;
     std::map<std::string, std::unique_ptr<CustomVarNode>> customVarTemplates;
+    std::vector<std::string> global_constraints;
 
     std::map<std::string, std::unique_ptr<Scope>> nestedScopes;
     Scope* parent = nullptr;
@@ -95,6 +96,21 @@ public:
     }
     const CustomVarNode* getCustomVar(const std::string& name) const {
         return getFromScope(name, scopeStack.back(), &Scope::customVarTemplates);
+    }
+
+    void addGlobalConstraint(const std::string& constraint) {
+        if (!scopeStack.empty()) {
+            scopeStack.back()->global_constraints.push_back(constraint);
+        }
+    }
+
+    std::vector<std::string> getActiveGlobalConstraints() const {
+        std::vector<std::string> all_constraints;
+        for (auto it = scopeStack.rbegin(); it != scopeStack.rend(); ++it) {
+            const auto& scope_constraints = (*it)->global_constraints;
+            all_constraints.insert(all_constraints.end(), scope_constraints.begin(), scope_constraints.end());
+        }
+        return all_constraints;
     }
 
     // Qualified getter methods

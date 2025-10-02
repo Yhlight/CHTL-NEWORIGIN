@@ -29,6 +29,8 @@ public:
     const std::string& getName() const { return templateName; }
     const std::map<std::string, std::string>& getVariables() const { return variables; }
 
+    std::string getNodeType() const override { return "[Template] @Var"; }
+
 private:
     std::string templateName;
     std::map<std::string, std::string> variables;

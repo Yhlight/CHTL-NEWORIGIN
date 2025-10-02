@@ -28,6 +28,8 @@ public:
     const std::string& getName() const { return templateName; }
     const std::vector<std::pair<std::string, std::string>>& getProperties() const { return properties; }
 
+    std::string getNodeType() const override { return "[Template] @Style"; }
+
 private:
     std::string templateName;
     std::vector<std::pair<std::string, std::string>> properties;

@@ -9,6 +9,7 @@ class BaseNode {
 public:
     virtual ~BaseNode() = default;
     virtual std::string toString(int depth = 0) const = 0;
+    virtual std::string getNodeType() const { return "Base"; }
 };
 
 #endif //CHTL_BASE_NODE_H
