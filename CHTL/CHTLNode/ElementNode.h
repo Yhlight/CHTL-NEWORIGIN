@@ -12,6 +12,8 @@ class ElementNode : public BaseNode {
 public:
     explicit ElementNode(const std::string& tagName) : tagName(tagName) {}
 
+    const std::string& getTagName() const { return tagName; }
+
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
     }

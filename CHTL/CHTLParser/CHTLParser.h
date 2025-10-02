@@ -4,6 +4,9 @@
 #include "../CHTLLexer/CHTLLexer.h"
 #include "../CHTLNode/DocumentNode.h"
 #include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/CustomStyleNode.h"
+#include "../CHTLNode/CustomElementNode.h"
+#include "../CHTLNode/CustomVarNode.h"
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
 
@@ -29,6 +32,7 @@ private:
     std::unique_ptr<BaseNode> parseStyleNode();
     std::unique_ptr<BaseNode> parseTextAttribute();
     std::unique_ptr<BaseNode> parseTemplateDeclaration();
+    std::unique_ptr<BaseNode> parseCustomDeclaration();
 };
 
 #endif //CHTL_PARSER_H

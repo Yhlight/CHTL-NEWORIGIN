@@ -34,7 +34,14 @@ void CHTLParser::expect(TokenType type) {
 
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     if (currentToken.type == TokenType::LBracket) {
-        return parseTemplateDeclaration();
+        if (peek().type == TokenType::Identifier) {
+            if (peek().value == "Template") {
+                return parseTemplateDeclaration();
+            } else if (peek().value == "Custom") {
+                return parseCustomDeclaration();
+            }
+        }
+        throw std::runtime_error("Unsupported declaration type inside []. Expected 'Template' or 'Custom'.");
     }
     if (currentToken.type == TokenType::Identifier) {
         // The 'text' keyword is special; it can start a text block.
@@ -313,7 +320,7 @@ std::unique_ptr<DocumentNode> CHTLParser::parse() {
     auto documentNode = std::make_unique<DocumentNode>();
     while (currentToken.type != TokenType::EndOfFile) {
         if (currentToken.type == TokenType::LBracket) {
-            // Template declarations are non-emitting statements.
+            // Template/Custom declarations are non-emitting statements.
             // We parse them to register them in the context, but they don't
             // return a node to be added to the document tree.
             parseStatement();
@@ -329,4 +336,145 @@ std::unique_ptr<DocumentNode> CHTLParser::parse() {
         }
     }
     return documentNode;
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseCustomDeclaration() {
+    expect(TokenType::LBracket);
+    if (currentToken.type != TokenType::Identifier || currentToken.value != "Custom") {
+        throw std::runtime_error("Expected 'Custom' keyword inside [].");
+    }
+    advance();
+    expect(TokenType::RBracket);
+
+    expect(TokenType::At);
+
+    if (currentToken.type != TokenType::Identifier) {
+        throw std::runtime_error("Expected custom type specifier (e.g., @Style).");
+    }
+
+    std::string customType = currentToken.value;
+    advance();
+
+    if (customType == "Style") {
+        if (currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected a name for the custom style.");
+        }
+        std::string customName = currentToken.value;
+        advance();
+
+        auto customNode = std::make_unique<CustomStyleNode>(customName);
+
+        expect(TokenType::LBrace);
+
+        while (currentToken.type != TokenType::RBrace && currentToken.type != TokenType::EndOfFile) {
+            if (currentToken.type == TokenType::Identifier && currentToken.value == "delete") {
+                advance(); // consume 'delete'
+                do {
+                    if (currentToken.type != TokenType::Identifier) {
+                        throw std::runtime_error("Expected property name after 'delete'.");
+                    }
+                    customNode->addDeletedProperty(currentToken.value);
+                    advance();
+                    if (currentToken.type == TokenType::Comma) {
+                        advance();
+                    } else {
+                        break;
+                    }
+                } while (true);
+                expect(TokenType::Semicolon);
+            } else if (currentToken.type == TokenType::Identifier) {
+                std::string propName = currentToken.value;
+                advance();
+                expect(TokenType::Colon);
+                if (currentToken.type != TokenType::Identifier) {
+                    throw std::runtime_error("Expected a style property value.");
+                }
+                std::string propValue = currentToken.value;
+                advance();
+                expect(TokenType::Semicolon);
+                customNode->addProperty(propName, propValue);
+            } else {
+                throw std::runtime_error("Unexpected token in custom style block.");
+            }
+        }
+        expect(TokenType::RBrace);
+        context.registerCustomStyle(std::move(customNode));
+        return nullptr;
+    } else if (customType == "Element") {
+        if (currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected a name for the custom element.");
+        }
+        std::string customName = currentToken.value;
+        advance();
+
+        auto customNode = std::make_unique<CustomElementNode>(customName);
+
+        expect(TokenType::LBrace);
+
+        while (currentToken.type != TokenType::RBrace && currentToken.type != TokenType::EndOfFile) {
+            if (currentToken.type == TokenType::Identifier && currentToken.value == "delete") {
+                advance(); // consume 'delete'
+                do {
+                    if (currentToken.type != TokenType::Identifier) {
+                        throw std::runtime_error("Expected element name after 'delete'.");
+                    }
+                    customNode->addDeletedElement(currentToken.value);
+                    advance();
+                    if (currentToken.type == TokenType::Comma) {
+                        advance();
+                    } else {
+                        break;
+                    }
+                } while (true);
+                expect(TokenType::Semicolon);
+            } else {
+                 auto child = parseStatement();
+                if (child) {
+                    customNode->addChild(std::move(child));
+                } else {
+                    break;
+                }
+            }
+        }
+
+        expect(TokenType::RBrace);
+        context.registerCustomElement(std::move(customNode));
+        return nullptr;
+    } else if (customType == "Var") {
+        if (currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected a name for the var custom.");
+        }
+        std::string customName = currentToken.value;
+        advance();
+
+        auto customNode = std::make_unique<CustomVarNode>(customName);
+
+        expect(TokenType::LBrace);
+
+        while (currentToken.type != TokenType::RBrace && currentToken.type != TokenType::EndOfFile) {
+            if (currentToken.type != TokenType::Identifier) {
+                throw std::runtime_error("Expected a variable name.");
+            }
+            std::string varName = currentToken.value;
+            advance();
+
+            expect(TokenType::Colon);
+
+            if (currentToken.type != TokenType::String) {
+                throw std::runtime_error("Expected a string literal for variable value.");
+            }
+            std::string varValue = currentToken.value;
+            advance();
+
+            expect(TokenType::Semicolon);
+
+            customNode->addVariable(varName, varValue);
+        }
+
+        expect(TokenType::RBrace);
+        context.registerCustomVar(std::move(customNode));
+        return nullptr;
+    } else {
+        throw std::runtime_error("Unsupported custom type: " + customType);
+    }
 }

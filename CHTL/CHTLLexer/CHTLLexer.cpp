@@ -157,6 +157,11 @@ Token CHTLLexer::getNextToken() {
             return makeToken(TokenType::Assign, "=");
         }
 
+        if (currentChar() == ',') {
+            advance();
+            return makeToken(TokenType::Comma, ",");
+        }
+
         // Unrecognized character
         advance();
         return makeToken(TokenType::Unknown, std::string(1, input[position - 1]));

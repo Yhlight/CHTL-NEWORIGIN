@@ -5,6 +5,9 @@
 #include "CHTLNode/TemplateStyleNode.h"
 #include "CHTLNode/TemplateElementNode.h"
 #include "CHTLNode/TemplateVarNode.h"
+#include "CHTLNode/CustomStyleNode.h"
+#include "CHTLNode/CustomElementNode.h"
+#include "CHTLNode/CustomVarNode.h"
 #include "CHTLContext/CHTLContext.h"
 #include <memory>
 
@@ -305,4 +308,91 @@ div {
 
     std::string output = root->toString();
     REQUIRE(output.find("/* Style Block: color: black; line-height: 1.6; */") != std::string::npos);
+}
+
+TEST_CASE("Parser handles custom style declarations with delete", "[parser]") {
+    const std::string input = R"(
+[Custom] @Style YellowText
+{
+    color: yellow;
+    delete line-height, border;
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0); // Declarations are non-emitting
+
+    const auto* customNode = context.getCustomStyle("YellowText");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "YellowText");
+
+    const auto& props = customNode->getProperties();
+    REQUIRE(props.size() == 1);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "yellow");
+
+    const auto& deletedProps = customNode->getDeletedProperties();
+    REQUIRE(deletedProps.size() == 2);
+    REQUIRE(deletedProps.count("line-height") == 1);
+    REQUIRE(deletedProps.count("border") == 1);
+}
+
+TEST_CASE("Parser handles custom element declarations with delete", "[parser]") {
+    const std::string input = R"(
+[Custom] @Element MyCustomBox
+{
+    delete span;
+    div { }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* customNode = context.getCustomElement("MyCustomBox");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "MyCustomBox");
+
+    const auto& customChildren = customNode->getChildren();
+    REQUIRE(customChildren.size() == 1);
+    auto* divNode = dynamic_cast<ElementNode*>(customChildren[0].get());
+    REQUIRE(divNode != nullptr);
+    REQUIRE(divNode->getTagName() == "div");
+
+
+    const auto& deletedElements = customNode->getDeletedElements();
+    REQUIRE(deletedElements.size() == 1);
+    REQUIRE(deletedElements.count("span") == 1);
+}
+
+TEST_CASE("Parser handles custom var declarations", "[parser]") {
+    const std::string input = R"END(
+[Custom] @Var CustomTheme
+{
+    mainColor: "blue";
+}
+)END";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* customNode = context.getCustomVar("CustomTheme");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "CustomTheme");
+
+    const auto& vars = customNode->getVariables();
+    REQUIRE(vars.size() == 1);
+    REQUIRE(vars.at("mainColor") == "blue");
 }
