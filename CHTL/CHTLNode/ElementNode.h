@@ -25,6 +25,8 @@ public:
         attributes[key] = value;
     }
 
+    const std::map<std::string, std::string>& getAttributes() const { return attributes; }
+
     std::string toString(int depth = 0) const override {
         std::stringstream ss;
         ss << std::string(depth * 2, ' ') << "<" << tagName;

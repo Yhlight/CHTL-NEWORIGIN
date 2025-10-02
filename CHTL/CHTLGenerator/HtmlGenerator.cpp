@@ -2,6 +2,10 @@
 #include "ExpressionEvaluator/ExpressionEvaluator.h"
 #include <vector>
 
+HtmlGenerator::HtmlGenerator() {
+    selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
+}
+
 // Helper to get inline style string from a StyleNode
 std::string getInlineStyle(const StyleNode* styleNode) {
     if (!styleNode) return "";
@@ -56,6 +60,11 @@ void HtmlGenerator::visit(ElementNode& node) {
     std::string indent(depth * 2, ' ');
     resultStream << indent << "<" << node.getTagName();
 
+    // Handle attributes
+    for (const auto& attr : node.getAttributes()) {
+        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
+    }
+
     // Collect all inline styles from StyleNode and IfNode children
     std::vector<std::pair<std::string, std::string>> inlineStyles;
 
@@ -99,16 +108,20 @@ void HtmlGenerator::visit(ElementNode& node) {
         resultStream << "\"";
     }
 
-    resultStream << ">\n";
-    depth++;
-    for (const auto& child : node.getChildren()) {
-        // StyleNodes and IfNodes are processed for styles, so skip direct rendering
-        if (dynamic_cast<StyleNode*>(child.get()) == nullptr && dynamic_cast<IfNode*>(child.get()) == nullptr) {
-            child->accept(*this);
+    if (selfClosingTags.count(node.getTagName())) {
+        resultStream << " />\n";
+    } else {
+        resultStream << ">\n";
+        depth++;
+        for (const auto& child : node.getChildren()) {
+            // StyleNodes and IfNodes are processed for styles, so skip direct rendering
+            if (dynamic_cast<StyleNode*>(child.get()) == nullptr && dynamic_cast<IfNode*>(child.get()) == nullptr) {
+                child->accept(*this);
+            }
         }
+        depth--;
+        resultStream << indent << "</" << node.getTagName() << ">\n";
     }
-    depth--;
-    resultStream << indent << "</" << node.getTagName() << ">\n";
 }
 
 void HtmlGenerator::visit(TextNode& node) {

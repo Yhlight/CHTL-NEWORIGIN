@@ -13,9 +13,11 @@
 #include <vector>
 #include <sstream>
 #include <memory>
+#include <unordered_set>
 
 class HtmlGenerator : public NodeVisitor {
 public:
+    HtmlGenerator();
     std::string getResult();
 
     void visit(DocumentNode& node) override;
@@ -44,6 +46,7 @@ private:
     std::stringstream resultStream;
     std::stringstream hoistedCss;
     int depth = 0;
+    std::unordered_set<std::string> selfClosingTags;
 };
 
 #endif // CHTL_HTML_GENERATOR_H

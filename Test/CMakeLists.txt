@@ -9,6 +9,7 @@ add_executable(run-tests
     ConstraintsTest.cpp
     LocalStyleTest.cpp
     ConditionalRenderingTest.cpp
+    ImgTagTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC
