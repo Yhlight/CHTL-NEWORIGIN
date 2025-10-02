@@ -1,0 +1,5 @@
+use html5;
+
+div {
+    text: "hello";
+}

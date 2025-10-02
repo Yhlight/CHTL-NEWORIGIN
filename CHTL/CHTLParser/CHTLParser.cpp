@@ -53,6 +53,9 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
         if (currentToken.value == "style" && peek().type == TokenType::LBrace) return parseStyleNode();
         return parseElement();
     }
+    if (currentToken.type == TokenType::Use) {
+        return parseUseStatement();
+    }
     if (currentToken.type == TokenType::Comment) return parseCommentNode();
     return nullptr;
 }
@@ -280,6 +283,11 @@ std::unique_ptr<DocumentNode> CHTLParser::parse() {
         auto pre_parse_token = currentToken;
         auto statement = parseStatement();
         if (statement) {
+            if (auto useNode = dynamic_cast<UseNode*>(statement.get())) {
+                if (useNode->getDirective() == "html5") {
+                    documentNode->setHasHtml5Doctype(true);
+                }
+            }
             documentNode->addChild(std::move(statement));
         } else if (pre_parse_token == currentToken) {
             break;
@@ -316,6 +324,14 @@ std::unique_ptr<BaseNode> CHTLParser::parseImportDeclaration() {
         advance();
     }
     return std::make_unique<ImportNode>(fullType, entityName, filePath, alias);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseUseStatement() {
+    expect(TokenType::Use);
+    std::string directive = currentToken.value;
+    advance();
+    expect(TokenType::Semicolon);
+    return std::make_unique<UseNode>(directive);
 }
 
 std::unique_ptr<BaseNode> CHTLParser::parseNamespaceDeclaration() {

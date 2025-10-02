@@ -59,6 +59,12 @@ Token CHTLLexer::makeIdentifier() {
     if (value == "as") {
         return makeToken(TokenType::As, value);
     }
+    if (value == "use") {
+        return makeToken(TokenType::Use, value);
+    }
+    if (value == "html5") {
+        return makeToken(TokenType::Html5, value);
+    }
 
     return makeToken(TokenType::Identifier, value);
 }

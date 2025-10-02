@@ -4,6 +4,7 @@ add_executable(run-tests
     LexerTest.cpp
     ParserTest.cpp
     IntegrationTest.cpp
+    UseTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC

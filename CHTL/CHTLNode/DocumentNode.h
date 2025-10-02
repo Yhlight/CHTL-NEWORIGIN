@@ -8,7 +8,7 @@
 
 class DocumentNode : public BaseNode {
 public:
-    DocumentNode() = default;
+    DocumentNode() : hasHtml5Doctype(false) {}
 
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
@@ -27,8 +27,17 @@ public:
         return children;
     }
 
+    void setHasHtml5Doctype(bool value) {
+        hasHtml5Doctype = value;
+    }
+
+    bool getHasHtml5Doctype() const {
+        return hasHtml5Doctype;
+    }
+
 private:
     std::vector<std::unique_ptr<BaseNode>> children;
+    bool hasHtml5Doctype;
 };
 
 #endif //CHTL_DOCUMENT_NODE_H

@@ -15,6 +15,9 @@ int main(int argc, char* argv[]) {
         CHTLProcessor processor(argv[1]);
         std::unique_ptr<DocumentNode> ast = processor.process();
         if (ast) {
+            if (ast->getHasHtml5Doctype()) {
+                std::cout << "<!DOCTYPE html>\n";
+            }
             std::cout << ast->toString();
         } else {
             std::cerr << "Failed to process the document." << std::endl;

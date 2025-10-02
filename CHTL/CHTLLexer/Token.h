@@ -8,6 +8,8 @@ enum class TokenType {
     // Keywords
     From,
     As,
+    Use,
+    Html5,
 
     // Literals
     Identifier,
