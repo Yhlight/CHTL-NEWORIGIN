@@ -4,6 +4,7 @@
 #include "../../CHTL/CHTLNode/CommentNode.h"
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/ScriptNode.h"
+#include "../../CHTL/CHTLNode/StylePropertyNode.h"
 
 void ASTPrinter::print(BaseNode* root) {
     if (!root) {
@@ -38,13 +39,17 @@ void ASTPrinter::printNode(BaseNode* node, int indent) {
             break;
         }
         case NodeType::Style: {
-            auto* styleNode = static_cast<StyleNode*>(node);
-            std::cout << indentation << "Style: \"" << styleNode->getStyle() << "\"" << std::endl;
+            std::cout << indentation << "Style" << std::endl;
             break;
         }
         case NodeType::Script: {
             auto* scriptNode = static_cast<ScriptNode*>(node);
             std::cout << indentation << "Script: \"" << scriptNode->getScript() << "\"" << std::endl;
+            break;
+        }
+        case NodeType::StyleProperty: {
+            auto* propNode = static_cast<StylePropertyNode*>(node);
+            std::cout << indentation << "Style Property: " << propNode->getName() << " = \"" << propNode->getValue() << "\"" << std::endl;
             break;
         }
         case NodeType::Base:

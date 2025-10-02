@@ -8,6 +8,6 @@ public:
     StyleState();
     void handle(CHTLParser& parser, Token token) override;
 private:
-    std::string content;
-    bool inBlock;
+    std::string pendingPropertyName;
+    bool expectingValue;
 };

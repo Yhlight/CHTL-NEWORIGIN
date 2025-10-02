@@ -1,16 +1,44 @@
 #include "StyleState.h"
 #include "TagState.h"
 #include "../CHTLParser/CHTLParser.h"
-#include "../CHTLNode/StyleNode.h"
+#include "../CHTLNode/StylePropertyNode.h"
 #include <iostream>
 
-StyleState::StyleState() {}
+StyleState::StyleState() : expectingValue(false) {}
 
 void StyleState::handle(CHTLParser& parser, Token token) {
-    // In raw content mode, we expect a single token with the block's content.
-    if (token.type == TokenType::STRING_LITERAL) {
-        parser.addNode(std::make_unique<StyleNode>(token.value));
+    switch (token.type) {
+        case TokenType::IDENTIFIER:
+            if (expectingValue) {
+                // This is the property value
+                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, token.value));
+                pendingPropertyName.clear();
+                expectingValue = false;
+            } else {
+                // This is the property name
+                pendingPropertyName = token.value;
+            }
+            break;
+
+        case TokenType::COLON:
+        case TokenType::EQUALS:
+            expectingValue = true;
+            break;
+
+        case TokenType::SEMICOLON:
+            // End of a property; reset for the next one.
+            pendingPropertyName.clear();
+            expectingValue = false;
+            break;
+
+        case TokenType::RIGHT_BRACE:
+            // End of the style block.
+            parser.closeScope();
+            parser.setState(std::make_unique<TagState>());
+            break;
+
+        default:
+            // Ignore other tokens for now.
+            break;
     }
-    // After processing the raw content, transition back to the TagState.
-    parser.setState(std::make_unique<TagState>());
 }

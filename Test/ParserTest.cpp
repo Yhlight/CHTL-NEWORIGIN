@@ -4,6 +4,7 @@
 #include "CHTLNode/ElementNode.h"
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/ScriptNode.h"
+#include "CHTLNode/StylePropertyNode.h"
 
 TEST(ParserTest, ParsesSingleEmptyElement) {
     std::string input = "div {}";
@@ -34,11 +35,16 @@ TEST(ParserTest, ParsesStyleBlock) {
     ASSERT_EQ(divNode->getType(), NodeType::Element);
     ASSERT_EQ(divNode->getChildren().size(), 1);
 
-    BaseNode* styleNodeBase = divNode->getChildren()[0].get();
-    ASSERT_EQ(styleNodeBase->getType(), NodeType::Style);
+    BaseNode* styleNode = divNode->getChildren()[0].get();
+    ASSERT_EQ(styleNode->getType(), NodeType::Style);
+    ASSERT_EQ(styleNode->getChildren().size(), 1);
 
-    auto* styleNode = static_cast<StyleNode*>(styleNodeBase);
-    EXPECT_EQ(styleNode->getStyle(), " color: red; ");
+    BaseNode* propNodeBase = styleNode->getChildren()[0].get();
+    ASSERT_EQ(propNodeBase->getType(), NodeType::StyleProperty);
+
+    auto* propNode = static_cast<StylePropertyNode*>(propNodeBase);
+    EXPECT_EQ(propNode->getName(), "color");
+    EXPECT_EQ(propNode->getValue(), "red");
 }
 
 TEST(ParserTest, ParsesScriptBlock) {
