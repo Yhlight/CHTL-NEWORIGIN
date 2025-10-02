@@ -2,74 +2,68 @@
 #define CHTL_TOKEN_H
 
 #include <string>
-
-namespace CHTL {
+#include <vector>
 
 enum class TokenType {
-    // Basic
-    UNKNOWN,
-    EndOfFile,
-    IDENTIFIER,
-    STRING_LITERAL,
-    NUMBER,
-    RAW_SCRIPT,
-    COMMENT,
-
     // Keywords
-    TEXT_KEYWORD,
-    STYLE_KEYWORD,
-    SCRIPT_KEYWORD,
-    IF_KEYWORD,
-    ELSE_KEYWORD,
-    CONDITION_KEYWORD,
+    From,
+    As,
+    Use,
+    Html5,
+    Except,
+    If,
+    Else,
+    ElseIf,
+    Condition,
 
-    // Punctuation
-    L_BRACE,
-    R_BRACE,
-    COLON,
-    EQUAL,
-    SEMICOLON,
-    COMMA,
-    DOT,
-    HASH,
-    AMPERSAND,
-    L_BRACKET,
-    R_BRACKET,
-    AT_SIGN,
-    L_DOUBLE_BRACE,
-    R_DOUBLE_BRACE,
+    // Literals
+    Identifier,
+    String,
+    Number,
 
-    // Arithmetic Operators
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    PERCENT,
-    STAR_STAR,
+    // Operators
+    LBrace,
+    RBrace,
+    LBracket,
+    RBracket,
+    LParen,
+    RParen,
+    At,
+    Colon,
+    Semicolon,
+    Assign,
+    Plus,
+    Minus,
+    Asterisk,
+    Slash,
+    Percent,
+    Power,
+    Question,
+    Comma,
+    Dot,
+    Ampersand,
+    GreaterThan,
+    LessThan,
+    EqualTo,
+    NotEqualTo,
+    GreaterThanEqualTo,
+    LessThanEqualTo,
 
-    // Conditional and Logical Operators
-    QUESTION_MARK,
-    GREATER,
-    LESS,
-    GREATER_EQUAL,
-    LESS_EQUAL,
-    EQUAL_EQUAL,
-    BANG_EQUAL,
-    AMPERSAND_AMPERSAND,
-    PIPE_PIPE
+    // Special
+    Comment,
+    EndOfFile,
+    Unknown
 };
 
-class Token {
-public:
+struct Token {
     TokenType type;
     std::string value;
+    size_t line = 0;
+    size_t column = 0;
 
-    // Helper for debugging
     bool operator==(const Token& other) const {
-        return type == other.type && value == other.value;
+        return type == other.type && value == other.value && line == other.line && column == other.column;
     }
 };
 
-} // namespace CHTL
-
-#endif // CHTL_TOKEN_H
+#endif //CHTL_TOKEN_H

@@ -1,36 +1,23 @@
-# CMake build files
+# Build artifacts
 build/
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-
-# Compiled binaries and libraries
-*.exe
-*.dll
-*.so
-*.a
-*.lib
-*.out
-
-# Object files
+bin/
 *.o
-*.obj
+*.a
+*.so
+*.dylib
 
-# CHTL module artifacts
-*.cmod
-*.cjmod
+# Third-party libraries
+third-party/css3/
+third-party/javascript/
 
-# IDE-specific files
+# IDE files
 .vscode/
 .idea/
 
-# OS-specific files
+# OS files
 .DS_Store
 Thumbs.db
-
-# Log files
-*.log
-
-# Third-party libraries (cloned from git)
-/third-party/
+third-party/antlr4/
+third-party/libsass/
+third-party/libzippp/
+third-party/quickjs/

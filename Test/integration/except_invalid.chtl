@@ -1,0 +1,6 @@
+div {
+    except span;
+    span {
+        text: "This is not allowed.";
+    }
+}

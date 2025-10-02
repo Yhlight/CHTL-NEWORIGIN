@@ -1,0 +1,8 @@
+[Import] @Chtl from "Test/integration/module.chtl" as Mod
+
+div {
+    style {
+        @Style ImportantText from Mod.MyModule;
+    }
+    text: "This should be important.";
+}

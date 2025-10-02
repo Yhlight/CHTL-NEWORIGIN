@@ -2,32 +2,51 @@
 #define CHTL_STYLE_NODE_H
 
 #include "BaseNode.h"
-#include "StylePropertyNode.h"
-#include "SelectorBlockNode.h"
-#include "TemplateUsageNode.h"
+#include "CssRuleNode.h"
+#include "NodeVisitor.h"
+#include <string>
 #include <vector>
+#include <utility>
+#include <sstream>
 #include <memory>
-
-namespace CHTL {
 
 class StyleNode : public BaseNode {
 public:
-    void addProperty(std::unique_ptr<StylePropertyNode> property);
-    void addSelectorBlock(std::unique_ptr<SelectorBlockNode> selectorBlock);
-    void addTemplateUsage(std::unique_ptr<TemplateUsageNode> templateUsage);
+    StyleNode() = default;
 
-    const std::vector<std::unique_ptr<StylePropertyNode>>& getProperties() const;
-    const std::vector<std::unique_ptr<SelectorBlockNode>>& getSelectorBlocks() const;
-    const std::vector<std::unique_ptr<TemplateUsageNode>>& getTemplateUsages() const;
+    void addProperty(const std::string& key, const std::string& value) {
+        properties.push_back({key, value});
+    }
 
-    void print(int indent = 0) const override;
+    void addRule(std::unique_ptr<CssRuleNode> rule) {
+        rules.push_back(std::move(rule));
+    }
+
+    std::string toString(int depth = 0) const override {
+        // This will be updated later to handle hoisting.
+        // For now, it only represents inline styles.
+        return "";
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+    const std::vector<std::pair<std::string, std::string>>& getProperties() const {
+        return properties;
+    }
+
+    const std::vector<std::unique_ptr<CssRuleNode>>& getRules() const {
+        return rules;
+    }
+
+    std::string getNodeType() const override {
+        return "[Style]";
+    }
 
 private:
-    std::vector<std::unique_ptr<StylePropertyNode>> properties;
-    std::vector<std::unique_ptr<SelectorBlockNode>> selector_blocks;
-    std::vector<std::unique_ptr<TemplateUsageNode>> template_usages;
+    std::vector<std::pair<std::string, std::string>> properties;
+    std::vector<std::unique_ptr<CssRuleNode>> rules;
 };
 
-} // namespace CHTL
-
-#endif // CHTL_STYLE_NODE_H
+#endif //CHTL_STYLE_NODE_H

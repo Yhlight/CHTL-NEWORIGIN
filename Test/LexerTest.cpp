@@ -1,100 +1,86 @@
+#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "CHTLLexer/CHTLLexer.h"
+#include "CHTLLexer/Token.h"
 #include <vector>
 
-TEST_CASE("Lexer Initialization", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    SUCCEED("Lexer can be initialized.");
-}
-
-TEST_CASE("Tokenize Single-Line Comment", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "// This is a test comment";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-
-    REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::COMMENT);
-    REQUIRE(tokens[0].value == " This is a test comment");
-}
-
-TEST_CASE("Tokenize Multi-Line Comment", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "/* This is a multi-line comment */";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-
-    REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::COMMENT);
-    REQUIRE(tokens[0].value == " This is a multi-line comment ");
-}
-
-TEST_CASE("Tokenize Generator Comment", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "# this is a generator comment";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-
-    REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::COMMENT);
-    // As per spec, the space after '#' is a delimiter and not part of the value.
-    REQUIRE(tokens[0].value == "this is a generator comment");
-}
-
-TEST_CASE("Tokenize Text Block", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "text { \"Hello\" }";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+TEST_CASE("Lexer handles single-line comments", "[lexer]") {
+    const std::string input = R"(
+// This is a comment
+div { }
+)";
+    CHTLLexer lexer(input);
+    std::vector<Token> tokens = lexer.getAllTokens();
 
     REQUIRE(tokens.size() == 4);
-    REQUIRE(tokens[0].type == CHTL::TokenType::TEXT_KEYWORD);
-    REQUIRE(tokens[0].value == "text");
-    REQUIRE(tokens[1].type == CHTL::TokenType::L_BRACE);
-    REQUIRE(tokens[1].value == "{");
-    REQUIRE(tokens[2].type == CHTL::TokenType::STRING_LITERAL);
-    REQUIRE(tokens[2].value == "Hello");
-    REQUIRE(tokens[3].type == CHTL::TokenType::R_BRACE);
-    REQUIRE(tokens[3].value == "}");
+    REQUIRE(tokens[0].type == TokenType::Identifier);
+    REQUIRE(tokens[0].value == "div");
+    REQUIRE(tokens[1].type == TokenType::LBrace);
+    REQUIRE(tokens[2].type == TokenType::RBrace);
+    REQUIRE(tokens[3].type == TokenType::EndOfFile);
 }
 
-TEST_CASE("Tokenize Attribute Syntax Characters", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = ":=;";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+TEST_CASE("Lexer handles string literals", "[lexer]") {
+    const std::string input = R"(
+div {
+    text: "double-quoted string";
+    id: 'single-quoted-string';
+}
+)";
+    CHTLLexer lexer(input);
+    std::vector<Token> tokens = lexer.getAllTokens();
 
-    REQUIRE(tokens.size() == 3);
-    REQUIRE(tokens[0].type == CHTL::TokenType::COLON);
-    REQUIRE(tokens[1].type == CHTL::TokenType::EQUAL);
-    REQUIRE(tokens[2].type == CHTL::TokenType::SEMICOLON);
+    REQUIRE(tokens.size() == 12);
+    REQUIRE(tokens[0].type == TokenType::Identifier);
+    REQUIRE(tokens[0].value == "div");
+    REQUIRE(tokens[1].type == TokenType::LBrace);
+    REQUIRE(tokens[2].type == TokenType::Identifier);
+    REQUIRE(tokens[2].value == "text");
+    REQUIRE(tokens[3].type == TokenType::Colon);
+    REQUIRE(tokens[4].type == TokenType::String);
+    REQUIRE(tokens[4].value == "double-quoted string");
+    REQUIRE(tokens[5].type == TokenType::Semicolon);
+    REQUIRE(tokens[6].type == TokenType::Identifier);
+    REQUIRE(tokens[6].value == "id");
+    REQUIRE(tokens[7].type == TokenType::Colon);
+    REQUIRE(tokens[8].type == TokenType::String);
+    REQUIRE(tokens[8].value == "single-quoted-string");
+    REQUIRE(tokens[9].type == TokenType::Semicolon);
+    REQUIRE(tokens[10].type == TokenType::RBrace);
+    REQUIRE(tokens[11].type == TokenType::EndOfFile);
 }
 
-TEST_CASE("Tokenize Number", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "123";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+TEST_CASE("Lexer handles generator comments", "[lexer]") {
+    const std::string input = R"(
+# This is a generator comment
+p { }
+)";
+    CHTLLexer lexer(input);
+    std::vector<Token> tokens = lexer.getAllTokens();
 
-    REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::NUMBER);
-    REQUIRE(tokens[0].value == "123");
+    REQUIRE(tokens.size() == 5);
+    REQUIRE(tokens[0].type == TokenType::Comment);
+    REQUIRE(tokens[0].value == "This is a generator comment");
+    REQUIRE(tokens[1].type == TokenType::Identifier);
+    REQUIRE(tokens[1].value == "p");
+    REQUIRE(tokens[2].type == TokenType::LBrace);
+    REQUIRE(tokens[3].type == TokenType::RBrace);
+    REQUIRE(tokens[4].type == TokenType::EndOfFile);
 }
 
-TEST_CASE("Tokenize Script Keyword", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "script";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+TEST_CASE("Lexer handles multi-line comments", "[lexer]") {
+    const std::string input = R"(
+/* This is a
+   multi-line comment */
+span { }
+)";
+    CHTLLexer lexer(input);
+    std::vector<Token> tokens = lexer.getAllTokens();
 
-    REQUIRE(tokens.size() == 1);
-    REQUIRE(tokens[0].type == CHTL::TokenType::SCRIPT_KEYWORD);
-    REQUIRE(tokens[0].value == "script");
-}
-
-TEST_CASE("Tokenize Arithmetic Operators", "[lexer]") {
-    CHTL::CHTLLexer lexer;
-    std::string input = "+ - * / % **";
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-
-    REQUIRE(tokens.size() == 6);
-    REQUIRE(tokens[0].type == CHTL::TokenType::PLUS);
-    REQUIRE(tokens[1].type == CHTL::TokenType::MINUS);
-    REQUIRE(tokens[2].type == CHTL::TokenType::STAR);
-    REQUIRE(tokens[3].type == CHTL::TokenType::SLASH);
-    REQUIRE(tokens[4].type == CHTL::TokenType::PERCENT);
-    REQUIRE(tokens[5].type == CHTL::TokenType::STAR_STAR);
+    REQUIRE(tokens.size() == 4);
+    REQUIRE(tokens[0].type == TokenType::Identifier);
+    REQUIRE(tokens[0].value == "span");
+    REQUIRE(tokens[1].type == TokenType::LBrace);
+    REQUIRE(tokens[2].type == TokenType::RBrace);
+    REQUIRE(tokens[3].type == TokenType::EndOfFile);
 }

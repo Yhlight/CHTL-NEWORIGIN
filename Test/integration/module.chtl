@@ -1,0 +1,6 @@
+[Namespace] MyModule {
+    [Template] @Style ImportantText {
+        color: red;
+        font-weight: bold;
+    }
+}

@@ -1,273 +1,598 @@
 #include "CHTLParser.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/TextNode.h"
-#include "../CHTLNode/StyleNode.h"
-#include "../CHTLNode/ScriptNode.h"
-#include "../CHTLNode/StylePropertyNode.h"
-#include "../CHTLNode/SelectorBlockNode.h"
-#include "../CHTLNode/LiteralNode.h"
-#include "../CHTLNode/BinaryOpNode.h"
-#include "../CHTLNode/ReferenceNode.h"
-#include "../CHTLNode/TemplateDefinitionNode.h"
-#include "../CHTLNode/TemplateUsageNode.h"
-#include "../CHTLManager/TemplateManager.h"
-#include "../CHTLState/GlobalState.h"
 #include <stdexcept>
-#include <vector>
 
-namespace CHTL {
-
-CHTLParser::CHTLParser(const std::vector<Token>& tokens) : tokens(tokens) {
-    // Start in the global state
-    currentState = std::make_unique<GlobalState>();
+CHTLParser::CHTLParser(const std::string& input, CHTLContext& context, bool discoveryMode)
+    : lexer(input), context(context), discoveryMode(discoveryMode) {
+    advance();
+    advance();
 }
 
-void CHTLParser::setState(std::unique_ptr<State> newState) {
-    currentState = std::move(newState);
+void CHTLParser::advance() {
+    currentToken = nextToken;
+    nextToken = lexer.getNextToken();
 }
 
-// --- Context Stack Management ---
-
-void CHTLParser::pushNode(BaseNode* node) {
-    nodeStack.push(node);
+Token CHTLParser::peek() {
+    return nextToken;
 }
 
-void CHTLParser::popNode() {
-    if (!nodeStack.empty()) {
-        nodeStack.pop();
-    }
-}
-
-BaseNode* CHTLParser::currentNode() const {
-    if (nodeStack.empty()) {
-        return nullptr;
-    }
-    return nodeStack.top();
-}
-
-void CHTLParser::addNodeToCurrent(std::unique_ptr<BaseNode> node) {
-    if (!node) return;
-
-    if (nodeStack.empty()) {
-        ast.push_back(std::move(node));
-    } else {
-        BaseNode* parent = currentNode();
-        if (auto* element_parent = dynamic_cast<ElementNode*>(parent)) {
-            element_parent->addChild(std::move(node));
-        } else if (auto* template_parent = dynamic_cast<TemplateDefinitionNode*>(parent)) {
-            template_parent->addChild(std::move(node));
-        }
-    }
-}
-
-// --- Core Parsing Logic ---
-
-void CHTLParser::parse() {
-    while (!isAtEnd()) {
-        if (currentState) {
-            currentState->handle(*this);
-        } else {
-            advance(); // Safeguard
-        }
-    }
-}
-
-std::vector<std::unique_ptr<BaseNode>> CHTLParser::getAST() {
-    std::vector<std::unique_ptr<BaseNode>> main_nodes;
-    for (auto& node : ast) {
-        if (auto* def_node = dynamic_cast<TemplateDefinitionNode*>(node.get())) {
-            TemplateManager::getInstance().registerTemplate(
-                std::unique_ptr<TemplateDefinitionNode>(static_cast<TemplateDefinitionNode*>(node.release()))
-            );
-        } else {
-            if (node) {
-                main_nodes.push_back(std::move(node));
-            }
-        }
-    }
-    ast.clear();
-    return main_nodes;
-}
-
-
-// --- Public Token Manipulation Helpers ---
-
-bool CHTLParser::isAtEnd() const {
-    return current >= tokens.size() || peek().type == TokenType::EndOfFile;
-}
-
-Token CHTLParser::peek() const {
-    if (current >= tokens.size()) return {TokenType::EndOfFile, ""};
-    return tokens[current];
-}
-
-Token CHTLParser::peekNext() const {
-    if (current + 1 >= tokens.size()) return {TokenType::EndOfFile, ""};
-    return tokens[current + 1];
-}
-
-Token CHTLParser::advance() {
-    if (!isAtEnd()) {
-        current++;
-    }
-    return tokens[current - 1];
-}
-
-bool CHTLParser::check(TokenType type) const {
-    if (isAtEnd()) return false;
-    return peek().type == type;
-}
-
-bool CHTLParser::match(TokenType type) {
-    if (check(type)) {
+void CHTLParser::expect(TokenType type) {
+    if (currentToken.type == type) {
         advance();
-        return true;
+    } else {
+        // A simple to_string for token types for debugging
+        auto token_type_to_string = [](TokenType t) -> std::string {
+            switch(t) {
+                case TokenType::From: return "From";
+                case TokenType::As: return "As";
+                case TokenType::Use: return "Use";
+                case TokenType::Html5: return "Html5";
+                case TokenType::Except: return "Except";
+                case TokenType::If: return "If";
+                case TokenType::Else: return "Else";
+                case TokenType::ElseIf: return "ElseIf";
+                case TokenType::Condition: return "Condition";
+                case TokenType::Identifier: return "Identifier";
+                case TokenType::String: return "String";
+                case TokenType::Number: return "Number";
+                case TokenType::LBrace: return "{";
+                case TokenType::RBrace: return "}";
+                case TokenType::LBracket: return "[";
+                case TokenType::RBracket: return "]";
+                case TokenType::LParen: return "(";
+                case TokenType::RParen: return ")";
+                case TokenType::At: return "@";
+                case TokenType::Colon: return ":";
+                case TokenType::Semicolon: return ";";
+                case TokenType::Assign: return "=";
+                case TokenType::Plus: return "+";
+                case TokenType::Minus: return "-";
+                case TokenType::Asterisk: return "*";
+                case TokenType::Slash: return "/";
+                case TokenType::Percent: return "%";
+                case TokenType::Power: return "**";
+                case TokenType::Question: return "?";
+                case TokenType::Comma: return ",";
+                case TokenType::Dot: return ".";
+                case TokenType::Ampersand: return "&";
+                case TokenType::Comment: return "Comment";
+                case TokenType::EndOfFile: return "EOF";
+                case TokenType::Unknown: return "Unknown";
+                default: return "UNHANDLED_TOKEN";
+            }
+        };
+        throw std::runtime_error("Unexpected token. Got: " + token_type_to_string(currentToken.type) + " ('" + currentToken.value + "'), expected: " + token_type_to_string(type));
     }
-    return false;
 }
 
-Token CHTLParser::consume(TokenType type, const std::string& message) {
-    if (check(type)) {
-        return advance();
+#include "../CHTLNode/TextNode.h"
+#include "../CHTLNode/CommentNode.h"
+#include "../CHTLNode/StyleNode.h"
+#include "../CHTLNode/TemplateStyleNode.h"
+#include "../CHTLNode/TemplateElementNode.h"
+#include "../CHTLNode/TemplateVarNode.h"
+#include "../CHTLNode/CustomStyleNode.h"
+#include "../CHTLNode/CustomElementNode.h"
+#include "../CHTLNode/CustomVarNode.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
+#include "../CHTLNode/DeclarationNode.h"
+#include "../CHTLLoader/CHTLLoader.h"
+
+std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
+    std::unique_ptr<BaseNode> node = nullptr;
+
+    if (currentToken.type == TokenType::LBracket) {
+        if (peek().type == TokenType::Identifier) {
+            const auto& keyword = peek().value;
+            if (keyword == "Template") node = parseTemplateDeclaration();
+            else if (keyword == "Custom") node = parseCustomDeclaration();
+            else if (keyword == "Import") node = parseImportDeclaration();
+            else if (keyword == "Namespace") node = parseNamespaceDeclaration();
+            else throw std::runtime_error("Unsupported declaration type inside [].");
+        }
+    } else if (currentToken.type == TokenType::Identifier) {
+        if (currentToken.value == "text" && peek().type == TokenType::LBrace) node = parseTextNode();
+        else if (currentToken.value == "style" && peek().type == TokenType::LBrace) node = parseStyleNode();
+        else node = parseElement();
+    } else if (currentToken.type == TokenType::Use) {
+        node = parseUseStatement();
+    } else if (currentToken.type == TokenType::Comment) {
+        node = parseCommentNode();
     }
-    throw std::runtime_error(message);
-}
 
-
-
-// --- Expression Parsing (Precedence Climbing) ---
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseExpression() {
-    return parseTernary();
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseTernary() {
-    auto expr = parseLogicalOr();
-    if (match(TokenType::QUESTION_MARK)) {
-        auto true_expr = parseExpression();
-        consume(TokenType::COLON, "Expect ':' after true expression in ternary operator.");
-        auto false_expr = parseExpression();
-        return std::make_unique<ConditionalExpressionNode>(std::move(expr), std::move(true_expr), std::move(false_expr));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseLogicalOr() {
-    auto expr = parseLogicalAnd();
-    while (match(TokenType::PIPE_PIPE)) {
-        Token op = tokens[current - 1];
-        auto right = parseLogicalAnd();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseLogicalAnd() {
-    auto expr = parseEquality();
-    while (match(TokenType::AMPERSAND_AMPERSAND)) {
-        Token op = tokens[current - 1];
-        auto right = parseEquality();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseEquality() {
-    auto expr = parseComparison();
-    while (match(TokenType::EQUAL_EQUAL) || match(TokenType::BANG_EQUAL)) {
-        Token op = tokens[current - 1];
-        auto right = parseComparison();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseComparison() {
-    auto expr = parseTerm();
-    while (match(TokenType::GREATER) || match(TokenType::GREATER_EQUAL) || match(TokenType::LESS) || match(TokenType::LESS_EQUAL)) {
-        Token op = tokens[current - 1];
-        auto right = parseTerm();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseTerm() {
-    auto expr = parseFactor();
-    while (match(TokenType::PLUS) || match(TokenType::MINUS)) {
-        Token op = tokens[current - 1];
-        auto right = parseFactor();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parseFactor() {
-    auto expr = parsePower();
-    while (match(TokenType::STAR) || match(TokenType::SLASH) || match(TokenType::PERCENT)) {
-        Token op = tokens[current - 1];
-        auto right = parsePower();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parsePower() {
-    auto expr = parsePrimary();
-    if (match(TokenType::STAR_STAR)) {
-        Token op = tokens[current - 1];
-        auto right = parsePower();
-        expr = std::make_unique<BinaryOpNode>(std::move(expr), op, std::move(right));
-    }
-    return expr;
-}
-
-std::unique_ptr<ExpressionNode> CHTLParser::parsePrimary() {
-    if (match(TokenType::NUMBER)) {
-        Token num_token = tokens[current - 1];
-        std::string unit;
-        if (check(TokenType::IDENTIFIER)) {
-            unit = advance().value;
-        } else if (check(TokenType::PERCENT)) {
-            size_t next_token_idx = current + 1;
-            if (next_token_idx >= tokens.size() ||
-                (tokens[next_token_idx].type != TokenType::NUMBER &&
-                 tokens[next_token_idx].type != TokenType::IDENTIFIER &&
-                 tokens[next_token_idx].type != TokenType::L_BRACE)) {
-                unit = advance().value;
+    if (node) {
+        const auto& global_constraints = context.getActiveGlobalConstraints();
+        if (!global_constraints.empty()) {
+            std::string nodeType = node->getNodeType();
+            for (const auto& constraint : global_constraints) {
+                if (nodeType.rfind(constraint, 0) == 0) {
+                    throw std::runtime_error("Node type '" + nodeType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.");
+                }
             }
         }
-        return std::make_unique<LiteralNode>(num_token, unit);
     }
 
-    if (check(TokenType::DOT) || check(TokenType::HASH)) {
-        Token prefix = advance();
-        Token name = consume(TokenType::IDENTIFIER, "Expect selector name.");
-        consume(TokenType::DOT, "Expect '.' after selector.");
-        Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
-        return std::make_unique<ReferenceNode>(prefix.value + name.value, prop.value);
+    return node;
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseTemplateDeclaration() {
+    expect(TokenType::LBracket);
+    expect(TokenType::Identifier); // "Template"
+    expect(TokenType::RBracket);
+    expect(TokenType::At);
+    std::string templateType = currentToken.value; advance();
+    std::string templateName = currentToken.value; advance();
+
+    if (templateType == "Style") {
+        auto tmplNode = std::make_unique<TemplateStyleNode>(templateName);
+        expect(TokenType::LBrace);
+        while (currentToken.type != TokenType::RBrace) {
+            std::string propName = currentToken.value; advance();
+            expect(TokenType::Colon);
+            std::string propValue = currentToken.value; advance();
+            expect(TokenType::Semicolon);
+            tmplNode->addProperty(propName, propValue);
+        }
+        expect(TokenType::RBrace);
+        context.registerStyleTemplate(std::move(tmplNode));
+    } else if (templateType == "Element") {
+        auto tmplNode = std::make_unique<TemplateElementNode>(templateName);
+        expect(TokenType::LBrace);
+        while (currentToken.type != TokenType::RBrace) {
+            auto child = parseStatement();
+            if (child) tmplNode->addChild(std::move(child));
+            else break;
+        }
+        expect(TokenType::RBrace);
+        context.registerElementTemplate(std::move(tmplNode));
+    } else if (templateType == "Var") {
+        auto tmplNode = std::make_unique<TemplateVarNode>(templateName);
+        expect(TokenType::LBrace);
+        while (currentToken.type != TokenType::RBrace) {
+            std::string varName = currentToken.value; advance();
+            expect(TokenType::Colon);
+            std::string varValue = currentToken.value; advance();
+            expect(TokenType::Semicolon);
+            tmplNode->addVariable(varName, varValue);
+        }
+        expect(TokenType::RBrace);
+        context.registerVarTemplate(std::move(tmplNode));
+    }
+    return std::make_unique<DeclarationNode>("[Template] @" + templateType);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseCustomDeclaration() {
+    expect(TokenType::LBracket);
+    expect(TokenType::Identifier); // "Custom"
+    expect(TokenType::RBracket);
+    expect(TokenType::At);
+    std::string customType = currentToken.value; advance();
+    std::string customName = currentToken.value; advance();
+
+    if (customType == "Style") {
+        auto customNode = std::make_unique<CustomStyleNode>(customName);
+        expect(TokenType::LBrace);
+        while (currentToken.type != TokenType::RBrace) {
+            if (currentToken.value == "delete") {
+                advance();
+                do {
+                    customNode->addDeletedProperty(currentToken.value); advance();
+                    if (currentToken.type == TokenType::Comma) advance();
+                    else break;
+                } while (true);
+                expect(TokenType::Semicolon);
+            } else {
+                std::string propName = currentToken.value; advance();
+                expect(TokenType::Colon);
+                std::string propValue = currentToken.value; advance();
+                expect(TokenType::Semicolon);
+                customNode->addProperty(propName, propValue);
+            }
+        }
+        expect(TokenType::RBrace);
+        context.registerCustomStyle(std::move(customNode));
+    } else if (customType == "Element") {
+        auto customNode = std::make_unique<CustomElementNode>(customName);
+        expect(TokenType::LBrace);
+        while (currentToken.type != TokenType::RBrace) {
+            if (currentToken.value == "delete") {
+                advance();
+                do {
+                    customNode->addDeletedElement(currentToken.value); advance();
+                    if (currentToken.type == TokenType::Comma) advance();
+                    else break;
+                } while (true);
+                expect(TokenType::Semicolon);
+            } else {
+                auto child = parseStatement();
+                if (child) customNode->addChild(std::move(child));
+                else break;
+            }
+        }
+        expect(TokenType::RBrace);
+        context.registerCustomElement(std::move(customNode));
+    } else if (customType == "Var") {
+        auto customNode = std::make_unique<CustomVarNode>(customName);
+        expect(TokenType::LBrace);
+        while (currentToken.type != TokenType::RBrace) {
+            std::string varName = currentToken.value; advance();
+            expect(TokenType::Colon);
+            std::string varValue = currentToken.value; advance();
+            expect(TokenType::Semicolon);
+            customNode->addVariable(varName, varValue);
+        }
+        expect(TokenType::RBrace);
+        context.registerCustomVar(std::move(customNode));
+    }
+    return std::make_unique<DeclarationNode>("[Custom] @" + customType);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseStyleNode() {
+    expect(TokenType::Identifier); // "style"
+    expect(TokenType::LBrace);
+    auto styleNode = std::make_unique<StyleNode>();
+
+    while (currentToken.type != TokenType::RBrace) {
+        if (currentToken.type == TokenType::At) {
+            advance(); // Consume '@'
+            expect(TokenType::Identifier); // "Style"
+            std::string templateName = currentToken.value;
+            advance();
+            if (!discoveryMode) {
+                const TemplateStyleNode* tmpl = nullptr;
+                if (currentToken.type == TokenType::From) {
+                    advance();
+                    std::string nsPath;
+                    do {
+                        nsPath += currentToken.value; advance();
+                        if (currentToken.type == TokenType::Dot) {
+                            nsPath += "."; advance();
+                        } else break;
+                    } while (true);
+                    tmpl = context.getStyleTemplate(templateName, nsPath);
+                } else {
+                    tmpl = context.getStyleTemplate(templateName);
+                }
+                if (!tmpl) throw std::runtime_error("Style template not found: " + templateName);
+                for (const auto& prop : tmpl->getProperties()) {
+                    styleNode->addProperty(prop.first, prop.second);
+                }
+            } else {
+                if (currentToken.type == TokenType::From) {
+                    advance();
+                    while (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::Dot) {
+                        advance();
+                    }
+                }
+            }
+            expect(TokenType::Semicolon);
+        } else if (peek().type == TokenType::LBrace) {
+            // This is a nested CSS rule, e.g., ".class { ... }"
+            std::string selector = currentToken.value;
+            advance(); // Consume selector
+            auto ruleNode = std::make_unique<CssRuleNode>(selector);
+
+            expect(TokenType::LBrace);
+            while (currentToken.type != TokenType::RBrace) {
+                std::string propName = currentToken.value;
+                advance();
+                expect(TokenType::Colon);
+                std::string propValue = currentToken.value;
+                advance();
+                expect(TokenType::Semicolon);
+                ruleNode->addProperty(propName, propValue);
+            }
+            expect(TokenType::RBrace);
+            styleNode->addRule(std::move(ruleNode));
+        } else {
+            // This is an inline property
+            std::string propName = currentToken.value;
+            advance();
+            expect(TokenType::Colon);
+            std::string propValue = currentToken.value;
+            advance();
+            expect(TokenType::Semicolon);
+            styleNode->addProperty(propName, propValue);
+        }
+    }
+    expect(TokenType::RBrace);
+    return styleNode;
+}
+
+void CHTLParser::parseAttribute(ElementNode& node) {
+    std::string attrName = currentToken.value; expect(TokenType::Identifier);
+    if (currentToken.type == TokenType::Colon || currentToken.type == TokenType::Assign) advance();
+    else throw std::runtime_error("Expected ':' or '=' after attribute name.");
+    std::string attrValue = currentToken.value; advance();
+    expect(TokenType::Semicolon);
+    node.setAttribute(attrName, attrValue);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseTextNode() {
+    expect(TokenType::Identifier);
+    expect(TokenType::LBrace);
+    auto node = std::make_unique<TextNode>(currentToken.value);
+    advance();
+    expect(TokenType::RBrace);
+    return node;
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseCommentNode() {
+    auto node = std::make_unique<CommentNode>(currentToken.value);
+    advance();
+    return node;
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseTextAttribute() {
+    expect(TokenType::Identifier);
+    if (currentToken.type == TokenType::Colon || currentToken.type == TokenType::Assign) advance();
+    else throw std::runtime_error("Expected ':' or '=' after 'text' attribute.");
+    auto node = std::make_unique<TextNode>(currentToken.value);
+    advance();
+    expect(TokenType::Semicolon);
+    return node;
+}
+
+std::unique_ptr<ConditionNode> CHTLParser::parseIfStatement() {
+    expect(TokenType::If);
+    expect(TokenType::LBrace);
+    expect(TokenType::Condition);
+    expect(TokenType::Colon);
+
+    std::string condition_str;
+    while (currentToken.type != TokenType::Comma && currentToken.type != TokenType::RBrace) {
+        if (!condition_str.empty()) {
+            condition_str += " ";
+        }
+        condition_str += currentToken.value;
+        advance();
     }
 
-    if (check(TokenType::IDENTIFIER)) {
-        if (current + 1 < tokens.size() && tokens[current + 1].type == TokenType::DOT) {
-            Token selector = advance();
-            advance(); // consume dot
-            Token prop = consume(TokenType::IDENTIFIER, "Expect property name.");
-            return std::make_unique<ReferenceNode>(selector.value, prop.value);
+    auto conditionNode = std::make_unique<ConditionNode>(condition_str);
+
+    if (currentToken.type == TokenType::Comma) {
+        advance();
+        while (currentToken.type != TokenType::RBrace) {
+            std::string propName = currentToken.value; advance();
+            expect(TokenType::Colon);
+            std::string propValue = currentToken.value; advance();
+            expect(TokenType::Semicolon);
+            conditionNode->addProperty(propName, propValue);
         }
     }
 
-    if (match(TokenType::IDENTIFIER) || match(TokenType::STRING_LITERAL)) {
-        return std::make_unique<LiteralNode>(tokens[current - 1], "");
+    expect(TokenType::RBrace);
+
+    if (currentToken.type == TokenType::Else) {
+        advance();
+        if (currentToken.type == TokenType::If) {
+            conditionNode->setNext(parseIfStatement());
+        } else {
+            auto elseNode = std::make_unique<ConditionNode>(""); // Empty condition for else
+            expect(TokenType::LBrace);
+            while (currentToken.type != TokenType::RBrace) {
+                std::string propName = currentToken.value; advance();
+                expect(TokenType::Colon);
+                std::string propValue = currentToken.value; advance();
+                expect(TokenType::Semicolon);
+                elseNode->addProperty(propName, propValue);
+            }
+            expect(TokenType::RBrace);
+            conditionNode->setNext(std::move(elseNode));
+        }
     }
 
-    if (match(TokenType::L_BRACE)) {
-        auto expr = parseExpression();
-        consume(TokenType::R_BRACE, "Expect '}' after expression.");
-        return expr;
-    }
-
-    throw std::runtime_error("Expected expression, but found " + peek().value);
+    return conditionNode;
 }
 
-} // namespace CHTL
+std::unique_ptr<ElementNode> CHTLParser::parseElement() {
+    if (currentToken.type != TokenType::Identifier) return nullptr;
+    auto node = std::make_unique<ElementNode>(currentToken.value);
+    advance();
+    if (currentToken.type == TokenType::LBrace) {
+        advance();
+        while (currentToken.type != TokenType::RBrace) {
+            if (currentToken.type == TokenType::If) {
+                node->addCondition(parseIfStatement());
+                continue;
+            }
+            if (currentToken.type == TokenType::Except) {
+                advance(); // consume 'except'
+                do {
+                    std::string constraint_value;
+                    bool is_type_constraint = false;
+
+                    if (currentToken.type == TokenType::LBracket) {
+                        is_type_constraint = true;
+                        constraint_value += "["; advance();
+                        constraint_value += currentToken.value; advance(); // e.g., "Template"
+                        constraint_value += "]"; expect(TokenType::RBracket);
+
+                        if (currentToken.type == TokenType::At) { // for cases like [Template] @Var
+                            constraint_value += " "; // Add space for readability
+                            constraint_value += "@"; advance();
+                            constraint_value += currentToken.value; advance();
+                        }
+                    } else if (currentToken.type == TokenType::At) {
+                        is_type_constraint = true;
+                        constraint_value += "@"; advance();
+                        constraint_value += currentToken.value; advance(); // e.g., "Html"
+                    } else if (currentToken.type == TokenType::Identifier) {
+                        constraint_value = currentToken.value;
+                        advance();
+                    } else {
+                        throw std::runtime_error("Invalid token in 'except' clause. Expected identifier, '@', or '['.");
+                    }
+
+                    if (is_type_constraint) {
+                        node->addTypeConstraint(constraint_value);
+                    } else {
+                        node->addConstraint(constraint_value);
+                    }
+
+                    if (currentToken.type == TokenType::Comma) {
+                        advance();
+                    } else {
+                        break;
+                    }
+                } while (true);
+                expect(TokenType::Semicolon);
+                continue;
+            }
+
+            if (currentToken.type == TokenType::Identifier && (peek().type == TokenType::Colon || peek().type == TokenType::Assign)) {
+                if (currentToken.value == "text") node->addChild(parseTextAttribute());
+                else parseAttribute(*node);
+            } else {
+                auto pre_parse_token = currentToken;
+                auto child = parseStatement();
+                if (child) {
+                    // Check tag name constraints
+                    if (auto* childElement = dynamic_cast<ElementNode*>(child.get())) {
+                        const auto& constraints = node->getConstraints();
+                        const auto& tagName = childElement->getTagName();
+                        for (const auto& constraint : constraints) {
+                            if (tagName == constraint) {
+                                throw std::runtime_error("Element '" + tagName + "' is not allowed in <" + node->getTagName() + "> due to an 'except' constraint.");
+                            }
+                        }
+                    }
+                    // Check type constraints
+                    const auto& typeConstraints = node->getTypeConstraints();
+                    if (!typeConstraints.empty()) {
+                        std::string childType = child->getNodeType();
+                        for (const auto& typeConstraint : typeConstraints) {
+                            if (childType.rfind(typeConstraint, 0) == 0) { // checks if childType starts with typeConstraint
+                                throw std::runtime_error("Node type '" + childType + "' is not allowed in <" + node->getTagName() + "> due to an 'except' type constraint for '" + typeConstraint + "'.");
+                            }
+                        }
+                    }
+
+                    // Do not add declarations to the children list
+                    if (dynamic_cast<DeclarationNode*>(child.get()) == nullptr) {
+                        node->addChild(std::move(child));
+                    }
+                }
+                else if (pre_parse_token == currentToken) break;
+            }
+        }
+        expect(TokenType::RBrace);
+    }
+    return node;
+}
+
+std::unique_ptr<DocumentNode> CHTLParser::parse() {
+    auto documentNode = std::make_unique<DocumentNode>();
+    while (currentToken.type != TokenType::EndOfFile) {
+        auto pre_parse_token = currentToken;
+        auto statement = parseStatement();
+        if (statement) {
+            bool isEmittingNode = true;
+            if (auto useNode = dynamic_cast<UseNode*>(statement.get())) {
+                if (useNode->getDirective() == "html5") {
+                    documentNode->setHasHtml5Doctype(true);
+                }
+                isEmittingNode = false;
+            } else if (dynamic_cast<DeclarationNode*>(statement.get()) != nullptr) {
+                isEmittingNode = false;
+            }
+
+            if (isEmittingNode) {
+                documentNode->addChild(std::move(statement));
+            }
+        } else if (pre_parse_token == currentToken) {
+            break;
+        }
+    }
+    return documentNode;
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseImportDeclaration() {
+    expect(TokenType::LBracket);
+    expect(TokenType::Identifier); // "Import"
+    expect(TokenType::RBracket);
+    std::string fullType;
+    if (currentToken.type == TokenType::LBracket) {
+        fullType += "["; advance();
+        fullType += currentToken.value; advance();
+        fullType += "]"; expect(TokenType::RBracket);
+    }
+    expect(TokenType::At);
+    fullType += "@" + currentToken.value;
+    advance();
+    std::string entityName;
+    if (currentToken.type == TokenType::Identifier) {
+        entityName = currentToken.value;
+        advance();
+    }
+    expect(TokenType::From);
+    std::string filePath = currentToken.value;
+    advance();
+    std::string alias;
+    if (currentToken.type == TokenType::As) {
+        advance();
+        alias = currentToken.value;
+        advance();
+    }
+    return std::make_unique<ImportNode>(fullType, entityName, filePath, alias);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseUseStatement() {
+    expect(TokenType::Use);
+    std::string directive = currentToken.value;
+    advance();
+    expect(TokenType::Semicolon);
+    return std::make_unique<UseNode>(directive);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseNamespaceDeclaration() {
+    expect(TokenType::LBracket);
+    expect(TokenType::Identifier); // "Namespace"
+    expect(TokenType::RBracket);
+    std::string namespaceName = currentToken.value;
+    advance();
+    context.enterNamespace(namespaceName);
+    auto namespaceNode = std::make_unique<NamespaceNode>(namespaceName);
+
+    if (currentToken.type == TokenType::LBrace) {
+        advance();
+        while (currentToken.type != TokenType::RBrace) {
+            if (currentToken.type == TokenType::Except) {
+                advance(); // consume 'except'
+                do {
+                    std::string constraint_value;
+                    if (currentToken.type == TokenType::LBracket) {
+                        constraint_value += "["; advance();
+                        constraint_value += currentToken.value; advance(); // e.g., "Template"
+                        constraint_value += "]"; expect(TokenType::RBracket);
+                    } else {
+                        throw std::runtime_error("Global 'except' only supports type constraints like [Template].");
+                    }
+                    context.addGlobalConstraint(constraint_value);
+                    if (currentToken.type == TokenType::Comma) {
+                        advance();
+                    } else {
+                        break;
+                    }
+                } while (true);
+                expect(TokenType::Semicolon);
+                continue;
+            }
+
+            auto pre_parse_token = currentToken;
+            auto child = parseStatement();
+            if (child) {
+                // Do not add declarations to the children list
+                if (dynamic_cast<DeclarationNode*>(child.get()) == nullptr) {
+                    namespaceNode->addChild(std::move(child));
+                }
+            } else if (pre_parse_token == currentToken) {
+                break;
+            }
+        }
+        expect(TokenType::RBrace);
+    }
+    context.leaveNamespace();
+    return namespaceNode;
+}

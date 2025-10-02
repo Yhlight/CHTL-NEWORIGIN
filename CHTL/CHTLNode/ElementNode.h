@@ -1,44 +1,87 @@
-#ifndef ELEMENT_NODE_H
-#define ELEMENT_NODE_H
+#ifndef CHTL_ELEMENT_NODE_H
+#define CHTL_ELEMENT_NODE_H
 
 #include "BaseNode.h"
-#include "StyleNode.h"
-#include "ScriptNode.h"
+#include "NodeVisitor.h"
+#include "ConditionNode.h"
 #include <string>
 #include <vector>
-#include <memory>
 #include <map>
-
-namespace CHTL {
-
-class StyleNode;
-class ScriptNode;
+#include <memory>
+#include <sstream>
 
 class ElementNode : public BaseNode {
 public:
-    ElementNode(const std::string& tagName);
-    void addChild(std::unique_ptr<BaseNode> child);
-    void addAttribute(const std::string& key, const std::string& value);
-    void setStyle(std::unique_ptr<StyleNode> styleNode);
-    void setScript(std::unique_ptr<ScriptNode> scriptNode);
-    void print(int indent = 0) const override;
+    explicit ElementNode(const std::string& tagName) : tagName(tagName) {}
 
-    const std::string& getTagName() const;
-    const std::vector<std::unique_ptr<BaseNode>>& getChildren() const;
-    const std::map<std::string, std::string>& getAttributes() const;
-    std::string getAttribute(const std::string& key) const;
-    const StyleNode* getStyle() const;
-    const ScriptNode* getScript() const;
+    const std::string& getTagName() const { return tagName; }
 
+    std::string getNodeType() const override { return "@Html"; }
+
+    void addChild(std::unique_ptr<BaseNode> child) {
+        children.push_back(std::move(child));
+    }
+
+    void setAttribute(const std::string& key, const std::string& value) {
+        attributes[key] = value;
+    }
+
+    std::string toString(int depth = 0) const override {
+        std::stringstream ss;
+        ss << std::string(depth * 2, ' ') << "<" << tagName;
+        for (const auto& attr : attributes) {
+            ss << " " << attr.first << "=\"" << attr.second << "\"";
+        }
+        ss << ">" << std::endl;
+
+        for (const auto& child : children) {
+            ss << child->toString(depth + 1);
+        }
+
+        ss << std::string(depth * 2, ' ') << "</" << tagName << ">" << std::endl;
+        return ss.str();
+    }
+
+    void accept(NodeVisitor& visitor) override {
+        visitor.visit(*this);
+    }
+
+public:
+    const std::vector<std::unique_ptr<BaseNode>>& getChildren() const {
+        return children;
+    }
+
+    void addConstraint(const std::string& constraint) {
+        constraints.push_back(constraint);
+    }
+
+    const std::vector<std::string>& getConstraints() const {
+        return constraints;
+    }
+
+    void addTypeConstraint(const std::string& typeConstraint) {
+        type_constraints.push_back(typeConstraint);
+    }
+
+    const std::vector<std::string>& getTypeConstraints() const {
+        return type_constraints;
+    }
+
+    void addCondition(std::unique_ptr<ConditionNode> condition) {
+        conditions.push_back(std::move(condition));
+    }
+
+    const std::vector<std::unique_ptr<ConditionNode>>& getConditions() const {
+        return conditions;
+    }
 
 private:
     std::string tagName;
-    std::vector<std::unique_ptr<BaseNode>> children;
     std::map<std::string, std::string> attributes;
-    std::unique_ptr<StyleNode> style;
-    std::unique_ptr<ScriptNode> script;
+    std::vector<std::unique_ptr<BaseNode>> children;
+    std::vector<std::string> constraints;
+    std::vector<std::string> type_constraints;
+    std::vector<std::unique_ptr<ConditionNode>> conditions;
 };
 
-} // namespace CHTL
-
-#endif // ELEMENT_NODE_H
+#endif //CHTL_ELEMENT_NODE_H

@@ -1,357 +1,500 @@
 #include "catch.hpp"
-#include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
-#include "CHTLNode/TextNode.h"
+#include "CHTLNode/DocumentNode.h"
 #include "CHTLNode/ElementNode.h"
+#include "CHTLNode/TemplateStyleNode.h"
+#include "CHTLNode/TemplateElementNode.h"
+#include "CHTLNode/TemplateVarNode.h"
+#include "CHTLNode/CustomStyleNode.h"
+#include "CHTLNode/CustomElementNode.h"
+#include "CHTLNode/CustomVarNode.h"
+#include "CHTLNode/ImportNode.h"
+#include "CHTLNode/NamespaceNode.h"
 #include "CHTLNode/StyleNode.h"
-#include "CHTLNode/StylePropertyNode.h"
-#include "CHTLNode/ScriptNode.h"
-#include "CHTLNode/RawScriptNode.h"
-#include "CHTLNode/BinaryOpNode.h"
-#include "CHTLNode/LiteralNode.h"
-#include "CHTLNode/TemplateDefinitionNode.h"
-#include "CHTLNode/TemplateUsageNode.h"
-#include "CHTLManager/TemplateManager.h"
+#include "CHTLContext/CHTLContext.h"
+#include <memory>
 
-TEST_CASE("Parser Initialization", "[parser]") {
-    std::vector<CHTL::Token> tokens;
-    CHTL::CHTLParser parser(tokens);
-    SUCCEED("Parser can be initialized.");
+TEST_CASE("Parser handles a single element", "[parser]") {
+    const std::string input = "div { }";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+    REQUIRE(root->toString().find("<div>") != std::string::npos);
 }
 
-TEST_CASE("Parse Empty Element Node", "[parser]") {
-    std::string input = "div {}";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+TEST_CASE("Parser handles text nodes", "[parser]") {
+    const std::string input = R"(
+div {
+    text { "Hello, CHTL!" }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
 
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getTagName() == "div");
-    REQUIRE(elementNode->getChildren().empty());
+    std::string output = root->toString();
+    REQUIRE(output.find("<div>") != std::string::npos);
+    REQUIRE(output.find("Hello, CHTL!") != std::string::npos);
+    REQUIRE(output.find("</div>") != std::string::npos);
 }
 
-TEST_CASE("Parse Nested Element Node", "[parser]") {
-    std::string input = "div { span {} }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
+TEST_CASE("Parser handles attributes", "[parser]") {
+    const std::string input = R"(
+div {
+    id: "my-div";
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
 
-    // Check root node
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* divNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
+    std::string output = root->toString();
+    REQUIRE(output.find("<div id=\"my-div\">") != std::string::npos);
+}
+
+TEST_CASE("Parser handles attributes with equals sign", "[parser]") {
+    const std::string input = R"(
+div {
+    id = "my-div-equals";
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    std::string output = root->toString();
+    REQUIRE(output.find("<div id=\"my-div-equals\">") != std::string::npos);
+}
+
+TEST_CASE("Parser handles unquoted literal attributes", "[parser]") {
+    const std::string input = R"(
+p {
+    color: red;
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    std::string output = root->toString();
+    REQUIRE(output.find("<p color=\"red\">") != std::string::npos);
+}
+
+TEST_CASE("Parser handles text attribute", "[parser]") {
+    const std::string input = R"(
+div {
+    text: "Hello from attribute!";
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    std::string output = root->toString();
+    REQUIRE(output.find("text=\"Hello from attribute!\"") == std::string::npos);
+    REQUIRE(output.find("Hello from attribute!") != std::string::npos);
+}
+
+TEST_CASE("Parser handles style blocks", "[parser]") {
+    const std::string input = R"(
+div {
+    style {
+        color: blue;
+        font-size: 16px;
+    }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    const auto& styleChildren = root->getChildren();
+    REQUIRE(styleChildren.size() == 1);
+    auto* styleNode = dynamic_cast<StyleNode*>(styleChildren[0].get());
+    REQUIRE(styleNode != nullptr);
+    const auto& props = styleNode->getProperties();
+    REQUIRE(props.size() == 2);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "blue");
+    REQUIRE(props[1].first == "font-size");
+    REQUIRE(props[1].second == "16px");
+}
+
+TEST_CASE("Parser handles comment nodes", "[parser]") {
+    const std::string input = R"(
+div {
+    # This is a comment
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    std::string output = root->toString();
+    REQUIRE(output.find("<div>") != std::string::npos);
+    REQUIRE(output.find("<!-- This is a comment -->") != std::string::npos);
+    REQUIRE(output.find("</div>") != std::string::npos);
+}
+
+TEST_CASE("Parser handles nested elements", "[parser]") {
+    const std::string input = R"(
+div {
+    span { }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    std::string output = root->toString();
+    REQUIRE(output.find("<div>") != std::string::npos);
+    REQUIRE(output.find("<span>") != std::string::npos);
+    REQUIRE(output.find("</span>") != std::string::npos);
+    REQUIRE(output.find("</div>") != std::string::npos);
+}
+
+TEST_CASE("Parser handles style template declarations", "[parser]") {
+    const std::string input = R"(
+[Template] @Style DefaultText
+{
+    color: black;
+    font-size: 16px;
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* tmplNode = context.getStyleTemplate("DefaultText");
+    REQUIRE(tmplNode != nullptr);
+    REQUIRE(tmplNode->getName() == "DefaultText");
+
+    const auto& props = tmplNode->getProperties();
+    REQUIRE(props.size() == 2);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "black");
+    REQUIRE(props[1].first == "font-size");
+    REQUIRE(props[1].second == "16px");
+}
+
+TEST_CASE("Parser handles element template declarations", "[parser]") {
+    const std::string input = R"(
+[Template] @Element Box
+{
+    div { }
+    span { text { "I am in a box" } }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* tmplNode = context.getElementTemplate("Box");
+    REQUIRE(tmplNode != nullptr);
+    REQUIRE(tmplNode->getName() == "Box");
+
+    const auto& tmplChildren = tmplNode->getChildren();
+    REQUIRE(tmplChildren.size() == 2);
+
+    auto* divNode = dynamic_cast<ElementNode*>(tmplChildren[0].get());
+    REQUIRE(divNode != nullptr);
+
+    auto* spanNode = dynamic_cast<ElementNode*>(tmplChildren[1].get());
+    REQUIRE(spanNode != nullptr);
+}
+
+TEST_CASE("Parser handles var template declarations", "[parser]") {
+    const std::string input = R"END(
+[Template] @Var ThemeColor
+{
+    tableColor: "rgb(255, 192, 203)";
+    textColor: "black";
+}
+)END";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* tmplNode = context.getVarTemplate("ThemeColor");
+    REQUIRE(tmplNode != nullptr);
+    REQUIRE(tmplNode->getName() == "ThemeColor");
+
+    const auto& vars = tmplNode->getVariables();
+    REQUIRE(vars.size() == 2);
+    REQUIRE(vars.at("tableColor") == "rgb(255, 192, 203)");
+    REQUIRE(vars.at("textColor") == "black");
+}
+
+TEST_CASE("Parser applies style templates", "[parser]") {
+    const std::string input = R"END(
+[Template] @Style DefaultText
+{
+    color: black;
+    line-height: 1.6;
+}
+
+div {
+    style {
+        @Style DefaultText;
+    }
+}
+)END";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+
+    auto* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    const auto& styleChildren = root->getChildren();
+    REQUIRE(styleChildren.size() == 1);
+    auto* styleNode = dynamic_cast<StyleNode*>(styleChildren[0].get());
+    REQUIRE(styleNode != nullptr);
+    const auto& props = styleNode->getProperties();
+    REQUIRE(props.size() == 2);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "black");
+    REQUIRE(props[1].first == "line-height");
+    REQUIRE(props[1].second == "1.6");
+}
+
+TEST_CASE("Parser handles custom style declarations with delete", "[parser]") {
+    const std::string input = R"(
+[Custom] @Style YellowText
+{
+    color: yellow;
+    delete line-height, border;
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0); // Declarations are non-emitting
+
+    const auto* customNode = context.getCustomStyle("YellowText");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "YellowText");
+
+    const auto& props = customNode->getProperties();
+    REQUIRE(props.size() == 1);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "yellow");
+
+    const auto& deletedProps = customNode->getDeletedProperties();
+    REQUIRE(deletedProps.size() == 2);
+    REQUIRE(deletedProps.count("line-height") == 1);
+    REQUIRE(deletedProps.count("border") == 1);
+}
+
+TEST_CASE("Parser handles custom element declarations with delete", "[parser]") {
+    const std::string input = R"(
+[Custom] @Element MyCustomBox
+{
+    delete span;
+    div { }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* customNode = context.getCustomElement("MyCustomBox");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "MyCustomBox");
+
+    const auto& customChildren = customNode->getChildren();
+    REQUIRE(customChildren.size() == 1);
+    auto* divNode = dynamic_cast<ElementNode*>(customChildren[0].get());
     REQUIRE(divNode != nullptr);
     REQUIRE(divNode->getTagName() == "div");
 
-    // Check child node
-    REQUIRE(divNode->getChildren().size() == 1);
-    CHTL::BaseNode* child = divNode->getChildren()[0].get();
-    CHTL::ElementNode* spanNode = dynamic_cast<CHTL::ElementNode*>(child);
-    REQUIRE(spanNode != nullptr);
-    REQUIRE(spanNode->getTagName() == "span");
-    REQUIRE(spanNode->getChildren().empty());
+
+    const auto& deletedElements = customNode->getDeletedElements();
+    REQUIRE(deletedElements.size() == 1);
+    REQUIRE(deletedElements.count("span") == 1);
 }
 
-TEST_CASE("Parse Mixed Content", "[parser]") {
-    std::string input = "body { h1 { text { \"Title\" } } p { text { \"Content\" } } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+TEST_CASE("Parser handles custom var declarations", "[parser]") {
+    const std::string input = R"END(
+[Custom] @Var CustomTheme
+{
+    mainColor: "blue";
+}
+)END";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
-    // Check root node
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* bodyNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(bodyNode != nullptr);
-    REQUIRE(bodyNode->getTagName() == "body");
-    REQUIRE(bodyNode->getChildren().size() == 2);
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
 
-    // Check first child (h1)
-    CHTL::ElementNode* h1Node = dynamic_cast<CHTL::ElementNode*>(bodyNode->getChildren()[0].get());
-    REQUIRE(h1Node != nullptr);
-    REQUIRE(h1Node->getTagName() == "h1");
-    REQUIRE(h1Node->getChildren().size() == 1);
-    CHTL::TextNode* titleNode = dynamic_cast<CHTL::TextNode*>(h1Node->getChildren()[0].get());
-    REQUIRE(titleNode != nullptr);
-    REQUIRE(titleNode->getValue() == "Title");
+    const auto* customNode = context.getCustomVar("CustomTheme");
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "CustomTheme");
 
-    // Check second child (p)
-    CHTL::ElementNode* pNode = dynamic_cast<CHTL::ElementNode*>(bodyNode->getChildren()[1].get());
-    REQUIRE(pNode != nullptr);
-    REQUIRE(pNode->getTagName() == "p");
-    REQUIRE(pNode->getChildren().size() == 1);
-    CHTL::TextNode* contentNode = dynamic_cast<CHTL::TextNode*>(pNode->getChildren()[0].get());
-    REQUIRE(contentNode != nullptr);
-    REQUIRE(contentNode->getValue() == "Content");
+    const auto& vars = customNode->getVariables();
+    REQUIRE(vars.size() == 1);
+    REQUIRE(vars.at("mainColor") == "blue");
 }
 
-TEST_CASE("Parse Simple Attribute", "[parser]") {
-    std::string input = "div { id: \"my-id\"; }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+TEST_CASE("Parser handles import declarations", "[parser]") {
+    const std::string input = R"([Import] @Chtl from "my/lib.chtl" as MyLib)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getTagName() == "div");
-    REQUIRE(elementNode->getChildren().empty());
-    REQUIRE(elementNode->getAttributes().size() == 1);
-    REQUIRE(elementNode->getAttribute("id") == "my-id");
+    REQUIRE(doc != nullptr);
+    // Imports are non-emitting at the top level of the document for now
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+
+    auto* importNode = dynamic_cast<ImportNode*>(children[0].get());
+    REQUIRE(importNode != nullptr);
+    REQUIRE(importNode->getFullType() == "@Chtl");
+    REQUIRE(importNode->getFilePath() == "my/lib.chtl");
+    REQUIRE(importNode->getAlias() == "MyLib");
 }
 
-TEST_CASE("Parse Attribute with Equal Sign", "[parser]") {
-    std::string input = "div { id = \"my-id\"; }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+TEST_CASE("Parser handles namespace declarations", "[parser]") {
+    const std::string input = R"(
+[Namespace] MyTestSpace {
+    [Template] @Style MyStyle { color: purple; }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getAttributes().size() == 1);
-    REQUIRE(elementNode->getAttribute("id") == "my-id");
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1); // The NamespaceNode
+
+    auto* nsNode = dynamic_cast<NamespaceNode*>(children[0].get());
+    REQUIRE(nsNode != nullptr);
+    REQUIRE(nsNode->getName() == "MyTestSpace");
 }
 
-TEST_CASE("Parse Attribute with Unquoted Literal", "[parser]") {
-    std::string input = "div { class: box; }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+TEST_CASE("Context handles nested namespaces and scoped lookups", "[parser]") {
+    const std::string input = R"(
+[Namespace] Outer {
+    [Template] @Style OuterStyle { color: red; }
 
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getAttributes().size() == 1);
-    REQUIRE(elementNode->getAttribute("class") == "box");
+    [Namespace] Inner {
+        [Template] @Style InnerStyle { color: blue; }
+    }
 }
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    parser.parse(); // Parse the input to populate the context
 
-TEST_CASE("Parse Simple Style Block", "[parser]") {
-    std::string input = "div { style { color: red; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
+    // After parsing, we should be back in the global scope
+    REQUIRE(context.getStyleTemplate("OuterStyle") == nullptr);
+    REQUIRE(context.getStyleTemplate("InnerStyle") == nullptr);
 
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
+    // Enter the outer scope and check again
+    context.enterNamespace("Outer");
+    const auto* outerStyle = context.getStyleTemplate("OuterStyle");
+    REQUIRE(outerStyle != nullptr);
+    REQUIRE(outerStyle->getName() == "OuterStyle");
+    REQUIRE(context.getStyleTemplate("InnerStyle") == nullptr); // Inner is not visible here directly
 
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getProperties().size() == 1);
+    // Enter the inner scope
+    context.enterNamespace("Inner");
+    const auto* innerStyle = context.getStyleTemplate("InnerStyle");
+    REQUIRE(innerStyle != nullptr);
+    REQUIRE(innerStyle->getName() == "InnerStyle");
 
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode->getKey() == "color");
+    // Check that we can still resolve names from the outer scope
+    const auto* outerFromInner = context.getStyleTemplate("OuterStyle");
+    REQUIRE(outerFromInner != nullptr);
+    REQUIRE(outerFromInner->getName() == "OuterStyle");
 
-    const CHTL::ExpressionNode* valueExpr = propNode->getValue();
-    REQUIRE(valueExpr != nullptr);
-    REQUIRE(valueExpr->getType() == CHTL::ExpressionType::LITERAL);
-    const CHTL::LiteralNode* litNode = dynamic_cast<const CHTL::LiteralNode*>(valueExpr);
-    REQUIRE(litNode != nullptr);
-    REQUIRE(litNode->getValue().value == "red");
-}
+    // Leave the inner scope
+    context.leaveNamespace();
+    REQUIRE(context.getStyleTemplate("InnerStyle") == nullptr); // No longer visible
+    REQUIRE(context.getStyleTemplate("OuterStyle") != nullptr); // Outer still visible
 
-TEST_CASE("Parse Numeric Style Property", "[parser]") {
-    std::string input = "div { style { width: 100px; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getProperties().size() == 1);
-
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode->getKey() == "width");
-
-    const CHTL::ExpressionNode* valueExpr = propNode->getValue();
-    REQUIRE(valueExpr != nullptr);
-    REQUIRE(valueExpr->getType() == CHTL::ExpressionType::LITERAL);
-    const CHTL::LiteralNode* litNode = dynamic_cast<const CHTL::LiteralNode*>(valueExpr);
-    REQUIRE(litNode != nullptr);
-    REQUIRE(litNode->getValue().value == "100");
-    REQUIRE(litNode->getUnit() == "px");
-}
-
-TEST_CASE("Parse Simple Script Block", "[parser]") {
-    std::string input = "div { script { let a = 1; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
-
-    REQUIRE(rootNode != nullptr);
-    CHTL::ElementNode* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-    REQUIRE(elementNode->getTagName() == "div");
-    REQUIRE(elementNode->getChildren().empty());
-
-    const CHTL::ScriptNode* scriptNode = elementNode->getScript();
-    REQUIRE(scriptNode != nullptr);
-    REQUIRE(scriptNode->getChildren().size() == 1);
-    const auto* rawScript = dynamic_cast<const CHTL::RawScriptNode*>(scriptNode->getChildren()[0].get());
-    REQUIRE(rawScript != nullptr);
-    REQUIRE(rawScript->getScript() == " let a = 1; ");
-}
-
-TEST_CASE("Parse Text Node", "[parser]") {
-    // 1. Lex the input string
-    std::string input = "text { \"Hello, Parser!\" }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-
-    // 2. Parse the tokens
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
-
-    // 3. Assert the results
-    REQUIRE(rootNode != nullptr);
-    CHTL::TextNode* textNode = dynamic_cast<CHTL::TextNode*>(rootNode.get());
-    REQUIRE(textNode != nullptr);
-    REQUIRE(textNode->getValue() == "Hello, Parser!");
-}
-
-TEST_CASE("Parse Style Property with Simple Arithmetic Expression", "[parser]") {
-    std::string input = "div { style { width: 100 + 50; } }";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> rootNode = std::move(rootNodes[0]);
-
-    REQUIRE(rootNode != nullptr);
-    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(rootNode.get());
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getProperties().size() == 1);
-
-    const CHTL::StylePropertyNode* propNode = styleNode->getProperties()[0].get();
-    REQUIRE(propNode->getKey() == "width");
-
-    const CHTL::ExpressionNode* exprNode = propNode->getValue();
-    REQUIRE(exprNode != nullptr);
-    REQUIRE(exprNode->getType() == CHTL::ExpressionType::BINARY_OP);
-
-    const auto* binOpNode = dynamic_cast<const CHTL::BinaryOpNode*>(exprNode);
-    REQUIRE(binOpNode != nullptr);
-    REQUIRE(binOpNode->getOperator().type == CHTL::TokenType::PLUS);
-
-    const auto* leftLit = dynamic_cast<const CHTL::LiteralNode*>(binOpNode->getLeft());
-    REQUIRE(leftLit != nullptr);
-    REQUIRE(leftLit->getValue().type == CHTL::TokenType::NUMBER);
-    REQUIRE(leftLit->getValue().value == "100");
-
-    const auto* rightLit = dynamic_cast<const CHTL::LiteralNode*>(binOpNode->getRight());
-    REQUIRE(rightLit != nullptr);
-    REQUIRE(rightLit->getValue().type == CHTL::TokenType::NUMBER);
-    REQUIRE(rightLit->getValue().value == "50");
-}
-
-TEST_CASE("Parse Style Template Definition", "[parser]") {
-    std::string input = R"(
-        [Template] @Style MyTemplate {
-            color: red;
-            font-size: 16px;
-        }
-    )";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto ast_nodes = parser.getAST();
-
-    // A file with only a template definition should not produce a root node
-    REQUIRE(ast_nodes.empty());
-
-    // But it should register the template
-    const auto* templateDef = CHTL::TemplateManager::getInstance().getTemplate("MyTemplate");
-    REQUIRE(templateDef != nullptr);
-    REQUIRE(templateDef->getTemplateType() == CHTL::TemplateType::STYLE);
-    REQUIRE(templateDef->getName() == "MyTemplate");
-    REQUIRE(templateDef->getChildren().size() == 2);
-
-    auto* prop1 = dynamic_cast<const CHTL::StylePropertyNode*>(templateDef->getChildren()[0].get());
-    REQUIRE(prop1 != nullptr);
-    REQUIRE(prop1->getKey() == "color");
-
-    auto* prop2 = dynamic_cast<const CHTL::StylePropertyNode*>(templateDef->getChildren()[1].get());
-    REQUIRE(prop2 != nullptr);
-    REQUIRE(prop2->getKey() == "font-size");
-}
-
-TEST_CASE("Parse Style Template Usage", "[parser]") {
-    std::string input = R"(
-        div {
-            style {
-                @Style MyTemplate;
-            }
-        }
-    )";
-    CHTL::CHTLLexer lexer;
-    std::vector<CHTL::Token> tokens = lexer.tokenize(input);
-    CHTL::CHTLParser parser(tokens);
-    parser.parse();
-    auto rootNodes = parser.getAST();
-    REQUIRE(rootNodes.size() == 1);
-    std::unique_ptr<CHTL::BaseNode> root = std::move(rootNodes[0]);
-
-    REQUIRE(root != nullptr);
-    auto* elementNode = dynamic_cast<CHTL::ElementNode*>(root.get());
-    REQUIRE(elementNode != nullptr);
-
-    const CHTL::StyleNode* styleNode = elementNode->getStyle();
-    REQUIRE(styleNode != nullptr);
-    REQUIRE(styleNode->getTemplateUsages().size() == 1);
-
-    const auto* templateUsage = styleNode->getTemplateUsages()[0].get();
-    REQUIRE(templateUsage->getTemplateType() == CHTL::TemplateType::STYLE);
-    REQUIRE(templateUsage->getName() == "MyTemplate");
+    // Leave the outer scope
+    context.leaveNamespace();
+    REQUIRE(context.getStyleTemplate("OuterStyle") == nullptr); // No longer visible
 }

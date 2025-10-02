@@ -1,0 +1,7 @@
+[Namespace] my_space {
+    except [Template];
+
+    div {
+        text: "This is allowed.";
+    }
+}
