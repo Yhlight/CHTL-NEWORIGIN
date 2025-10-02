@@ -6,7 +6,8 @@
 
 enum class TokenType {
     // Keywords
-    // ...
+    From,
+    As,
 
     // Literals
     Identifier,
@@ -46,6 +47,10 @@ struct Token {
     std::string value;
     size_t line = 0;
     size_t column = 0;
+
+    bool operator==(const Token& other) const {
+        return type == other.type && value == other.value && line == other.line && column == other.column;
+    }
 };
 
 #endif //CHTL_TOKEN_H

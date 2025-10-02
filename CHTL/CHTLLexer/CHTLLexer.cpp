@@ -52,6 +52,14 @@ Token CHTLLexer::makeIdentifier() {
         value += currentChar();
         advance();
     }
+
+    if (value == "from") {
+        return makeToken(TokenType::From, value);
+    }
+    if (value == "as") {
+        return makeToken(TokenType::As, value);
+    }
+
     return makeToken(TokenType::Identifier, value);
 }
 

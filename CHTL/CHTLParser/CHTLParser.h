@@ -7,6 +7,8 @@
 #include "../CHTLNode/CustomStyleNode.h"
 #include "../CHTLNode/CustomElementNode.h"
 #include "../CHTLNode/CustomVarNode.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
 
@@ -33,6 +35,8 @@ private:
     std::unique_ptr<BaseNode> parseTextAttribute();
     std::unique_ptr<BaseNode> parseTemplateDeclaration();
     std::unique_ptr<BaseNode> parseCustomDeclaration();
+    std::unique_ptr<BaseNode> parseImportDeclaration();
+    std::unique_ptr<BaseNode> parseNamespaceDeclaration();
 };
 
 #endif //CHTL_PARSER_H

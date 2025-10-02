@@ -8,6 +8,8 @@
 #include "CHTLNode/CustomStyleNode.h"
 #include "CHTLNode/CustomElementNode.h"
 #include "CHTLNode/CustomVarNode.h"
+#include "CHTLNode/ImportNode.h"
+#include "CHTLNode/NamespaceNode.h"
 #include "CHTLContext/CHTLContext.h"
 #include <memory>
 
@@ -395,4 +397,87 @@ TEST_CASE("Parser handles custom var declarations", "[parser]") {
     const auto& vars = customNode->getVariables();
     REQUIRE(vars.size() == 1);
     REQUIRE(vars.at("mainColor") == "blue");
+}
+
+TEST_CASE("Parser handles import declarations", "[parser]") {
+    const std::string input = R"([Import] @Chtl from "my/lib.chtl" as MyLib)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    // Imports are non-emitting at the top level of the document for now
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+
+    auto* importNode = dynamic_cast<ImportNode*>(children[0].get());
+    REQUIRE(importNode != nullptr);
+    REQUIRE(importNode->getFullType() == "@Chtl");
+    REQUIRE(importNode->getFilePath() == "my/lib.chtl");
+    REQUIRE(importNode->getAlias() == "MyLib");
+}
+
+TEST_CASE("Parser handles namespace declarations", "[parser]") {
+    const std::string input = R"(
+[Namespace] MyTestSpace {
+    [Template] @Style MyStyle { color: purple; }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1); // The NamespaceNode
+
+    auto* nsNode = dynamic_cast<NamespaceNode*>(children[0].get());
+    REQUIRE(nsNode != nullptr);
+    REQUIRE(nsNode->getName() == "MyTestSpace");
+}
+
+TEST_CASE("Context handles nested namespaces and scoped lookups", "[parser]") {
+    const std::string input = R"(
+[Namespace] Outer {
+    [Template] @Style OuterStyle { color: red; }
+
+    [Namespace] Inner {
+        [Template] @Style InnerStyle { color: blue; }
+    }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    parser.parse(); // Parse the input to populate the context
+
+    // After parsing, we should be back in the global scope
+    REQUIRE(context.getStyleTemplate("OuterStyle") == nullptr);
+    REQUIRE(context.getStyleTemplate("InnerStyle") == nullptr);
+
+    // Enter the outer scope and check again
+    context.enterNamespace("Outer");
+    const auto* outerStyle = context.getStyleTemplate("OuterStyle");
+    REQUIRE(outerStyle != nullptr);
+    REQUIRE(outerStyle->getName() == "OuterStyle");
+    REQUIRE(context.getStyleTemplate("InnerStyle") == nullptr); // Inner is not visible here directly
+
+    // Enter the inner scope
+    context.enterNamespace("Inner");
+    const auto* innerStyle = context.getStyleTemplate("InnerStyle");
+    REQUIRE(innerStyle != nullptr);
+    REQUIRE(innerStyle->getName() == "InnerStyle");
+
+    // Check that we can still resolve names from the outer scope
+    const auto* outerFromInner = context.getStyleTemplate("OuterStyle");
+    REQUIRE(outerFromInner != nullptr);
+    REQUIRE(outerFromInner->getName() == "OuterStyle");
+
+    // Leave the inner scope
+    context.leaveNamespace();
+    REQUIRE(context.getStyleTemplate("InnerStyle") == nullptr); // No longer visible
+    REQUIRE(context.getStyleTemplate("OuterStyle") != nullptr); // Outer still visible
+
+    // Leave the outer scope
+    context.leaveNamespace();
+    REQUIRE(context.getStyleTemplate("OuterStyle") == nullptr); // No longer visible
 }

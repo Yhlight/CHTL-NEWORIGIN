@@ -31,17 +31,25 @@ void CHTLParser::expect(TokenType type) {
 #include "../CHTLNode/TemplateStyleNode.h"
 #include "../CHTLNode/TemplateElementNode.h"
 #include "../CHTLNode/TemplateVarNode.h"
+#include "../CHTLNode/ImportNode.h"
+#include "../CHTLNode/NamespaceNode.h"
+#include "../CHTLLoader/CHTLLoader.h"
 
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     if (currentToken.type == TokenType::LBracket) {
         if (peek().type == TokenType::Identifier) {
-            if (peek().value == "Template") {
+            const auto& keyword = peek().value;
+            if (keyword == "Template") {
                 return parseTemplateDeclaration();
-            } else if (peek().value == "Custom") {
+            } else if (keyword == "Custom") {
                 return parseCustomDeclaration();
+            } else if (keyword == "Import") {
+                return parseImportDeclaration();
+            } else if (keyword == "Namespace") {
+                return parseNamespaceDeclaration();
             }
         }
-        throw std::runtime_error("Unsupported declaration type inside []. Expected 'Template' or 'Custom'.");
+        throw std::runtime_error("Unsupported declaration type inside []. Expected 'Template', 'Custom', 'Import', or 'Namespace'.");
     }
     if (currentToken.type == TokenType::Identifier) {
         // The 'text' keyword is special; it can start a text block.
@@ -294,7 +302,6 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
     if (currentToken.type == TokenType::LBrace) {
         advance(); // Consume '{'
         while (currentToken.type != TokenType::RBrace && currentToken.type != TokenType::EndOfFile) {
-
             if (currentToken.type == TokenType::Identifier && (peek().type == TokenType::Colon || peek().type == TokenType::Assign)) {
                 if (currentToken.value == "text") {
                     node->addChild(parseTextAttribute());
@@ -302,10 +309,12 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
                     parseAttribute(*node);
                 }
             } else {
+                auto pre_parse_token = currentToken;
                 auto child = parseStatement();
                 if (child) {
                     node->addChild(std::move(child));
-                } else {
+                } else if (pre_parse_token == currentToken) {
+                    // Parser is stuck, break the loop
                     break;
                 }
             }
@@ -319,21 +328,16 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
 std::unique_ptr<DocumentNode> CHTLParser::parse() {
     auto documentNode = std::make_unique<DocumentNode>();
     while (currentToken.type != TokenType::EndOfFile) {
-        if (currentToken.type == TokenType::LBracket) {
-            // Template/Custom declarations are non-emitting statements.
-            // We parse them to register them in the context, but they don't
-            // return a node to be added to the document tree.
-            parseStatement();
-        } else {
-            auto statement = parseStatement();
-            if (statement) {
-                documentNode->addChild(std::move(statement));
-            } else {
-                // If we can't parse a statement and it wasn't a non-emitting
-                // one, then we should break to avoid an infinite loop.
-                break;
-            }
+        auto pre_parse_token = currentToken;
+        auto statement = parseStatement();
+        if (statement) {
+            documentNode->addChild(std::move(statement));
+        } else if (pre_parse_token == currentToken) {
+            // If parseStatement returned nullptr and the token hasn't changed,
+            // we are stuck on an unhandled token. Break to avoid an infinite loop.
+            break;
         }
+        // Otherwise, it was a valid non-emitting statement, and we can continue.
     }
     return documentNode;
 }
@@ -472,9 +476,94 @@ std::unique_ptr<BaseNode> CHTLParser::parseCustomDeclaration() {
         }
 
         expect(TokenType::RBrace);
-        context.registerCustomVar(std::move(customNode));
+    context.registerCustomVar(std::move(customNode));
         return nullptr;
     } else {
         throw std::runtime_error("Unsupported custom type: " + customType);
     }
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseImportDeclaration() {
+    expect(TokenType::LBracket);
+    expect(TokenType::Identifier); // Consume "Import"
+    expect(TokenType::RBracket);
+
+    std::string fullType;
+    if (currentToken.type == TokenType::LBracket) {
+        // Handle full spec like [Custom] @Element
+        fullType += "[";
+        advance();
+        fullType += currentToken.value;
+        advance();
+        fullType += "]";
+        expect(TokenType::RBracket);
+    }
+
+    expect(TokenType::At);
+    fullType += "@" + currentToken.value;
+    std::string importType = currentToken.value;
+    advance();
+
+    std::string entityName;
+    if (currentToken.type == TokenType::Identifier) {
+        entityName = currentToken.value;
+        advance();
+    }
+
+    expect(TokenType::From);
+    if (currentToken.type != TokenType::String && currentToken.type != TokenType::Identifier) {
+        throw std::runtime_error("Expected a file path string or literal after 'from'.");
+    }
+    std::string filePath = currentToken.value;
+    advance();
+
+    std::string alias;
+    if (currentToken.type == TokenType::As) {
+        advance();
+        if (currentToken.type != TokenType::Identifier) {
+            throw std::runtime_error("Expected an alias name after 'as'.");
+        }
+        alias = currentToken.value;
+        advance();
+    }
+
+    // For now, we just create the node. The actual loading and processing
+    // will be handled by a later component that uses the context.
+    return std::make_unique<ImportNode>(fullType, entityName, filePath, alias);
+}
+
+std::unique_ptr<BaseNode> CHTLParser::parseNamespaceDeclaration() {
+    expect(TokenType::LBracket);
+    expect(TokenType::Identifier); // Consume "Namespace"
+    expect(TokenType::RBracket);
+
+    if (currentToken.type != TokenType::Identifier) {
+        throw std::runtime_error("Expected a name for the namespace.");
+    }
+    std::string namespaceName = currentToken.value;
+    advance();
+
+    context.enterNamespace(namespaceName);
+    auto namespaceNode = std::make_unique<NamespaceNode>(namespaceName);
+
+    if (currentToken.type == TokenType::LBrace) {
+        advance(); // Consume '{'
+        while (currentToken.type != TokenType::RBrace && currentToken.type != TokenType::EndOfFile) {
+            auto pre_parse_token = currentToken;
+            auto child = parseStatement();
+            if (child) {
+                namespaceNode->addChild(std::move(child));
+            } else if (pre_parse_token == currentToken) {
+                // Parser is stuck, break the loop
+                break;
+            }
+        }
+        expect(TokenType::RBrace);
+        context.leaveNamespace();
+    }
+    // If there's no brace, the namespace extends to the end of the file.
+    // In that case, we don't call leaveNamespace() here. The calling process
+    // would be responsible for managing that at the end of parsing the file.
+
+    return namespaceNode;
 }
