@@ -65,6 +65,9 @@ Token CHTLLexer::makeIdentifier() {
     if (value == "html5") {
         return makeToken(TokenType::Html5, value);
     }
+    if (value == "except") {
+        return makeToken(TokenType::Except, value);
+    }
 
     return makeToken(TokenType::Identifier, value);
 }

@@ -262,13 +262,44 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
     if (currentToken.type == TokenType::LBrace) {
         advance();
         while (currentToken.type != TokenType::RBrace) {
+            if (currentToken.type == TokenType::Except) {
+                advance(); // consume 'except'
+                do {
+                    if (currentToken.type == TokenType::Identifier) {
+                        node->addConstraint(currentToken.value);
+                        advance();
+                    } else {
+                        throw std::runtime_error("Expected an identifier for constraint.");
+                    }
+
+                    if (currentToken.type == TokenType::Comma) {
+                        advance();
+                    } else {
+                        break;
+                    }
+                } while (true);
+                expect(TokenType::Semicolon);
+                continue;
+            }
+
             if (currentToken.type == TokenType::Identifier && (peek().type == TokenType::Colon || peek().type == TokenType::Assign)) {
                 if (currentToken.value == "text") node->addChild(parseTextAttribute());
                 else parseAttribute(*node);
             } else {
                 auto pre_parse_token = currentToken;
                 auto child = parseStatement();
-                if (child) node->addChild(std::move(child));
+                if (child) {
+                    if (auto* childElement = dynamic_cast<ElementNode*>(child.get())) {
+                        const auto& constraints = node->getConstraints();
+                        const auto& tagName = childElement->getTagName();
+                        for (const auto& constraint : constraints) {
+                            if (tagName == constraint) {
+                                throw std::runtime_error("Element '" + tagName + "' is not allowed in <" + node->getTagName() + "> due to an 'except' constraint.");
+                            }
+                        }
+                    }
+                    node->addChild(std::move(child));
+                }
                 else if (pre_parse_token == currentToken) break;
             }
         }

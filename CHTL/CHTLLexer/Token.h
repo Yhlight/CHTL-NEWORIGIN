@@ -10,6 +10,7 @@ enum class TokenType {
     As,
     Use,
     Html5,
+    Except,
 
     // Literals
     Identifier,

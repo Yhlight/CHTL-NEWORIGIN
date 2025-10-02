@@ -38,10 +38,24 @@ public:
         return ss.str();
     }
 
+public:
+    const std::vector<std::unique_ptr<BaseNode>>& getChildren() const {
+        return children;
+    }
+
+    void addConstraint(const std::string& constraint) {
+        constraints.push_back(constraint);
+    }
+
+    const std::vector<std::string>& getConstraints() const {
+        return constraints;
+    }
+
 private:
     std::string tagName;
     std::map<std::string, std::string> attributes;
     std::vector<std::unique_ptr<BaseNode>> children;
+    std::vector<std::string> constraints;
 };
 
 #endif //CHTL_ELEMENT_NODE_H
