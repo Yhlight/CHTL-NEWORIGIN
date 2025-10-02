@@ -11,7 +11,6 @@ enum class TokenType {
     COLON,
     EQUALS,
     STRING_LITERAL,
-    UNQUOTED_LITERAL,
     KEYWORD_TEXT,
     KEYWORD_STYLE,
     KEYWORD_SCRIPT,

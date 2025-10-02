@@ -14,53 +14,36 @@ Token CHTLLexer::getNextToken() {
             continue;
         }
 
-        if (isalpha(current) || current == '_') {
-            return identifier();
+        // Handle single-character tokens
+        switch (current) {
+            case '{': advance(); return {TokenType::LEFT_BRACE, "{", line, column};
+            case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
+            case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
+            case ':': advance(); return {TokenType::COLON, ":", line, column};
+            case '=': advance(); return {TokenType::EQUALS, "=", line, column};
         }
 
+        // Handle comments
+        if (current == '/') {
+            if (position + 1 < input.size()) {
+                if (input[position + 1] == '/') return singleLineComment();
+                if (input[position + 1] == '*') return multiLineComment();
+            }
+        }
+        if (current == '#') return generatorComment();
+
+        // Handle string literals
         if (current == '"' || current == '\'') {
             return stringLiteral();
         }
 
-        if (current == '/') {
-            if (position + 1 < input.size()) {
-                if (input[position + 1] == '/') {
-                    return singleLineComment();
-                } else if (input[position + 1] == '*') {
-                    return multiLineComment();
-                }
-            }
-        }
-
-        if (current == '#') {
-            return generatorComment();
-        }
-
-        switch (current) {
-            case '{':
-                advance();
-                return {TokenType::LEFT_BRACE, "{", line, column};
-            case '}':
-                advance();
-                return {TokenType::RIGHT_BRACE, "}", line, column};
-            case ';':
-                advance();
-                return {TokenType::SEMICOLON, ";", line, column};
-            case ':':
-                advance();
-                return {TokenType::COLON, ":", line, column};
-            case '=':
-                advance();
-                return {TokenType::EQUALS, "=", line, column};
-        }
-
-        // For now, any other character is considered part of an unquoted literal
+        // If it's none of the above, it's an identifier or an unquoted literal.
+        // We treat them the same at the lexer level.
         if (isgraph(current)) {
-            return unquotedLiteral();
+            return identifier();
         }
 
-
-        // If we reach here, it's an unknown character. Advance past it.
+        // If we reach here, it's an unknown character.
         advance();
         return {TokenType::UNKNOWN, std::string(1, current), line, column};
     }
@@ -97,7 +80,8 @@ Token CHTLLexer::identifier() {
     std::string value;
     int startLine = line;
     int startColumn = column;
-    while (position < input.size() && (isalnum(currentChar()) || currentChar() == '_')) {
+    // Consume characters until a whitespace or a CHTL punctuation character is found.
+    while (position < input.size() && !isspace(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=') {
         value += currentChar();
         advance();
     }
@@ -123,17 +107,6 @@ Token CHTLLexer::stringLiteral() {
 
     advance(); // Consume closing quote
     return {TokenType::STRING_LITERAL, value, startLine, startColumn};
-}
-
-Token CHTLLexer::unquotedLiteral() {
-    std::string value;
-    int startLine = line;
-    int startColumn = column;
-    while (position < input.size() && isgraph(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=') {
-        value += currentChar();
-        advance();
-    }
-    return {TokenType::UNQUOTED_LITERAL, value, startLine, startColumn};
 }
 
 Token CHTLLexer::singleLineComment() {
@@ -175,10 +148,3 @@ Token CHTLLexer::generatorComment() {
     }
     return {TokenType::GENERATOR_COMMENT, value, startLine, startColumn};
 }
-
-// This function is not called from getNextToken, so it is dead code.
-// I am removing it to avoid confusion.
-// Token CHTLLexer::comment() {
-//     // Placeholder implementation
-//     return {TokenType::UNKNOWN, "", line, column};
-// }

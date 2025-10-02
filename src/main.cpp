@@ -1,20 +1,38 @@
 #include <iostream>
 #include "CHTL/CHTLParser/CHTLParser.h"
+#include "Util/ASTPrinter/ASTPrinter.h"
 
 int main() {
     std::string chtl_code = R"(
-        div {
-            id: "main-container";
-            class: "container";
+        // This is the main page structure
+        html {
+            # This is a generator comment for the head
+            head {
+                title { text { "My CHTL Page" } }
+            }
+            body {
+                // Main container for the content
+                div {
+                    id = "main-container";
+                    class: "container";
 
-            text {
-                "Hello, CHTL!"
+                    h1 { text { "Welcome to CHTL!" } }
+
+                    p {
+                        text { "This is a paragraph of text." }
+                    }
+                }
             }
         }
     )";
 
     CHTLParser parser(chtl_code);
     parser.parse();
+
+    std::cout << "--- AST ---" << std::endl;
+    ASTPrinter printer;
+    printer.print(parser.getRoot());
+    std::cout << "-----------" << std::endl;
 
     std::cout << "Parsing complete." << std::endl;
 

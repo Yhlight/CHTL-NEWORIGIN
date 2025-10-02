@@ -3,11 +3,18 @@
 #include <memory>
 #include <vector>
 
+enum class NodeType {
+    Base,
+    Element,
+    Text,
+    Comment
+};
+
 class BaseNode {
 public:
     virtual ~BaseNode() = default;
+    virtual NodeType getType() const { return NodeType::Base; }
 
-    // A method to add a child node, useful for building the tree
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));
     }

@@ -9,6 +9,8 @@ class ElementNode : public BaseNode {
 public:
     ElementNode(const std::string& tagName) : tagName(tagName) {}
 
+    NodeType getType() const override { return NodeType::Element; }
+
     const std::string& getTagName() const {
         return tagName;
     }
