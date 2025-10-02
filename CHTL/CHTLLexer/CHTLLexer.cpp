@@ -47,7 +47,8 @@ void CHTLLexer::skipMultiLineComment() {
 Token CHTLLexer::makeIdentifier() {
     std::string value;
     size_t start_pos = position;
-    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_')) {
+    // Allow hyphens for CSS properties and values.
+    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-')) {
         value += currentChar();
         advance();
     }
@@ -111,7 +112,8 @@ Token CHTLLexer::getNextToken() {
             return makeString(currentChar());
         }
 
-        if (isalpha(currentChar()) || currentChar() == '_') {
+        // Allow identifiers to start with a digit for CSS values like '16px'.
+        if (isalpha(currentChar()) || currentChar() == '_' || isdigit(currentChar())) {
             return makeIdentifier();
         }
 
@@ -133,6 +135,11 @@ Token CHTLLexer::getNextToken() {
         if (currentChar() == ';') {
             advance();
             return makeToken(TokenType::Semicolon, ";");
+        }
+
+        if (currentChar() == '=') {
+            advance();
+            return makeToken(TokenType::Assign, "=");
         }
 
         // Unrecognized character
