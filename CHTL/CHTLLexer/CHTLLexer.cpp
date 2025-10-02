@@ -47,8 +47,8 @@ void CHTLLexer::skipMultiLineComment() {
 Token CHTLLexer::makeIdentifier() {
     std::string value;
     size_t start_pos = position;
-    // Allow hyphens for CSS properties and values.
-    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-')) {
+    // Allow hyphens and dots for CSS properties and values.
+    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-' || currentChar() == '.')) {
         value += currentChar();
         advance();
     }
@@ -125,6 +125,21 @@ Token CHTLLexer::getNextToken() {
         if (currentChar() == '}') {
             advance();
             return makeToken(TokenType::RBrace, "}");
+        }
+
+        if (currentChar() == '[') {
+            advance();
+            return makeToken(TokenType::LBracket, "[");
+        }
+
+        if (currentChar() == ']') {
+            advance();
+            return makeToken(TokenType::RBracket, "]");
+        }
+
+        if (currentChar() == '@') {
+            advance();
+            return makeToken(TokenType::At, "@");
         }
 
         if (currentChar() == ':') {

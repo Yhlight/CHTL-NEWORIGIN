@@ -20,6 +20,7 @@ enum class TokenType {
     RBracket,
     LParen,
     RParen,
+    At,
     Colon,
     Semicolon,
     Assign,

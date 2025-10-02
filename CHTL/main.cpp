@@ -3,7 +3,7 @@
 #include <sstream>
 #include <memory>
 #include "CHTLParser/CHTLParser.h"
-#include "CHTLNode/ElementNode.h"
+#include "CHTLNode/DocumentNode.h"
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -22,8 +22,9 @@ int main(int argc, char* argv[]) {
     std::string content = buffer.str();
 
     try {
-        CHTLParser parser(content);
-        std::unique_ptr<ElementNode> ast = parser.parse();
+        CHTLContext context;
+        CHTLParser parser(content, context);
+        std::unique_ptr<DocumentNode> ast = parser.parse();
         if (ast) {
             std::cout << ast->toString();
         } else {

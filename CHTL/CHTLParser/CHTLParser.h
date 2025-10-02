@@ -2,16 +2,19 @@
 #define CHTL_PARSER_H
 
 #include "../CHTLLexer/CHTLLexer.h"
+#include "../CHTLNode/DocumentNode.h"
 #include "../CHTLNode/ElementNode.h"
+#include "../CHTLContext/CHTLContext.h"
 #include <memory>
 
 class CHTLParser {
 public:
-    explicit CHTLParser(const std::string& input);
-    std::unique_ptr<ElementNode> parse();
+    CHTLParser(const std::string& input, CHTLContext& context);
+    std::unique_ptr<DocumentNode> parse();
 
 private:
     CHTLLexer lexer;
+    CHTLContext& context;
     Token currentToken;
     Token nextToken;
 
@@ -25,6 +28,7 @@ private:
     std::unique_ptr<BaseNode> parseCommentNode();
     std::unique_ptr<BaseNode> parseStyleNode();
     std::unique_ptr<BaseNode> parseTextAttribute();
+    std::unique_ptr<BaseNode> parseTemplateDeclaration();
 };
 
 #endif //CHTL_PARSER_H

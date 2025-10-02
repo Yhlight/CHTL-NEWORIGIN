@@ -1,16 +1,25 @@
 #include "catch.hpp"
 #include "CHTLParser/CHTLParser.h"
+#include "CHTLNode/DocumentNode.h"
 #include "CHTLNode/ElementNode.h"
+#include "CHTLNode/TemplateStyleNode.h"
+#include "CHTLNode/TemplateElementNode.h"
+#include "CHTLNode/TemplateVarNode.h"
+#include "CHTLContext/CHTLContext.h"
 #include <memory>
 
 TEST_CASE("Parser handles a single element", "[parser]") {
     const std::string input = "div { }";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
-    // In a real scenario, we'd have a better way to check the tag name
-    // but for now, we'll rely on the toString() method for verification.
     REQUIRE(root->toString().find("<div>") != std::string::npos);
 }
 
@@ -20,9 +29,14 @@ div {
     text { "Hello, CHTL!" }
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
     std::string output = root->toString();
@@ -37,9 +51,14 @@ div {
     id: "my-div";
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
     std::string output = root->toString();
@@ -52,9 +71,14 @@ div {
     id = "my-div-equals";
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
     std::string output = root->toString();
@@ -67,9 +91,14 @@ p {
     color: red;
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
     std::string output = root->toString();
@@ -82,15 +111,18 @@ div {
     text: "Hello from attribute!";
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
     std::string output = root->toString();
-    // Ensure 'text' is not treated as a regular attribute.
     REQUIRE(output.find("text=\"Hello from attribute!\"") == std::string::npos);
-    // Ensure the content is added as a text node.
     REQUIRE(output.find("Hello from attribute!") != std::string::npos);
 }
 
@@ -103,13 +135,16 @@ div {
     }
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
-    // For now, we'll check if the StyleNode's content is captured.
-    // A more robust test would inspect the AST directly.
     std::string output = root->toString();
     REQUIRE(output.find("/* Style Block: color: blue; font-size: 16px; */") != std::string::npos);
 }
@@ -120,9 +155,14 @@ div {
     # This is a comment
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
     std::string output = root->toString();
@@ -137,16 +177,132 @@ div {
     span { }
 }
 )";
-    CHTLParser parser(input);
-    std::unique_ptr<ElementNode> root = parser.parse();
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
 
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
     REQUIRE(root != nullptr);
 
-    // Using toString() for verification. This is not ideal but works for now.
-    // A better approach would be to inspect the AST directly.
     std::string output = root->toString();
     REQUIRE(output.find("<div>") != std::string::npos);
     REQUIRE(output.find("<span>") != std::string::npos);
     REQUIRE(output.find("</span>") != std::string::npos);
     REQUIRE(output.find("</div>") != std::string::npos);
+}
+
+TEST_CASE("Parser handles style template declarations", "[parser]") {
+    const std::string input = R"(
+[Template] @Style DefaultText
+{
+    color: black;
+    font-size: 16px;
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* tmplNode = context.getStyleTemplate("DefaultText");
+    REQUIRE(tmplNode != nullptr);
+    REQUIRE(tmplNode->getName() == "DefaultText");
+
+    const auto& props = tmplNode->getProperties();
+    REQUIRE(props.size() == 2);
+    REQUIRE(props[0].first == "color");
+    REQUIRE(props[0].second == "black");
+    REQUIRE(props[1].first == "font-size");
+    REQUIRE(props[1].second == "16px");
+}
+
+TEST_CASE("Parser handles element template declarations", "[parser]") {
+    const std::string input = R"(
+[Template] @Element Box
+{
+    div { }
+    span { text { "I am in a box" } }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* tmplNode = context.getElementTemplate("Box");
+    REQUIRE(tmplNode != nullptr);
+    REQUIRE(tmplNode->getName() == "Box");
+
+    const auto& tmplChildren = tmplNode->getChildren();
+    REQUIRE(tmplChildren.size() == 2);
+
+    auto* divNode = dynamic_cast<ElementNode*>(tmplChildren[0].get());
+    REQUIRE(divNode != nullptr);
+
+    auto* spanNode = dynamic_cast<ElementNode*>(tmplChildren[1].get());
+    REQUIRE(spanNode != nullptr);
+}
+
+TEST_CASE("Parser handles var template declarations", "[parser]") {
+    const std::string input = R"END(
+[Template] @Var ThemeColor
+{
+    tableColor: "rgb(255, 192, 203)";
+    textColor: "black";
+}
+)END";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 0);
+
+    const auto* tmplNode = context.getVarTemplate("ThemeColor");
+    REQUIRE(tmplNode != nullptr);
+    REQUIRE(tmplNode->getName() == "ThemeColor");
+
+    const auto& vars = tmplNode->getVariables();
+    REQUIRE(vars.size() == 2);
+    REQUIRE(vars.at("tableColor") == "rgb(255, 192, 203)");
+    REQUIRE(vars.at("textColor") == "black");
+}
+
+TEST_CASE("Parser applies style templates", "[parser]") {
+    const std::string input = R"END(
+[Template] @Style DefaultText
+{
+    color: black;
+    line-height: 1.6;
+}
+
+div {
+    style {
+        @Style DefaultText;
+    }
+}
+)END";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+
+    auto* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    std::string output = root->toString();
+    REQUIRE(output.find("/* Style Block: color: black; line-height: 1.6; */") != std::string::npos);
 }
