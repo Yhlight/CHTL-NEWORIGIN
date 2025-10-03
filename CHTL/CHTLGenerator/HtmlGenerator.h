@@ -40,19 +40,25 @@ public:
     void visit(IfNode& node) override;
 
 private:
+    // Helper methods for visiting nodes
     void findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styleNodes);
     std::string generateHead(const std::vector<StyleNode*>& allStyleNodes);
 
+    // Helper methods for refactoring visit(ElementNode&)
+    void handleDynamicIfs(ElementNode& node);
+    void collectInlineStyles(ElementNode& node, std::vector<std::pair<std::string, std::string>>& inlineStyles);
+
+    // Script generation helpers
+    void generateDynamicScript(const std::string& elementId, const IfNode& rootIfNode);
+    std::string translateTokensToJs(const std::vector<Token>& tokens);
+
+    // Member variables
     std::stringstream resultStream;
     std::stringstream hoistedCss;
     std::stringstream dynamicScripts;
     int depth = 0;
     int dynamicIdCounter = 0;
     std::unordered_set<std::string> selfClosingTags;
-
-private:
-    void generateDynamicScript(const std::string& elementId, const IfNode& rootIfNode);
-    std::string translateTokensToJs(const std::vector<Token>& tokens);
 };
 
 #endif // CHTL_HTML_GENERATOR_H

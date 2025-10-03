@@ -52,7 +52,49 @@ void HtmlGenerator::visit(DocumentNode& node) {
 }
 
 void HtmlGenerator::visit(ElementNode& node) {
-    // Check for dynamic if children to decide if an ID is needed
+    // Handle dynamic ifs first to ensure an ID is present before rendering attributes.
+    handleDynamicIfs(node);
+
+    std::string indent(depth * 2, ' ');
+    resultStream << indent << "<" << node.getTagName();
+
+    // Handle attributes (which may have been modified by handleDynamicIfs)
+    for (const auto& attr : node.getAttributes()) {
+        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
+    }
+
+    // Collect all inline styles from StyleNode and static IfNode children
+    std::vector<std::pair<std::string, std::string>> inlineStyles;
+    collectInlineStyles(node, inlineStyles);
+
+    if (!inlineStyles.empty()) {
+        resultStream << " style=\"";
+        for (size_t i = 0; i < inlineStyles.size(); ++i) {
+            resultStream << inlineStyles[i].first << ": " << inlineStyles[i].second << ";";
+            if (i < inlineStyles.size() - 1) {
+                resultStream << " ";
+            }
+        }
+        resultStream << "\"";
+    }
+
+    if (selfClosingTags.count(node.getTagName())) {
+        resultStream << " />\n";
+    } else {
+        resultStream << ">\n";
+        depth++;
+        for (const auto& child : node.getChildren()) {
+            // Skip nodes that have already been processed for styling
+            if (dynamic_cast<StyleNode*>(child.get()) == nullptr && dynamic_cast<IfNode*>(child.get()) == nullptr) {
+                child->accept(*this);
+            }
+        }
+        depth--;
+        resultStream << indent << "</" << node.getTagName() << ">\n";
+    }
+}
+
+void HtmlGenerator::handleDynamicIfs(ElementNode& node) {
     const auto& attrs = node.getAttributes();
     auto it = attrs.find("id");
     std::string elementId = (it != attrs.end()) ? it->second : "";
@@ -69,21 +111,20 @@ void HtmlGenerator::visit(ElementNode& node) {
         }
     }
 
-    if (hasDynamicIf && elementId.empty()) {
-        elementId = "chtl-dynamic-" + std::to_string(dynamicIdCounter++);
-        const_cast<ElementNode&>(node).setAttribute("id", elementId);
+    if (hasDynamicIf) {
+        if (elementId.empty()) {
+            elementId = "chtl-dynamic-" + std::to_string(dynamicIdCounter++);
+            // This const_cast is acceptable here as we are logically modifying the node
+            // during the generation phase to ensure it has a required ID for scripting.
+            const_cast<ElementNode&>(node).setAttribute("id", elementId);
+        }
+        if (firstDynamicIf) {
+            generateDynamicScript(elementId, *firstDynamicIf);
+        }
     }
+}
 
-    std::string indent(depth * 2, ' ');
-    resultStream << indent << "<" << node.getTagName();
-
-    // Handle attributes
-    for (const auto& attr : node.getAttributes()) {
-        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
-    }
-
-    // Collect all inline styles from StyleNode and IfNode children
-    std::vector<std::pair<std::string, std::string>> inlineStyles;
+void HtmlGenerator::collectInlineStyles(ElementNode& node, std::vector<std::pair<std::string, std::string>>& inlineStyles) {
     ExpressionEvaluator evaluator(node);
 
     for (const auto& child : node.getChildren()) {
@@ -103,16 +144,10 @@ void HtmlGenerator::visit(ElementNode& node) {
                 }
             }
         } else if (auto* ifNode = dynamic_cast<IfNode*>(child.get())) {
-            if (ifNode->isDynamic()) {
-                if (ifNode == firstDynamicIf) {
-                    generateDynamicScript(elementId, *ifNode);
-                }
-            } else {
-                bool conditionMet = false;
+            if (!ifNode->isDynamic()) {
                 auto* currentIf = ifNode;
-                while(currentIf && !conditionMet) {
+                while (currentIf) {
                     if (currentIf->getConditionTokens().empty() || evaluator.evaluate(currentIf->getConditionTokens())) {
-                        conditionMet = true;
                         for (const auto& prop : currentIf->getProperties()) {
                             std::string finalValue;
                             if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
@@ -127,40 +162,12 @@ void HtmlGenerator::visit(ElementNode& node) {
                                 inlineStyles.push_back({prop.first, finalValue});
                             }
                         }
+                        break; // Found a matching branch, so exit the while loop
                     }
-                    if (!conditionMet && currentIf->getElseBranch()) {
-                        currentIf = dynamic_cast<IfNode*>(currentIf->getElseBranch().get());
-                    } else {
-                        currentIf = nullptr;
-                    }
+                    currentIf = dynamic_cast<IfNode*>(currentIf->getElseBranch().get());
                 }
             }
         }
-    }
-
-    if (!inlineStyles.empty()) {
-        resultStream << " style=\"";
-        for (size_t i = 0; i < inlineStyles.size(); ++i) {
-            resultStream << inlineStyles[i].first << ": " << inlineStyles[i].second << ";";
-            if (i < inlineStyles.size() - 1) {
-                resultStream << " ";
-            }
-        }
-        resultStream << "\"";
-    }
-
-    if (selfClosingTags.count(node.getTagName())) {
-        resultStream << " />\n";
-    } else {
-        resultStream << ">\n";
-        depth++;
-        for (const auto& child : node.getChildren()) {
-            if (dynamic_cast<StyleNode*>(child.get()) == nullptr && dynamic_cast<IfNode*>(child.get()) == nullptr) {
-                child->accept(*this);
-            }
-        }
-        depth--;
-        resultStream << indent << "</" << node.getTagName() << ">\n";
     }
 }
 
