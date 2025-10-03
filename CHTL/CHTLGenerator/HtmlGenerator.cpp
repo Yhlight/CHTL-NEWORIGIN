@@ -270,8 +270,8 @@ void HtmlGenerator::generateDynamicScript(const std::string& elementId, const If
                      }
                  }
                  std::string propVal = *val;
-                 // If the parser provided a quoted string, un-quote it first.
-                 if (propVal.length() >= 2 && propVal.front() == '"' && propVal.back() == '"') {
+                 // If the parser provided a quoted string, un-quote it. This handles potential multiple layers of quoting.
+                 while (propVal.length() >= 2 && propVal.front() == '"' && propVal.back() == '"') {
                      propVal = propVal.substr(1, propVal.length() - 2);
                  }
 
