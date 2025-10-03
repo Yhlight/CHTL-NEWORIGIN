@@ -26,11 +26,9 @@ void HtmlGenerator::visit(DocumentNode& node) {
 
     // Generate head with hoisted styles
     resultStream << "<head>\n";
-    resultStream << "  <style>\n";
     if (!hoistedCss.str().empty()) {
-        resultStream << hoistedCss.str();
+        resultStream << "  <style>\n" << hoistedCss.str() << "  </style>\n";
     }
-    resultStream << "  </style>\n";
     resultStream << "</head>\n";
 
     // Generate body
@@ -76,10 +74,10 @@ void HtmlGenerator::visit(ElementNode& node) {
 
     // Collect all inline styles from StyleNode and IfNode children
     std::vector<std::pair<std::string, std::string>> inlineStyles;
-    ExpressionEvaluator evaluator(node);
 
     for (const auto& child : node.getChildren()) {
         if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
+            ExpressionEvaluator evaluator(node);
             for (const auto& prop : styleNode->getProperties()) {
                 std::string finalValue;
                 if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
@@ -97,6 +95,7 @@ void HtmlGenerator::visit(ElementNode& node) {
             auto* currentIf = ifNode;
 
             while(currentIf && !conditionMet) {
+                ExpressionEvaluator evaluator(node);
                 // Check for else block (empty condition) or evaluate condition
                 if (currentIf->getConditionTokens().empty() || evaluator.evaluate(currentIf->getConditionTokens())) {
                     conditionMet = true;
@@ -118,7 +117,7 @@ void HtmlGenerator::visit(ElementNode& node) {
                 if (!conditionMet && currentIf->getElseBranch()) {
                     currentIf = dynamic_cast<IfNode*>(currentIf->getElseBranch().get());
                 } else {
-                    currentIf = nullptr; // End of chain
+                    break;
                 }
             }
         }

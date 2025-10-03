@@ -1,3 +1,4 @@
+#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLLexer/Token.h"

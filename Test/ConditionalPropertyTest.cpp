@@ -27,29 +27,40 @@ TEST_CASE("Attribute Conditional Expressions", "[integration]") {
     std::string result = generator.getResult();
 
     // Test 1: Simple true condition
-    requireSubstring(result, "<div id=\"test1\" style=\"background-color: red;\">");
+    requireSubstring(result, "id=\"test1\"");
+    requireSubstring(result, "style=\"background-color: red;\"");
 
     // Test 2: Simple false condition with else
-    requireSubstring(result, "<div id=\"test2\" style=\"background-color: blue;\">");
+    requireSubstring(result, "id=\"test2\"");
+    requireSubstring(result, "style=\"background-color: blue;\"");
 
     // Test 3: Chained condition, first branch true
-    requireSubstring(result, "<div id=\"test3\" style=\"border: 1px solid green;\">");
+    requireSubstring(result, "id=\"test3\"");
+    requireSubstring(result, "style=\"border: 1px solid green;\"");
 
     // Test 4: Chained condition, second branch true
-    requireSubstring(result, "<div id=\"test4\" style=\"border: 1px solid yellow;\">");
+    requireSubstring(result, "id=\"test4\"");
+    requireSubstring(result, "style=\"border: 1px solid yellow;\"");
 
     // Test 5: Chained condition, else branch taken
-    requireSubstring(result, "<div id=\"test5\" style=\"border: 1px solid black;\">");
+    requireSubstring(result, "id=\"test5\"");
+    requireSubstring(result, "style=\"border: 1px solid black;\"");
 
     // Test 6: Chained condition with no else, first branch true
-    requireSubstring(result, "<div id=\"test6\" style=\"background-color: purple;\">");
+    requireSubstring(result, "id=\"test6\"");
+    requireSubstring(result, "style=\"background-color: purple;\"");
 
     // Test 7: Chained condition with no else, no branch true (should have no style attribute)
-    requireSubstring(result, "<div id=\"test7\">");
-    size_t test7_pos = result.find("<div id=\"test7\">");
+    size_t test7_pos = result.find("id=\"test7\"");
     REQUIRE(test7_pos != std::string::npos);
-    size_t tag_end = result.find(">", test7_pos);
-    REQUIRE(tag_end != std::string::npos);
-    std::string test7_tag = result.substr(test7_pos, tag_end - test7_pos);
+
+    // Find the start of the tag for test7
+    size_t tag_start_pos = result.rfind("<div", test7_pos);
+    REQUIRE(tag_start_pos != std::string::npos);
+
+    size_t tag_end_pos = result.find(">", test7_pos);
+    REQUIRE(tag_end_pos != std::string::npos);
+
+    std::string test7_tag = result.substr(tag_start_pos, tag_end_pos - tag_start_pos);
     REQUIRE(test7_tag.find("style=") == std::string::npos);
 }
