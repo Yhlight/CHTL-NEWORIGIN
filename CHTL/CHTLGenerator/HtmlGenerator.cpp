@@ -100,7 +100,16 @@ void HtmlGenerator::visit(ElementNode& node) {
                 if (currentIf->getConditionTokens().empty() || evaluator.evaluate(currentIf->getConditionTokens())) {
                     conditionMet = true;
                     for (const auto& prop : currentIf->getProperties()) {
-                        inlineStyles.push_back(prop);
+                        std::string finalValue;
+                        if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
+                            finalValue = *stringVal;
+                        } else if (const auto* condVal = std::get_if<ConditionalPropertyValue>(&prop.second)) {
+                            finalValue = evaluator.resolveConditionalProperty(*condVal);
+                        }
+
+                        if (!finalValue.empty()) {
+                            inlineStyles.push_back({prop.first, finalValue});
+                        }
                     }
                 }
 
@@ -165,6 +174,12 @@ void HtmlGenerator::visit(CssRuleNode& node) {
         hoistedCss << indent << "    " << prop.first << ": " << prop.second << ";\n";
     }
     hoistedCss << indent << "  }\n";
+}
+
+void HtmlGenerator::visit(IfNode& node) {
+    // This visitor is a no-op because the logic for if-statements is
+    // handled within the parent ElementNode's visit method. The if-statement
+    // modifies the parent's styles rather than emitting its own output.
 }
 
 void HtmlGenerator::findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styleNodes) {

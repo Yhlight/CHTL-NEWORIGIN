@@ -580,7 +580,7 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
     expect(TokenType::If);
     expect(TokenType::LBrace);
 
-    if (currentToken.type != TokenType::Identifier || currentToken.value != "condition") {
+    if (currentToken.type != TokenType::Condition) {
         throw std::runtime_error("Expected 'condition' keyword in if block.");
     }
     advance(); // consume 'condition'
@@ -601,18 +601,11 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
         std::string propName = currentToken.value;
         advance();
         expect(TokenType::Colon);
-        std::string propValue;
-        while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::RBrace) {
-            propValue += currentToken.value;
-            if (peek().type != TokenType::Semicolon && peek().type != TokenType::RBrace) {
-                propValue += " ";
-            }
-            advance();
-        }
+        auto propValue = parsePropertyValue();
+        ifNode->addProperty(propName, std::move(propValue));
         if (currentToken.type == TokenType::Semicolon) {
             advance();
         }
-        ifNode->addProperty(propName, propValue);
     }
     expect(TokenType::RBrace);
 
@@ -627,18 +620,11 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
                 std::string propName = currentToken.value;
                 advance();
                 expect(TokenType::Colon);
-                std::string propValue;
-                while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::RBrace) {
-                    propValue += currentToken.value;
-                    if (peek().type != TokenType::Semicolon && peek().type != TokenType::RBrace) {
-                        propValue += " ";
-                    }
+                auto propValue = parsePropertyValue();
+                elseNode->addProperty(propName, std::move(propValue));
+                 if (currentToken.type == TokenType::Semicolon) {
                     advance();
                 }
-                if (currentToken.type == TokenType::Semicolon) {
-                    advance();
-                }
-                elseNode->addProperty(propName, propValue);
             }
             expect(TokenType::RBrace);
             ifNode->setElseBranch(std::move(elseNode));

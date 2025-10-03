@@ -13,6 +13,7 @@ enum class TokenType {
     Except,
     If,
     Else,
+    Condition,
 
     // Literals
     Identifier,

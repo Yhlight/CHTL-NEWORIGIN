@@ -3,6 +3,7 @@
 
 #include "BaseNode.h"
 #include "NodeVisitor.h"
+#include "StyleNode.h" // For PropertyValue
 #include "../CHTLLexer/Token.h"
 #include <string>
 #include <vector>
@@ -15,8 +16,8 @@ public:
 
     std::string getNodeType() const override { return "If"; }
 
-    void addProperty(const std::string& key, const std::string& value) {
-        properties.push_back({key, value});
+    void addProperty(const std::string& key, PropertyValue value) {
+        properties.push_back({key, std::move(value)});
     }
 
     void setElseBranch(std::unique_ptr<BaseNode> else_branch) {
@@ -27,7 +28,7 @@ public:
         std::stringstream ss;
         ss << std::string(depth * 2, ' ') << "if (condition) {" << std::endl; // Simplified for now
         for (const auto& prop : properties) {
-            ss << std::string((depth + 1) * 2, ' ') << prop.first << ": " << prop.second << ";" << std::endl;
+             ss << std::string((depth + 1) * 2, ' ') << prop.first << ": " << "...;" << std::endl; // Simplified
         }
         ss << std::string(depth * 2, ' ') << "}" << std::endl;
         if (elseBranch) {
@@ -44,7 +45,7 @@ public:
         return conditionTokens;
     }
 
-    const std::vector<std::pair<std::string, std::string>>& getProperties() const {
+    const std::vector<std::pair<std::string, PropertyValue>>& getProperties() const {
         return properties;
     }
 
@@ -54,7 +55,7 @@ public:
 
 private:
     std::vector<Token> conditionTokens;
-    std::vector<std::pair<std::string, std::string>> properties;
+    std::vector<std::pair<std::string, PropertyValue>> properties;
     std::unique_ptr<BaseNode> elseBranch;
 };
 

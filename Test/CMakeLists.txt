@@ -11,6 +11,7 @@ add_executable(run-tests
     ConditionalRenderingTest.cpp
     ImgTagTest.cpp
     ConditionalPropertyTest.cpp
+    IfParserTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC

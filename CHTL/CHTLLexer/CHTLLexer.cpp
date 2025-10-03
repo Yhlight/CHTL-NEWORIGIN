@@ -74,6 +74,9 @@ Token CHTLLexer::makeIdentifier() {
     if (value == "else") {
         return makeToken(TokenType::Else, value);
     }
+    if (value == "condition") {
+        return makeToken(TokenType::Condition, value);
+    }
 
     return makeToken(TokenType::Identifier, value);
 }

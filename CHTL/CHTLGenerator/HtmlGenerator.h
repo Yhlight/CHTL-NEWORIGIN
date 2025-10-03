@@ -37,7 +37,7 @@ public:
     void visit(NamespaceNode& node) override {}
     void visit(UseNode& node) override {}
     void visit(DeclarationNode& node) override {}
-    void visit(IfNode& node) override {}
+    void visit(IfNode& node) override;
 
 private:
     void findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styleNodes);
