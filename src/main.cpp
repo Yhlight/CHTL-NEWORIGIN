@@ -9,8 +9,9 @@ int main() {
         div {
             class: "my-div";
             style {
+                width: 100px + 50px * 2;
                 &:hover {
-                    color: red;
+                    color: blue;
                 }
             }
         }

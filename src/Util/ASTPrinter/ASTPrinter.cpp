@@ -8,6 +8,8 @@
 #include "../../CHTL/CHTLNode/ClassSelectorNode.h"
 #include "../../CHTL/CHTLNode/IdSelectorNode.h"
 #include "../../CHTL/CHTLNode/ContextSelectorNode.h"
+#include "../../CHTL/CHTLNode/ValueNode.h"
+#include "../../CHTL/CHTLNode/BinaryOpNode.h"
 
 void ASTPrinter::print(BaseNode* root) {
     if (!root) {
@@ -15,6 +17,29 @@ void ASTPrinter::print(BaseNode* root) {
         return;
     }
     printNode(root, 0);
+}
+
+void ASTPrinter::printExpression(const ExpressionNode* node, int indent) {
+    if (!node) return;
+    std::string indentation(indent * 2, ' ');
+
+    switch (node->getType()) {
+        case NodeType::Value: {
+            auto* valueNode = static_cast<const ValueNode*>(node);
+            std::cout << indentation << "Value: " << valueNode->getValue() << std::endl;
+            break;
+        }
+        case NodeType::BinaryOp: {
+            auto* opNode = static_cast<const BinaryOpNode*>(node);
+            std::cout << indentation << "BinaryOp: " << static_cast<int>(opNode->getOp()) << std::endl;
+            printExpression(opNode->getLeft(), indent + 1);
+            printExpression(opNode->getRight(), indent + 1);
+            break;
+        }
+        default:
+            std::cout << indentation << "Unknown Expression Node" << std::endl;
+            break;
+    }
 }
 
 void ASTPrinter::printNode(BaseNode* node, int indent) {
@@ -52,7 +77,8 @@ void ASTPrinter::printNode(BaseNode* node, int indent) {
         }
         case NodeType::StyleProperty: {
             auto* propNode = static_cast<StylePropertyNode*>(node);
-            std::cout << indentation << "Style Property: " << propNode->getName() << " = \"" << propNode->getValue() << "\"" << std::endl;
+            std::cout << indentation << "Style Property: " << propNode->getName() << std::endl;
+            printExpression(propNode->getValue(), indent + 1);
             break;
         }
         case NodeType::ClassSelector: {

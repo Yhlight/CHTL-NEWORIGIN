@@ -13,7 +13,9 @@ enum class NodeType {
     StyleProperty,
     ClassSelector,
     IdSelector,
-    ContextSelector
+    ContextSelector,
+    Value,
+    BinaryOp
 };
 
 class BaseNode {

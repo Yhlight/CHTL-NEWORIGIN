@@ -5,6 +5,7 @@
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/ContextSelectorNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLNode/ValueNode.h"
 
 TEST(CssGeneratorTest, GeneratesCssForContextualSelector) {
     // Manually construct the AST
@@ -12,7 +13,7 @@ TEST(CssGeneratorTest, GeneratesCssForContextualSelector) {
     root->setAttribute("class", "my-div");
     auto styleNode = std::make_unique<StyleNode>();
     auto contextNode = std::make_unique<ContextSelectorNode>("&:hover");
-    contextNode->addChild(std::make_unique<StylePropertyNode>("color", "red"));
+    contextNode->addChild(std::make_unique<StylePropertyNode>("color", std::make_unique<ValueNode>("red")));
     styleNode->addChild(std::move(contextNode));
     root->addChild(std::move(styleNode));
 
@@ -32,7 +33,7 @@ TEST(CssGeneratorTest, HandlesIdForContext) {
     root->setAttribute("id", "my-id");
     auto styleNode = std::make_unique<StyleNode>();
     auto contextNode = std::make_unique<ContextSelectorNode>("&::before");
-    contextNode->addChild(std::make_unique<StylePropertyNode>("content", "\"hello\""));
+    contextNode->addChild(std::make_unique<StylePropertyNode>("content", std::make_unique<ValueNode>("\"hello\"")));
     styleNode->addChild(std::move(contextNode));
     root->addChild(std::move(styleNode));
 
@@ -52,7 +53,7 @@ TEST(CssGeneratorTest, HandlesMultipleClassesForContext) {
     root->setAttribute("class", "class1 class2");
     auto styleNode = std::make_unique<StyleNode>();
     auto contextNode = std::make_unique<ContextSelectorNode>("&:active");
-    contextNode->addChild(std::make_unique<StylePropertyNode>("font-weight", "bold"));
+    contextNode->addChild(std::make_unique<StylePropertyNode>("font-weight", std::make_unique<ValueNode>("bold")));
     styleNode->addChild(std::move(contextNode));
     root->addChild(std::move(styleNode));
 

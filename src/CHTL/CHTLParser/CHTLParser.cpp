@@ -11,10 +11,10 @@ CHTLParser::CHTLParser(const std::string& input) : lexer(input) {
 CHTLParser::~CHTLParser() {}
 
 void CHTLParser::parse() {
-    Token token = getNextToken();
+    Token token = consume();
     while (token.type != TokenType::END_OF_FILE) {
         currentState->handle(*this, token);
-        token = getNextToken();
+        token = consume();
     }
 }
 
@@ -22,8 +22,24 @@ void CHTLParser::setState(std::unique_ptr<CHTLState> newState) {
     currentState = std::move(newState);
 }
 
-Token CHTLParser::getNextToken() {
+Token CHTLParser::consume() {
+    if (!tokenBuffer.empty()) {
+        Token token = tokenBuffer.front();
+        tokenBuffer.erase(tokenBuffer.begin());
+        return token;
+    }
     return lexer.getNextToken();
+}
+
+Token CHTLParser::peek() {
+    if (tokenBuffer.empty()) {
+        tokenBuffer.push_back(lexer.getNextToken());
+    }
+    return tokenBuffer.front();
+}
+
+void CHTLParser::putback(Token token) {
+    tokenBuffer.insert(tokenBuffer.begin(), token);
 }
 
 void CHTLParser::setRawContentMode(bool enabled) {

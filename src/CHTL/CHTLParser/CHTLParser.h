@@ -14,7 +14,9 @@ public:
     ~CHTLParser();
     void parse();
     void setState(std::unique_ptr<CHTLState> newState);
-    Token getNextToken();
+    Token consume();
+    Token peek();
+    void putback(Token token);
     void setRawContentMode(bool enabled);
 
     // AST management
@@ -29,6 +31,7 @@ public:
 private:
     std::unique_ptr<CHTLState> currentState;
     CHTLLexer lexer;
+    std::vector<Token> tokenBuffer;
     std::unique_ptr<BaseNode> root;
     std::vector<BaseNode*> nodeStack;
     GlobalStylesheet stylesheet;

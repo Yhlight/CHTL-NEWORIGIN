@@ -3,6 +3,7 @@
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/ContextSelectorNode.h"
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
+#include "../../CHTL/CHTLNode/ValueNode.h"
 #include <iostream>
 #include <sstream>
 
@@ -41,9 +42,12 @@ void CssGenerator::traverse(BaseNode* node, ElementNode* parentElement, GlobalSt
                     const auto& propChild = children[i];
                     if (propChild->getType() == NodeType::StyleProperty) {
                         auto* propNode = static_cast<StylePropertyNode*>(propChild.get());
-                        properties += propNode->getName() + ": " + propNode->getValue() + ";";
-                        if (i < children.size() - 1) {
-                            properties += " ";
+                        if (propNode->getValue() && propNode->getValue()->getType() == NodeType::Value) {
+                            const auto* valueNode = static_cast<const ValueNode*>(propNode->getValue());
+                            properties += propNode->getName() + ": " + valueNode->getValue() + ";";
+                            if (i < children.size() - 1) {
+                                properties += " ";
+                            }
                         }
                     }
                 }

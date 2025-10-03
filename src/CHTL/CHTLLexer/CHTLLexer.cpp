@@ -40,38 +40,51 @@ Token CHTLLexer::getNextToken() {
             continue;
         }
 
-        // Handle selectors
-        if (current == '&') { // Contextual selector
-            return contextualSelector();
-        }
-        if (current == '.') { // Class selector
-            return selector();
-        }
-        if (current == '#') { // ID selector OR Generator Comment
-            if (position + 1 < input.size() && isspace(input[position + 1])) {
-                return generatorComment();
-            } else {
-                return selector();
-            }
-        }
-
-        // Handle single-character tokens
-        switch (current) {
-            case '{': advance(); return {TokenType::LEFT_BRACE, "{", line, column};
-            case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
-            case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
-            case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
-            case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
-            case ':': advance(); return {TokenType::COLON, ":", line, column};
-            case '=': advance(); return {TokenType::EQUALS, "=", line, column};
-        }
-
-        // Handle multi-character comments
+        // Handle multi-character tokens and special single-character tokens first
         if (current == '/') {
             if (position + 1 < input.size()) {
                 if (input[position + 1] == '/') return singleLineComment();
                 if (input[position + 1] == '*') return multiLineComment();
             }
+        }
+        if (current == '*') {
+            if (position + 1 < input.size() && input[position + 1] == '*') {
+                advance();
+                advance();
+                return {TokenType::POWER, "**", line, column};
+            }
+        }
+        if (current == '#') {
+            if (position + 1 < input.size() && isspace(input[position + 1])) {
+                return generatorComment();
+            } else {
+                return selector(); // ID selector
+            }
+        }
+        if (current == '.') {
+            if (position + 1 < input.size() && isdigit(input[position + 1])) {
+                return number();
+            }
+             return selector(); // Class selector
+        }
+        if (current == '&') {
+            return contextualSelector();
+        }
+
+        // Handle standard single-character tokens
+        switch (current) {
+            case '{': advance(); return {TokenType::LEFT_BRACE, "{", line, column};
+            case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
+            case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
+            case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
+            case '+': advance(); return {TokenType::PLUS, "+", line, column};
+            case '-': advance(); return {TokenType::MINUS, "-", line, column};
+            case '/': advance(); return {TokenType::SLASH, "/", line, column};
+            case '*': advance(); return {TokenType::STAR, "*", line, column};
+            case '%': advance(); return {TokenType::PERCENT, "%", line, column};
+            case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
+            case ':': advance(); return {TokenType::COLON, ":", line, column};
+            case '=': advance(); return {TokenType::EQUALS, "=", line, column};
         }
 
         // Handle string literals
@@ -79,8 +92,12 @@ Token CHTLLexer::getNextToken() {
             return stringLiteral();
         }
 
+        if (isdigit(current)) {
+            return number();
+        }
+
         // If it's none of the above, it's an identifier
-        if (isgraph(current)) {
+        if (isalnum(current) || current == '_') {
             return identifier();
         }
 
@@ -117,12 +134,41 @@ void CHTLLexer::skipWhitespace() {
     }
 }
 
+Token CHTLLexer::number() {
+    std::string value;
+    int startLine = line;
+    int startColumn = column;
+
+    // Consume digits before a decimal
+    while(position < input.size() && isdigit(currentChar())) {
+        value += currentChar();
+        advance();
+    }
+
+    // Consume decimal and following digits
+    if(position < input.size() && currentChar() == '.') {
+        value += currentChar();
+        advance();
+        while(position < input.size() && isdigit(currentChar())) {
+            value += currentChar();
+            advance();
+        }
+    }
+
+    // Consume unit
+    while(position < input.size() && (isalpha(currentChar()) || currentChar() == '%')) {
+        value += currentChar();
+        advance();
+    }
+
+    return {TokenType::NUMBER, value, startLine, startColumn};
+}
+
 Token CHTLLexer::identifier() {
     std::string value;
     int startLine = line;
     int startColumn = column;
-    // Consume characters until a whitespace or a CHTL punctuation character is found.
-    while (position < input.size() && !isspace(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=' && currentChar() != '(' && currentChar() != ')' && currentChar() != '.' && currentChar() != '#') {
+    while (position < input.size() && (isalnum(currentChar()) || currentChar() == '_')) {
         value += currentChar();
         advance();
     }

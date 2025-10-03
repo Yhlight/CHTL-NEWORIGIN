@@ -1,6 +1,7 @@
 #include "StyleState.h"
 #include "TagState.h"
 #include "../CHTLParser/CHTLParser.h"
+#include "../ExpressionParser/ExpressionParser.h"
 #include "../CHTLNode/StylePropertyNode.h"
 #include "../CHTLNode/ClassSelectorNode.h"
 #include "../CHTLNode/IdSelectorNode.h"
@@ -13,45 +14,52 @@ StyleState::StyleState() : expectingValue(false), inContextualBlock(false) {}
 void StyleState::handle(CHTLParser& parser, Token token) {
     // If we are inside a contextual selector's block (e.g., &:hover { ... })
     if (inContextualBlock) {
-        switch (token.type) {
-            case TokenType::IDENTIFIER:
-                if (expectingValue) {
-                    parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, token.value));
-                    pendingPropertyName.clear();
-                    expectingValue = false;
-                } else {
-                    pendingPropertyName = token.value;
-                }
-                break;
-            case TokenType::COLON:
-            case TokenType::EQUALS:
+        if (token.type == TokenType::RIGHT_BRACE) {
+            parser.closeScope();
+            inContextualBlock = false;
+        } else {
+            // Inside a contextual block, we expect property: value pairs
+             if (token.type == TokenType::IDENTIFIER && !expectingValue) {
+                pendingPropertyName = token.value;
+            } else if (token.type == TokenType::COLON || token.type == TokenType::EQUALS) {
                 expectingValue = true;
-                break;
-            case TokenType::SEMICOLON:
+            } else if (expectingValue) {
+                parser.putback(token);
+                ExpressionParser exprParser(parser);
+                auto valueNode = exprParser.parse();
+                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
                 pendingPropertyName.clear();
                 expectingValue = false;
-                break;
-            case TokenType::RIGHT_BRACE:
-                // Exiting the contextual block, so we pop its scope
-                parser.closeScope();
-                inContextualBlock = false;
-                break;
-            default:
-                // Ignore other tokens inside a contextual block for now
-                break;
+            }
         }
-        return; // Important to return here to not fall through to the outer switch
+        return;
     }
 
     // If we are in the main style block
     switch (token.type) {
         case TokenType::IDENTIFIER:
-            if (expectingValue) {
-                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, token.value));
+             if (expectingValue) { // This case handles unquoted literals like 'red'
+                parser.putback(token);
+                ExpressionParser exprParser(parser);
+                auto valueNode = exprParser.parse();
+                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
                 pendingPropertyName.clear();
                 expectingValue = false;
             } else {
                 pendingPropertyName = token.value;
+            }
+            break;
+
+        case TokenType::NUMBER:
+        case TokenType::STRING_LITERAL:
+        case TokenType::LEFT_PAREN: // Start of a grouped expression
+            if (expectingValue) {
+                parser.putback(token);
+                ExpressionParser exprParser(parser);
+                auto valueNode = exprParser.parse();
+                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                pendingPropertyName.clear();
+                expectingValue = false;
             }
             break;
 
@@ -93,7 +101,6 @@ void StyleState::handle(CHTLParser& parser, Token token) {
                 pendingContextualSelector.clear();
                 inContextualBlock = true;
             }
-            // If there's no pending selector, we ignore the brace for now.
             break;
 
         default:

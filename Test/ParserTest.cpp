@@ -7,6 +7,7 @@
 #include "CHTLNode/StylePropertyNode.h"
 #include "CHTLNode/ClassSelectorNode.h"
 #include "CHTLNode/IdSelectorNode.h"
+#include "CHTLNode/ValueNode.h"
 
 TEST(ParserTest, ParsesSingleEmptyElement) {
     std::string input = "div {}";
@@ -46,7 +47,11 @@ TEST(ParserTest, ParsesStyleBlock) {
 
     auto* propNode = static_cast<StylePropertyNode*>(propNodeBase);
     EXPECT_EQ(propNode->getName(), "color");
-    EXPECT_EQ(propNode->getValue(), "red");
+
+    ASSERT_NE(propNode->getValue(), nullptr);
+    ASSERT_EQ(propNode->getValue()->getType(), NodeType::Value);
+    const auto* valueNode = static_cast<const ValueNode*>(propNode->getValue());
+    EXPECT_EQ(valueNode->getValue(), "red");
 }
 
 TEST(ParserTest, ParsesScriptBlock) {

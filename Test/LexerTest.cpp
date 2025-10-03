@@ -43,12 +43,12 @@ TEST(LexerTest, TokenizesStringLiterals) {
     checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "world");
 }
 
-TEST(LexerTest, TokenizesUnquotedLiteralsAsIdentifiers) {
+TEST(LexerTest, TokenizesUnquotedLiterals) {
     std::string input = "red 100px";
     CHTLLexer lexer(input);
 
     checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "red");
-    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "100px");
+    checkToken(lexer.getNextToken(), TokenType::NUMBER, "100px");
 }
 
 TEST(LexerTest, TokenizesComments) {

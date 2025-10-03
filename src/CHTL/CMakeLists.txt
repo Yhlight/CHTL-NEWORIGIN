@@ -1,3 +1,5 @@
+add_subdirectory(ExpressionParser)
+
 add_library(CHTL
     CHTL.cpp
     CHTLParser/CHTLParser.cpp

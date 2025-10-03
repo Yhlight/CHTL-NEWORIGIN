@@ -24,6 +24,7 @@ private:
     Token stringLiteral();
     Token selector();
     Token contextualSelector();
+    Token number();
     Token singleLineComment();
     Token multiLineComment();
     Token generatorComment();
