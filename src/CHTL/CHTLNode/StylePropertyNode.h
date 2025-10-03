@@ -19,6 +19,11 @@ public:
         value = std::move(newValue);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto cloned_value = value ? static_cast<ExpressionNode*>(value->clone().release()) : nullptr;
+        return std::make_unique<StylePropertyNode>(name, std::unique_ptr<ExpressionNode>(cloned_value));
+    }
+
 private:
     std::string name;
     std::unique_ptr<ExpressionNode> value;

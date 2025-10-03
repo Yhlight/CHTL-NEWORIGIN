@@ -13,6 +13,10 @@ public:
         return reference;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<ReferenceNode>(reference);
+    }
+
 private:
     std::string reference;
 };

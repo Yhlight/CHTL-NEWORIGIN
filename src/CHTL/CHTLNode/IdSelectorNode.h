@@ -13,6 +13,10 @@ public:
         return name;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<IdSelectorNode>(name);
+    }
+
 private:
     std::string name;
 };

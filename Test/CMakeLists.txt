@@ -6,6 +6,7 @@ add_executable(runTests
     ExpressionParserTest.cpp
     ExpressionEvaluatorTest.cpp
     IfBehaviorTest.cpp
+    TemplateTest.cpp
 )
 
 target_link_libraries(runTests
@@ -17,6 +18,7 @@ target_link_libraries(runTests
     ExpressionParser
     ExpressionEvaluator
     StyleEvaluator
+    TemplateEvaluator
     gtest_main
 )
 

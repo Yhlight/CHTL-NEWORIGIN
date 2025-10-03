@@ -108,6 +108,8 @@ Token CHTLLexer::getNextToken() {
             case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
             case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
             case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
+        case '[': advance(); return {TokenType::LEFT_BRACKET, "[", line, column};
+        case ']': advance(); return {TokenType::RIGHT_BRACKET, "]", line, column};
             case '+': advance(); return {TokenType::PLUS, "+", line, column};
             case '-': advance(); return {TokenType::MINUS, "-", line, column};
             case '/': advance(); return {TokenType::SLASH, "/", line, column};
@@ -117,6 +119,7 @@ Token CHTLLexer::getNextToken() {
             case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
             case ':': advance(); return {TokenType::COLON, ":", line, column};
         case ',': advance(); return {TokenType::COMMA, ",", line, column};
+        case '@': advance(); return {TokenType::AT_SIGN, "@", line, column};
         }
 
         // Handle string literals
@@ -223,6 +226,12 @@ Token CHTLLexer::identifier() {
     if (value == "if") return {TokenType::KEYWORD_IF, value, startLine, startColumn};
     if (value == "else") return {TokenType::KEYWORD_ELSE, value, startLine, startColumn};
     if (value == "condition") return {TokenType::KEYWORD_CONDITION, value, startLine, startColumn};
+    if (value == "inherit") return {TokenType::KEYWORD_INHERIT, value, startLine, startColumn};
+    if (value == "delete") return {TokenType::KEYWORD_DELETE, value, startLine, startColumn};
+    if (value == "insert") return {TokenType::KEYWORD_INSERT, value, startLine, startColumn};
+    if (value == "Template") return {TokenType::KEYWORD_TEMPLATE, value, startLine, startColumn};
+    if (value == "Custom") return {TokenType::KEYWORD_CUSTOM, value, startLine, startColumn};
+    if (value == "Element") return {TokenType::KEYWORD_ELEMENT, value, startLine, startColumn};
 
     return {TokenType::IDENTIFIER, value, startLine, startColumn};
 }

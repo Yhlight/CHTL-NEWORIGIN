@@ -1,6 +1,7 @@
 #include "DefaultState.h"
 #include "TagState.h"
 #include "TextState.h"
+#include "DeclarationState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -22,6 +23,10 @@ void DefaultState::handle(CHTLParser& parser, Token token) {
                 pendingTagName.clear(); // Clear the name BEFORE changing the state
                 parser.setState(std::make_unique<TagState>());
             }
+            break;
+
+        case TokenType::LEFT_BRACKET:
+            parser.setState(std::make_unique<DeclarationState>());
             break;
 
         case TokenType::KEYWORD_TEXT:

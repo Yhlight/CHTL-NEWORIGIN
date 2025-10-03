@@ -8,6 +8,7 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/StyleNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 
 #include <iostream>
 
@@ -89,6 +90,15 @@ void TagState::handle(CHTLParser& parser, Token token) {
         case TokenType::GENERATOR_COMMENT:
             parser.addNode(std::make_unique<CommentNode>(token.value));
             break;
+
+        case TokenType::AT_SIGN: {
+            Token typeToken = parser.consume();
+            Token nameToken = parser.consume();
+            if ((typeToken.type == TokenType::KEYWORD_ELEMENT) && nameToken.type == TokenType::IDENTIFIER) {
+                parser.addNode(std::make_unique<TemplateUsageNode>(typeToken.value, nameToken.value));
+            }
+            break;
+        }
 
         default:
             // Ignore other tokens for now

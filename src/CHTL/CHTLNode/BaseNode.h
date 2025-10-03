@@ -20,13 +20,24 @@ enum class NodeType {
     Conditional,
     IfBehavior,
     ElseIfBehavior,
-    ElseBehavior
+    ElseBehavior,
+    TemplateDefinition,
+    TemplateUsage,
+    CustomDefinition,
+    CustomUsage
 };
 
 class BaseNode {
 public:
     virtual ~BaseNode() = default;
     virtual NodeType getType() const { return NodeType::Base; }
+    virtual std::unique_ptr<BaseNode> clone() const {
+        auto node = std::make_unique<BaseNode>();
+        for (const auto& child : children) {
+            node->addChild(child->clone());
+        }
+        return node;
+    }
 
     void addChild(std::unique_ptr<BaseNode> child) {
         children.push_back(std::move(child));

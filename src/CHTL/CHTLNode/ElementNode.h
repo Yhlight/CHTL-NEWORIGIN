@@ -23,6 +23,17 @@ public:
         return attributes;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto node = std::make_unique<ElementNode>(tagName);
+        for (const auto& attr : attributes) {
+            node->setAttribute(attr.first, attr.second);
+        }
+        for (const auto& child : getChildren()) {
+            node->addChild(child->clone());
+        }
+        return node;
+    }
+
 private:
     std::string tagName;
     std::map<std::string, std::string> attributes;

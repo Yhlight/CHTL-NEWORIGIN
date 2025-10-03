@@ -1,5 +1,6 @@
 #include "StyleState.h"
 #include "TagState.h"
+#include "DefaultState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../ExpressionParser/ExpressionParser.h"
 #include "../CHTLNode/StylePropertyNode.h"
@@ -7,18 +8,18 @@
 #include "../CHTLNode/IdSelectorNode.h"
 #include "../CHTLNode/ContextSelectorNode.h"
 #include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/TemplateDefinitionNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 #include <iostream>
 
 StyleState::StyleState() : expectingValue(false), inContextualBlock(false) {}
 
 void StyleState::handle(CHTLParser& parser, Token token) {
-    // If we are inside a contextual selector's block (e.g., &:hover { ... })
     if (inContextualBlock) {
         if (token.type == TokenType::RIGHT_BRACE) {
             parser.closeScope();
             inContextualBlock = false;
         } else {
-            // Inside a contextual block, we expect property: value pairs
              if (token.type == TokenType::IDENTIFIER && !expectingValue) {
                 pendingPropertyName = token.value;
             } else if (token.type == TokenType::COLON || token.type == TokenType::EQUALS) {
@@ -35,10 +36,9 @@ void StyleState::handle(CHTLParser& parser, Token token) {
         return;
     }
 
-    // If we are in the main style block
     switch (token.type) {
         case TokenType::IDENTIFIER:
-             if (expectingValue) { // This case handles unquoted literals like 'red'
+             if (expectingValue) {
                 parser.putback(token);
                 ExpressionParser exprParser(parser);
                 auto valueNode = exprParser.parse();
@@ -52,7 +52,7 @@ void StyleState::handle(CHTLParser& parser, Token token) {
 
         case TokenType::NUMBER:
         case TokenType::STRING_LITERAL:
-        case TokenType::LEFT_PAREN: // Start of a grouped expression
+        case TokenType::LEFT_PAREN:
         case TokenType::PROPERTY_REFERENCE:
             if (expectingValue) {
                 parser.putback(token);
@@ -74,11 +74,17 @@ void StyleState::handle(CHTLParser& parser, Token token) {
             expectingValue = false;
             break;
 
-        case TokenType::RIGHT_BRACE:
-            // End of the main style block
-            parser.closeScope();
-            parser.setState(std::make_unique<TagState>());
+        case TokenType::RIGHT_BRACE: {
+            parser.closeScope(); // Close the StyleNode or ContextSelectorNode
+            BaseNode* parent = parser.getCurrentScope();
+            if (parent && (parent->getType() == NodeType::TemplateDefinition || parent->getType() == NodeType::CustomDefinition)) {
+                parser.closeScope(); // Close the Template/Custom Definition Node
+                parser.setState(std::make_unique<DefaultState>());
+            } else {
+                parser.setState(std::make_unique<TagState>());
+            }
             break;
+        }
 
         case TokenType::CLASS_SELECTOR:
             parser.addNode(std::make_unique<ClassSelectorNode>(token.value));
@@ -93,7 +99,6 @@ void StyleState::handle(CHTLParser& parser, Token token) {
             break;
 
         case TokenType::LEFT_BRACE:
-            // This brace opens the block for the pending contextual selector
             if (!pendingContextualSelector.empty()) {
                 auto contextNode = std::make_unique<ContextSelectorNode>(pendingContextualSelector);
                 auto* contextNodePtr = contextNode.get();
@@ -103,6 +108,15 @@ void StyleState::handle(CHTLParser& parser, Token token) {
                 inContextualBlock = true;
             }
             break;
+
+        case TokenType::AT_SIGN: {
+            Token typeToken = parser.consume();
+            Token nameToken = parser.consume();
+            if ((typeToken.type == TokenType::IDENTIFIER || typeToken.type == TokenType::KEYWORD_STYLE) && nameToken.type == TokenType::IDENTIFIER) {
+                parser.addNode(std::make_unique<TemplateUsageNode>(typeToken.value, nameToken.value));
+            }
+            break;
+        }
 
         default:
             break;

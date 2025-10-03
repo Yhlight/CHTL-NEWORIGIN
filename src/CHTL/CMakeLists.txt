@@ -11,6 +11,7 @@ add_library(CHTL
     CHTLState/CommentState.cpp
     CHTLState/TextState.cpp
     CHTLState/IfBehaviorState.cpp
+    CHTLState/DeclarationState.cpp
 )
 
 target_link_libraries(CHTL PRIVATE GlobalStylesheet)
