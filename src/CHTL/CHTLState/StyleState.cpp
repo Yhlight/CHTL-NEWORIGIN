@@ -2,6 +2,9 @@
 #include "TagState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLNode/StylePropertyNode.h"
+#include "../CHTLNode/ClassSelectorNode.h"
+#include "../CHTLNode/IdSelectorNode.h"
+#include "../CHTLNode/ElementNode.h"
 #include <iostream>
 
 StyleState::StyleState() : expectingValue(false) {}
@@ -35,6 +38,14 @@ void StyleState::handle(CHTLParser& parser, Token token) {
             // End of the style block.
             parser.closeScope();
             parser.setState(std::make_unique<TagState>());
+            break;
+
+        case TokenType::CLASS_SELECTOR:
+            parser.addNode(std::make_unique<ClassSelectorNode>(token.value));
+            break;
+
+        case TokenType::ID_SELECTOR:
+            parser.addNode(std::make_unique<IdSelectorNode>(token.value));
             break;
 
         default:

@@ -5,6 +5,8 @@
 #include "CHTLNode/StyleNode.h"
 #include "CHTLNode/ScriptNode.h"
 #include "CHTLNode/StylePropertyNode.h"
+#include "CHTLNode/ClassSelectorNode.h"
+#include "CHTLNode/IdSelectorNode.h"
 
 TEST(ParserTest, ParsesSingleEmptyElement) {
     std::string input = "div {}";

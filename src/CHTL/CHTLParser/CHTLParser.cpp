@@ -48,6 +48,13 @@ BaseNode* CHTLParser::getCurrentScope() {
     return nodeStack.back();
 }
 
+BaseNode* CHTLParser::getParentScope() {
+    if (nodeStack.size() > 1) {
+        return nodeStack[nodeStack.size() - 2];
+    }
+    return nullptr;
+}
+
 BaseNode* CHTLParser::getRoot() {
     return root.get();
 }

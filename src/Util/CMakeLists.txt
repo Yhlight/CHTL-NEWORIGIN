@@ -1,1 +1,2 @@
 add_subdirectory(ASTPrinter)
+add_subdirectory(AttributeAutomator)

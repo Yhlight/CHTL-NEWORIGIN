@@ -5,6 +5,8 @@
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/ScriptNode.h"
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
+#include "../../CHTL/CHTLNode/ClassSelectorNode.h"
+#include "../../CHTL/CHTLNode/IdSelectorNode.h"
 
 void ASTPrinter::print(BaseNode* root) {
     if (!root) {
@@ -50,6 +52,16 @@ void ASTPrinter::printNode(BaseNode* node, int indent) {
         case NodeType::StyleProperty: {
             auto* propNode = static_cast<StylePropertyNode*>(node);
             std::cout << indentation << "Style Property: " << propNode->getName() << " = \"" << propNode->getValue() << "\"" << std::endl;
+            break;
+        }
+        case NodeType::ClassSelector: {
+            auto* selectorNode = static_cast<ClassSelectorNode*>(node);
+            std::cout << indentation << "Class Selector: ." << selectorNode->getName() << std::endl;
+            break;
+        }
+        case NodeType::IdSelector: {
+            auto* selectorNode = static_cast<IdSelectorNode*>(node);
+            std::cout << indentation << "ID Selector: #" << selectorNode->getName() << std::endl;
             break;
         }
         case NodeType::Base:

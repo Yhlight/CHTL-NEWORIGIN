@@ -5,6 +5,8 @@
 enum class TokenType {
     // Placeholders for various token types
     IDENTIFIER,
+    CLASS_SELECTOR,
+    ID_SELECTOR,
     LEFT_BRACE,
     RIGHT_BRACE,
     LEFT_PAREN,

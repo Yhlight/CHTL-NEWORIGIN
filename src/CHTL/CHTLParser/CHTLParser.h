@@ -21,6 +21,7 @@ public:
     void openScope(BaseNode* node);
     void closeScope();
     BaseNode* getCurrentScope();
+    BaseNode* getParentScope();
     BaseNode* getRoot();
 
 private:

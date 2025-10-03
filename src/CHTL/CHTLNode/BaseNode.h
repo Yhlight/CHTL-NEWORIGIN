@@ -10,7 +10,9 @@ enum class NodeType {
     Comment,
     Style,
     Script,
-    StyleProperty
+    StyleProperty,
+    ClassSelector,
+    IdSelector
 };
 
 class BaseNode {

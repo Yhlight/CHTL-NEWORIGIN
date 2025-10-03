@@ -40,26 +40,36 @@ Token CHTLLexer::getNextToken() {
             continue;
         }
 
+        // Handle selectors
+        if (current == '.') { // Class selector
+            return selector();
+        }
+        if (current == '#') { // ID selector OR Generator Comment
+            if (position + 1 < input.size() && isspace(input[position + 1])) {
+                return generatorComment();
+            } else {
+                return selector();
+            }
+        }
+
         // Handle single-character tokens
         switch (current) {
             case '{': advance(); return {TokenType::LEFT_BRACE, "{", line, column};
             case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
             case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
             case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
-            case '.': advance(); return {TokenType::DOT, ".", line, column};
             case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
             case ':': advance(); return {TokenType::COLON, ":", line, column};
             case '=': advance(); return {TokenType::EQUALS, "=", line, column};
         }
 
-        // Handle comments
+        // Handle multi-character comments
         if (current == '/') {
             if (position + 1 < input.size()) {
                 if (input[position + 1] == '/') return singleLineComment();
                 if (input[position + 1] == '*') return multiLineComment();
             }
         }
-        if (current == '#') return generatorComment();
 
         // Handle string literals
         if (current == '"' || current == '\'') {
@@ -109,7 +119,7 @@ Token CHTLLexer::identifier() {
     int startLine = line;
     int startColumn = column;
     // Consume characters until a whitespace or a CHTL punctuation character is found.
-    while (position < input.size() && !isspace(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=' && currentChar() != '(' && currentChar() != ')' && currentChar() != '.') {
+    while (position < input.size() && !isspace(currentChar()) && currentChar() != '{' && currentChar() != '}' && currentChar() != ';' && currentChar() != ':' && currentChar() != '=' && currentChar() != '(' && currentChar() != ')' && currentChar() != '.' && currentChar() != '#') {
         value += currentChar();
         advance();
     }
@@ -175,4 +185,23 @@ Token CHTLLexer::generatorComment() {
         advance();
     }
     return {TokenType::GENERATOR_COMMENT, value, startLine, startColumn};
+}
+
+Token CHTLLexer::selector() {
+    int startLine = line;
+    int startColumn = column;
+    char selectorTypeChar = currentChar();
+    advance(); // Consume '.' or '#'
+
+    std::string value;
+    while (position < input.size() && (isalnum(currentChar()) || currentChar() == '-')) {
+        value += currentChar();
+        advance();
+    }
+
+    if (selectorTypeChar == '.') {
+        return {TokenType::CLASS_SELECTOR, value, startLine, startColumn};
+    } else { // It must be '#'
+        return {TokenType::ID_SELECTOR, value, startLine, startColumn};
+    }
 }

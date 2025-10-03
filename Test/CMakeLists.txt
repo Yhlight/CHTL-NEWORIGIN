@@ -1,13 +1,18 @@
 add_executable(runTests
     LexerTest.cpp
     ParserTest.cpp
+    AttributeAutomatorTest.cpp
 )
 
 target_link_libraries(runTests
     PRIVATE
     CHTL
+    ASTPrinter
+    AttributeAutomator
     gtest_main
 )
+
+target_include_directories(runTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 include(GoogleTest)
 gtest_discover_tests(runTests)

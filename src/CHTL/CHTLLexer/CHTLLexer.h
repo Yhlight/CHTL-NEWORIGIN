@@ -22,7 +22,7 @@ private:
     void skipWhitespace();
     Token identifier();
     Token stringLiteral();
-    Token unquotedLiteral();
+    Token selector();
     Token singleLineComment();
     Token multiLineComment();
     Token generatorComment();

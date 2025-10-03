@@ -1,6 +1,7 @@
 #include <iostream>
 #include "CHTL/CHTLParser/CHTLParser.h"
 #include "Util/ASTPrinter/ASTPrinter.h"
+#include "Util/AttributeAutomator/AttributeAutomator.h"
 
 int main() {
     std::string chtl_code = R"(
@@ -28,6 +29,9 @@ int main() {
 
     CHTLParser parser(chtl_code);
     parser.parse();
+
+    AttributeAutomator automator;
+    automator.process(parser.getRoot());
 
     std::cout << "--- AST ---" << std::endl;
     ASTPrinter printer;
