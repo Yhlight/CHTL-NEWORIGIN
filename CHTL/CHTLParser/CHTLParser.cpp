@@ -587,7 +587,11 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
     expect(TokenType::Colon);
 
     std::vector<Token> conditionTokens;
+    bool isDynamic = false;
     while(currentToken.type != TokenType::Comma && currentToken.type != TokenType::RBrace) {
+        if (currentToken.type == TokenType::DynamicSelectorStart) {
+            isDynamic = true;
+        }
         conditionTokens.push_back(currentToken);
         advance();
     }
@@ -595,7 +599,7 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
         advance();
     }
 
-    auto ifNode = std::make_unique<IfNode>(conditionTokens);
+    auto ifNode = std::make_unique<IfNode>(conditionTokens, isDynamic);
 
     while (currentToken.type != TokenType::RBrace) {
         std::string propName = currentToken.value;

@@ -176,11 +176,21 @@ Token CHTLLexer::getNextToken() {
         }
 
         if (currentChar() == '{') {
+            if (position + 1 < input.length() && input[position + 1] == '{') {
+                advance();
+                advance();
+                return makeToken(TokenType::DynamicSelectorStart, "{{");
+            }
             advance();
             return makeToken(TokenType::LBrace, "{");
         }
 
         if (currentChar() == '}') {
+            if (position + 1 < input.length() && input[position + 1] == '}') {
+                advance();
+                advance();
+                return makeToken(TokenType::DynamicSelectorEnd, "}}");
+            }
             advance();
             return makeToken(TokenType::RBrace, "}");
         }

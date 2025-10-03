@@ -2,8 +2,10 @@
 #include "../Util/ExpressionEvaluator/ExpressionEvaluator.h"
 #include <vector>
 #include <set>
+#include <algorithm> // For std::replace
+#include <cctype>    // For toupper
 
-HtmlGenerator::HtmlGenerator() {
+HtmlGenerator::HtmlGenerator() : dynamicIdCounter(0) {
     selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
 }
 
@@ -26,9 +28,11 @@ void HtmlGenerator::visit(DocumentNode& node) {
 
     // Generate head with hoisted styles
     resultStream << "<head>\n";
+    resultStream << "  <style>\n";
     if (!hoistedCss.str().empty()) {
-        resultStream << "  <style>\n" << hoistedCss.str() << "  </style>\n";
+        resultStream << hoistedCss.str();
     }
+    resultStream << "  </style>\n";
     resultStream << "</head>\n";
 
     // Generate body
@@ -40,44 +44,50 @@ void HtmlGenerator::visit(DocumentNode& node) {
     depth--;
     resultStream << "</body>\n";
 
+    if (!dynamicScripts.str().empty()) {
+        resultStream << "<script>\n" << dynamicScripts.str() << "</script>\n";
+    }
+
     resultStream << "</html>\n";
 }
 
 void HtmlGenerator::visit(ElementNode& node) {
-    // Collect variables from conditional properties to avoid rendering them as attributes
-    std::set<std::string> conditionalVars;
+    // Check for dynamic if children to decide if an ID is needed
+    const auto& attrs = node.getAttributes();
+    auto it = attrs.find("id");
+    std::string elementId = (it != attrs.end()) ? it->second : "";
+    bool hasDynamicIf = false;
+    const IfNode* firstDynamicIf = nullptr;
+
     for (const auto& child : node.getChildren()) {
-        if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
-            for (const auto& prop : styleNode->getProperties()) {
-                if (const auto* condProp = std::get_if<ConditionalPropertyValue>(&prop.second)) {
-                    for (const auto& branch : condProp->branches) {
-                        for (const auto& token : branch.condition) {
-                            if (token.type == TokenType::Identifier) {
-                                conditionalVars.insert(token.value);
-                            }
-                        }
-                    }
-                }
+        if (const auto* ifNode = dynamic_cast<IfNode*>(child.get())) {
+            if (ifNode->isDynamic()) {
+                hasDynamicIf = true;
+                firstDynamicIf = ifNode; // We only need to trigger generation for the first in a chain
+                break;
             }
         }
+    }
+
+    if (hasDynamicIf && elementId.empty()) {
+        elementId = "chtl-dynamic-" + std::to_string(dynamicIdCounter++);
+        const_cast<ElementNode&>(node).setAttribute("id", elementId);
     }
 
     std::string indent(depth * 2, ' ');
     resultStream << indent << "<" << node.getTagName();
 
-    // Handle attributes, skipping those used as variables in conditionals
+    // Handle attributes
     for (const auto& attr : node.getAttributes()) {
-        if (conditionalVars.find(attr.first) == conditionalVars.end()) {
-            resultStream << " " << attr.first << "=\"" << attr.second << "\"";
-        }
+        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
     // Collect all inline styles from StyleNode and IfNode children
     std::vector<std::pair<std::string, std::string>> inlineStyles;
+    ExpressionEvaluator evaluator(node);
 
     for (const auto& child : node.getChildren()) {
         if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
-            ExpressionEvaluator evaluator(node);
             for (const auto& prop : styleNode->getProperties()) {
                 std::string finalValue;
                 if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
@@ -91,33 +101,34 @@ void HtmlGenerator::visit(ElementNode& node) {
                 }
             }
         } else if (auto* ifNode = dynamic_cast<IfNode*>(child.get())) {
-            bool conditionMet = false;
-            auto* currentIf = ifNode;
+            if (ifNode->isDynamic()) {
+                if (ifNode == firstDynamicIf) {
+                    generateDynamicScript(elementId, *ifNode);
+                }
+            } else {
+                bool conditionMet = false;
+                auto* currentIf = ifNode;
+                while(currentIf && !conditionMet) {
+                    if (currentIf->getConditionTokens().empty() || evaluator.evaluate(currentIf->getConditionTokens())) {
+                        conditionMet = true;
+                        for (const auto& prop : currentIf->getProperties()) {
+                            std::string finalValue;
+                            if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
+                                finalValue = *stringVal;
+                            } else if (const auto* condVal = std::get_if<ConditionalPropertyValue>(&prop.second)) {
+                                finalValue = evaluator.resolveConditionalProperty(*condVal);
+                            }
 
-            while(currentIf && !conditionMet) {
-                ExpressionEvaluator evaluator(node);
-                // Check for else block (empty condition) or evaluate condition
-                if (currentIf->getConditionTokens().empty() || evaluator.evaluate(currentIf->getConditionTokens())) {
-                    conditionMet = true;
-                    for (const auto& prop : currentIf->getProperties()) {
-                        std::string finalValue;
-                        if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
-                            finalValue = *stringVal;
-                        } else if (const auto* condVal = std::get_if<ConditionalPropertyValue>(&prop.second)) {
-                            finalValue = evaluator.resolveConditionalProperty(*condVal);
-                        }
-
-                        if (!finalValue.empty()) {
-                            inlineStyles.push_back({prop.first, finalValue});
+                            if (!finalValue.empty()) {
+                                inlineStyles.push_back({prop.first, finalValue});
+                            }
                         }
                     }
-                }
-
-                // Move to the else branch if it exists
-                if (!conditionMet && currentIf->getElseBranch()) {
-                    currentIf = dynamic_cast<IfNode*>(currentIf->getElseBranch().get());
-                } else {
-                    break;
+                    if (!conditionMet && currentIf->getElseBranch()) {
+                        currentIf = dynamic_cast<IfNode*>(currentIf->getElseBranch().get());
+                    } else {
+                        currentIf = nullptr;
+                    }
                 }
             }
         }
@@ -140,7 +151,6 @@ void HtmlGenerator::visit(ElementNode& node) {
         resultStream << ">\n";
         depth++;
         for (const auto& child : node.getChildren()) {
-            // StyleNodes and IfNodes are processed for styles, so skip direct rendering
             if (dynamic_cast<StyleNode*>(child.get()) == nullptr && dynamic_cast<IfNode*>(child.get()) == nullptr) {
                 child->accept(*this);
             }
@@ -152,16 +162,15 @@ void HtmlGenerator::visit(ElementNode& node) {
 
 void HtmlGenerator::visit(TextNode& node) {
     std::string indent(depth * 2, ' ');
-    resultStream << indent << node.toString(0); // Use existing simple to string for content
+    resultStream << indent << node.toString(0);
 }
 
 void HtmlGenerator::visit(CommentNode& node) {
     std::string indent(depth * 2, ' ');
-    resultStream << indent << node.toString(0); // Use existing simple to string for content
+    resultStream << indent << node.toString(0);
 }
 
 void HtmlGenerator::visit(StyleNode& node) {
-    // This visit is for hoisting CSS rules. Inline styles are handled by ElementNode visitor.
     for (const auto& rule : node.getRules()) {
         rule->accept(*this);
     }
@@ -177,9 +186,7 @@ void HtmlGenerator::visit(CssRuleNode& node) {
 }
 
 void HtmlGenerator::visit(IfNode& node) {
-    // This visitor is a no-op because the logic for if-statements is
-    // handled within the parent ElementNode's visit method. The if-statement
-    // modifies the parent's styles rather than emitting its own output.
+    // No-op, handled by parent ElementNode
 }
 
 void HtmlGenerator::findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styleNodes) {
@@ -190,7 +197,6 @@ void HtmlGenerator::findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styl
             if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
                 styleNodes.push_back(styleNode);
             }
-            // Recurse into children of elements
             findStyleNodes(child.get(), styleNodes);
         }
     } else if (auto* docNode = dynamic_cast<DocumentNode*>(node)) {
@@ -198,5 +204,85 @@ void HtmlGenerator::findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styl
             findStyleNodes(child.get(), styleNodes);
         }
     }
-    // Other node types (like NamespaceNode) could be handled here if they can contain elements
+}
+
+std::string HtmlGenerator::translateTokensToJs(const std::vector<Token>& tokens) {
+    std::stringstream js;
+    bool inDynamicSelector = false;
+    for (const auto& token : tokens) {
+        if (token.type == TokenType::DynamicSelectorStart) {
+            inDynamicSelector = true;
+            continue;
+        }
+        if (token.type == TokenType::DynamicSelectorEnd) {
+            inDynamicSelector = false;
+            continue;
+        }
+
+        if (inDynamicSelector) {
+            // A more robust solution would parse this, but for now we just output the value.
+            // e.g. {{obj.prop}} -> obj.prop
+            js << token.value;
+        } else {
+            js << token.value;
+        }
+        js << " ";
+    }
+    return js.str();
+}
+
+void HtmlGenerator::generateDynamicScript(const std::string& elementId, const IfNode& rootIfNode) {
+    std::string functionName = "update_" + elementId;
+    // Sanitize function name
+    std::replace(functionName.begin(), functionName.end(), '-', '_');
+
+    dynamicScripts << "function " << functionName << "() {\n";
+    dynamicScripts << "  const element = document.getElementById('" << elementId << "');\n";
+    dynamicScripts << "  if (!element) return;\n";
+
+    const IfNode* currentIf = &rootIfNode;
+    bool first = true;
+    while (currentIf) {
+        if (currentIf->getConditionTokens().empty()) {
+            dynamicScripts << "  } else {\n";
+        } else {
+            std::string jsCondition = translateTokensToJs(currentIf->getConditionTokens());
+            if (first) {
+                dynamicScripts << "  if (" << jsCondition << ") {\n";
+                first = false;
+            } else {
+                dynamicScripts << "  } else if (" << jsCondition << ") {\n";
+            }
+        }
+
+        for (const auto& prop : currentIf->getProperties()) {
+            if (const auto* val = std::get_if<std::string>(&prop.second)) {
+                 std::string jsProp = prop.first;
+                 size_t hyphenPos;
+                 while((hyphenPos = jsProp.find('-')) != std::string::npos) {
+                     jsProp.erase(hyphenPos, 1);
+                     if (hyphenPos < jsProp.length()) {
+                         jsProp[hyphenPos] = toupper(jsProp[hyphenPos]);
+                     }
+                 }
+                 std::string propVal = *val;
+                 // escape single quotes
+                 size_t pos = 0;
+                 while ((pos = propVal.find('\'', pos)) != std::string::npos) {
+                     propVal.replace(pos, 1, "\\'");
+                     pos += 2;
+                 }
+                 dynamicScripts << "    element.style." << jsProp << " = '" << propVal << "';\n";
+            }
+        }
+
+        // Move to the next branch in the if-else chain
+        currentIf = currentIf->getElseBranch() ? dynamic_cast<IfNode*>(currentIf->getElseBranch().get()) : nullptr;
+    }
+
+    dynamicScripts << "  }\n";
+    dynamicScripts << "}\n\n";
+
+    dynamicScripts << "window.addEventListener('DOMContentLoaded', " << functionName << ");\n";
+    dynamicScripts << "window.addEventListener('resize', " << functionName << ");\n\n";
 }

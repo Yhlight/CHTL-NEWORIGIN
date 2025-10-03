@@ -45,8 +45,14 @@ private:
 
     std::stringstream resultStream;
     std::stringstream hoistedCss;
+    std::stringstream dynamicScripts;
     int depth = 0;
+    int dynamicIdCounter = 0;
     std::unordered_set<std::string> selfClosingTags;
+
+private:
+    void generateDynamicScript(const std::string& elementId, const IfNode& rootIfNode);
+    std::string translateTokensToJs(const std::vector<Token>& tokens);
 };
 
 #endif // CHTL_HTML_GENERATOR_H

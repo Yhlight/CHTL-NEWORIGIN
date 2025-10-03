@@ -53,7 +53,11 @@ enum class TokenType {
     // Special
     Comment,
     EndOfFile,
-    Unknown
+    Unknown,
+
+    // CHTL JS Interpolation
+    DynamicSelectorStart, // {{
+    DynamicSelectorEnd   // }}
 };
 
 struct Token {

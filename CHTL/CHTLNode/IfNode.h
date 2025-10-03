@@ -12,7 +12,8 @@
 
 class IfNode : public BaseNode {
 public:
-    explicit IfNode(const std::vector<Token>& conditionTokens) : conditionTokens(conditionTokens) {}
+    explicit IfNode(const std::vector<Token>& conditionTokens, bool isDynamic = false)
+        : conditionTokens(conditionTokens), isDynamic_(isDynamic) {}
 
     std::string getNodeType() const override { return "If"; }
 
@@ -53,10 +54,15 @@ public:
         return elseBranch;
     }
 
+    bool isDynamic() const {
+        return isDynamic_;
+    }
+
 private:
     std::vector<Token> conditionTokens;
     std::vector<std::pair<std::string, PropertyValue>> properties;
     std::unique_ptr<BaseNode> elseBranch;
+    bool isDynamic_;
 };
 
 #endif //CHTL_IF_NODE_H

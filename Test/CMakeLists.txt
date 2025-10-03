@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 add_executable(run-tests
+    TestMain.cpp
     LexerTest.cpp
     ParserTest.cpp
     IntegrationTest.cpp
@@ -12,6 +13,7 @@ add_executable(run-tests
     ImgTagTest.cpp
     ConditionalPropertyTest.cpp
     IfParserTest.cpp
+    DynamicConditionalRenderingTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC
