@@ -5,6 +5,7 @@
 #include "CHTLProcessor/CHTLProcessor.h"
 #include "CHTLGenerator/HtmlGenerator.h"
 #include "CHTLNode/DocumentNode.h"
+#include "../Util/Exceptions/CHTLException.h"
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -22,6 +23,9 @@ int main(int argc, char* argv[]) {
         } else {
             std::cerr << "Failed to process the document." << std::endl;
         }
+    } catch (const CHTLException& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
     } catch (const std::exception& e) {
         std::cerr << "Processing error: " << e.what() << std::endl;
         return 1;

@@ -13,6 +13,7 @@
 #include "../CHTLNode/IfNode.h"
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLContext/CHTLContext.h"
+#include "../../Util/Exceptions/CHTLException.h"
 #include <memory>
 
 class CHTLParser {

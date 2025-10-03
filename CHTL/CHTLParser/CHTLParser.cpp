@@ -1,5 +1,4 @@
 #include "CHTLParser.h"
-#include <stdexcept>
 
 CHTLParser::CHTLParser(const std::string& input, CHTLContext& context, bool discoveryMode)
     : lexer(input), context(context), discoveryMode(discoveryMode) {
@@ -20,7 +19,7 @@ void CHTLParser::expect(TokenType type) {
     if (currentToken.type == type) {
         advance();
     } else {
-        throw std::runtime_error("Unexpected token");
+        throw CHTLException("Unexpected token", currentToken.line, currentToken.column);
     }
 }
 
@@ -48,7 +47,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
             else if (keyword == "Custom") node = parseCustomDeclaration();
             else if (keyword == "Import") node = parseImportDeclaration();
             else if (keyword == "Namespace") node = parseNamespaceDeclaration();
-            else throw std::runtime_error("Unsupported declaration type inside [].");
+            else throw CHTLException("Unsupported declaration type inside [].", peek().line, peek().column);
         }
     } else if (currentToken.type == TokenType::Identifier) {
         if (currentToken.value == "text" && peek().type == TokenType::LBrace) node = parseTextNode();
@@ -68,7 +67,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
             std::string nodeType = node->getNodeType();
             for (const auto& constraint : global_constraints) {
                 if (nodeType.rfind(constraint, 0) == 0) {
-                    throw std::runtime_error("Node type '" + nodeType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.");
+                    throw CHTLException("Node type '" + nodeType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.", currentToken.line, currentToken.column);
                 }
             }
         }
@@ -215,7 +214,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseStyleNode() {
                 } else {
                     tmpl = context.getStyleTemplate(templateName);
                 }
-                if (!tmpl) throw std::runtime_error("Style template not found: " + templateName);
+                if (!tmpl) throw CHTLException("Style template not found: " + templateName, currentToken.line, currentToken.column);
                 for (const auto& prop : tmpl->getProperties()) {
                     styleNode->addProperty(prop.first, prop.second);
                 }
@@ -262,7 +261,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseStyleNode() {
 
 PropertyValue CHTLParser::parsePropertyValue() {
     std::vector<Token> valueTokens;
-    while (currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::EndOfFile) {
+    while (currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::RBrace && currentToken.type != TokenType::EndOfFile) {
         valueTokens.push_back(currentToken);
         advance();
     }
@@ -299,7 +298,7 @@ PropertyValue CHTLParser::parsePropertyValue() {
             currentPos = std::distance(valueTokens.begin(), q_it) + 1;
 
             if (currentPos >= valueTokens.size() || valueTokens[currentPos].type != TokenType::String) {
-                throw std::runtime_error("Invalid conditional expression: missing string value after '?'");
+                throw CHTLException("Invalid conditional expression: missing string value after '?'", valueTokens[currentPos].line, valueTokens[currentPos].column);
             }
             branch.trueValue = valueTokens[currentPos].value;
             currentPos++;
@@ -313,13 +312,13 @@ PropertyValue CHTLParser::parsePropertyValue() {
             if (valueTokens[currentPos].type == TokenType::Colon) {
                 currentPos++;
                 if (currentPos >= valueTokens.size() || valueTokens[currentPos].type != TokenType::String) {
-                    throw std::runtime_error("Invalid conditional expression: missing string value after ':'");
+                    throw CHTLException("Invalid conditional expression: missing string value after ':'", valueTokens[currentPos].line, valueTokens[currentPos].column);
                 }
                 conditionalValue.elseValue = valueTokens[currentPos].value;
                 currentPos++;
 
                 if (currentPos < valueTokens.size()) {
-                    throw std::runtime_error("Unexpected tokens after final 'else' value in conditional property.");
+                    throw CHTLException("Unexpected tokens after final 'else' value in conditional property.", valueTokens[currentPos].line, valueTokens[currentPos].column);
                 }
                 break;
             } else if (valueTokens[currentPos].type == TokenType::Comma) {
@@ -360,7 +359,7 @@ PropertyValue CHTLParser::parsePropertyValue() {
 void CHTLParser::parseAttribute(ElementNode& node) {
     std::string attrName = currentToken.value; expect(TokenType::Identifier);
     if (currentToken.type == TokenType::Colon || currentToken.type == TokenType::Assign) advance();
-    else throw std::runtime_error("Expected ':' or '=' after attribute name.");
+    else throw CHTLException("Expected ':' or '=' after attribute name.", currentToken.line, currentToken.column);
     std::string attrValue = currentToken.value; advance();
     expect(TokenType::Semicolon);
     node.setAttribute(attrName, attrValue);
@@ -384,7 +383,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseCommentNode() {
 std::unique_ptr<BaseNode> CHTLParser::parseTextAttribute() {
     expect(TokenType::Identifier);
     if (currentToken.type == TokenType::Colon || currentToken.type == TokenType::Assign) advance();
-    else throw std::runtime_error("Expected ':' or '=' after 'text' attribute.");
+    else throw CHTLException("Expected ':' or '=' after 'text' attribute.", currentToken.line, currentToken.column);
     auto node = std::make_unique<TextNode>(currentToken.value);
     advance();
     expect(TokenType::Semicolon);
@@ -423,7 +422,7 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
                         constraint_value = currentToken.value;
                         advance();
                     } else {
-                        throw std::runtime_error("Invalid token in 'except' clause. Expected identifier, '@', or '['.");
+                        throw CHTLException("Invalid token in 'except' clause. Expected identifier, '@', or '['.", currentToken.line, currentToken.column);
                     }
 
                     if (is_type_constraint) {
@@ -455,7 +454,7 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
                         const auto& tagName = childElement->getTagName();
                         for (const auto& constraint : constraints) {
                             if (tagName == constraint) {
-                                throw std::runtime_error("Element '" + tagName + "' is not allowed in <" + node->getTagName() + "> due to an 'except' constraint.");
+                                throw CHTLException("Element '" + tagName + "' is not allowed in <" + node->getTagName() + "> due to an 'except' constraint.", pre_parse_token.line, pre_parse_token.column);
                             }
                         }
                     }
@@ -465,7 +464,7 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
                         std::string childType = child->getNodeType();
                         for (const auto& typeConstraint : typeConstraints) {
                             if (childType.rfind(typeConstraint, 0) == 0) { // checks if childType starts with typeConstraint
-                                throw std::runtime_error("Node type '" + childType + "' is not allowed in <" + node->getTagName() + "> due to an 'except' type constraint for '" + typeConstraint + "'.");
+                                throw CHTLException("Node type '" + childType + "' is not allowed in <" + node->getTagName() + "> due to an 'except' type constraint for '" + typeConstraint + "'.", pre_parse_token.line, pre_parse_token.column);
                             }
                         }
                     }
@@ -568,7 +567,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseNamespaceDeclaration() {
                         constraint_value += currentToken.value; advance(); // e.g., "Template"
                         constraint_value += "]"; expect(TokenType::RBracket);
                     } else {
-                        throw std::runtime_error("Global 'except' only supports type constraints like [Template].");
+                        throw CHTLException("Global 'except' only supports type constraints like [Template].", currentToken.line, currentToken.column);
                     }
                     context.addGlobalConstraint(constraint_value);
                     if (currentToken.type == TokenType::Comma) {
@@ -603,7 +602,7 @@ std::unique_ptr<IfNode> CHTLParser::parseIfStatement() {
     expect(TokenType::LBrace);
 
     if (currentToken.type != TokenType::Condition) {
-        throw std::runtime_error("Expected 'condition' keyword in if block.");
+        throw CHTLException("Expected 'condition' keyword in if block.", currentToken.line, currentToken.column);
     }
     advance(); // consume 'condition'
     expect(TokenType::Colon);
