@@ -35,8 +35,17 @@ public:
         return clonedNode;
     }
 
+    void addValuelessProperty(const std::string& propName) {
+        valuelessProperties.insert(propName);
+    }
+
+    const std::unordered_set<std::string>& getValuelessProperties() const {
+        return valuelessProperties;
+    }
+
 private:
     std::unordered_set<std::string> deletedProperties;
+    std::unordered_set<std::string> valuelessProperties;
 };
 
 #endif // CHTL_CUSTOM_STYLE_NODE_H

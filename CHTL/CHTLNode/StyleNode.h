@@ -8,6 +8,7 @@
 #include <vector>
 #include <utility>
 #include <sstream>
+#include <algorithm>
 #include <memory>
 
 class StyleNode : public BaseNode {
@@ -15,11 +16,26 @@ public:
     StyleNode() = default;
 
     void addProperty(const std::string& key, const std::string& value) {
+        // Overwrite if property already exists
+        for (auto& prop : properties) {
+            if (prop.first == key) {
+                prop.second = value;
+                return;
+            }
+        }
         properties.push_back({key, value});
     }
 
     void addRule(std::unique_ptr<CssRuleNode> rule) {
         rules.push_back(std::move(rule));
+    }
+
+    void deleteProperty(const std::string& key) {
+        properties.erase(
+            std::remove_if(properties.begin(), properties.end(),
+                           [&key](const auto& prop) { return prop.first == key; }),
+            properties.end()
+        );
     }
 
     std::string toString(int depth = 0) const override {

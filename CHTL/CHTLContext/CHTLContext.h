@@ -124,6 +124,11 @@ public:
         return getFromScope(name, targetScope, &Scope::elementTemplates);
     }
 
+    const CustomStyleNode* getCustomStyle(const std::string& name, const std::string& path) const {
+        const Scope* targetScope = findScopeByPath(path);
+        return getFromScope(name, targetScope, &Scope::customStyleTemplates);
+    }
+
 private:
     template<typename T>
     const T* getFromScope(const std::string& name, const Scope* startScope, std::map<std::string, std::unique_ptr<T>> Scope::*member) const {

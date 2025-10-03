@@ -176,7 +176,7 @@ std::unique_ptr<BaseNode> CHTLParser::parseCustomDeclaration() {
         auto customNode = std::make_unique<CustomStyleNode>(customName);
         expect(TokenType::LBrace);
         while (currentToken.type != TokenType::RBrace) {
-            if (currentToken.value == "delete") {
+            if (currentToken.type == TokenType::Identifier && currentToken.value == "delete") {
                 advance();
                 do {
                     customNode->addDeletedProperty(currentToken.value); advance();
@@ -184,12 +184,27 @@ std::unique_ptr<BaseNode> CHTLParser::parseCustomDeclaration() {
                     else break;
                 } while (true);
                 expect(TokenType::Semicolon);
+            } else if (currentToken.type == TokenType::Identifier) {
+                if (peek().type == TokenType::Colon || peek().type == TokenType::Assign) {
+                    std::string propName = currentToken.value; advance();
+                    advance(); // consume ':' or '='
+                    std::string propValue = currentToken.value; advance();
+                    expect(TokenType::Semicolon);
+                    customNode->addProperty(propName, propValue);
+                } else { // Valueless properties
+                    do {
+                        customNode->addValuelessProperty(currentToken.value);
+                        advance();
+                        if (currentToken.type == TokenType::Comma) {
+                            advance();
+                        } else {
+                            break;
+                        }
+                    } while (currentToken.type == TokenType::Identifier);
+                    expect(TokenType::Semicolon);
+                }
             } else {
-                std::string propName = currentToken.value; advance();
-                expect(TokenType::Colon);
-                std::string propValue = currentToken.value; advance();
-                expect(TokenType::Semicolon);
-                customNode->addProperty(propName, propValue);
+                throw std::runtime_error("Unexpected token in [Custom] @Style block");
             }
         }
         expect(TokenType::RBrace);
@@ -238,37 +253,111 @@ std::unique_ptr<BaseNode> CHTLParser::parseStyleNode() {
     while (currentToken.type != TokenType::RBrace) {
         if (currentToken.type == TokenType::At) {
             advance(); // Consume '@'
+            if (currentToken.value != "Style") {
+                throw std::runtime_error("Expected 'Style' after '@' in a style block.");
+            }
             expect(TokenType::Identifier); // "Style"
             std::string templateName = currentToken.value;
             advance();
-            if (!discoveryMode) {
-                const TemplateStyleNode* tmpl = nullptr;
-                if (currentToken.type == TokenType::From) {
-                    advance();
-                    std::string nsPath;
-                    do {
-                        nsPath += currentToken.value; advance();
-                        if (currentToken.type == TokenType::Dot) {
-                            nsPath += "."; advance();
-                        } else break;
-                    } while (true);
-                    tmpl = context.getStyleTemplate(templateName, nsPath);
-                } else {
-                    tmpl = context.getStyleTemplate(templateName);
-                }
-                if (!tmpl) throw std::runtime_error("Style template not found: " + templateName);
-                for (const auto& prop : tmpl->getProperties()) {
-                    styleNode->addProperty(prop.first, prop.second);
-                }
-            } else {
+
+            // Handle discovery mode separately to avoid side-effects
+            if (discoveryMode) {
                 if (currentToken.type == TokenType::From) {
                     advance();
                     while (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::Dot) {
                         advance();
                     }
                 }
+                if (currentToken.type == TokenType::LBrace) {
+                    expect(TokenType::LBrace);
+                    int brace_level = 1;
+                    while (brace_level > 0 && currentToken.type != TokenType::EndOfFile) {
+                        if (currentToken.type == TokenType::LBrace) brace_level++;
+                        else if (currentToken.type == TokenType::RBrace) brace_level--;
+                        advance();
+                    }
+                } else {
+                    expect(TokenType::Semicolon);
+                }
+                continue;
             }
-            expect(TokenType::Semicolon);
+
+            // Get namespace path if it exists
+            std::string nsPath;
+            if (currentToken.type == TokenType::From) {
+                advance();
+                do {
+                    nsPath += currentToken.value; advance();
+                    if (currentToken.type == TokenType::Dot) {
+                        nsPath += "."; advance();
+                    } else break;
+                } while (true);
+            }
+
+            // Try to resolve as a Custom Style first
+            const CustomStyleNode* customTmpl = nsPath.empty() ?
+                context.getCustomStyle(templateName) :
+                context.getCustomStyle(templateName, nsPath);
+
+            if (customTmpl) {
+                for (const auto& prop : customTmpl->getProperties()) {
+                    styleNode->addProperty(prop.first, prop.second);
+                }
+                // Handle specialization block for custom styles
+                if (currentToken.type == TokenType::LBrace) {
+                    expect(TokenType::LBrace);
+
+                    while (currentToken.type != TokenType::RBrace) {
+                        if (currentToken.type == TokenType::Identifier && (peek().type == TokenType::Colon || peek().type == TokenType::Assign)) {
+                            std::string propName = currentToken.value;
+                            advance();
+                            advance(); // Consume ':' or '='
+                            std::string propValue = currentToken.value;
+                            advance();
+                            expect(TokenType::Semicolon);
+
+                            // Add the property, whether it was originally valueless or is a new override/addition.
+                            styleNode->addProperty(propName, propValue);
+                        } else if (currentToken.type == TokenType::Identifier && currentToken.value == "delete") {
+                            advance(); // consume 'delete'
+                            do {
+                                std::string propToDelete = currentToken.value;
+                                advance();
+                                styleNode->deleteProperty(propToDelete);
+
+                                if (currentToken.type == TokenType::Comma) {
+                                    advance();
+                                } else {
+                                    break;
+                                }
+                            } while (currentToken.type == TokenType::Identifier);
+                            expect(TokenType::Semicolon);
+                        } else {
+                            throw std::runtime_error("Unexpected token inside @Style specialization block. Expected 'property: value;' or 'delete'.");
+                        }
+                    }
+                    expect(TokenType::RBrace);
+                } else {
+                    // If there's no block, there must be a semicolon.
+                    // Also, ensure there are no valueless properties that need values.
+                    if (!customTmpl->getValuelessProperties().empty()) {
+                        throw std::runtime_error("Custom style '" + templateName + "' has valueless properties and requires a specialization block {} to provide values.");
+                    }
+                    expect(TokenType::Semicolon);
+                }
+            } else {
+                // Fallback to regular Style Template
+                const TemplateStyleNode* tmpl = nsPath.empty() ?
+                    context.getStyleTemplate(templateName) :
+                    context.getStyleTemplate(templateName, nsPath);
+                if (!tmpl) {
+                    throw std::runtime_error("Style template not found: " + templateName);
+                }
+                for (const auto& prop : tmpl->getProperties()) {
+                    styleNode->addProperty(prop.first, prop.second);
+                }
+                expect(TokenType::Semicolon);
+            }
         } else if (peek().type == TokenType::LBrace) {
             // This is a nested CSS rule, e.g., ".class { ... }"
             std::string selector = currentToken.value;
