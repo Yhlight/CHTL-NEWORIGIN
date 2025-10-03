@@ -41,6 +41,9 @@ Token CHTLLexer::getNextToken() {
         }
 
         // Handle selectors
+        if (current == '&') { // Contextual selector
+            return contextualSelector();
+        }
         if (current == '.') { // Class selector
             return selector();
         }
@@ -204,4 +207,18 @@ Token CHTLLexer::selector() {
     } else { // It must be '#'
         return {TokenType::ID_SELECTOR, value, startLine, startColumn};
     }
+}
+
+Token CHTLLexer::contextualSelector() {
+    int startLine = line;
+    int startColumn = column;
+    std::string value;
+
+    // Consume the '&' and any following pseudo-class/element characters
+    while (position < input.size() && (isalnum(currentChar()) || currentChar() == '&' || currentChar() == ':' || currentChar() == '-')) {
+        value += currentChar();
+        advance();
+    }
+
+    return {TokenType::CONTEXT_SELECTOR, value, startLine, startColumn};
 }

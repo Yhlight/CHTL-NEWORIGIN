@@ -6,6 +6,7 @@
 #include "../CHTLState/CHTLState.h"
 #include "../CHTLLexer/CHTLLexer.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../../Util/GlobalStylesheet/GlobalStylesheet.h"
 
 class CHTLParser {
 public:
@@ -23,10 +24,12 @@ public:
     BaseNode* getCurrentScope();
     BaseNode* getParentScope();
     BaseNode* getRoot();
+    GlobalStylesheet& getGlobalStylesheet();
 
 private:
     std::unique_ptr<CHTLState> currentState;
     CHTLLexer lexer;
     std::unique_ptr<BaseNode> root;
     std::vector<BaseNode*> nodeStack;
+    GlobalStylesheet stylesheet;
 };

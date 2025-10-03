@@ -7,6 +7,7 @@ enum class TokenType {
     IDENTIFIER,
     CLASS_SELECTOR,
     ID_SELECTOR,
+    CONTEXT_SELECTOR,
     LEFT_BRACE,
     RIGHT_BRACE,
     LEFT_PAREN,

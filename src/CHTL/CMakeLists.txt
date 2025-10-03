@@ -10,6 +10,8 @@ add_library(CHTL
     CHTLState/TextState.cpp
 )
 
+target_link_libraries(CHTL PRIVATE GlobalStylesheet)
+
 target_include_directories(CHTL PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/CHTLState"

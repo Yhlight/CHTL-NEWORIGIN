@@ -58,3 +58,7 @@ BaseNode* CHTLParser::getParentScope() {
 BaseNode* CHTLParser::getRoot() {
     return root.get();
 }
+
+GlobalStylesheet& CHTLParser::getGlobalStylesheet() {
+    return stylesheet;
+}

@@ -2,6 +2,7 @@ add_executable(runTests
     LexerTest.cpp
     ParserTest.cpp
     AttributeAutomatorTest.cpp
+    CssGeneratorTest.cpp
 )
 
 target_link_libraries(runTests
@@ -9,6 +10,7 @@ target_link_libraries(runTests
     CHTL
     ASTPrinter
     AttributeAutomator
+    CssGenerator
     gtest_main
 )
 

@@ -2,26 +2,15 @@
 #include "CHTL/CHTLParser/CHTLParser.h"
 #include "Util/ASTPrinter/ASTPrinter.h"
 #include "Util/AttributeAutomator/AttributeAutomator.h"
+#include "Util/CssGenerator/CssGenerator.h"
 
 int main() {
     std::string chtl_code = R"(
-        // This is the main page structure
-        html {
-            # This is a generator comment for the head
-            head {
-                title { text { "My CHTL Page" } }
-            }
-            body {
-                // Main container for the content
-                div {
-                    id = "main-container";
-                    class: "container";
-
-                    h1 { text { "Welcome to CHTL!" } }
-
-                    p {
-                        text { "This is a paragraph of text." }
-                    }
+        div {
+            class: "my-div";
+            style {
+                &:hover {
+                    color: red;
                 }
             }
         }
@@ -33,10 +22,17 @@ int main() {
     AttributeAutomator automator;
     automator.process(parser.getRoot());
 
+    CssGenerator cssGenerator;
+    cssGenerator.generate(parser.getRoot(), parser.getGlobalStylesheet());
+
     std::cout << "--- AST ---" << std::endl;
     ASTPrinter printer;
     printer.print(parser.getRoot());
     std::cout << "-----------" << std::endl;
+
+    std::cout << "\n--- Global Stylesheet ---\n";
+    std::cout << parser.getGlobalStylesheet().getStylesheet();
+    std::cout << "-------------------------\n";
 
     std::cout << "Parsing complete." << std::endl;
 

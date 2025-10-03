@@ -12,7 +12,8 @@ enum class NodeType {
     Script,
     StyleProperty,
     ClassSelector,
-    IdSelector
+    IdSelector,
+    ContextSelector
 };
 
 class BaseNode {

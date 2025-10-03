@@ -10,4 +10,6 @@ public:
 private:
     std::string pendingPropertyName;
     bool expectingValue;
+    std::string pendingContextualSelector;
+    bool inContextualBlock;
 };

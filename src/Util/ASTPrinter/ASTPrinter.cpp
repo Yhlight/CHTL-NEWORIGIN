@@ -7,6 +7,7 @@
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
 #include "../../CHTL/CHTLNode/ClassSelectorNode.h"
 #include "../../CHTL/CHTLNode/IdSelectorNode.h"
+#include "../../CHTL/CHTLNode/ContextSelectorNode.h"
 
 void ASTPrinter::print(BaseNode* root) {
     if (!root) {
@@ -62,6 +63,11 @@ void ASTPrinter::printNode(BaseNode* node, int indent) {
         case NodeType::IdSelector: {
             auto* selectorNode = static_cast<IdSelectorNode*>(node);
             std::cout << indentation << "ID Selector: #" << selectorNode->getName() << std::endl;
+            break;
+        }
+        case NodeType::ContextSelector: {
+            auto* selectorNode = static_cast<ContextSelectorNode*>(node);
+            std::cout << indentation << "Context Selector: " << selectorNode->getSelector() << std::endl;
             break;
         }
         case NodeType::Base:

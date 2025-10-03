@@ -1,2 +1,4 @@
 add_subdirectory(ASTPrinter)
 add_subdirectory(AttributeAutomator)
+add_subdirectory(GlobalStylesheet)
+add_subdirectory(CssGenerator)
