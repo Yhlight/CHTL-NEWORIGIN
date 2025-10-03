@@ -5,4 +5,4 @@ target_include_directories(CssGenerator PUBLIC
 )
 
 # Link against CHTL because CssGenerator uses CHTL nodes
-target_link_libraries(CssGenerator PRIVATE CHTL)
+target_link_libraries(CssGenerator PRIVATE CHTL ExpressionEvaluator)

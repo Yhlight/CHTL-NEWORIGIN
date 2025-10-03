@@ -3,7 +3,6 @@
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/ContextSelectorNode.h"
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
-#include "../../CHTL/CHTLNode/ValueNode.h"
 #include <iostream>
 #include <sstream>
 
@@ -17,15 +16,33 @@ void CssGenerator::traverse(BaseNode* node, ElementNode* parentElement, GlobalSt
 
     ElementNode* currentElement = (node->getType() == NodeType::Element) ? static_cast<ElementNode*>(node) : parentElement;
 
-    if (node->getType() == NodeType::ContextSelector) {
+    if (node->getType() == NodeType::Style) {
+        if (currentElement && currentElement != node) {
+            std::string inlineStyleString;
+            for (const auto& child : node->getChildren()) {
+                if (child->getType() == NodeType::StyleProperty) {
+                    auto* propNode = static_cast<StylePropertyNode*>(child.get());
+                    std::string value = evaluator.evaluate(propNode->getValue());
+                    inlineStyleString += propNode->getName() + ": " + value + ";";
+                }
+            }
+            if (!inlineStyleString.empty()) {
+                auto attrs = currentElement->getAttributes();
+                if (attrs.count("style")) {
+                    inlineStyleString = attrs.at("style") + " " + inlineStyleString;
+                }
+                currentElement->setAttribute("style", inlineStyleString);
+            }
+        }
+    }
+    else if (node->getType() == NodeType::ContextSelector) {
         auto* contextNode = static_cast<ContextSelectorNode*>(node);
-        if (parentElement) {
+        if (currentElement) {
             std::string parentSelector;
-            auto attrs = parentElement->getAttributes();
+            auto attrs = currentElement->getAttributes();
             if (attrs.count("id")) {
                 parentSelector = "#" + attrs["id"];
             } else if (attrs.count("class")) {
-                // Handle multiple classes correctly
                 std::stringstream ss(attrs["class"]);
                 std::string className;
                 while (ss >> className) {
@@ -34,7 +51,7 @@ void CssGenerator::traverse(BaseNode* node, ElementNode* parentElement, GlobalSt
             }
 
             if (!parentSelector.empty()) {
-                std::string fullSelector = parentSelector + contextNode->getSelector().substr(1); // remove '&'
+                std::string fullSelector = parentSelector + contextNode->getSelector().substr(1);
 
                 std::string properties;
                 const auto& children = contextNode->getChildren();
@@ -42,16 +59,16 @@ void CssGenerator::traverse(BaseNode* node, ElementNode* parentElement, GlobalSt
                     const auto& propChild = children[i];
                     if (propChild->getType() == NodeType::StyleProperty) {
                         auto* propNode = static_cast<StylePropertyNode*>(propChild.get());
-                        if (propNode->getValue() && propNode->getValue()->getType() == NodeType::Value) {
-                            const auto* valueNode = static_cast<const ValueNode*>(propNode->getValue());
-                            properties += propNode->getName() + ": " + valueNode->getValue() + ";";
-                            if (i < children.size() - 1) {
-                                properties += " ";
-                            }
+                        std::string value = evaluator.evaluate(propNode->getValue());
+                        properties += propNode->getName() + ": " + value + ";";
+                        if (i < children.size() - 1) {
+                            properties += " ";
                         }
                     }
                 }
-                stylesheet.addRule(fullSelector, properties);
+                if (!properties.empty()) {
+                     stylesheet.addRule(fullSelector, properties);
+                }
             }
         }
     }

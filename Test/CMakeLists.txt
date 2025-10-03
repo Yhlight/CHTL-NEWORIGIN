@@ -4,6 +4,7 @@ add_executable(runTests
     AttributeAutomatorTest.cpp
     CssGeneratorTest.cpp
     ExpressionParserTest.cpp
+    ExpressionEvaluatorTest.cpp
 )
 
 target_link_libraries(runTests
@@ -13,6 +14,7 @@ target_link_libraries(runTests
     AttributeAutomator
     CssGenerator
     ExpressionParser
+    ExpressionEvaluator
     gtest_main
 )
 
