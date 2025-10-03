@@ -11,12 +11,9 @@
 #include "../CHTLNode/NamespaceNode.h"
 #include "../CHTLNode/UseNode.h"
 #include "../CHTLNode/IfNode.h"
+#include "../CHTLNode/StyleNode.h"
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
-
-class FragmentNode;
-class InsertNode;
-class DeleteNode;
 
 class CHTLParser {
 public:
@@ -46,13 +43,7 @@ private:
     std::unique_ptr<BaseNode> parseNamespaceDeclaration();
     std::unique_ptr<BaseNode> parseUseStatement();
     std::unique_ptr<IfNode> parseIfStatement();
-
-    void addChildWithChecks(ElementNode* parent, std::unique_ptr<BaseNode> child);
-    void applySpecialization(FragmentNode* fragment, std::unique_ptr<ElementNode> modifications);
-    std::unique_ptr<InsertNode> parseInsertStatement();
-    std::unique_ptr<DeleteNode> parseDeleteStatement();
-    std::unique_ptr<ElementNode> parseElementTarget();
-    std::unique_ptr<ElementNode> parseSpecializationBlock();
+    PropertyValue parsePropertyValue();
 };
 
 #endif //CHTL_PARSER_H

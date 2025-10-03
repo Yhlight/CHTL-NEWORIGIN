@@ -158,9 +158,11 @@ div {
     const auto& props = styleNode->getProperties();
     REQUIRE(props.size() == 2);
     REQUIRE(props[0].first == "color");
-    REQUIRE(props[0].second == "blue");
+    REQUIRE(std::holds_alternative<std::string>(props[0].second));
+    REQUIRE(std::get<std::string>(props[0].second) == "blue");
     REQUIRE(props[1].first == "font-size");
-    REQUIRE(props[1].second == "16px");
+    REQUIRE(std::holds_alternative<std::string>(props[1].second));
+    REQUIRE(std::get<std::string>(props[1].second) == "16px");
 }
 
 TEST_CASE("Parser handles comment nodes", "[parser]") {
@@ -324,9 +326,11 @@ div {
     const auto& props = styleNode->getProperties();
     REQUIRE(props.size() == 2);
     REQUIRE(props[0].first == "color");
-    REQUIRE(props[0].second == "black");
+    REQUIRE(std::holds_alternative<std::string>(props[0].second));
+    REQUIRE(std::get<std::string>(props[0].second) == "black");
     REQUIRE(props[1].first == "line-height");
-    REQUIRE(props[1].second == "1.6");
+    REQUIRE(std::holds_alternative<std::string>(props[1].second));
+    REQUIRE(std::get<std::string>(props[1].second) == "1.6");
 }
 
 TEST_CASE("Parser handles custom style declarations with delete", "[parser]") {

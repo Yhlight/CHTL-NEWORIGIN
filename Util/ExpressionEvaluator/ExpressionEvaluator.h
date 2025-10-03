@@ -5,14 +5,15 @@
 #include <vector>
 #include <map>
 #include <stack>
-#include <CHTL/CHTLLexer/Token.h>
-
-class ElementNode; // Forward declaration
+#include "../../CHTL/CHTLNode/ElementNode.h"
+#include "../../CHTL/CHTLNode/StyleNode.h"
+#include "../../CHTL/CHTLLexer/Token.h"
 
 class ExpressionEvaluator {
 public:
     explicit ExpressionEvaluator(const ElementNode& context);
     bool evaluate(const std::vector<Token>& tokens);
+    std::string resolveConditionalProperty(const ConditionalPropertyValue& propValue);
 
 private:
     const ElementNode& context;

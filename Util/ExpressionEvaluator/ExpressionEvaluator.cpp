@@ -1,6 +1,4 @@
 #include "ExpressionEvaluator.h"
-#include <CHTL/CHTLNode/ElementNode.h>
-#include <CHTL/CHTLNode/StyleNode.h>
 #include <stdexcept>
 #include <cctype>
 #include <iostream>
@@ -99,26 +97,65 @@ double ExpressionEvaluator::evaluateRPN(const std::vector<Token>& rpnTokens) {
 }
 
 double ExpressionEvaluator::getValue(const std::string& identifier) {
+    // First, check the element's own attributes.
+    const auto& attributes = context.getAttributes();
+    auto attr_it = attributes.find(identifier);
+    if (attr_it != attributes.end()) {
+        std::string numericPart;
+        for (char c : attr_it->second) {
+            if (isdigit(c) || c == '.') {
+                numericPart += c;
+            } else if (!numericPart.empty()) {
+                break;
+            }
+        }
+        if (!numericPart.empty()) {
+            return std::stod(numericPart);
+        }
+    }
+
+    // Then, check properties within any child StyleNodes.
     for (const auto& child : context.getChildren()) {
         if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
             for (const auto& prop : styleNode->getProperties()) {
                 if (prop.first == identifier) {
-                    std::string numericPart;
-                    for (char c : prop.second) {
-                        if (isdigit(c) || c == '.') {
-                            numericPart += c;
-                        } else if (!numericPart.empty()) {
-                            break;
+                    // Ensure we only try to get a value from non-conditional, simple string properties.
+                    if (const std::string* value_ptr = std::get_if<std::string>(&prop.second)) {
+                        std::string numericPart;
+                        for (char c : *value_ptr) {
+                            if (isdigit(c) || c == '.') {
+                                numericPart += c;
+                            } else if (!numericPart.empty()) {
+                                break;
+                            }
                         }
-                    }
-                    if (!numericPart.empty()) {
-                        return std::stod(numericPart);
+                        if (!numericPart.empty()) {
+                            return std::stod(numericPart);
+                        }
                     }
                 }
             }
         }
     }
-    return 0.0;
+
+    // Fallback: try to interpret the identifier itself as a numeric value.
+    std::string numericPart;
+    for (char c : identifier) {
+        if (isdigit(c) || c == '.') {
+            numericPart += c;
+        } else if (!numericPart.empty()) {
+            break; // Stop at first non-numeric character
+        }
+    }
+    if (!numericPart.empty()) {
+        try {
+            return std::stod(numericPart);
+        } catch (const std::exception& e) {
+            // Not a number, fall through to return 0.0
+        }
+    }
+
+    return 0.0; // Identifier not found or has no numeric value
 }
 
 int ExpressionEvaluator::getPrecedence(TokenType type) {
@@ -141,4 +178,13 @@ int ExpressionEvaluator::getPrecedence(TokenType type) {
 
 bool ExpressionEvaluator::isOperator(TokenType type) {
     return getPrecedence(type) > 0;
+}
+
+std::string ExpressionEvaluator::resolveConditionalProperty(const ConditionalPropertyValue& propValue) {
+    for (const auto& branch : propValue.branches) {
+        if (evaluate(branch.condition)) {
+            return branch.trueValue;
+        }
+    }
+    return propValue.elseValue; // Return the else value, or an empty string if it doesn't exist.
 }

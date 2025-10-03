@@ -4,5 +4,4 @@ add_library(chtl-util STATIC
 
 target_include_directories(chtl-util PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}
 )

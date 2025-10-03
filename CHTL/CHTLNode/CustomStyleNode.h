@@ -24,28 +24,8 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<CustomStyleNode>(getName());
-        for (const auto& prop : getProperties()) {
-            clonedNode->addProperty(prop.first, prop.second);
-        }
-        for (const auto& deletedProp : deletedProperties) {
-            clonedNode->addDeletedProperty(deletedProp);
-        }
-        return clonedNode;
-    }
-
-    void addValuelessProperty(const std::string& propName) {
-        valuelessProperties.insert(propName);
-    }
-
-    const std::unordered_set<std::string>& getValuelessProperties() const {
-        return valuelessProperties;
-    }
-
 private:
     std::unordered_set<std::string> deletedProperties;
-    std::unordered_set<std::string> valuelessProperties;
 };
 
 #endif // CHTL_CUSTOM_STYLE_NODE_H

@@ -24,17 +24,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<CustomElementNode>(getName());
-        for (const auto& child : getChildren()) {
-            clonedNode->addChild(child->clone());
-        }
-        for (const auto& deletedElem : deletedElements) {
-            clonedNode->addDeletedElement(deletedElem);
-        }
-        return clonedNode;
-    }
-
 private:
     std::unordered_set<std::string> deletedElements;
 };

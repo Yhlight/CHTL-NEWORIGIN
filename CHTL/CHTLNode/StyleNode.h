@@ -8,34 +8,47 @@
 #include <vector>
 #include <utility>
 #include <sstream>
-#include <algorithm>
 #include <memory>
+#include <variant>
+#include <algorithm>
+#include "../CHTLLexer/Token.h"
+
+// Represents a single branch of a conditional property: `condition ? "true_value"`
+struct ConditionalBranch {
+    std::vector<Token> condition;
+    std::string trueValue;
+};
+
+// Represents a full conditional property value, which can have multiple branches and an optional else value.
+struct ConditionalPropertyValue {
+    std::vector<ConditionalBranch> branches;
+    std::string elseValue;
+};
+
+using PropertyValue = std::variant<std::string, ConditionalPropertyValue>;
 
 class StyleNode : public BaseNode {
 public:
     StyleNode() = default;
 
-    void addProperty(const std::string& key, const std::string& value) {
-        // Overwrite if property already exists
-        for (auto& prop : properties) {
-            if (prop.first == key) {
-                prop.second = value;
-                return;
-            }
-        }
-        properties.push_back({key, value});
+    void addProperty(const std::string& key, PropertyValue value) {
+        properties.push_back({key, std::move(value)});
     }
 
-    void addRule(std::unique_ptr<CssRuleNode> rule) {
-        rules.push_back(std::move(rule));
+    void addProperty(const std::string& key, const std::string& value) {
+        properties.push_back({key, value});
     }
 
     void deleteProperty(const std::string& key) {
         properties.erase(
             std::remove_if(properties.begin(), properties.end(),
-                           [&key](const auto& prop) { return prop.first == key; }),
+                           [&](const auto& prop) { return prop.first == key; }),
             properties.end()
         );
+    }
+
+    void addRule(std::unique_ptr<CssRuleNode> rule) {
+        rules.push_back(std::move(rule));
     }
 
     std::string toString(int depth = 0) const override {
@@ -48,18 +61,7 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<StyleNode>();
-        for (const auto& prop : properties) {
-            clonedNode->addProperty(prop.first, prop.second);
-        }
-        for (const auto& rule : rules) {
-            clonedNode->addRule(std::unique_ptr<CssRuleNode>(static_cast<CssRuleNode*>(rule->clone().release())));
-        }
-        return clonedNode;
-    }
-
-    const std::vector<std::pair<std::string, std::string>>& getProperties() const {
+    const std::vector<std::pair<std::string, PropertyValue>>& getProperties() const {
         return properties;
     }
 
@@ -72,7 +74,7 @@ public:
     }
 
 private:
-    std::vector<std::pair<std::string, std::string>> properties;
+    std::vector<std::pair<std::string, PropertyValue>> properties;
     std::vector<std::unique_ptr<CssRuleNode>> rules;
 };
 

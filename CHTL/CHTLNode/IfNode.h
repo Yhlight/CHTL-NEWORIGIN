@@ -40,17 +40,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<IfNode>(conditionTokens);
-        for (const auto& prop : properties) {
-            clonedNode->addProperty(prop.first, prop.second);
-        }
-        if (elseBranch) {
-            clonedNode->setElseBranch(elseBranch->clone());
-        }
-        return clonedNode;
-    }
-
     const std::vector<Token>& getConditionTokens() const {
         return conditionTokens;
     }

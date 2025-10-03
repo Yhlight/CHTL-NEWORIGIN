@@ -137,6 +137,35 @@ Token CHTLLexer::getNextToken() {
             return makeString(currentChar());
         }
 
+        if (currentChar() == '(') {
+            advance();
+            return makeToken(TokenType::LParen, "(");
+        }
+        if (currentChar() == ')') {
+            advance();
+            return makeToken(TokenType::RParen, ")");
+        }
+        if (currentChar() == '+') {
+            advance();
+            return makeToken(TokenType::Plus, "+");
+        }
+        if (currentChar() == '-') {
+            advance();
+            return makeToken(TokenType::Minus, "-");
+        }
+        if (currentChar() == '*') {
+            advance();
+            return makeToken(TokenType::Asterisk, "*");
+        }
+        if (currentChar() == '/') {
+            advance();
+            return makeToken(TokenType::Slash, "/");
+        }
+        if (currentChar() == '?') {
+            advance();
+            return makeToken(TokenType::Question, "?");
+        }
+
         // Allow identifiers to start with a digit for CSS values like '16px',
         // and selectors starting with '.', '#', or '&'.
         if (isalpha(currentChar()) || currentChar() == '_' || isdigit(currentChar()) || currentChar() == '.' || currentChar() == '#') {

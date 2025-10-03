@@ -1,23 +1,10 @@
 #include "HtmlGenerator.h"
-#include "ExpressionEvaluator/ExpressionEvaluator.h"
+#include "../Util/ExpressionEvaluator/ExpressionEvaluator.h"
 #include <vector>
+#include <set>
 
 HtmlGenerator::HtmlGenerator() {
     selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
-}
-
-// Helper to get inline style string from a StyleNode
-std::string getInlineStyle(const StyleNode* styleNode) {
-    if (!styleNode) return "";
-    std::stringstream ss;
-    const auto& properties = styleNode->getProperties();
-    for (size_t i = 0; i < properties.size(); ++i) {
-        ss << properties[i].first << ": " << properties[i].second << ";";
-        if (i < properties.size() - 1) {
-            ss << " ";
-        }
-    }
-    return ss.str();
 }
 
 std::string HtmlGenerator::getResult() {
@@ -57,12 +44,32 @@ void HtmlGenerator::visit(DocumentNode& node) {
 }
 
 void HtmlGenerator::visit(ElementNode& node) {
+    // Collect variables from conditional properties to avoid rendering them as attributes
+    std::set<std::string> conditionalVars;
+    for (const auto& child : node.getChildren()) {
+        if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
+            for (const auto& prop : styleNode->getProperties()) {
+                if (const auto* condProp = std::get_if<ConditionalPropertyValue>(&prop.second)) {
+                    for (const auto& branch : condProp->branches) {
+                        for (const auto& token : branch.condition) {
+                            if (token.type == TokenType::Identifier) {
+                                conditionalVars.insert(token.value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     std::string indent(depth * 2, ' ');
     resultStream << indent << "<" << node.getTagName();
 
-    // Handle attributes
+    // Handle attributes, skipping those used as variables in conditionals
     for (const auto& attr : node.getAttributes()) {
-        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
+        if (conditionalVars.find(attr.first) == conditionalVars.end()) {
+            resultStream << " " << attr.first << "=\"" << attr.second << "\"";
+        }
     }
 
     // Collect all inline styles from StyleNode and IfNode children
@@ -70,8 +77,18 @@ void HtmlGenerator::visit(ElementNode& node) {
 
     for (const auto& child : node.getChildren()) {
         if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
+            ExpressionEvaluator evaluator(node);
             for (const auto& prop : styleNode->getProperties()) {
-                inlineStyles.push_back(prop);
+                std::string finalValue;
+                if (const auto* stringVal = std::get_if<std::string>(&prop.second)) {
+                    finalValue = *stringVal;
+                } else if (const auto* condVal = std::get_if<ConditionalPropertyValue>(&prop.second)) {
+                    finalValue = evaluator.resolveConditionalProperty(*condVal);
+                }
+
+                if (!finalValue.empty()) {
+                    inlineStyles.push_back({prop.first, finalValue});
+                }
             }
         } else if (auto* ifNode = dynamic_cast<IfNode*>(child.get())) {
             bool conditionMet = false;

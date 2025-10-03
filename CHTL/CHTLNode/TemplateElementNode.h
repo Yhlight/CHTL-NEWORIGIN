@@ -30,14 +30,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<TemplateElementNode>(templateName);
-        for (const auto& child : children) {
-            clonedNode->addChild(child->clone());
-        }
-        return clonedNode;
-    }
-
     const std::string& getName() const { return templateName; }
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const { return children; }
 

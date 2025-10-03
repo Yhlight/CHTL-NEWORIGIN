@@ -31,17 +31,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<NamespaceNode>(name);
-        for (const auto& child : children) {
-            clonedNode->addChild(child->clone());
-        }
-        for (const auto& constraint : global_constraints) {
-            clonedNode->addGlobalConstraint(constraint);
-        }
-        return clonedNode;
-    }
-
     const std::string& getName() const { return name; }
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const { return children; }
 

@@ -17,10 +17,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        return std::make_unique<UseNode>(directive);
-    }
-
     const std::string& getDirective() const {
         return directive;
     }

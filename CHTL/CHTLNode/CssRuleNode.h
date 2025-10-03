@@ -36,14 +36,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<CssRuleNode>(selector);
-        for (const auto& prop : properties) {
-            clonedNode->addProperty(prop.first, prop.second);
-        }
-        return clonedNode;
-    }
-
 private:
     std::string selector;
     std::map<std::string, std::string> properties;

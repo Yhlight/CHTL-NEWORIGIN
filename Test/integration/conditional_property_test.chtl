@@ -1,0 +1,87 @@
+body
+{
+    // Test 1: Simple true condition
+    div {
+        id: "test1";
+        width: 100px;
+        style
+        {
+            background-color: width > 50px ? "red" : "blue";
+        }
+    }
+
+    // Test 2: Simple false condition with else
+    div {
+        id: "test2";
+        width: 20px;
+        style
+        {
+            background-color: width > 50px ? "red" : "blue";
+        }
+    }
+
+    // Test 3: Chained condition, first branch true
+    div {
+        id: "test3";
+        width: 75px;
+        height: 30px;
+        style
+        {
+            border:
+                width > 50px ? "1px solid green",
+                height > 50px ? "1px solid yellow" : "1px solid black";
+        }
+    }
+
+    // Test 4: Chained condition, second branch true
+    div {
+        id: "test4";
+        width: 30px;
+        height: 75px;
+        style
+        {
+            border:
+                width > 50px ? "1px solid green",
+                height > 50px ? "1px solid yellow" : "1px solid black";
+        }
+    }
+
+    // Test 5: Chained condition, else branch taken
+    div {
+        id: "test5";
+        width: 30px;
+        height: 30px;
+        style
+        {
+            border:
+                width > 50px ? "1px solid green",
+                height > 50px ? "1px solid yellow" : "1px solid black";
+        }
+    }
+
+    // Test 6: Chained condition with no else, first branch true
+    div {
+        id: "test6";
+        width: 100px;
+        height: 30px;
+        style
+        {
+            background-color:
+                width > 50px ? "purple",
+                height > 50px ? "orange";
+        }
+    }
+
+    // Test 7: Chained condition with no else, no branch true (should have no style)
+    div {
+        id: "test7";
+        width: 30px;
+        height: 30px;
+        style
+        {
+            background-color:
+                width > 50px ? "purple",
+                height > 50px ? "orange";
+        }
+    }
+}

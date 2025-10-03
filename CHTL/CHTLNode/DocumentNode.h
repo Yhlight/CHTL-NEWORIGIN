@@ -28,15 +28,6 @@ public:
         visitor.visit(*this);
     }
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<DocumentNode>();
-        clonedNode->setHasHtml5Doctype(hasHtml5Doctype);
-        for (const auto& child : children) {
-            clonedNode->addChild(child->clone());
-        }
-        return clonedNode;
-    }
-
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const {
         return children;
     }
