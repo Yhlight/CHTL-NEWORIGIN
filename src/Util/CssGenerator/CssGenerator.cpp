@@ -3,6 +3,7 @@
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/ContextSelectorNode.h"
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
+#include "../../CHTL/CHTLNode/ValueNode.h"
 #include <iostream>
 #include <sstream>
 
@@ -22,7 +23,8 @@ void CssGenerator::traverse(BaseNode* node, ElementNode* parentElement, GlobalSt
             for (const auto& child : node->getChildren()) {
                 if (child->getType() == NodeType::StyleProperty) {
                     auto* propNode = static_cast<StylePropertyNode*>(child.get());
-                    std::string value = evaluator.evaluate(propNode->getValue());
+                    const auto* valueNode = static_cast<const ValueNode*>(propNode->getValue());
+                    std::string value = valueNode->getValue();
                     inlineStyleString += propNode->getName() + ": " + value + ";";
                 }
             }
@@ -59,7 +61,8 @@ void CssGenerator::traverse(BaseNode* node, ElementNode* parentElement, GlobalSt
                     const auto& propChild = children[i];
                     if (propChild->getType() == NodeType::StyleProperty) {
                         auto* propNode = static_cast<StylePropertyNode*>(propChild.get());
-                        std::string value = evaluator.evaluate(propNode->getValue());
+                        const auto* valueNode = static_cast<const ValueNode*>(propNode->getValue());
+                        std::string value = valueNode->getValue();
                         properties += propNode->getName() + ": " + value + ";";
                         if (i < children.size() - 1) {
                             properties += " ";

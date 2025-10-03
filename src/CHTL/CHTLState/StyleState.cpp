@@ -53,6 +53,7 @@ void StyleState::handle(CHTLParser& parser, Token token) {
         case TokenType::NUMBER:
         case TokenType::STRING_LITERAL:
         case TokenType::LEFT_PAREN: // Start of a grouped expression
+        case TokenType::PROPERTY_REFERENCE:
             if (expectingValue) {
                 parser.putback(token);
                 ExpressionParser exprParser(parser);

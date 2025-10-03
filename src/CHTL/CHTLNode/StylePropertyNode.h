@@ -15,6 +15,10 @@ public:
     const std::string& getName() const { return name; }
     const ExpressionNode* getValue() const { return value.get(); }
 
+    void setValue(std::unique_ptr<ExpressionNode> newValue) {
+        value = std::move(newValue);
+    }
+
 private:
     std::string name;
     std::unique_ptr<ExpressionNode> value;

@@ -14,6 +14,7 @@ enum class NodeType {
     ClassSelector,
     IdSelector,
     ContextSelector,
+    Reference,
     Value,
     BinaryOp
 };

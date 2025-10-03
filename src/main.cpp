@@ -3,16 +3,20 @@
 #include "Util/ASTPrinter/ASTPrinter.h"
 #include "Util/AttributeAutomator/AttributeAutomator.h"
 #include "Util/CssGenerator/CssGenerator.h"
+#include "Util/StyleEvaluator/StyleEvaluator.h"
 
 int main() {
     std::string chtl_code = R"(
         div {
-            class: "my-div";
+            id: "box";
             style {
-                width: 100px + 50px * 2;
-                &:hover {
-                    color: blue;
-                }
+                width: 100px;
+            }
+        }
+        div {
+            id: "bar";
+            style {
+                height: #box.width + 50px;
             }
         }
     )";
@@ -22,6 +26,9 @@ int main() {
 
     AttributeAutomator automator;
     automator.process(parser.getRoot());
+
+    StyleEvaluator styleEvaluator;
+    styleEvaluator.evaluate(parser.getRoot());
 
     CssGenerator cssGenerator;
     cssGenerator.generate(parser.getRoot(), parser.getGlobalStylesheet());

@@ -8,6 +8,7 @@ enum class TokenType {
     CLASS_SELECTOR,
     ID_SELECTOR,
     CONTEXT_SELECTOR,
+    PROPERTY_REFERENCE,
     NUMBER,
     LEFT_BRACE,
     RIGHT_BRACE,

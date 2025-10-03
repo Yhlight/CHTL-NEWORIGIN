@@ -2,11 +2,22 @@
 #include "../../CHTL/CHTLNode/ExpressionNode.h"
 #include "../../CHTL/CHTLNode/ValueNode.h"
 #include "../../CHTL/CHTLNode/BinaryOpNode.h"
+#include "../../CHTL/CHTLNode/ReferenceNode.h"
+#include "../../CHTL/CHTLNode/ElementNode.h"
+#include "../../CHTL/CHTLNode/StyleNode.h"
+#include "../../CHTL/CHTLNode/StylePropertyNode.h"
 #include <stdexcept>
 #include <string>
 #include <sstream>
+#include <vector>
+#include <algorithm>
 
 namespace {
+    // Forward declarations
+    std::string evaluate_recursive(const ExpressionNode* node, const BaseNode* astRoot, std::vector<const ExpressionNode*>& call_stack);
+    const ElementNode* find_node_by_selector(const std::string& selector, const BaseNode* astRoot);
+    const ExpressionNode* find_property_in_node(const ElementNode* element, const std::string& propertyName);
+
     struct NumericValue {
         double value;
         std::string unit;
@@ -14,7 +25,6 @@ namespace {
 
     NumericValue parse_value(const std::string& s) {
         if (s.empty()) return {0.0, ""};
-
         size_t first_alpha = std::string::npos;
         for (size_t i = 0; i < s.length(); ++i) {
             if (isalpha(s[i]) || s[i] == '%') {
@@ -22,11 +32,9 @@ namespace {
                 break;
             }
         }
-
         if (first_alpha == std::string::npos) {
-            return {std::stod(s), ""};
+            try { return {std::stod(s), ""}; } catch (const std::invalid_argument&) { return {0.0, s}; }
         }
-
         double val = std::stod(s.substr(0, first_alpha));
         std::string unit = s.substr(first_alpha);
         return {val, unit};
@@ -38,23 +46,63 @@ namespace {
         return ss.str();
     }
 
-    std::string evaluate_recursive(const ExpressionNode* node) {
-        if (!node) {
-            throw std::runtime_error("Cannot evaluate null expression node.");
+    const ElementNode* find_node_by_selector(const std::string& selector, const BaseNode* astRoot) {
+        if (!astRoot || selector.empty()) return nullptr;
+        std::vector<const BaseNode*> nodes_to_visit;
+        nodes_to_visit.push_back(astRoot);
+        while (!nodes_to_visit.empty()) {
+            const BaseNode* current = nodes_to_visit.back();
+            nodes_to_visit.pop_back();
+            if (current->getType() == NodeType::Element) {
+                const auto* elementNode = static_cast<const ElementNode*>(current);
+                if (selector[0] == '.') {
+                    auto attrs = elementNode->getAttributes();
+                    if (attrs.count("class") && attrs.at("class") == selector.substr(1)) return elementNode;
+                } else if (selector[0] == '#') {
+                    auto attrs = elementNode->getAttributes();
+                    if (attrs.count("id") && attrs.at("id") == selector.substr(1)) return elementNode;
+                } else if (elementNode->getTagName() == selector) {
+                    return elementNode;
+                }
+            }
+            for (const auto& child : current->getChildren()) {
+                nodes_to_visit.push_back(child.get());
+            }
         }
+        return nullptr;
+    }
 
+    const ExpressionNode* find_property_in_node(const ElementNode* element, const std::string& propertyName) {
+        if (!element) return nullptr;
+        for (const auto& child : element->getChildren()) {
+            if (child->getType() == NodeType::Style) {
+                for (const auto& styleChild : child->getChildren()) {
+                    if (styleChild->getType() == NodeType::StyleProperty) {
+                        const auto* propNode = static_cast<const StylePropertyNode*>(styleChild.get());
+                        if (propNode->getName() == propertyName) return propNode->getValue();
+                    }
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    std::string evaluate_recursive(const ExpressionNode* node, const BaseNode* astRoot, std::vector<const ExpressionNode*>& call_stack) {
+        if (!node) throw std::runtime_error("Cannot evaluate null expression node.");
+        if (std::find(call_stack.begin(), call_stack.end(), node) != call_stack.end()) throw std::runtime_error("Circular property reference detected.");
+        call_stack.push_back(node);
+
+        std::string result_str;
         switch (node->getType()) {
             case NodeType::Value: {
-                const auto* valueNode = static_cast<const ValueNode*>(node);
-                return valueNode->getValue();
+                result_str = static_cast<const ValueNode*>(node)->getValue();
+                break;
             }
             case NodeType::BinaryOp: {
                 const auto* opNode = static_cast<const BinaryOpNode*>(node);
-
-                NumericValue left = parse_value(evaluate_recursive(opNode->getLeft()));
-                NumericValue right = parse_value(evaluate_recursive(opNode->getRight()));
+                NumericValue left = parse_value(evaluate_recursive(opNode->getLeft(), astRoot, call_stack));
+                NumericValue right = parse_value(evaluate_recursive(opNode->getRight(), astRoot, call_stack));
                 NumericValue result;
-
                 switch (opNode->getOp()) {
                     case TokenType::PLUS:
                         if (left.unit != right.unit) throw std::runtime_error("Mismatched units for addition.");
@@ -69,21 +117,42 @@ namespace {
                         result = {left.value * right.value, left.unit.empty() ? right.unit : left.unit};
                         break;
                     case TokenType::SLASH:
-                        if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot divide two values with units.");
                         if (right.value == 0) throw std::runtime_error("Division by zero.");
+                        if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot divide two values with units.");
                         result = {left.value / right.value, left.unit.empty() ? right.unit : left.unit};
                         break;
-                    default:
-                        throw std::runtime_error("Unsupported binary operator.");
+                    default: throw std::runtime_error("Unsupported binary operator.");
                 }
-                return format_value(result);
+                result_str = format_value(result);
+                break;
+            }
+            case NodeType::Reference: {
+                 const auto* refNode = static_cast<const ReferenceNode*>(node);
+                 const std::string& refStr = refNode->getReference();
+                 size_t last_dot = refStr.find_last_of('.');
+                 if (last_dot == std::string::npos) throw std::runtime_error("Invalid property reference: " + refStr);
+
+                 std::string selector = refStr.substr(0, last_dot);
+                 std::string propertyName = refStr.substr(last_dot + 1);
+
+                 const ElementNode* targetNode = find_node_by_selector(selector, astRoot);
+                 if (!targetNode) throw std::runtime_error("Reference error: selector '" + selector + "' not found.");
+
+                 const ExpressionNode* propertyExpr = find_property_in_node(targetNode, propertyName);
+                 if (!propertyExpr) throw std::runtime_error("Reference error: property '" + propertyName + "' not found on element with selector '" + selector + "'.");
+
+                 result_str = evaluate_recursive(propertyExpr, astRoot, call_stack);
+                 break;
             }
             default:
                 throw std::runtime_error("Unknown or unsupported expression node type for evaluation.");
         }
+        call_stack.pop_back();
+        return result_str;
     }
 }
 
-std::string ExpressionEvaluator::evaluate(const ExpressionNode* node) {
-    return evaluate_recursive(node);
+std::string ExpressionEvaluator::evaluate(const ExpressionNode* node, const BaseNode* astRoot) {
+    std::vector<const ExpressionNode*> call_stack;
+    return evaluate_recursive(node, astRoot, call_stack);
 }

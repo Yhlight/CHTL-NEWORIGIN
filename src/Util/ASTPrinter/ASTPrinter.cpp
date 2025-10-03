@@ -10,6 +10,7 @@
 #include "../../CHTL/CHTLNode/ContextSelectorNode.h"
 #include "../../CHTL/CHTLNode/ValueNode.h"
 #include "../../CHTL/CHTLNode/BinaryOpNode.h"
+#include "../../CHTL/CHTLNode/ReferenceNode.h"
 
 void ASTPrinter::print(BaseNode* root) {
     if (!root) {
@@ -34,6 +35,11 @@ void ASTPrinter::printExpression(const ExpressionNode* node, int indent) {
             std::cout << indentation << "BinaryOp: " << static_cast<int>(opNode->getOp()) << std::endl;
             printExpression(opNode->getLeft(), indent + 1);
             printExpression(opNode->getRight(), indent + 1);
+            break;
+        }
+        case NodeType::Reference: {
+            auto* refNode = static_cast<const ReferenceNode*>(node);
+            std::cout << indentation << "Reference: " << refNode->getReference() << std::endl;
             break;
         }
         default:

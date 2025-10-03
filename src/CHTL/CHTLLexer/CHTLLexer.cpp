@@ -173,6 +173,18 @@ Token CHTLLexer::identifier() {
         advance();
     }
 
+    // Check for property reference like "div.width"
+    if (position < input.size() && currentChar() == '.') {
+        value += currentChar();
+        advance(); // consume '.'
+
+        while (position < input.size() && (isalnum(currentChar()) || currentChar() == '_')) {
+            value += currentChar();
+            advance();
+        }
+        return {TokenType::PROPERTY_REFERENCE, value, startLine, startColumn};
+    }
+
     if (value == "text") return {TokenType::KEYWORD_TEXT, value, startLine, startColumn};
     if (value == "style") return {TokenType::KEYWORD_STYLE, value, startLine, startColumn};
     if (value == "script") return {TokenType::KEYWORD_SCRIPT, value, startLine, startColumn};
@@ -239,19 +251,33 @@ Token CHTLLexer::generatorComment() {
 Token CHTLLexer::selector() {
     int startLine = line;
     int startColumn = column;
+    std::string value;
+
     char selectorTypeChar = currentChar();
+    value += selectorTypeChar;
     advance(); // Consume '.' or '#'
 
-    std::string value;
     while (position < input.size() && (isalnum(currentChar()) || currentChar() == '-')) {
         value += currentChar();
         advance();
     }
 
+    // Check for property reference like ".box.width"
+    if (position < input.size() && currentChar() == '.') {
+        value += currentChar();
+        advance(); // consume '.'
+
+        while (position < input.size() && (isalnum(currentChar()) || currentChar() == '_')) {
+            value += currentChar();
+            advance();
+        }
+        return {TokenType::PROPERTY_REFERENCE, value, startLine, startColumn};
+    }
+
     if (selectorTypeChar == '.') {
-        return {TokenType::CLASS_SELECTOR, value, startLine, startColumn};
+        return {TokenType::CLASS_SELECTOR, value.substr(1), startLine, startColumn};
     } else { // It must be '#'
-        return {TokenType::ID_SELECTOR, value, startLine, startColumn};
+        return {TokenType::ID_SELECTOR, value.substr(1), startLine, startColumn};
     }
 }
 

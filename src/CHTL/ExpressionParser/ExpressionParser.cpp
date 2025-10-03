@@ -3,6 +3,7 @@
 #include "../CHTLNode/ValueNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
 #include "../CHTLNode/ExpressionNode.h"
+#include "../CHTLNode/ReferenceNode.h"
 
 ExpressionParser::ExpressionParser(CHTLParser& parser) : parser(parser) {}
 
@@ -31,6 +32,8 @@ std::unique_ptr<ExpressionNode> ExpressionParser::parsePrefix() {
     Token token = parser.consume();
     if (token.type == TokenType::NUMBER || token.type == TokenType::IDENTIFIER || token.type == TokenType::STRING_LITERAL) {
         return std::make_unique<ValueNode>(token.value);
+    } else if (token.type == TokenType::PROPERTY_REFERENCE) {
+        return std::make_unique<ReferenceNode>(token.value);
     } else if (token.type == TokenType::LEFT_PAREN) {
         auto expression = parseExpression(0);
         parser.consume(); // Consume ')'
