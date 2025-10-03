@@ -16,7 +16,8 @@ enum class NodeType {
     ContextSelector,
     Reference,
     Value,
-    BinaryOp
+    BinaryOp,
+    Conditional
 };
 
 class BaseNode {

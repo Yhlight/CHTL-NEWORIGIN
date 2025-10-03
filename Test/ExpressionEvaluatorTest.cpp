@@ -2,6 +2,7 @@
 #include "../src/Util/ExpressionEvaluator/ExpressionEvaluator.h"
 #include "../src/CHTL/CHTLNode/ValueNode.h"
 #include "../src/CHTL/CHTLNode/BinaryOpNode.h"
+#include "../src/CHTL/CHTLNode/ConditionalNode.h"
 #include "../src/CHTL/CHTLNode/ReferenceNode.h"
 #include "../src/CHTL/CHTLNode/ElementNode.h"
 #include "../src/CHTL/CHTLNode/StyleNode.h"
@@ -148,4 +149,50 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnCircularReference) {
     auto expr = std::make_unique<ReferenceNode>("#div1.width");
 
     EXPECT_THROW(evaluator.evaluate(expr.get(), root.get()), std::runtime_error);
+}
+
+// --- Conditional Logic Tests ---
+
+TEST_F(ExpressionEvaluatorTest, HandlesSimpleTernary) {
+    // 10 > 5 ? "yes" : "no"
+    auto condition = std::make_unique<BinaryOpNode>(TokenType::GREATER,
+        std::make_unique<ValueNode>("10"), std::make_unique<ValueNode>("5"));
+    auto true_expr = std::make_unique<ValueNode>("yes");
+    auto false_expr = std::make_unique<ValueNode>("no");
+
+    auto ternary_expr = std::make_unique<ConditionalNode>(std::move(condition), std::move(true_expr), std::move(false_expr));
+
+    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr), "yes");
+}
+
+TEST_F(ExpressionEvaluatorTest, HandlesComplexConditionWithLogicalAnd) {
+    // (10 > 5 && 2 < 1) ? "no" : "yes"
+    auto ten_greater_five = std::make_unique<BinaryOpNode>(TokenType::GREATER,
+        std::make_unique<ValueNode>("10"), std::make_unique<ValueNode>("5"));
+    auto two_less_one = std::make_unique<BinaryOpNode>(TokenType::LESS,
+        std::make_unique<ValueNode>("2"), std::make_unique<ValueNode>("1"));
+
+    auto condition = std::make_unique<BinaryOpNode>(TokenType::LOGICAL_AND, std::move(ten_greater_five), std::move(two_less_one));
+
+    auto true_expr = std::make_unique<ValueNode>("no");
+    auto false_expr = std::make_unique<ValueNode>("yes");
+
+    auto ternary_expr = std::make_unique<ConditionalNode>(std::move(condition), std::move(true_expr), std::move(false_expr));
+
+    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr), "yes");
+}
+
+TEST_F(ExpressionEvaluatorTest, HandlesTernaryWithExpressionResult) {
+    // 1 > 0 ? 10px + 5px : 2px
+    auto condition = std::make_unique<BinaryOpNode>(TokenType::GREATER,
+        std::make_unique<ValueNode>("1"), std::make_unique<ValueNode>("0"));
+
+    auto true_expr = std::make_unique<BinaryOpNode>(TokenType::PLUS,
+        std::make_unique<ValueNode>("10px"), std::make_unique<ValueNode>("5px"));
+
+    auto false_expr = std::make_unique<ValueNode>("2px");
+
+    auto ternary_expr = std::make_unique<ConditionalNode>(std::move(condition), std::move(true_expr), std::move(false_expr));
+
+    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr), "15px");
 }

@@ -68,7 +68,38 @@ Token CHTLLexer::getNextToken() {
              return selector(); // Class selector
         }
         if (current == '&') {
+            if (position + 1 < input.size() && input[position + 1] == '&') {
+                advance(); advance(); return {TokenType::LOGICAL_AND, "&&", line, column};
+            }
             return contextualSelector();
+        }
+        if (current == '|') {
+            if (position + 1 < input.size() && input[position + 1] == '|') {
+                advance(); advance(); return {TokenType::LOGICAL_OR, "||", line, column};
+            }
+        }
+        if (current == '=') {
+            if (position + 1 < input.size() && input[position + 1] == '=') {
+                advance(); advance(); return {TokenType::EQUAL_EQUAL, "==", line, column};
+            }
+            advance(); return {TokenType::EQUALS, "=", line, column};
+        }
+        if (current == '!') {
+            if (position + 1 < input.size() && input[position + 1] == '=') {
+                advance(); advance(); return {TokenType::NOT_EQUAL, "!=", line, column};
+            }
+        }
+        if (current == '>') {
+            if (position + 1 < input.size() && input[position + 1] == '=') {
+                advance(); advance(); return {TokenType::GREATER_EQUAL, ">=", line, column};
+            }
+            advance(); return {TokenType::GREATER, ">", line, column};
+        }
+        if (current == '<') {
+            if (position + 1 < input.size() && input[position + 1] == '=') {
+                advance(); advance(); return {TokenType::LESS_EQUAL, "<=", line, column};
+            }
+            advance(); return {TokenType::LESS, "<", line, column};
         }
 
         // Handle standard single-character tokens
@@ -82,9 +113,9 @@ Token CHTLLexer::getNextToken() {
             case '/': advance(); return {TokenType::SLASH, "/", line, column};
             case '*': advance(); return {TokenType::STAR, "*", line, column};
             case '%': advance(); return {TokenType::PERCENT, "%", line, column};
+            case '?': advance(); return {TokenType::QUESTION_MARK, "?", line, column};
             case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
             case ':': advance(); return {TokenType::COLON, ":", line, column};
-            case '=': advance(); return {TokenType::EQUALS, "=", line, column};
         }
 
         // Handle string literals

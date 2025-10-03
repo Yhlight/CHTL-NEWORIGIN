@@ -3,6 +3,7 @@
 #include "../../CHTL/CHTLNode/ValueNode.h"
 #include "../../CHTL/CHTLNode/BinaryOpNode.h"
 #include "../../CHTL/CHTLNode/ReferenceNode.h"
+#include "../../CHTL/CHTLNode/ConditionalNode.h"
 #include "../../CHTL/CHTLNode/ElementNode.h"
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
@@ -102,28 +103,48 @@ namespace {
                 const auto* opNode = static_cast<const BinaryOpNode*>(node);
                 NumericValue left = parse_value(evaluate_recursive(opNode->getLeft(), astRoot, call_stack));
                 NumericValue right = parse_value(evaluate_recursive(opNode->getRight(), astRoot, call_stack));
-                NumericValue result;
+
                 switch (opNode->getOp()) {
                     case TokenType::PLUS:
                         if (left.unit != right.unit) throw std::runtime_error("Mismatched units for addition.");
-                        result = {left.value + right.value, left.unit};
+                        result_str = format_value({left.value + right.value, left.unit});
                         break;
                     case TokenType::MINUS:
                         if (left.unit != right.unit) throw std::runtime_error("Mismatched units for subtraction.");
-                        result = {left.value - right.value, left.unit};
+                        result_str = format_value({left.value - right.value, left.unit});
                         break;
                     case TokenType::STAR:
                         if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot multiply two values with units.");
-                        result = {left.value * right.value, left.unit.empty() ? right.unit : left.unit};
+                        result_str = format_value({left.value * right.value, left.unit.empty() ? right.unit : left.unit});
                         break;
                     case TokenType::SLASH:
                         if (right.value == 0) throw std::runtime_error("Division by zero.");
                         if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot divide two values with units.");
-                        result = {left.value / right.value, left.unit.empty() ? right.unit : left.unit};
+                        result_str = format_value({left.value / right.value, left.unit.empty() ? right.unit : left.unit});
                         break;
+                    // Comparison operators
+                    case TokenType::GREATER: result_str = (left.value > right.value) ? "1" : "0"; break;
+                    case TokenType::LESS: result_str = (left.value < right.value) ? "1" : "0"; break;
+                    case TokenType::GREATER_EQUAL: result_str = (left.value >= right.value) ? "1" : "0"; break;
+                    case TokenType::LESS_EQUAL: result_str = (left.value <= right.value) ? "1" : "0"; break;
+                    case TokenType::EQUAL_EQUAL: result_str = (left.value == right.value) ? "1" : "0"; break;
+                    case TokenType::NOT_EQUAL: result_str = (left.value != right.value) ? "1" : "0"; break;
+                    // Logical operators
+                    case TokenType::LOGICAL_AND: result_str = (left.value != 0 && right.value != 0) ? "1" : "0"; break;
+                    case TokenType::LOGICAL_OR: result_str = (left.value != 0 || right.value != 0) ? "1" : "0"; break;
                     default: throw std::runtime_error("Unsupported binary operator.");
                 }
-                result_str = format_value(result);
+                break;
+            }
+            case NodeType::Conditional: {
+                const auto* condNode = static_cast<const ConditionalNode*>(node);
+                std::string cond_result_str = evaluate_recursive(condNode->getCondition(), astRoot, call_stack);
+                NumericValue cond_val = parse_value(cond_result_str);
+                if (cond_val.value != 0) {
+                    result_str = evaluate_recursive(condNode->getTrueExpression(), astRoot, call_stack);
+                } else {
+                    result_str = evaluate_recursive(condNode->getFalseExpression(), astRoot, call_stack);
+                }
                 break;
             }
             case NodeType::Reference: {

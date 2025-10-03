@@ -17,6 +17,7 @@ int main() {
             id: "bar";
             style {
                 height: #box.width + 50px;
+                background-color: #box.width > 50 ? "red" : "blue";
             }
         }
     )";
