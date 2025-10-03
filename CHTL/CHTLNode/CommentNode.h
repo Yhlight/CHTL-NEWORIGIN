@@ -20,6 +20,10 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<CommentNode>(comment);
+    }
+
     const std::string& getComment() const { return comment; }
 
 private:

@@ -10,6 +10,7 @@ class NodeVisitor; // Forward declaration
 class BaseNode {
 public:
     virtual ~BaseNode() = default;
+    virtual std::unique_ptr<BaseNode> clone() const = 0;
     virtual std::string toString(int depth = 0) const = 0;
     virtual std::string getNodeType() const { return "Base"; }
     virtual void accept(NodeVisitor& visitor) = 0;

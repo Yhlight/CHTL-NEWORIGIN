@@ -30,6 +30,10 @@ public:
     const std::string& getFilePath() const { return filePath; }
     const std::string& getAlias() const { return alias; }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<ImportNode>(fullType, entityName, filePath, alias);
+    }
+
 private:
     std::string fullType;
     std::string entityName;

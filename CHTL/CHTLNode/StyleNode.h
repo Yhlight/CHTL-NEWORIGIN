@@ -32,6 +32,17 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<StyleNode>();
+        for (const auto& prop : properties) {
+            clonedNode->addProperty(prop.first, prop.second);
+        }
+        for (const auto& rule : rules) {
+            clonedNode->addRule(std::unique_ptr<CssRuleNode>(static_cast<CssRuleNode*>(rule->clone().release())));
+        }
+        return clonedNode;
+    }
+
     const std::vector<std::pair<std::string, std::string>>& getProperties() const {
         return properties;
     }

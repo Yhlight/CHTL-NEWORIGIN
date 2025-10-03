@@ -42,6 +42,8 @@ private:
     std::unique_ptr<BaseNode> parseNamespaceDeclaration();
     std::unique_ptr<BaseNode> parseUseStatement();
     std::unique_ptr<IfNode> parseIfStatement();
+
+    void addChildWithChecks(ElementNode* parent, std::unique_ptr<BaseNode> child);
 };
 
 #endif //CHTL_PARSER_H

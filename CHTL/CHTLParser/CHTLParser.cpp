@@ -36,6 +36,7 @@ void CHTLParser::expect(TokenType type) {
 #include "../CHTLNode/ImportNode.h"
 #include "../CHTLNode/NamespaceNode.h"
 #include "../CHTLNode/DeclarationNode.h"
+#include "../CHTLNode/FragmentNode.h"
 #include "../CHTLLoader/CHTLLoader.h"
 
 std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
@@ -50,6 +51,43 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
             else if (keyword == "Namespace") node = parseNamespaceDeclaration();
             else throw std::runtime_error("Unsupported declaration type inside [].");
         }
+    } else if (currentToken.type == TokenType::At) {
+        advance(); // consume '@'
+        if (currentToken.value == "Element") {
+            advance(); // consume 'Element'
+            std::string templateName = currentToken.value;
+            advance();
+            // Optional 'from' clause
+            std::string nsPath;
+            if (currentToken.type == TokenType::From) {
+                advance();
+                do {
+                    nsPath += currentToken.value;
+                    advance();
+                    if (currentToken.type == TokenType::Dot) {
+                        nsPath += ".";
+                        advance();
+                    } else break;
+                } while (true);
+            }
+            expect(TokenType::Semicolon);
+
+            if (discoveryMode) {
+                return std::make_unique<DeclarationNode>("@Element usage");
+            }
+
+            const TemplateElementNode* tmpl = nsPath.empty() ? context.getElementTemplate(templateName) : context.getElementTemplate(templateName, nsPath);
+            if (!tmpl) {
+                throw std::runtime_error("Element template not found: " + templateName);
+            }
+            auto fragment = std::make_unique<FragmentNode>();
+            for (const auto& child : tmpl->getChildren()) {
+                fragment->addChild(child->clone());
+            }
+            node = std::move(fragment);
+        } else {
+             throw std::runtime_error("Unexpected '@' usage. Only @Element is supported at this level.");
+        }
     } else if (currentToken.type == TokenType::Identifier) {
         if (currentToken.value == "text" && peek().type == TokenType::LBrace) node = parseTextNode();
         else if (currentToken.value == "style" && peek().type == TokenType::LBrace) node = parseStyleNode();
@@ -63,12 +101,15 @@ std::unique_ptr<BaseNode> CHTLParser::parseStatement() {
     }
 
     if (node) {
-        const auto& global_constraints = context.getActiveGlobalConstraints();
-        if (!global_constraints.empty()) {
-            std::string nodeType = node->getNodeType();
-            for (const auto& constraint : global_constraints) {
-                if (nodeType.rfind(constraint, 0) == 0) {
-                    throw std::runtime_error("Node type '" + nodeType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.");
+        // Don't check global constraints on fragments, check them on the fragment's children when they are added.
+        if (dynamic_cast<FragmentNode*>(node.get()) == nullptr) {
+            const auto& global_constraints = context.getActiveGlobalConstraints();
+            if (!global_constraints.empty()) {
+                std::string nodeType = node->getNodeType();
+                for (const auto& constraint : global_constraints) {
+                    if (nodeType.rfind(constraint, 0) == 0) {
+                        throw std::runtime_error("Node type '" + nodeType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.");
+                    }
                 }
             }
         }
@@ -295,6 +336,48 @@ std::unique_ptr<BaseNode> CHTLParser::parseTextAttribute() {
     return node;
 }
 
+void CHTLParser::addChildWithChecks(ElementNode* parent, std::unique_ptr<BaseNode> child) {
+    if (!child) return;
+
+    // Check global constraints
+    const auto& global_constraints = context.getActiveGlobalConstraints();
+    if (!global_constraints.empty()) {
+        std::string childType = child->getNodeType();
+        for (const auto& constraint : global_constraints) {
+            if (childType.rfind(constraint, 0) == 0) {
+                throw std::runtime_error("Node type '" + childType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.");
+            }
+        }
+    }
+
+    // Check tag name constraints
+    if (auto* childElement = dynamic_cast<ElementNode*>(child.get())) {
+        const auto& constraints = parent->getConstraints();
+        const auto& tagName = childElement->getTagName();
+        for (const auto& constraint : constraints) {
+            if (tagName == constraint) {
+                throw std::runtime_error("Element '" + tagName + "' is not allowed in <" + parent->getTagName() + "> due to an 'except' constraint.");
+            }
+        }
+    }
+
+    // Check type constraints
+    const auto& typeConstraints = parent->getTypeConstraints();
+    if (!typeConstraints.empty()) {
+        std::string childType = child->getNodeType();
+        for (const auto& typeConstraint : typeConstraints) {
+            if (childType.rfind(typeConstraint, 0) == 0) { // checks if childType starts with typeConstraint
+                throw std::runtime_error("Node type '" + childType + "' is not allowed in <" + parent->getTagName() + "> due to an 'except' type constraint for '" + typeConstraint + "'.");
+            }
+        }
+    }
+
+    // Do not add declarations to the children list
+    if (dynamic_cast<DeclarationNode*>(child.get()) == nullptr) {
+        parent->addChild(std::move(child));
+    }
+}
+
 std::unique_ptr<ElementNode> CHTLParser::parseElement() {
     if (currentToken.type != TokenType::Identifier) return nullptr;
     auto node = std::make_unique<ElementNode>(currentToken.value);
@@ -347,36 +430,22 @@ std::unique_ptr<ElementNode> CHTLParser::parseElement() {
             }
 
             if (currentToken.type == TokenType::Identifier && (peek().type == TokenType::Colon || peek().type == TokenType::Assign)) {
-                if (currentToken.value == "text") node->addChild(parseTextAttribute());
+                if (currentToken.value == "text") {
+                    auto textNode = parseTextAttribute();
+                    addChildWithChecks(node.get(), std::move(textNode));
+                }
                 else parseAttribute(*node);
             } else {
                 auto pre_parse_token = currentToken;
                 auto child = parseStatement();
                 if (child) {
-                    // Check tag name constraints
-                    if (auto* childElement = dynamic_cast<ElementNode*>(child.get())) {
-                        const auto& constraints = node->getConstraints();
-                        const auto& tagName = childElement->getTagName();
-                        for (const auto& constraint : constraints) {
-                            if (tagName == constraint) {
-                                throw std::runtime_error("Element '" + tagName + "' is not allowed in <" + node->getTagName() + "> due to an 'except' constraint.");
-                            }
+                    if (auto* fragment = dynamic_cast<FragmentNode*>(child.get())) {
+                        auto children = fragment->takeChildren();
+                        for (auto& c : children) {
+                            addChildWithChecks(node.get(), std::move(c));
                         }
-                    }
-                    // Check type constraints
-                    const auto& typeConstraints = node->getTypeConstraints();
-                    if (!typeConstraints.empty()) {
-                        std::string childType = child->getNodeType();
-                        for (const auto& typeConstraint : typeConstraints) {
-                            if (childType.rfind(typeConstraint, 0) == 0) { // checks if childType starts with typeConstraint
-                                throw std::runtime_error("Node type '" + childType + "' is not allowed in <" + node->getTagName() + "> due to an 'except' type constraint for '" + typeConstraint + "'.");
-                            }
-                        }
-                    }
-
-                    // Do not add declarations to the children list
-                    if (dynamic_cast<DeclarationNode*>(child.get()) == nullptr) {
-                        node->addChild(std::move(child));
+                    } else {
+                        addChildWithChecks(node.get(), std::move(child));
                     }
                 }
                 else if (pre_parse_token == currentToken) break;
@@ -393,18 +462,42 @@ std::unique_ptr<DocumentNode> CHTLParser::parse() {
         auto pre_parse_token = currentToken;
         auto statement = parseStatement();
         if (statement) {
-            bool isEmittingNode = true;
-            if (auto useNode = dynamic_cast<UseNode*>(statement.get())) {
-                if (useNode->getDirective() == "html5") {
-                    documentNode->setHasHtml5Doctype(true);
+            if (auto* fragment = dynamic_cast<FragmentNode*>(statement.get())) {
+                auto children = fragment->takeChildren();
+                for (auto& child : children) {
+                    // Global constraints are checked in addChildWithChecks, but DocumentNode doesn't have that.
+                    // We must check them manually here.
+                    const auto& global_constraints = context.getActiveGlobalConstraints();
+                    if (!global_constraints.empty()) {
+                        std::string childType = child->getNodeType();
+                        for (const auto& constraint : global_constraints) {
+                            if (childType.rfind(constraint, 0) == 0) {
+                                throw std::runtime_error("Node type '" + childType + "' is not allowed due to a global 'except' constraint for '" + constraint + "'.");
+                            }
+                        }
+                    }
+                    if (auto useNode = dynamic_cast<UseNode*>(child.get())) {
+                        if (useNode->getDirective() == "html5") {
+                            documentNode->setHasHtml5Doctype(true);
+                        }
+                    } else if (dynamic_cast<DeclarationNode*>(child.get()) == nullptr) {
+                         documentNode->addChild(std::move(child));
+                    }
                 }
-                isEmittingNode = false;
-            } else if (dynamic_cast<DeclarationNode*>(statement.get()) != nullptr) {
-                isEmittingNode = false;
-            }
+            } else {
+                bool isEmittingNode = true;
+                if (auto useNode = dynamic_cast<UseNode*>(statement.get())) {
+                    if (useNode->getDirective() == "html5") {
+                        documentNode->setHasHtml5Doctype(true);
+                    }
+                    isEmittingNode = false;
+                } else if (dynamic_cast<DeclarationNode*>(statement.get()) != nullptr) {
+                    isEmittingNode = false;
+                }
 
-            if (isEmittingNode) {
-                documentNode->addChild(std::move(statement));
+                if (isEmittingNode) {
+                    documentNode->addChild(std::move(statement));
+                }
             }
         } else if (pre_parse_token == currentToken) {
             break;

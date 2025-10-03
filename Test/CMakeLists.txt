@@ -10,6 +10,7 @@ add_executable(run-tests
     LocalStyleTest.cpp
     ConditionalRenderingTest.cpp
     ImgTagTest.cpp
+    TemplateAttributeTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC

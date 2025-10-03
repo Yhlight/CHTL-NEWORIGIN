@@ -31,6 +31,14 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<TemplateVarNode>(templateName);
+        for (const auto& var : variables) {
+            clonedNode->addVariable(var.first, var.second);
+        }
+        return clonedNode;
+    }
+
     const std::string& getName() const { return templateName; }
     const std::map<std::string, std::string>& getVariables() const { return variables; }
 

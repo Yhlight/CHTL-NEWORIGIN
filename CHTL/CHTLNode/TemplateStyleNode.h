@@ -30,6 +30,14 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<TemplateStyleNode>(templateName);
+        for (const auto& prop : properties) {
+            clonedNode->addProperty(prop.first, prop.second);
+        }
+        return clonedNode;
+    }
+
     const std::string& getName() const { return templateName; }
     const std::vector<std::pair<std::string, std::string>>& getProperties() const { return properties; }
 

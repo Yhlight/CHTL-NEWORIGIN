@@ -12,6 +12,14 @@ public:
     void accept(NodeVisitor& visitor) override {
         visitor.visit(*this);
     }
+
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<CustomVarNode>(getName());
+        for (const auto& var : getVariables()) {
+            clonedNode->addVariable(var.first, var.second);
+        }
+        return clonedNode;
+    }
 };
 
 #endif // CHTL_CUSTOM_VAR_NODE_H

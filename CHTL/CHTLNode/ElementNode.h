@@ -47,6 +47,23 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<ElementNode>(tagName);
+        for (const auto& attr : attributes) {
+            clonedNode->setAttribute(attr.first, attr.second);
+        }
+        for (const auto& child : children) {
+            clonedNode->addChild(child->clone());
+        }
+        for (const auto& constraint : constraints) {
+            clonedNode->addConstraint(constraint);
+        }
+        for (const auto& type_constraint : type_constraints) {
+            clonedNode->addTypeConstraint(type_constraint);
+        }
+        return clonedNode;
+    }
+
 public:
     const std::vector<std::unique_ptr<BaseNode>>& getChildren() const {
         return children;

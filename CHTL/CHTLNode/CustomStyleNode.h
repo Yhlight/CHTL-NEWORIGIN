@@ -24,6 +24,17 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<CustomStyleNode>(getName());
+        for (const auto& prop : getProperties()) {
+            clonedNode->addProperty(prop.first, prop.second);
+        }
+        for (const auto& deletedProp : deletedProperties) {
+            clonedNode->addDeletedProperty(deletedProp);
+        }
+        return clonedNode;
+    }
+
 private:
     std::unordered_set<std::string> deletedProperties;
 };

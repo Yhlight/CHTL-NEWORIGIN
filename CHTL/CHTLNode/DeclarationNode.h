@@ -22,6 +22,10 @@ public:
         visitor.visit(*this);
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<DeclarationNode>(declarationType);
+    }
+
 private:
     std::string declarationType;
 };
