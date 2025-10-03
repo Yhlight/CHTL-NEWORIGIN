@@ -1,20 +1,26 @@
-cmake_minimum_required(VERSION 3.10)
-
-add_executable(run-tests
+add_executable(runTests
     LexerTest.cpp
     ParserTest.cpp
-    IntegrationTest.cpp
-    UseTest.cpp
-    ExceptTest.cpp
-    ConstraintsTest.cpp
-    LocalStyleTest.cpp
-    ConditionTest.cpp
+    AttributeAutomatorTest.cpp
+    CssGeneratorTest.cpp
+    ExpressionParserTest.cpp
+    ExpressionEvaluatorTest.cpp
+    IfBehaviorTest.cpp
 )
 
-target_include_directories(run-tests PUBLIC
-    ../third-party
+target_link_libraries(runTests
+    PRIVATE
+    CHTL
+    ASTPrinter
+    AttributeAutomator
+    CssGenerator
+    ExpressionParser
+    ExpressionEvaluator
+    StyleEvaluator
+    gtest_main
 )
 
-target_link_libraries(run-tests PRIVATE
-    chtl-lib
-)
+target_include_directories(runTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+include(GoogleTest)
+gtest_discover_tests(runTests)

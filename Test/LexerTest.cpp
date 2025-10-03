@@ -1,86 +1,84 @@
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include <gtest/gtest.h>
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLLexer/Token.h"
-#include <vector>
 
-TEST_CASE("Lexer handles single-line comments", "[lexer]") {
-    const std::string input = R"(
-// This is a comment
-div { }
-)";
-    CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
-
-    REQUIRE(tokens.size() == 4);
-    REQUIRE(tokens[0].type == TokenType::Identifier);
-    REQUIRE(tokens[0].value == "div");
-    REQUIRE(tokens[1].type == TokenType::LBrace);
-    REQUIRE(tokens[2].type == TokenType::RBrace);
-    REQUIRE(tokens[3].type == TokenType::EndOfFile);
+// Helper function to check a token's properties
+void checkToken(const Token& token, TokenType expectedType, const std::string& expectedValue) {
+    EXPECT_EQ(token.type, expectedType);
+    EXPECT_EQ(token.value, expectedValue);
 }
 
-TEST_CASE("Lexer handles string literals", "[lexer]") {
-    const std::string input = R"(
-div {
-    text: "double-quoted string";
-    id: 'single-quoted-string';
-}
-)";
+TEST(LexerTest, TokenizesSimpleIdentifiers) {
+    std::string input = "div";
     CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
-
-    REQUIRE(tokens.size() == 12);
-    REQUIRE(tokens[0].type == TokenType::Identifier);
-    REQUIRE(tokens[0].value == "div");
-    REQUIRE(tokens[1].type == TokenType::LBrace);
-    REQUIRE(tokens[2].type == TokenType::Identifier);
-    REQUIRE(tokens[2].value == "text");
-    REQUIRE(tokens[3].type == TokenType::Colon);
-    REQUIRE(tokens[4].type == TokenType::String);
-    REQUIRE(tokens[4].value == "double-quoted string");
-    REQUIRE(tokens[5].type == TokenType::Semicolon);
-    REQUIRE(tokens[6].type == TokenType::Identifier);
-    REQUIRE(tokens[6].value == "id");
-    REQUIRE(tokens[7].type == TokenType::Colon);
-    REQUIRE(tokens[8].type == TokenType::String);
-    REQUIRE(tokens[8].value == "single-quoted-string");
-    REQUIRE(tokens[9].type == TokenType::Semicolon);
-    REQUIRE(tokens[10].type == TokenType::RBrace);
-    REQUIRE(tokens[11].type == TokenType::EndOfFile);
+    Token token = lexer.getNextToken();
+    checkToken(token, TokenType::IDENTIFIER, "div");
 }
 
-TEST_CASE("Lexer handles generator comments", "[lexer]") {
-    const std::string input = R"(
-# This is a generator comment
-p { }
-)";
+TEST(LexerTest, TokenizesKeywords) {
+    std::string input = "text style script";
     CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
 
-    REQUIRE(tokens.size() == 5);
-    REQUIRE(tokens[0].type == TokenType::Comment);
-    REQUIRE(tokens[0].value == "This is a generator comment");
-    REQUIRE(tokens[1].type == TokenType::Identifier);
-    REQUIRE(tokens[1].value == "p");
-    REQUIRE(tokens[2].type == TokenType::LBrace);
-    REQUIRE(tokens[3].type == TokenType::RBrace);
-    REQUIRE(tokens[4].type == TokenType::EndOfFile);
+    checkToken(lexer.getNextToken(), TokenType::KEYWORD_TEXT, "text");
+    checkToken(lexer.getNextToken(), TokenType::KEYWORD_STYLE, "style");
+    checkToken(lexer.getNextToken(), TokenType::KEYWORD_SCRIPT, "script");
 }
 
-TEST_CASE("Lexer handles multi-line comments", "[lexer]") {
-    const std::string input = R"(
-/* This is a
-   multi-line comment */
-span { }
-)";
+TEST(LexerTest, TokenizesPunctuation) {
+    std::string input = "{}:;=";
     CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
 
-    REQUIRE(tokens.size() == 4);
-    REQUIRE(tokens[0].type == TokenType::Identifier);
-    REQUIRE(tokens[0].value == "span");
-    REQUIRE(tokens[1].type == TokenType::LBrace);
-    REQUIRE(tokens[2].type == TokenType::RBrace);
-    REQUIRE(tokens[3].type == TokenType::EndOfFile);
+    checkToken(lexer.getNextToken(), TokenType::LEFT_BRACE, "{");
+    checkToken(lexer.getNextToken(), TokenType::RIGHT_BRACE, "}");
+    checkToken(lexer.getNextToken(), TokenType::COLON, ":");
+    checkToken(lexer.getNextToken(), TokenType::SEMICOLON, ";");
+    checkToken(lexer.getNextToken(), TokenType::EQUALS, "=");
+}
+
+TEST(LexerTest, TokenizesStringLiterals) {
+    std::string input = R"("hello" 'world')";
+    CHTLLexer lexer(input);
+
+    checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "hello");
+    checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "world");
+}
+
+TEST(LexerTest, TokenizesUnquotedLiterals) {
+    std::string input = "red 100px";
+    CHTLLexer lexer(input);
+
+    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "red");
+    checkToken(lexer.getNextToken(), TokenType::NUMBER, "100px");
+}
+
+TEST(LexerTest, TokenizesComments) {
+    std::string input = R"(
+        // single line
+        /* multi
+           line */
+        # generator
+    )";
+    CHTLLexer lexer(input);
+
+    checkToken(lexer.getNextToken(), TokenType::SINGLE_LINE_COMMENT, " single line");
+    checkToken(lexer.getNextToken(), TokenType::MULTI_LINE_COMMENT, " multi\n           line ");
+    checkToken(lexer.getNextToken(), TokenType::GENERATOR_COMMENT, " generator");
+}
+
+TEST(LexerTest, TokenizesComplexSnippet) {
+    std::string input = R"(
+        div {
+            id: "main";
+        }
+    )";
+    CHTLLexer lexer(input);
+
+    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "div");
+    checkToken(lexer.getNextToken(), TokenType::LEFT_BRACE, "{");
+    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "id");
+    checkToken(lexer.getNextToken(), TokenType::COLON, ":");
+    checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "main");
+    checkToken(lexer.getNextToken(), TokenType::SEMICOLON, ";");
+    checkToken(lexer.getNextToken(), TokenType::RIGHT_BRACE, "}");
+    checkToken(lexer.getNextToken(), TokenType::END_OF_FILE, "");
 }

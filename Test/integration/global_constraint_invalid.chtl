@@ -1,7 +1,0 @@
-[Namespace] my_space {
-    except [Template];
-
-    [Template] @Style MyStyle {
-        color: red;
-    }
-}
