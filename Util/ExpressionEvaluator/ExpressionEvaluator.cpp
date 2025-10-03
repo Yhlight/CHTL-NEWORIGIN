@@ -1,10 +1,11 @@
 #include "ExpressionEvaluator.h"
-#include "../../CHTL/CHTLNode/StyleNode.h"
+#include <CHTL/CHTLNode/ElementNode.h>
+#include <CHTL/CHTLNode/StyleNode.h>
 #include <stdexcept>
 #include <cctype>
 #include <iostream>
 
-ExpressionEvaluator::ExpressionEvaluator(ElementNode& context) : context(context) {}
+ExpressionEvaluator::ExpressionEvaluator(const ElementNode& context) : context(context) {}
 
 bool ExpressionEvaluator::evaluate(const std::vector<Token>& tokens) {
     if (tokens.empty()) return false;

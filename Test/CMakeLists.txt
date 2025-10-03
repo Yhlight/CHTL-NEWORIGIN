@@ -12,6 +12,7 @@ add_executable(run-tests
     ImgTagTest.cpp
     TemplateAttributeTest.cpp
     CustomStyleTest.cpp
+    CustomElementTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC

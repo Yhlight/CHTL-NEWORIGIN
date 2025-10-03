@@ -6,7 +6,7 @@
 #include <string>
 
 // Helper function to check for a substring in a string and print context on failure
-void requireSubstring(const std::string& content, const std::string& substring) {
+static void requireSubstring(const std::string& content, const std::string& substring) {
     if (content.find(substring) == std::string::npos) {
         FAIL("Expected substring not found: \"" << substring << "\" in content:\n" << content);
     } else {

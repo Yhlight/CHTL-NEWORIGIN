@@ -5,16 +5,17 @@
 #include <vector>
 #include <map>
 #include <stack>
-#include "../../CHTL/CHTLNode/ElementNode.h"
-#include "../../CHTL/CHTLLexer/Token.h"
+#include <CHTL/CHTLLexer/Token.h>
+
+class ElementNode; // Forward declaration
 
 class ExpressionEvaluator {
 public:
-    explicit ExpressionEvaluator(ElementNode& context);
+    explicit ExpressionEvaluator(const ElementNode& context);
     bool evaluate(const std::vector<Token>& tokens);
 
 private:
-    ElementNode& context;
+    const ElementNode& context;
 
     std::vector<Token> shuntingYard(const std::vector<Token>& tokens);
     double evaluateRPN(const std::vector<Token>& rpnTokens);

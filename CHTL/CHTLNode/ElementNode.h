@@ -11,7 +11,7 @@
 
 class ElementNode : public BaseNode {
 public:
-    explicit ElementNode(const std::string& tagName) : tagName(tagName) {}
+    explicit ElementNode(const std::string& tagName) : tagName(tagName), index(-1) {}
 
     const std::string& getTagName() const { return tagName; }
 
@@ -49,6 +49,7 @@ public:
 
     std::unique_ptr<BaseNode> clone() const override {
         auto clonedNode = std::make_unique<ElementNode>(tagName);
+        clonedNode->setIndex(index);
         for (const auto& attr : attributes) {
             clonedNode->setAttribute(attr.first, attr.second);
         }
@@ -69,6 +70,13 @@ public:
         return children;
     }
 
+    void setIndex(int i) { index = i; }
+    int getIndex() const { return index; }
+
+    std::vector<std::unique_ptr<BaseNode>> takeChildren() {
+        return std::move(children);
+    }
+
     void addConstraint(const std::string& constraint) {
         constraints.push_back(constraint);
     }
@@ -87,6 +95,7 @@ public:
 
 private:
     std::string tagName;
+    int index;
     std::map<std::string, std::string> attributes;
     std::vector<std::unique_ptr<BaseNode>> children;
     std::vector<std::string> constraints;

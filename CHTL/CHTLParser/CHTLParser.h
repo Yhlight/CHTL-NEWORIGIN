@@ -14,6 +14,10 @@
 #include "../CHTLContext/CHTLContext.h"
 #include <memory>
 
+class FragmentNode;
+class InsertNode;
+class DeleteNode;
+
 class CHTLParser {
 public:
     CHTLParser(const std::string& input, CHTLContext& context, bool discoveryMode = false);
@@ -44,6 +48,11 @@ private:
     std::unique_ptr<IfNode> parseIfStatement();
 
     void addChildWithChecks(ElementNode* parent, std::unique_ptr<BaseNode> child);
+    void applySpecialization(FragmentNode* fragment, std::unique_ptr<ElementNode> modifications);
+    std::unique_ptr<InsertNode> parseInsertStatement();
+    std::unique_ptr<DeleteNode> parseDeleteStatement();
+    std::unique_ptr<ElementNode> parseElementTarget();
+    std::unique_ptr<ElementNode> parseSpecializationBlock();
 };
 
 #endif //CHTL_PARSER_H

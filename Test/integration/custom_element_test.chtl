@@ -1,0 +1,94 @@
+[Custom] @Element MyComponent
+{
+    // A component with a few elements to target
+    div { id: "div1"; }
+    span { id: "span1"; text { "Original Span" } }
+    div { id: "div2"; }
+    p { id: "p1"; }
+}
+
+body
+{
+    // Test 1: Basic style specialization
+    div
+    {
+        id: "test1";
+        @Element MyComponent
+        {
+            div // targets the first div
+            {
+                style { color: "blue"; }
+            }
+            span // targets the span
+            {
+                style { font-weight: "bold"; }
+            }
+        }
+    }
+
+    // Test 2: Indexed access specialization
+    div
+    {
+        id: "test2";
+        @Element MyComponent
+        {
+            div[1] // targets the second div
+            {
+                style { border: "1px solid red"; }
+            }
+        }
+    }
+
+    // Test 3: Insert 'after' and 'before'
+    div
+    {
+        id: "test3";
+        @Element MyComponent
+        {
+            insert after span[0] {
+                p { text { "Inserted After" } }
+            }
+            insert before div[0] {
+                p { text { "Inserted Before" } }
+            }
+        }
+    }
+
+    // Test 4: Insert 'at top' and 'at bottom'
+    div
+    {
+        id: "test4";
+        @Element MyComponent
+        {
+            insert at top {
+                header { text { "Top" } }
+            }
+            insert at bottom {
+                footer { text { "Bottom" } }
+            }
+        }
+    }
+
+    // Test 5: Replace an element
+    div
+    {
+        id: "test5";
+        @Element MyComponent
+        {
+            insert replace p[0] {
+                strong { text { "Replaced" } }
+            }
+        }
+    }
+
+    // Test 6: Delete elements (indexed and non-indexed)
+    div
+    {
+        id: "test6";
+        @Element MyComponent
+        {
+            delete span; // deletes all spans
+            delete div[1]; // deletes the second div
+        }
+    }
+}
