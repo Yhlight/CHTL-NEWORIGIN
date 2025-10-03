@@ -25,7 +25,12 @@ struct ConditionalPropertyValue {
     std::string elseValue;
 };
 
-using PropertyValue = std::variant<std::string, ConditionalPropertyValue>;
+// Represents a property value that is an arithmetic expression.
+struct ArithmeticExpression {
+    std::vector<Token> tokens;
+};
+
+using PropertyValue = std::variant<std::string, ConditionalPropertyValue, ArithmeticExpression>;
 
 class StyleNode : public BaseNode {
 public:

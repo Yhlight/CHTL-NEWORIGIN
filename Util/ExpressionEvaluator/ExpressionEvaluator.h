@@ -14,6 +14,7 @@ public:
     explicit ExpressionEvaluator(const ElementNode& context);
     bool evaluate(const std::vector<Token>& tokens);
     std::string resolveConditionalProperty(const ConditionalPropertyValue& propValue);
+    std::string resolveArithmeticExpression(const ArithmeticExpression& expression);
 
 private:
     const ElementNode& context;
@@ -23,6 +24,7 @@ private:
     double getValue(const std::string& identifier);
     int getPrecedence(TokenType type);
     bool isOperator(TokenType type);
+    bool isRightAssociative(TokenType type);
 };
 
 #endif // CHTL_EXPRESSION_EVALUATOR_H

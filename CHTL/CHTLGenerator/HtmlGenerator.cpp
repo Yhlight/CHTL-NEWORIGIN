@@ -7,45 +7,6 @@
 
 HtmlGenerator::HtmlGenerator() : dynamicIdCounter(0) {
     selfClosingTags = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"};
-    cssProperties = {
-        "align-content", "align-items", "align-self", "all", "animation", "animation-delay", "animation-direction",
-        "animation-duration", "animation-fill-mode", "animation-iteration-count", "animation-name", "animation-play-state",
-        "animation-timing-function", "backface-visibility", "background", "background-attachment", "background-blend-mode",
-        "background-clip", "background-color", "background-image", "background-origin", "background-position",
-        "background-repeat", "background-size", "border", "border-bottom", "border-bottom-color", "border-bottom-left-radius",
-        "border-bottom-right-radius", "border-bottom-style", "border-bottom-width", "border-collapse", "border-color",
-        "border-image", "border-image-outset", "border-image-repeat", "border-image-slice", "border-image-source",
-        "border-image-width", "border-left", "border-left-color", "border-left-style", "border-left-width",
-        "border-radius", "border-right", "border-right-color", "border-right-style", "border-right-width",
-        "border-spacing", "border-style", "border-top", "border-top-color", "border-top-left-radius",
-        "border-top-right-radius", "border-top-style", "border-top-width", "border-width", "bottom", "box-shadow",
-        "box-sizing", "caption-side", "caret-color", "clear", "clip", "clip-path", "color", "column-count",
-        "column-fill", "column-gap", "column-rule", "column-rule-color", "column-rule-style", "column-rule-width",
-        "column-span", "column-width", "columns", "content", "counter-increment", "counter-reset", "cursor",
-        "direction", "display", "empty-cells", "filter", "flex", "flex-basis", "flex-direction", "flex-flow",
-        "flex-grow", "flex-shrink", "flex-wrap", "float", "font", "font-family", "font-kerning", "font-size",
-        "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "grid", "grid-area",
-        "grid-auto-columns", "grid-auto-flow", "grid-auto-rows", "grid-column", "grid-column-end", "grid-column-gap",
-        "grid-column-start", "grid-gap", "grid-row", "grid-row-end", "grid-row-gap", "grid-row-start", "grid-template",
-        "grid-template-areas", "grid-template-columns", "grid-template-rows", "height", "hyphens", "isolation",
-        "justify-content", "left", "letter-spacing", "line-height", "list-style", "list-style-image",
-        "list-style-position", "list-style-type", "margin", "margin-bottom", "margin-left", "margin-right",
-        "margin-top", "max-height", "max-width", "min-height", "min-width", "mix-blend-mode", "object-fit",
-        "object-position", "opacity", "order", "orphans", "outline", "outline-color", "outline-offset",
-        "outline-style", "outline-width", "overflow", "overflow-x", "overflow-y", "padding", "padding-bottom",
-        "padding-left", "padding-right", "padding-top", "page-break-after", "page-break-before", "page-break-inside",
-        "perspective", "perspective-origin", "pointer-events", "position", "quotes", "resize", "right",
-        "scroll-behavior", "tab-size", "table-layout", "text-align", "text-align-last", "text-decoration",
-        "text-decoration-color", "text-decoration-line", "text-decoration-style", "text-indent", "text-justify",
-        "text-overflow", "text-shadow", "text-transform", "top", "transform", "transform-origin", "transform-style",
-        "transition", "transition-delay", "transition-duration", "transition-property", "transition-timing-function",
-        "unicode-bidi", "user-select", "vertical-align", "visibility", "white-space", "widows", "width",
-        "word-break", "word-spacing", "word-wrap", "writing-mode", "z-index"
-    };
-}
-
-bool HtmlGenerator::isStyleProperty(const std::string& name) const {
-    return cssProperties.count(name) > 0;
 }
 
 std::string HtmlGenerator::getResult() {
@@ -113,7 +74,15 @@ void HtmlGenerator::visit(ElementNode& node) {
         const_cast<ElementNode&>(node).setAttribute("id", elementId);
     }
 
-    auto finalAttributes = node.getAttributes();
+    std::string indent(depth * 2, ' ');
+    resultStream << indent << "<" << node.getTagName();
+
+    // Handle attributes
+    for (const auto& attr : node.getAttributes()) {
+        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
+    }
+
+    // Collect all inline styles from StyleNode and IfNode children
     std::vector<std::pair<std::string, std::string>> inlineStyles;
     ExpressionEvaluator evaluator(node);
 
@@ -125,6 +94,8 @@ void HtmlGenerator::visit(ElementNode& node) {
                     finalValue = *stringVal;
                 } else if (const auto* condVal = std::get_if<ConditionalPropertyValue>(&prop.second)) {
                     finalValue = evaluator.resolveConditionalProperty(*condVal);
+                } else if (const auto* arithExpr = std::get_if<ArithmeticExpression>(&prop.second)) {
+                    finalValue = evaluator.resolveArithmeticExpression(*arithExpr);
                 }
 
                 if (!finalValue.empty()) {
@@ -148,14 +119,12 @@ void HtmlGenerator::visit(ElementNode& node) {
                                 finalValue = *stringVal;
                             } else if (const auto* condVal = std::get_if<ConditionalPropertyValue>(&prop.second)) {
                                 finalValue = evaluator.resolveConditionalProperty(*condVal);
+                            } else if (const auto* arithExpr = std::get_if<ArithmeticExpression>(&prop.second)) {
+                                finalValue = evaluator.resolveArithmeticExpression(*arithExpr);
                             }
 
                             if (!finalValue.empty()) {
-                                if (isStyleProperty(prop.first)) {
-                                    inlineStyles.push_back({prop.first, finalValue});
-                                } else {
-                                    finalAttributes[prop.first] = finalValue;
-                                }
+                                inlineStyles.push_back({prop.first, finalValue});
                             }
                         }
                     }
@@ -167,13 +136,6 @@ void HtmlGenerator::visit(ElementNode& node) {
                 }
             }
         }
-    }
-
-    std::string indent(depth * 2, ' ');
-    resultStream << indent << "<" << node.getTagName();
-
-    for (const auto& attr : finalAttributes) {
-        resultStream << " " << attr.first << "=\"" << attr.second << "\"";
     }
 
     if (!inlineStyles.empty()) {
@@ -299,27 +261,22 @@ void HtmlGenerator::generateDynamicScript(const std::string& elementId, const If
 
         for (const auto& prop : currentIf->getProperties()) {
             if (const auto* val = std::get_if<std::string>(&prop.second)) {
-                std::string propVal = *val;
-                // escape single quotes
-                size_t pos = 0;
-                while ((pos = propVal.find('\'', pos)) != std::string::npos) {
-                    propVal.replace(pos, 1, "\\'");
-                    pos += 2;
-                }
-
-                if (isStyleProperty(prop.first)) {
-                    std::string jsProp = prop.first;
-                    size_t hyphenPos;
-                    while((hyphenPos = jsProp.find('-')) != std::string::npos) {
-                        jsProp.erase(hyphenPos, 1);
-                        if (hyphenPos < jsProp.length()) {
-                            jsProp[hyphenPos] = toupper(jsProp[hyphenPos]);
-                        }
-                    }
-                    dynamicScripts << "    element.style." << jsProp << " = '" << propVal << "';\n";
-                } else {
-                    dynamicScripts << "    element.setAttribute('" << prop.first << "', '" << propVal << "');\n";
-                }
+                 std::string jsProp = prop.first;
+                 size_t hyphenPos;
+                 while((hyphenPos = jsProp.find('-')) != std::string::npos) {
+                     jsProp.erase(hyphenPos, 1);
+                     if (hyphenPos < jsProp.length()) {
+                         jsProp[hyphenPos] = toupper(jsProp[hyphenPos]);
+                     }
+                 }
+                 std::string propVal = *val;
+                 // escape single quotes
+                 size_t pos = 0;
+                 while ((pos = propVal.find('\'', pos)) != std::string::npos) {
+                     propVal.replace(pos, 1, "\\'");
+                     pos += 2;
+                 }
+                 dynamicScripts << "    element.style." << jsProp << " = '" << propVal << "';\n";
             }
         }
 

@@ -14,6 +14,7 @@ add_executable(run-tests
     ConditionalPropertyTest.cpp
     IfParserTest.cpp
     DynamicConditionalRenderingTest.cpp
+    AttributeOperationTest.cpp
 )
 
 target_include_directories(run-tests PUBLIC

@@ -158,11 +158,19 @@ Token CHTLLexer::getNextToken() {
         }
         if (currentChar() == '*') {
             advance();
+            if (currentChar() == '*') {
+                advance();
+                return makeToken(TokenType::Power, "**");
+            }
             return makeToken(TokenType::Asterisk, "*");
         }
         if (currentChar() == '/') {
             advance();
             return makeToken(TokenType::Slash, "/");
+        }
+        if (currentChar() == '%') {
+            advance();
+            return makeToken(TokenType::Percent, "%");
         }
         if (currentChar() == '?') {
             advance();

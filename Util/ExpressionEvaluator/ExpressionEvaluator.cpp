@@ -1,7 +1,33 @@
 #include "ExpressionEvaluator.h"
 #include <stdexcept>
 #include <cctype>
+#include <cmath>
 #include <iostream>
+
+// Helper struct for arithmetic evaluation
+struct ValueWithUnit {
+    double value;
+    std::string unit;
+};
+
+// Helper function to parse a string like "100px" into a value and a unit
+static ValueWithUnit parseValueWithUnit(const std::string& s) {
+    if (s.empty()) return {0.0, ""};
+    size_t i = 0;
+    if (s[0] == '-' || s[0] == '+') {
+        i++;
+    }
+    while (i < s.length() && (isdigit(s[i]) || s[i] == '.')) {
+        i++;
+    }
+    std::string num_part = s.substr(0, i);
+    std::string unit_part = s.substr(i);
+    if (num_part == "+" || num_part == "-") {
+        return {std::stod(num_part + "0"), unit_part};
+    }
+    return {num_part.empty() ? 0.0 : std::stod(num_part), unit_part};
+}
+
 
 ExpressionEvaluator::ExpressionEvaluator(const ElementNode& context) : context(context) {}
 
@@ -40,8 +66,10 @@ std::vector<Token> ExpressionEvaluator::shuntingYard(const std::vector<Token>& t
                 break;
             default: // Operator
                 if (isOperator(token.type)) {
-                    while (!operator_stack.empty() && isOperator(operator_stack.top().type) &&
-                           getPrecedence(operator_stack.top().type) >= getPrecedence(token.type)) {
+                    while (!operator_stack.empty() && isOperator(operator_stack.top().type) && (
+                           (!isRightAssociative(token.type) && getPrecedence(operator_stack.top().type) >= getPrecedence(token.type)) ||
+                           (isRightAssociative(token.type) && getPrecedence(operator_stack.top().type) > getPrecedence(token.type))
+                    )) {
                         output_queue.push_back(operator_stack.top());
                         operator_stack.pop();
                     }
@@ -171,13 +199,19 @@ int ExpressionEvaluator::getPrecedence(TokenType type) {
         case TokenType::Plus:
         case TokenType::Minus: return 5;
         case TokenType::Asterisk:
-        case TokenType::Slash: return 6;
+        case TokenType::Slash:
+        case TokenType::Percent: return 6;
+        case TokenType::Power: return 7;
         default: return 0;
     }
 }
 
 bool ExpressionEvaluator::isOperator(TokenType type) {
     return getPrecedence(type) > 0;
+}
+
+bool ExpressionEvaluator::isRightAssociative(TokenType type) {
+    return type == TokenType::Power;
 }
 
 std::string ExpressionEvaluator::resolveConditionalProperty(const ConditionalPropertyValue& propValue) {
@@ -187,4 +221,91 @@ std::string ExpressionEvaluator::resolveConditionalProperty(const ConditionalPro
         }
     }
     return propValue.elseValue; // Return the else value, or an empty string if it doesn't exist.
+}
+
+static ValueWithUnit evaluateArithmeticRPN(const std::vector<Token>& rpnTokens) {
+    std::stack<ValueWithUnit> value_stack;
+
+    auto is_op = [](TokenType type){
+        switch (type) {
+            case TokenType::Plus: case TokenType::Minus: case TokenType::Asterisk:
+            case TokenType::Slash: case TokenType::Percent: case TokenType::Power:
+                return true;
+            default:
+                return false;
+        }
+    };
+
+    for (const auto& token : rpnTokens) {
+        if (token.type == TokenType::Identifier || token.type == TokenType::Number) {
+            value_stack.push(parseValueWithUnit(token.value));
+        } else if (is_op(token.type)) {
+            if (value_stack.size() < 2) throw std::runtime_error("Invalid arithmetic expression: not enough operands.");
+            ValueWithUnit right = value_stack.top(); value_stack.pop();
+            ValueWithUnit left = value_stack.top(); value_stack.pop();
+            ValueWithUnit result;
+
+            switch(token.type) {
+                case TokenType::Plus:
+                case TokenType::Minus:
+                    if (left.unit != right.unit && !left.unit.empty() && !right.unit.empty()) {
+                        throw std::runtime_error("Unit mismatch for '+' or '-' operation.");
+                    }
+                    result.value = (token.type == TokenType::Plus) ? (left.value + right.value) : (left.value - right.value);
+                    result.unit = !left.unit.empty() ? left.unit : right.unit;
+                    break;
+                case TokenType::Asterisk:
+                    result.value = left.value * right.value;
+                    if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot multiply two values with units.");
+                    result.unit = !left.unit.empty() ? left.unit : right.unit;
+                    break;
+                case TokenType::Slash:
+                    if (right.value == 0) throw std::runtime_error("Division by zero.");
+                    result.value = left.value / right.value;
+                     if (!left.unit.empty() && !right.unit.empty()) {
+                         if (left.unit != right.unit) throw std::runtime_error("Unit mismatch for division.");
+                         result.unit = ""; // Units cancel out
+                    } else {
+                        result.unit = left.unit;
+                    }
+                    break;
+                 case TokenType::Percent:
+                    if (static_cast<long long>(right.value) == 0) throw std::runtime_error("Modulo by zero.");
+                    result.value = fmod(left.value, right.value);
+                    result.unit = left.unit; // Unit of left operand is preserved
+                    break;
+                case TokenType::Power:
+                    if (!right.unit.empty()) throw std::runtime_error("Exponent cannot have a unit.");
+                    result.value = pow(left.value, right.value);
+                    result.unit = left.unit; // Unit of left operand is preserved
+                    break;
+                default:
+                     throw std::runtime_error("Unsupported operator in arithmetic expression.");
+            }
+            value_stack.push(result);
+        }
+    }
+    if (value_stack.size() != 1) throw std::runtime_error("Invalid arithmetic expression: stack size is not 1 after evaluation.");
+    return value_stack.top();
+}
+
+std::string ExpressionEvaluator::resolveArithmeticExpression(const ArithmeticExpression& expression) {
+    if (expression.tokens.empty()) return "";
+
+    try {
+        auto rpn = shuntingYard(expression.tokens);
+        ValueWithUnit result = evaluateArithmeticRPN(rpn);
+
+        std::stringstream ss;
+        if (result.value == static_cast<long long>(result.value)) {
+             ss << static_cast<long long>(result.value);
+        } else {
+             ss << result.value;
+        }
+        ss << result.unit;
+        return ss.str();
+    } catch (const std::exception& e) {
+        std::cerr << "Error evaluating arithmetic expression: " << e.what() << std::endl;
+        return "";
+    }
 }

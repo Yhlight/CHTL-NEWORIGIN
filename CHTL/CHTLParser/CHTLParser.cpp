@@ -268,23 +268,20 @@ PropertyValue CHTLParser::parsePropertyValue() {
     }
 
     bool isConditional = false;
+    bool isArithmetic = false;
     for (const auto& token : valueTokens) {
         if (token.type == TokenType::Question) {
             isConditional = true;
             break;
         }
+        if (token.type == TokenType::Plus || token.type == TokenType::Minus ||
+            token.type == TokenType::Asterisk || token.type == TokenType::Slash ||
+            token.type == TokenType::Percent || token.type == TokenType::Power) {
+            isArithmetic = true;
+        }
     }
 
-    if (!isConditional) {
-        std::string simpleValue;
-        for (size_t i = 0; i < valueTokens.size(); ++i) {
-            simpleValue += valueTokens[i].value;
-            if (i < valueTokens.size() - 1 && valueTokens[i+1].type != TokenType::Semicolon) {
-                simpleValue += " ";
-            }
-        }
-        return simpleValue;
-    } else {
+    if (isConditional) {
         ConditionalPropertyValue conditionalValue;
         size_t currentPos = 0;
 
@@ -332,6 +329,17 @@ PropertyValue CHTLParser::parsePropertyValue() {
             }
         }
         return conditionalValue;
+    } else if (isArithmetic) {
+        return ArithmeticExpression{valueTokens};
+    } else {
+        std::string simpleValue;
+        for (size_t i = 0; i < valueTokens.size(); ++i) {
+            simpleValue += valueTokens[i].value;
+            if (i < valueTokens.size() - 1 && valueTokens[i+1].type != TokenType::Semicolon) {
+                simpleValue += " ";
+            }
+        }
+        return simpleValue;
     }
 }
 

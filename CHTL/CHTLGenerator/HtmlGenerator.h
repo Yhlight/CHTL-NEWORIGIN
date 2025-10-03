@@ -42,7 +42,6 @@ public:
 private:
     void findStyleNodes(BaseNode* node, std::vector<StyleNode*>& styleNodes);
     std::string generateHead(const std::vector<StyleNode*>& allStyleNodes);
-    bool isStyleProperty(const std::string& name) const;
 
     std::stringstream resultStream;
     std::stringstream hoistedCss;
@@ -50,7 +49,6 @@ private:
     int depth = 0;
     int dynamicIdCounter = 0;
     std::unordered_set<std::string> selfClosingTags;
-    std::unordered_set<std::string> cssProperties;
 
 private:
     void generateDynamicScript(const std::string& elementId, const IfNode& rootIfNode);
