@@ -334,9 +334,23 @@ PropertyValue CHTLParser::parsePropertyValue() {
     } else {
         std::string simpleValue;
         for (size_t i = 0; i < valueTokens.size(); ++i) {
-            simpleValue += valueTokens[i].value;
-            if (i < valueTokens.size() - 1 && valueTokens[i+1].type != TokenType::Semicolon) {
-                simpleValue += " ";
+            const auto& token = valueTokens[i];
+            if (token.type == TokenType::String) {
+                simpleValue += "\"" + token.value + "\"";
+            } else {
+                simpleValue += token.value;
+            }
+
+            if (i < valueTokens.size() - 1) {
+                const auto& nextToken = valueTokens[i+1];
+                // Avoid adding spaces around parentheses or before semicolons/commas
+                if (token.type != TokenType::LParen &&
+                    nextToken.type != TokenType::RParen &&
+                    nextToken.type != TokenType::Semicolon &&
+                    nextToken.type != TokenType::Comma &&
+                    nextToken.type != TokenType::LParen) {
+                    simpleValue += " ";
+                }
             }
         }
         return simpleValue;

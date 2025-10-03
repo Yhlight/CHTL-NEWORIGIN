@@ -270,7 +270,12 @@ void HtmlGenerator::generateDynamicScript(const std::string& elementId, const If
                      }
                  }
                  std::string propVal = *val;
-                 // escape single quotes
+                 // If the parser provided a quoted string, un-quote it first.
+                 if (propVal.length() >= 2 && propVal.front() == '"' && propVal.back() == '"') {
+                     propVal = propVal.substr(1, propVal.length() - 2);
+                 }
+
+                 // escape single quotes for JS
                  size_t pos = 0;
                  while ((pos = propVal.find('\'', pos)) != std::string::npos) {
                      propVal.replace(pos, 1, "\\'");

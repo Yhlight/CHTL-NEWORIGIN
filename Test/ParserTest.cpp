@@ -502,3 +502,33 @@ TEST_CASE("Context handles nested namespaces and scoped lookups", "[parser]") {
     context.leaveNamespace();
     REQUIRE(context.getStyleTemplate("OuterStyle") == nullptr); // No longer visible
 }
+
+TEST_CASE("Parser handles style with url() value", "[parser]") {
+    const std::string input = R"(
+div {
+    style {
+        background: url("image.png");
+    }
+}
+)";
+    CHTLContext context;
+    CHTLParser parser(input, context);
+    std::unique_ptr<DocumentNode> doc = parser.parse();
+
+    REQUIRE(doc != nullptr);
+    const auto& children = doc->getChildren();
+    REQUIRE(children.size() == 1);
+    ElementNode* root = dynamic_cast<ElementNode*>(children[0].get());
+    REQUIRE(root != nullptr);
+
+    const auto& styleChildren = root->getChildren();
+    REQUIRE(styleChildren.size() == 1);
+    auto* styleNode = dynamic_cast<StyleNode*>(styleChildren[0].get());
+    REQUIRE(styleNode != nullptr);
+
+    const auto& props = styleNode->getProperties();
+    REQUIRE(props.size() == 1);
+    REQUIRE(props[0].first == "background");
+    REQUIRE(std::holds_alternative<std::string>(props[0].second));
+    REQUIRE(std::get<std::string>(props[0].second) == "url(\"image.png\")");
+}
