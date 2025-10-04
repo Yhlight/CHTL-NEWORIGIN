@@ -15,6 +15,12 @@ public:
     ExpressionNode* getLeft() const { return left.get(); }
     ExpressionNode* getRight() const { return right.get(); }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedLeft = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(left->clone().release()));
+        auto clonedRight = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(right->clone().release()));
+        return std::make_unique<BinaryOpNode>(op, std::move(clonedLeft), std::move(clonedRight));
+    }
+
 private:
     TokenType op;
     std::unique_ptr<ExpressionNode> left;

@@ -22,4 +22,9 @@ public:
 private:
     std::string name;
     std::unique_ptr<ExpressionNode> value;
+
+public:
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<StylePropertyNode>(name, std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(value->clone().release())));
+    }
 };

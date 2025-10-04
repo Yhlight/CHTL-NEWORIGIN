@@ -13,6 +13,10 @@ public:
         return comment;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<CommentNode>(comment);
+    }
+
 private:
     std::string comment;
 };

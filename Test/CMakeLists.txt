@@ -5,6 +5,7 @@ add_executable(runTests
     CssGeneratorTest.cpp
     ExpressionParserTest.cpp
     ExpressionEvaluatorTest.cpp
+    ImportResolverTest.cpp
 )
 
 target_link_libraries(runTests
@@ -15,6 +16,7 @@ target_link_libraries(runTests
     CssGenerator
     ExpressionParser
     ExpressionEvaluator
+    ImportResolver
     gtest_main
 )
 

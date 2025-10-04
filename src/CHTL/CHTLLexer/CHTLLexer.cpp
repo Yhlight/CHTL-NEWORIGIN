@@ -40,6 +40,32 @@ Token CHTLLexer::getNextToken() {
             continue;
         }
 
+        if (current == '[') {
+            size_t startPosition = position;
+            int startLine = line;
+            int startColumn = column;
+
+            advance(); // Consume '['
+            std::string keyword;
+            while(position < input.size() && isalnum(currentChar())) {
+                keyword += currentChar();
+                advance();
+            }
+
+            if (position < input.size() && currentChar() == ']') {
+                advance(); // Consume ']'
+                if (keyword == "Import") return {TokenType::KEYWORD_IMPORT, "[Import]", startLine, startColumn};
+                if (keyword == "Template") return {TokenType::KEYWORD_TEMPLATE, "[Template]", startLine, startColumn};
+                if (keyword == "Custom") return {TokenType::KEYWORD_CUSTOM, "[Custom]", startLine, startColumn};
+                if (keyword == "Origin") return {TokenType::KEYWORD_ORIGIN, "[Origin]", startLine, startColumn};
+                if (keyword == "Namespace") return {TokenType::KEYWORD_NAMESPACE, "[Namespace]", startLine, startColumn};
+            }
+
+            position = startPosition;
+            line = startLine;
+            column = startColumn;
+        }
+
         // Handle multi-character tokens and special single-character tokens first
         if (current == '/') {
             if (position + 1 < input.size()) {
@@ -108,6 +134,9 @@ Token CHTLLexer::getNextToken() {
             case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
             case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
             case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
+            case '[': advance(); return {TokenType::LEFT_BRACKET, "[", line, column};
+            case ']': advance(); return {TokenType::RIGHT_BRACKET, "]", line, column};
+            case '@': advance(); return {TokenType::AT_SIGN, "@", line, column};
             case '+': advance(); return {TokenType::PLUS, "+", line, column};
             case '-': advance(); return {TokenType::MINUS, "-", line, column};
             case '/': advance(); return {TokenType::SLASH, "/", line, column};
@@ -219,6 +248,45 @@ Token CHTLLexer::identifier() {
     if (value == "text") return {TokenType::KEYWORD_TEXT, value, startLine, startColumn};
     if (value == "style") return {TokenType::KEYWORD_STYLE, value, startLine, startColumn};
     if (value == "script") return {TokenType::KEYWORD_SCRIPT, value, startLine, startColumn};
+    if (value == "from") return {TokenType::KEYWORD_FROM, value, startLine, startColumn};
+    if (value == "as") return {TokenType::KEYWORD_AS, value, startLine, startColumn};
+    if (value == "inherit") return {TokenType::KEYWORD_INHERIT, value, startLine, startColumn};
+    if (value == "delete") return {TokenType::KEYWORD_DELETE, value, startLine, startColumn};
+    if (value == "insert") return {TokenType::KEYWORD_INSERT, value, startLine, startColumn};
+    if (value == "after") return {TokenType::KEYWORD_AFTER, value, startLine, startColumn};
+    if (value == "before") return {TokenType::KEYWORD_BEFORE, value, startLine, startColumn};
+    if (value == "replace") return {TokenType::KEYWORD_REPLACE, value, startLine, startColumn};
+    if (value == "use") return {TokenType::KEYWORD_USE, value, startLine, startColumn};
+    if (value == "html5") return {TokenType::KEYWORD_HTML5, value, startLine, startColumn};
+    if (value == "Config") return {TokenType::KEYWORD_CONFIG, value, startLine, startColumn};
+    if (value == "Name") return {TokenType::KEYWORD_NAME, value, startLine, startColumn};
+    if (value == "except") return {TokenType::KEYWORD_EXCEPT, value, startLine, startColumn};
+
+    // Handle multi-word keywords
+    if (value == "at") {
+        size_t saved_pos = position;
+        int saved_line = line;
+        int saved_col = column;
+
+        skipWhitespace();
+        std::string next_word;
+        while(position < input.size() && isalnum(currentChar())) {
+            next_word += currentChar();
+            advance();
+        }
+
+        if (next_word == "top") {
+            return {TokenType::KEYWORD_ATTOP, "at top", startLine, startColumn};
+        } else if (next_word == "bottom") {
+            return {TokenType::KEYWORD_ATBOTTOM, "at bottom", startLine, startColumn};
+        }
+
+        // backtrack if not a multi-word keyword
+        position = saved_pos;
+        line = saved_line;
+        column = saved_col;
+    }
+
 
     return {TokenType::IDENTIFIER, value, startLine, startColumn};
 }

@@ -26,6 +26,7 @@ public:
     BaseNode* getCurrentScope();
     BaseNode* getParentScope();
     BaseNode* getRoot();
+    std::unique_ptr<BaseNode> releaseRoot();
     GlobalStylesheet& getGlobalStylesheet();
 
 private:

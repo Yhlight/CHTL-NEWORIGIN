@@ -18,6 +18,13 @@ public:
     const ExpressionNode* getTrueExpression() const { return true_expr.get(); }
     const ExpressionNode* getFalseExpression() const { return false_expr.get(); }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedCondition = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(condition->clone().release()));
+        auto clonedTrue = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(true_expr->clone().release()));
+        auto clonedFalse = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(false_expr->clone().release()));
+        return std::make_unique<ConditionalNode>(std::move(clonedCondition), std::move(clonedTrue), std::move(clonedFalse));
+    }
+
 private:
     std::unique_ptr<ExpressionNode> condition;
     std::unique_ptr<ExpressionNode> true_expr;

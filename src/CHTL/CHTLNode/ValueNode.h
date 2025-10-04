@@ -13,6 +13,10 @@ public:
         return value;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<ValueNode>(value);
+    }
+
 private:
     std::string value;
 };

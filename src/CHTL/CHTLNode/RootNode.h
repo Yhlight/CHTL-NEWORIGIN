@@ -1,16 +1,15 @@
 #pragma once
 
 #include "BaseNode.h"
-#include <string>
 
-class StyleNode : public BaseNode {
+class RootNode : public BaseNode {
 public:
-    StyleNode() = default;
+    RootNode() = default;
 
-    NodeType getType() const override { return NodeType::Style; }
+    NodeType getType() const override { return NodeType::Root; }
 
     std::unique_ptr<BaseNode> clone() const override {
-        auto clonedNode = std::make_unique<StyleNode>();
+        auto clonedNode = std::make_unique<RootNode>();
         for (const auto& child : getChildren()) {
             clonedNode->addChild(child->clone());
         }

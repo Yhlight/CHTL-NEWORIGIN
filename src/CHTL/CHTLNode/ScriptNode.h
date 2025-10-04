@@ -13,6 +13,10 @@ public:
         return script;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        return std::make_unique<ScriptNode>(script);
+    }
+
 private:
     std::string script;
 };

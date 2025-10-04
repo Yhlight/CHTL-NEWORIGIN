@@ -13,6 +13,14 @@ public:
         return selector;
     }
 
+    std::unique_ptr<BaseNode> clone() const override {
+        auto clonedNode = std::make_unique<ContextSelectorNode>(selector);
+        for (const auto& child : getChildren()) {
+            clonedNode->addChild(child->clone());
+        }
+        return clonedNode;
+    }
+
 private:
     std::string selector;
 };

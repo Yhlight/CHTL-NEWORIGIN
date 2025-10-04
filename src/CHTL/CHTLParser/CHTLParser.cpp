@@ -1,9 +1,10 @@
 #include "CHTLParser.h"
 #include "../CHTLState/DefaultState.h"
+#include "../CHTLNode/RootNode.h"
 #include <string>
 
 CHTLParser::CHTLParser(const std::string& input) : lexer(input) {
-    root = std::make_unique<BaseNode>();
+    root = std::make_unique<RootNode>();
     nodeStack.push_back(root.get());
     currentState = std::make_unique<DefaultState>();
 }
@@ -73,6 +74,10 @@ BaseNode* CHTLParser::getParentScope() {
 
 BaseNode* CHTLParser::getRoot() {
     return root.get();
+}
+
+std::unique_ptr<BaseNode> CHTLParser::releaseRoot() {
+    return std::move(root);
 }
 
 GlobalStylesheet& CHTLParser::getGlobalStylesheet() {

@@ -8,6 +8,7 @@
 #include "../src/CHTL/CHTLNode/StyleNode.h"
 #include "../src/CHTL/CHTLNode/StylePropertyNode.h"
 #include "../src/CHTL/CHTLNode/BaseNode.h"
+#include "../src/CHTL/CHTLNode/RootNode.h"
 #include "../src/CHTL/CHTLLexer/Token.h"
 #include <memory>
 
@@ -88,7 +89,7 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnMultiplyTwoUnits) {
 
 TEST_F(ExpressionEvaluatorTest, ResolvesSimplePropertyReference) {
     // Build mock AST: div { style { width: 100px; } }
-    auto root = std::make_unique<BaseNode>();
+    auto root = std::make_unique<RootNode>();
     auto div = std::make_unique<ElementNode>("div");
     div->setAttribute("id", "box");
     auto style = std::make_unique<StyleNode>();
@@ -105,7 +106,7 @@ TEST_F(ExpressionEvaluatorTest, ResolvesSimplePropertyReference) {
 
 TEST_F(ExpressionEvaluatorTest, ResolvesReferenceInExpression) {
     // Build mock AST: div { style { width: 100px; } }
-    auto root = std::make_unique<BaseNode>();
+    auto root = std::make_unique<RootNode>();
     auto div = std::make_unique<ElementNode>("div");
     div->setAttribute("id", "box");
     auto style = std::make_unique<StyleNode>();
@@ -126,7 +127,7 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnCircularReference) {
     // Build mock AST:
     // div1.width -> div2.width
     // div2.width -> div1.width
-    auto root = std::make_unique<BaseNode>();
+    auto root = std::make_unique<RootNode>();
 
     auto div1 = std::make_unique<ElementNode>("div");
     div1->setAttribute("id", "div1");
