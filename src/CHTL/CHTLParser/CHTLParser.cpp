@@ -24,19 +24,18 @@ void CHTLParser::setState(std::unique_ptr<CHTLState> newState) {
 }
 
 Token CHTLParser::consume() {
-    if (!tokenBuffer.empty()) {
-        Token token = tokenBuffer.front();
-        tokenBuffer.erase(tokenBuffer.begin());
-        return token;
-    }
-    return lexer.getNextToken();
+    // Ensure the buffer is populated before consuming
+    peek();
+    Token token = tokenBuffer.front();
+    tokenBuffer.erase(tokenBuffer.begin());
+    return token;
 }
 
-Token CHTLParser::peek() {
-    if (tokenBuffer.empty()) {
+Token CHTLParser::peek(size_t lookahead) {
+    while (tokenBuffer.size() <= lookahead) {
         tokenBuffer.push_back(lexer.getNextToken());
     }
-    return tokenBuffer.front();
+    return tokenBuffer[lookahead];
 }
 
 void CHTLParser::putback(Token token) {

@@ -15,7 +15,7 @@ public:
     void parse();
     void setState(std::unique_ptr<CHTLState> newState);
     Token consume();
-    Token peek();
+    Token peek(size_t lookahead = 0);
     void putback(Token token);
     void setRawContentMode(bool enabled);
 

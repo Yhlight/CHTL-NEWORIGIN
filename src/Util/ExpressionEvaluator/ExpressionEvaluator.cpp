@@ -12,6 +12,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 
 namespace {
     // Forward declarations
@@ -25,20 +26,28 @@ namespace {
     };
 
     NumericValue parse_value(const std::string& s) {
-        if (s.empty()) return {0.0, ""};
-        size_t first_alpha = std::string::npos;
-        for (size_t i = 0; i < s.length(); ++i) {
-            if (isalpha(s[i]) || s[i] == '%') {
-                first_alpha = i;
-                break;
-            }
+        if (s.empty()) {
+            return {0.0, ""};
         }
-        if (first_alpha == std::string::npos) {
-            try { return {std::stod(s), ""}; } catch (const std::invalid_argument&) { throw std::runtime_error("stod"); }
+
+        const char* start = s.c_str();
+        char* end;
+
+        double value = std::strtod(start, &end);
+
+        // Check if any conversion happened. If not, treat as a keyword.
+        if (start == end) {
+            return {0.0, s};
         }
-        double val = std::stod(s.substr(0, first_alpha));
-        std::string unit = s.substr(first_alpha);
-        return {val, unit};
+
+        // Skip whitespace between number and unit
+        while (std::isspace(static_cast<unsigned char>(*end))) {
+            end++;
+        }
+
+        std::string unit(end);
+
+        return {value, unit};
     }
 
     std::string format_value(const NumericValue& nv) {
@@ -96,7 +105,34 @@ namespace {
         std::string result_str;
         switch (node->getType()) {
             case NodeType::Value: {
-                result_str = static_cast<const ValueNode*>(node)->getValue();
+                const auto* valNode = static_cast<const ValueNode*>(node);
+                const std::string& valStr = valNode->getValue();
+
+                // Check if the value is purely numeric or has a unit. If not, it could be a property reference.
+                const char* start = valStr.c_str();
+                char* end;
+                std::strtod(start, &end);
+
+                // If no conversion was made and the string is not empty, treat as a reference.
+                if (start == end && !valStr.empty()) {
+                    if (!contextNode || contextNode->getType() != NodeType::Element) {
+                        // Not in an element context, so it must be a string literal like 'red'
+                        result_str = valStr;
+                    } else {
+                        const auto* elementContext = static_cast<const ElementNode*>(contextNode);
+                        const ExpressionNode* propertyExpr = find_property_in_node(elementContext, valStr);
+                        if (!propertyExpr) {
+                             // Could be a string literal like 'red' or 'solid'.
+                             result_str = valStr;
+                        } else {
+                            // It's a property reference, so evaluate it recursively.
+                            result_str = evaluate_recursive(propertyExpr, astRoot, contextNode, call_stack);
+                        }
+                    }
+                } else {
+                    // It's a number or a value with units, so just return the string.
+                    result_str = valStr;
+                }
                 break;
             }
             case NodeType::BinaryOp: {
