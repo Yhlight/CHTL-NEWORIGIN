@@ -11,6 +11,8 @@ add_library(CHTL
     CHTLState/CommentState.cpp
     CHTLState/TextState.cpp
     CHTLState/ImportState.cpp
+    CHTLState/DefinitionState.cpp
+    CHTLState/NamespaceState.cpp
 )
 
 target_link_libraries(CHTL PRIVATE GlobalStylesheet)

@@ -22,7 +22,8 @@ enum class NodeType {
     TemplateDefinition,
     TemplateUsage,
     Import,
-    Origin
+    Origin,
+    Namespace
 };
 
 class BaseNode {

@@ -5,50 +5,79 @@
 #include <stdexcept>
 
 void ImportState::handle(CHTLParser& parser, Token token) {
-    // The [Import] token has been consumed by the DefaultState.
-    // The token passed to this handle method should be the AT_SIGN.
-    if (token.type != TokenType::AT_SIGN) {
-        parser.putback(token);
-        parser.setState(std::make_unique<DefaultState>());
-        throw std::runtime_error("Expected @ after [Import]");
-        return;
+    // The [Import] token was consumed by DefaultState.
+    // `token` is the first token after `[Import]`.
+
+    std::string category;
+    std::string importType;
+    std::string name;
+    std::string path;
+    std::string alias;
+
+    // Check for an optional category like [Custom] or [Template]
+    if (token.type == TokenType::KEYWORD_CUSTOM ||
+        token.type == TokenType::KEYWORD_TEMPLATE ||
+        token.type == TokenType::KEYWORD_ORIGIN) {
+        category = token.value;
+        token = parser.consume(); // Consume category, move to next token
     }
 
-    Token typeToken = parser.consume();
-    if (typeToken.type != TokenType::IDENTIFIER) {
-        throw std::runtime_error("Expected import type (e.g., Chtl, Html) after @");
+    // Check for a type like @Chtl or @Element
+    if (token.type == TokenType::AT_SIGN) {
+        token = parser.consume(); // Consume '@'
+        if (token.type != TokenType::IDENTIFIER) {
+            throw std::runtime_error("Expected import type identifier after '@'");
+        }
+        importType = token.value;
+        token = parser.consume();
+    } else if (category.empty()) {
+        // If there's no category, we must have a type starting with @
+        throw std::runtime_error("Unexpected token in import statement. Expected category or '@'.");
     }
-    std::string importType = typeToken.value;
 
-    Token fromToken = parser.consume();
-    if (fromToken.type != TokenType::KEYWORD_FROM) {
-        throw std::runtime_error("Expected 'from' keyword in import statement");
+    // Check for a specific name, for precise imports
+    if (!importType.empty() && token.type == TokenType::IDENTIFIER) {
+        // This could be the name or the 'from' keyword.
+        // Chtl, Html, etc. are file-level imports and won't have a name before 'from'.
+        if (token.value != "from") {
+            name = token.value;
+            token = parser.consume();
+        }
     }
 
-    Token pathToken = parser.consume();
-    if (pathToken.type != TokenType::STRING_LITERAL) {
+    // Now we must see 'from'
+    if (token.type != TokenType::KEYWORD_FROM) {
+        throw std::runtime_error("Expected 'from' keyword in import statement, got '" + token.value + "'");
+    }
+
+    // And then the path
+    token = parser.consume();
+    if (token.type != TokenType::STRING_LITERAL) {
         throw std::runtime_error("Expected file path string literal in import statement");
     }
+    path = token.value;
 
-    std::string alias;
+    // And then the optional 'as' alias
     if (parser.peek().type == TokenType::KEYWORD_AS) {
-        parser.consume(); // Consume 'as'
+        parser.consume(); // consume 'as'
         Token aliasToken = parser.consume();
         if (aliasToken.type != TokenType::IDENTIFIER) {
             throw std::runtime_error("Expected alias identifier after 'as'");
         }
         alias = aliasToken.value;
-    } else if (importType != "Chtl") {
-        // 'as' is mandatory for non-Chtl imports
-        throw std::runtime_error("The 'as' keyword is mandatory for importing " + importType + " files.");
+    } else {
+        // 'as' is mandatory for non-CHTL file-level imports
+        if (category.empty() && importType != "Chtl") {
+             throw std::runtime_error("The 'as' keyword is mandatory for importing " + importType + " files.");
+        }
     }
 
-    // Optional semicolon
+    // And then the optional semicolon
     if (parser.peek().type == TokenType::SEMICOLON) {
         parser.consume();
     }
 
-    auto importNode = std::make_unique<ImportNode>(importType, pathToken.value, alias);
+    auto importNode = std::make_unique<ImportNode>(path, alias, category, importType, name);
     parser.addNode(std::move(importNode));
 
     parser.setState(std::make_unique<DefaultState>());
