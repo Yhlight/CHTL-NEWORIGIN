@@ -1,31 +1,57 @@
 #include <iostream>
-#include <fstream>
-#include <sstream>
-#include <memory>
-#include "CHTLProcessor/CHTLProcessor.h"
-#include "CHTLGenerator/HtmlGenerator.h"
-#include "CHTLNode/DocumentNode.h"
+#include "CHTLLexer/CHTLLexer.h"
+#include "CHTLParser/CHTLParser.h"
+#include "CHTLGenerator/CHTLGenerator.h"
+#include "CHTLLoader/CHTLLoader.h"
+#include "CHTLContext/GenerationContext.h"
 
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <entry_filename>" << std::endl;
-        return 1;
+int main() {
+    std::string input = R"(
+[Template] @Style MyTemplate {
+    color: blue;
+}
+
+[Import] @Chtl from "test.chtl";
+
+div {
+    id: "main";
+    style {
+        color: red;
+    }
+    text { "Hello, CHTL!" }
+}
+)";
+
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
     }
 
-    try {
-        CHTLProcessor processor(argv[1]);
-        std::unique_ptr<DocumentNode> ast = processor.process();
-        if (ast) {
-            HtmlGenerator generator;
-            ast->accept(generator);
-            std::cout << generator.getResult();
-        } else {
-            std::cerr << "Failed to process the document." << std::endl;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Processing error: " << e.what() << std::endl;
-        return 1;
+    CHTL::CHTLParser parser(tokens);
+    std::shared_ptr<CHTL::BaseNode> ast = parser.parse();
+
+    CHTL::CHTLLoader loader(".");
+    loader.loadImports(ast);
+
+    CHTL::GenerationContext context;
+    loader.gatherTemplates(ast, context);
+    for (const auto& pair : loader.getLoadedAsts()) {
+        loader.gatherTemplates(pair.second, context);
     }
+
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast, context);
+
+    std::string html = generator.getHtml();
+    std::string css = generator.getCss();
+
+    std::cout << "Generated HTML:" << std::endl;
+    std::cout << html << std::endl;
+    std::cout << "\nGenerated CSS:" << std::endl;
+    std::cout << css << std::endl;
 
     return 0;
 }

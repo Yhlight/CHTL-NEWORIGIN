@@ -1,18 +1,40 @@
-#ifndef CHTL_BASE_NODE_H
-#define CHTL_BASE_NODE_H
+#pragma once
 
-#include <string>
 #include <vector>
 #include <memory>
 
-class NodeVisitor; // Forward declaration
+namespace CHTL {
 
-class BaseNode {
-public:
-    virtual ~BaseNode() = default;
-    virtual std::string toString(int depth = 0) const = 0;
-    virtual std::string getNodeType() const { return "Base"; }
-    virtual void accept(NodeVisitor& visitor) = 0;
-};
+    enum class NodeType {
+        NODE_ELEMENT,
+        NODE_TEXT,
+        NODE_COMMENT,
+        NODE_TEMPLATE,
+        NODE_CUSTOM,
+        NODE_STYLE,
+        NODE_SCRIPT,
+        NODE_ORIGIN,
+        NODE_IMPORT,
+        NODE_CONFIG,
+        NODE_NAMESPACE,
+        NODE_PROPERTY,
+        NODE_RULE,
+        NODE_OPERATOR,
+        NODE_USE,
+        NODE_TEMPLATE_USAGE,
+        NODE_IF
+    };
 
-#endif //CHTL_BASE_NODE_H
+    class BaseNode {
+    public:
+        virtual ~BaseNode() = default;
+        NodeType getType() const { return type; }
+        const std::vector<std::shared_ptr<BaseNode>>& getChildren() const { return children; }
+        void addChild(std::shared_ptr<BaseNode> child) { children.push_back(child); }
+
+    protected:
+        NodeType type;
+        std::vector<std::shared_ptr<BaseNode>> children;
+    };
+
+}

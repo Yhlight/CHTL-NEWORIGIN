@@ -1,86 +1,99 @@
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
-#include "CHTLLexer/CHTLLexer.h"
-#include "CHTLLexer/Token.h"
+#include "../third-party/catch.hpp"
+#include "../CHTL/CHTLLexer/CHTLLexer.h"
+#include "../CHTL/CHTLLexer/Token.h"
+
 #include <vector>
+#include <string>
+#include <utility>
 
-TEST_CASE("Lexer handles single-line comments", "[lexer]") {
-    const std::string input = R"(
-// This is a comment
-div { }
-)";
-    CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
-
-    REQUIRE(tokens.size() == 4);
-    REQUIRE(tokens[0].type == TokenType::Identifier);
-    REQUIRE(tokens[0].value == "div");
-    REQUIRE(tokens[1].type == TokenType::LBrace);
-    REQUIRE(tokens[2].type == TokenType::RBrace);
-    REQUIRE(tokens[3].type == TokenType::EndOfFile);
-}
-
-TEST_CASE("Lexer handles string literals", "[lexer]") {
-    const std::string input = R"(
+TEST_CASE("Lexer tokenizes simple input", "[lexer]") {
+    std::string input = R"(
 div {
-    text: "double-quoted string";
-    id: 'single-quoted-string';
+    id: "main";
+    text { "hello" }
 }
 )";
-    CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
+    CHTL::CHTLLexer lexer(input);
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "div"},
+        {CHTL::TokenType::TOKEN_LBRACE, "{"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "main"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_TEXT, "text"},
+        {CHTL::TokenType::TOKEN_LBRACE, "{"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "hello"},
+        {CHTL::TokenType::TOKEN_RBRACE, "}"},
+        {CHTL::TokenType::TOKEN_RBRACE, "}"}
+    };
 
-    REQUIRE(tokens.size() == 12);
-    REQUIRE(tokens[0].type == TokenType::Identifier);
-    REQUIRE(tokens[0].value == "div");
-    REQUIRE(tokens[1].type == TokenType::LBrace);
-    REQUIRE(tokens[2].type == TokenType::Identifier);
-    REQUIRE(tokens[2].value == "text");
-    REQUIRE(tokens[3].type == TokenType::Colon);
-    REQUIRE(tokens[4].type == TokenType::String);
-    REQUIRE(tokens[4].value == "double-quoted string");
-    REQUIRE(tokens[5].type == TokenType::Semicolon);
-    REQUIRE(tokens[6].type == TokenType::Identifier);
-    REQUIRE(tokens[6].value == "id");
-    REQUIRE(tokens[7].type == TokenType::Colon);
-    REQUIRE(tokens[8].type == TokenType::String);
-    REQUIRE(tokens[8].value == "single-quoted-string");
-    REQUIRE(tokens[9].type == TokenType::Semicolon);
-    REQUIRE(tokens[10].type == TokenType::RBrace);
-    REQUIRE(tokens[11].type == TokenType::EndOfFile);
+    for (const auto& expected : expectedTokens) {
+        CHTL::Token token = lexer.getNextToken();
+        REQUIRE(token.type == expected.first);
+        REQUIRE(token.lexeme == expected.second);
+    }
+    REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
 }
 
-TEST_CASE("Lexer handles generator comments", "[lexer]") {
-    const std::string input = R"(
-# This is a generator comment
-p { }
+TEST_CASE("Lexer handles comments", "[lexer]") {
+    std::string input = R"(
+// this is a comment
+div { # another comment
+    /* multi-line
+       comment */
+    id: "main"; // another comment
+}
 )";
-    CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        // We are interested in non-comment tokens
+        if (token.type != CHTL::TokenType::TOKEN_SINGLE_LINE_COMMENT &&
+            token.type != CHTL::TokenType::TOKEN_MULTI_LINE_COMMENT &&
+            token.type != CHTL::TokenType::TOKEN_GENERATOR_COMMENT) {
+            tokens.push_back(token);
+        }
+        token = lexer.getNextToken();
+    }
 
-    REQUIRE(tokens.size() == 5);
-    REQUIRE(tokens[0].type == TokenType::Comment);
-    REQUIRE(tokens[0].value == "This is a generator comment");
-    REQUIRE(tokens[1].type == TokenType::Identifier);
-    REQUIRE(tokens[1].value == "p");
-    REQUIRE(tokens[2].type == TokenType::LBrace);
-    REQUIRE(tokens[3].type == TokenType::RBrace);
-    REQUIRE(tokens[4].type == TokenType::EndOfFile);
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "div"},
+        {CHTL::TokenType::TOKEN_LBRACE, "{"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "main"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_RBRACE, "}"}
+    };
+
+    REQUIRE(tokens.size() == expectedTokens.size());
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        REQUIRE(tokens[i].type == expectedTokens[i].first);
+        REQUIRE(tokens[i].lexeme == expectedTokens[i].second);
+    }
 }
 
-TEST_CASE("Lexer handles multi-line comments", "[lexer]") {
-    const std::string input = R"(
-/* This is a
-   multi-line comment */
-span { }
-)";
-    CHTLLexer lexer(input);
-    std::vector<Token> tokens = lexer.getAllTokens();
+TEST_CASE("Lexer handles different literal types", "[lexer]") {
+    std::string input = "id: 'some-id'; class: some-class;";
+    CHTL::CHTLLexer lexer(input);
 
-    REQUIRE(tokens.size() == 4);
-    REQUIRE(tokens[0].type == TokenType::Identifier);
-    REQUIRE(tokens[0].value == "span");
-    REQUIRE(tokens[1].type == TokenType::LBrace);
-    REQUIRE(tokens[2].type == TokenType::RBrace);
-    REQUIRE(tokens[3].type == TokenType::EndOfFile);
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "some-id"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "class"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_UNQUOTED_LITERAL, "some-class"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+    };
+
+    for (const auto& expected : expectedTokens) {
+        CHTL::Token token = lexer.getNextToken();
+        REQUIRE(token.type == expected.first);
+        REQUIRE(token.lexeme == expected.second);
+    }
+    REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
 }

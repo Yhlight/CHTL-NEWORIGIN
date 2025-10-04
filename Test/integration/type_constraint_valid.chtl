@@ -1,6 +1,0 @@
-div {
-    except [Template] @Style;
-    p {
-        text: "This is allowed.";
-    }
-}

@@ -1,52 +1,30 @@
-#ifndef CHTL_STYLE_NODE_H
-#define CHTL_STYLE_NODE_H
+#pragma once
 
 #include "BaseNode.h"
-#include "CssRuleNode.h"
-#include "NodeVisitor.h"
-#include <string>
+#include "PropertyNode.h"
 #include <vector>
-#include <utility>
-#include <sstream>
 #include <memory>
 
-class StyleNode : public BaseNode {
-public:
-    StyleNode() = default;
+namespace CHTL {
 
-    void addProperty(const std::string& key, const std::string& value) {
-        properties.push_back({key, value});
-    }
+    class StyleNode : public BaseNode {
+    public:
+        StyleNode() {
+            type = NodeType::NODE_STYLE;
+        }
 
-    void addRule(std::unique_ptr<CssRuleNode> rule) {
-        rules.push_back(std::move(rule));
-    }
+        const std::vector<std::shared_ptr<PropertyNode>>& getProperties() const {
+            // This is not ideal, but it's a simple way to expose the properties
+            // A better solution would be to have a dedicated list of properties
+            // and not use the generic children from BaseNode.
+            // For now, we'll cast the children.
+            static std::vector<std::shared_ptr<PropertyNode>> properties;
+            properties.clear();
+            for (const auto& child : children) {
+                properties.push_back(std::dynamic_pointer_cast<PropertyNode>(child));
+            }
+            return properties;
+        }
+    };
 
-    std::string toString(int depth = 0) const override {
-        // This will be updated later to handle hoisting.
-        // For now, it only represents inline styles.
-        return "";
-    }
-
-    void accept(NodeVisitor& visitor) override {
-        visitor.visit(*this);
-    }
-
-    const std::vector<std::pair<std::string, std::string>>& getProperties() const {
-        return properties;
-    }
-
-    const std::vector<std::unique_ptr<CssRuleNode>>& getRules() const {
-        return rules;
-    }
-
-    std::string getNodeType() const override {
-        return "[Style]";
-    }
-
-private:
-    std::vector<std::pair<std::string, std::string>> properties;
-    std::vector<std::unique_ptr<CssRuleNode>> rules;
-};
-
-#endif //CHTL_STYLE_NODE_H
+}

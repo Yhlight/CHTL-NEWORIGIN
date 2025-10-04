@@ -1,260 +1,191 @@
 #include "CHTLLexer.h"
 #include <cctype>
+#include <cstring> // For strchr
 
-CHTLLexer::CHTLLexer(const std::string& input)
-    : input(input), position(0), line(1), column(1) {}
+namespace CHTL {
 
-char CHTLLexer::currentChar() {
-    if (position >= input.length()) {
+CHTLLexer::CHTLLexer(const std::string& source)
+    : source(source), position(0), line(1), column(1) {}
+
+char CHTLLexer::peek() {
+    if (position >= source.length()) {
         return '\0';
     }
-    return input[position];
+    return source[position];
 }
 
-void CHTLLexer::advance() {
-    if (currentChar() == '\n') {
+char CHTLLexer::advance() {
+    if (position >= source.length()) {
+        return '\0';
+    }
+    char currentChar = source[position];
+    position++;
+    column++;
+    if (currentChar == '\n') {
         line++;
         column = 1;
-    } else {
-        column++;
     }
-    position++;
+    return currentChar;
 }
 
 void CHTLLexer::skipWhitespace() {
-    while (currentChar() != '\0' && isspace(currentChar())) {
+    while (isspace(peek())) {
         advance();
     }
 }
 
-void CHTLLexer::skipSingleLineComment() {
-    while (currentChar() != '\0' && currentChar() != '\n') {
-        advance();
-    }
+Token CHTLLexer::makeToken(TokenType type, const std::string& lexeme) {
+    return Token{type, lexeme, line, column - (int)lexeme.length()};
 }
 
-void CHTLLexer::skipMultiLineComment() {
-    while (currentChar() != '\0') {
-        if (currentChar() == '*' && (position + 1 < input.length() && input[position + 1] == '/')) {
-            advance();
-            advance();
-            break;
-        }
-        advance();
-    }
-}
-
-Token CHTLLexer::makeIdentifier() {
-    std::string value;
-    size_t start_pos = position;
-    // Allow hyphens and dots for CSS properties and values.
-    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-' || currentChar() == '.')) {
-        value += currentChar();
-        advance();
-    }
-
-    if (value == "from") {
-        return makeToken(TokenType::From, value);
-    }
-    if (value == "as") {
-        return makeToken(TokenType::As, value);
-    }
-    if (value == "use") {
-        return makeToken(TokenType::Use, value);
-    }
-    if (value == "html5") {
-        return makeToken(TokenType::Html5, value);
-    }
-    if (value == "except") {
-        return makeToken(TokenType::Except, value);
-    }
-    if (value == "if") {
-        return makeToken(TokenType::If, value);
-    }
-    if (value == "else") {
-        return makeToken(TokenType::Else, value);
-    }
-
-    return makeToken(TokenType::Identifier, value);
-}
-
-Token CHTLLexer::makeString(char quote) {
-    std::string value;
-    advance(); // Consume opening quote
-    while (currentChar() != '\0' && currentChar() != quote) {
-        value += currentChar();
-        advance();
-    }
-    advance(); // Consume closing quote
-    return makeToken(TokenType::String, value);
-}
-
-Token CHTLLexer::makeComment() {
-    std::string value;
-    advance(); // Consume '#'
-    if (currentChar() == ' ') {
-        advance(); // Consume space
-        while (currentChar() != '\0' && currentChar() != '\n') {
-            value += currentChar();
-            advance();
-        }
-    }
-    return makeToken(TokenType::Comment, value);
-}
-
-Token CHTLLexer::makeToken(TokenType type, const std::string& value) {
-    return {type, value, line, column};
+Token CHTLLexer::errorToken(const std::string& message) {
+    return Token{TokenType::TOKEN_UNKNOWN, message, line, column};
 }
 
 Token CHTLLexer::getNextToken() {
-    while (currentChar() != '\0') {
-        if (isspace(currentChar())) {
-            skipWhitespace();
-            continue;
-        }
+    skipWhitespace();
+    char c = peek();
 
-        if (currentChar() == '/' && (position + 1 < input.length())) {
-            if (input[position + 1] == '/') {
-                advance();
-                advance();
-                skipSingleLineComment();
-                continue;
-            } else if (input[position + 1] == '*') {
-                advance();
-                advance();
-                skipMultiLineComment();
-                continue;
-            }
-        }
-
-        if (currentChar() == '#') {
-            if (position + 1 < input.length() && input[position + 1] == ' ') {
-                return makeComment();
-            }
-        }
-
-        if (currentChar() == '\'' || currentChar() == '"') {
-            return makeString(currentChar());
-        }
-
-        // Allow identifiers to start with a digit for CSS values like '16px',
-        // and selectors starting with '.', '#', or '&'.
-        if (isalpha(currentChar()) || currentChar() == '_' || isdigit(currentChar()) || currentChar() == '.' || currentChar() == '#') {
-            return makeIdentifier();
-        }
-
-        if (currentChar() == '{') {
-            advance();
-            return makeToken(TokenType::LBrace, "{");
-        }
-
-        if (currentChar() == '}') {
-            advance();
-            return makeToken(TokenType::RBrace, "}");
-        }
-
-        if (currentChar() == '[') {
-            advance();
-            return makeToken(TokenType::LBracket, "[");
-        }
-
-        if (currentChar() == ']') {
-            advance();
-            return makeToken(TokenType::RBracket, "]");
-        }
-
-        if (currentChar() == '@') {
-            advance();
-            return makeToken(TokenType::At, "@");
-        }
-
-        if (currentChar() == ':') {
-            advance();
-            return makeToken(TokenType::Colon, ":");
-        }
-
-        if (currentChar() == ';') {
-            advance();
-            return makeToken(TokenType::Semicolon, ";");
-        }
-
-        if (currentChar() == '=') {
-            advance();
-            return makeToken(TokenType::Assign, "=");
-        }
-
-        if (currentChar() == ',') {
-            advance();
-            return makeToken(TokenType::Comma, ",");
-        }
-
-        if (currentChar() == '>') {
-            advance();
-            if (currentChar() == '=') {
-                advance();
-                return makeToken(TokenType::GreaterThanOrEqual, ">=");
-            }
-            return makeToken(TokenType::GreaterThan, ">");
-        }
-
-        if (currentChar() == '<') {
-            advance();
-            if (currentChar() == '=') {
-                advance();
-                return makeToken(TokenType::LessThanOrEqual, "<=");
-            }
-            return makeToken(TokenType::LessThan, "<");
-        }
-
-        if (currentChar() == '=') {
-            advance();
-            if (currentChar() == '=') {
-                advance();
-                return makeToken(TokenType::EqualTo, "==");
-            }
-            return makeToken(TokenType::Assign, "=");
-        }
-
-        if (currentChar() == '!') {
-            advance();
-            if (currentChar() == '=') {
-                advance();
-                return makeToken(TokenType::NotEqualTo, "!=");
-            }
-        }
-
-        if (currentChar() == '&') {
-            advance();
-            if (currentChar() == '&') {
-                advance();
-                return makeToken(TokenType::LogicalAnd, "&&");
-            }
-            return makeToken(TokenType::Ampersand, "&");
-        }
-
-        if (currentChar() == '|') {
-            advance();
-            if (currentChar() == '|') {
-                advance();
-                return makeToken(TokenType::LogicalOr, "||");
-            }
-        }
-
-        // Unrecognized character
-        advance();
-        return makeToken(TokenType::Unknown, std::string(1, input[position - 1]));
+    if (c == '\0') {
+        return makeToken(TokenType::TOKEN_EOF, "");
     }
 
-    return makeToken(TokenType::EndOfFile, "");
+    switch (c) {
+        case '@': advance(); return makeToken(TokenType::TOKEN_AT, "@");
+        case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
+        case '}': advance(); return makeToken(TokenType::TOKEN_RBRACE, "}");
+        case '(': advance(); return makeToken(TokenType::TOKEN_LPAREN, "(");
+        case ')': advance(); return makeToken(TokenType::TOKEN_RPAREN, ")");
+        case '[': advance(); return makeToken(TokenType::TOKEN_LBRACKET, "[");
+        case ']': advance(); return makeToken(TokenType::TOKEN_RBRACKET, "]");
+        case ':': advance(); return makeToken(TokenType::TOKEN_COLON, ":");
+        case ';': advance(); return makeToken(TokenType::TOKEN_SEMICOLON, ";");
+        case ',': advance(); return makeToken(TokenType::TOKEN_COMMA, ",");
+        case '.': advance(); return makeToken(TokenType::TOKEN_DOT, ".");
+        case '=': advance(); return makeToken(TokenType::TOKEN_ASSIGN, "=");
+        case '+': advance(); return makeToken(TokenType::TOKEN_PLUS, "+");
+        case '-': advance(); return makeToken(TokenType::TOKEN_MINUS, "-");
+        case '*': advance(); return makeToken(TokenType::TOKEN_MULTIPLY, "*");
+        case '?': advance(); return makeToken(TokenType::TOKEN_QUESTION, "?");
+
+        case '/':
+            advance();
+            if (peek() == '/') {
+                advance();
+                return singleLineComment();
+            } else if (peek() == '*') {
+                advance();
+                return multiLineComment();
+            }
+            return makeToken(TokenType::TOKEN_DIVIDE, "/");
+
+        case '#':
+            advance();
+            return generatorComment();
+
+        case '"':
+        case '\'':
+            advance();
+            return stringLiteral(c);
+
+        default:
+            return lexIdentifierOrLiteral();
+    }
 }
 
-std::vector<Token> CHTLLexer::getAllTokens() {
-    std::vector<Token> tokens;
-    Token token = getNextToken();
-    while (token.type != TokenType::EndOfFile) {
-        tokens.push_back(token);
-        token = getNextToken();
+Token CHTLLexer::lexIdentifierOrLiteral() {
+    std::string lexeme;
+    const char* delimiters = "{}()[]:;,.=?# \t\n\r";
+    while (peek() != '\0' && strchr(delimiters, peek()) == nullptr) {
+        lexeme += advance();
     }
-    tokens.push_back(token); // Add EOF token
-    return tokens;
+
+    if (lexeme.empty()) {
+        return errorToken("Unexpected character");
+    }
+
+    // Check for keywords
+    if (lexeme == "text") return makeToken(TokenType::TOKEN_TEXT, lexeme);
+    if (lexeme == "style") return makeToken(TokenType::TOKEN_STYLE, lexeme);
+    if (lexeme == "script") return makeToken(TokenType::TOKEN_SCRIPT, lexeme);
+    if (lexeme == "use") return makeToken(TokenType::TOKEN_KEYWORD_USE, lexeme);
+    if (lexeme == "html5") return makeToken(TokenType::TOKEN_KEYWORD_HTML5, lexeme);
+    if (lexeme == "from") return makeToken(TokenType::TOKEN_KEYWORD_FROM, lexeme);
+    if (lexeme == "if") return makeToken(TokenType::TOKEN_IF, lexeme);
+    if (lexeme == "else") return makeToken(TokenType::TOKEN_ELSE, lexeme);
+
+    // Check if it's a valid identifier (starts with a letter or underscore)
+    if (isalpha(lexeme[0]) || lexeme[0] == '_') {
+        bool isIdentifier = true;
+        for (char c : lexeme) {
+            if (!isalnum(c) && c != '_') {
+                isIdentifier = false;
+                break;
+            }
+        }
+        if (isIdentifier) {
+            return makeToken(TokenType::TOKEN_IDENTIFIER, lexeme);
+        }
+    }
+
+    // Check if it's a number
+    bool isNumber = true;
+    for (char c : lexeme) {
+        if (!isdigit(c) && c != '.') {
+            isNumber = false;
+            break;
+        }
+    }
+    if (isNumber) {
+        return makeToken(TokenType::TOKEN_NUMERIC_LITERAL, lexeme);
+    }
+
+    // Otherwise, it's an unquoted literal
+    return makeToken(TokenType::TOKEN_UNQUOTED_LITERAL, lexeme);
+}
+
+Token CHTLLexer::stringLiteral(char quoteType) {
+    std::string lexeme;
+    while (peek() != quoteType && peek() != '\0') {
+        lexeme += advance();
+    }
+    if (peek() == quoteType) {
+        advance(); // consume the closing quote
+    } else {
+        return errorToken("Unterminated string literal");
+    }
+    return makeToken(TokenType::TOKEN_STRING_LITERAL, lexeme);
+}
+
+Token CHTLLexer::singleLineComment() {
+    std::string lexeme;
+    while (peek() != '\n' && peek() != '\0') {
+        lexeme += advance();
+    }
+    return makeToken(TokenType::TOKEN_SINGLE_LINE_COMMENT, lexeme);
+}
+
+Token CHTLLexer::multiLineComment() {
+    std::string lexeme;
+    while (position + 1 < source.length() && (peek() != '*' || source[position + 1] != '/')) {
+        lexeme += advance();
+    }
+
+    if (position + 1 < source.length() && peek() == '*' && source[position + 1] == '/') {
+        advance(); // consume *
+        advance(); // consume /
+    } else {
+        return errorToken("Unterminated multi-line comment");
+    }
+    return makeToken(TokenType::TOKEN_MULTI_LINE_COMMENT, lexeme);
+}
+
+Token CHTLLexer::generatorComment() {
+    std::string lexeme;
+    while (peek() != '\n' && peek() != '\0') {
+        lexeme += advance();
+    }
+    return makeToken(TokenType::TOKEN_GENERATOR_COMMENT, lexeme);
+}
+
 }

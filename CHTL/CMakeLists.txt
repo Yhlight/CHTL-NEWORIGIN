@@ -1,19 +1,24 @@
-add_library(chtl-lib STATIC
+add_library(CHTL STATIC
     CHTLLexer/CHTLLexer.cpp
+    CHTLLoader/CHTLLoader.cpp
     CHTLParser/CHTLParser.cpp
-    CHTLProcessor/CHTLProcessor.cpp
-    CHTLGenerator/HtmlGenerator.cpp
+    CHTLParser/CHTLParserContext.cpp
+    CHTLParser/ParsingUtils.cpp
+    CHTLState/InitialState.cpp
+    CHTLStrategy/ElementParsingStrategy.cpp
+    CHTLStrategy/TextParsingStrategy.cpp
+    CHTLStrategy/StyleParsingStrategy.cpp
+    CHTLStrategy/TemplateParsingStrategy.cpp
+    CHTLStrategy/CustomParsingStrategy.cpp
+    CHTLStrategy/OriginParsingStrategy.cpp
+    CHTLStrategy/ImportParsingStrategy.cpp
+    CHTLStrategy/NamespaceParsingStrategy.cpp
+    CHTLStrategy/ConfigurationParsingStrategy.cpp
+    CHTLStrategy/UseParsingStrategy.cpp
+    CHTLStrategy/IfParsingStrategy.cpp
+    CHTLGenerator/CHTLGenerator.cpp
 )
 
-target_include_directories(chtl-lib PUBLIC
-    .
-    ../SharedCore
-    ../Util
+target_include_directories(CHTL PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
-target_link_libraries(chtl-lib PRIVATE
-    chtl-util
-)
-
-add_executable(chtl-compiler main.cpp)
-target_link_libraries(chtl-compiler PRIVATE chtl-lib)

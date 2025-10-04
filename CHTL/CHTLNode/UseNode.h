@@ -1,28 +1,20 @@
-#ifndef CHTL_USE_NODE_H
-#define CHTL_USE_NODE_H
+#pragma once
 
 #include "BaseNode.h"
-#include "NodeVisitor.h"
 #include <string>
+
+namespace CHTL {
 
 class UseNode : public BaseNode {
 public:
-    explicit UseNode(std::string directive) : directive(std::move(directive)) {}
-
-    std::string toString(int depth = 0) const override {
-        return std::string(depth * 2, ' ') + "UseNode: " + directive + "\n";
+    UseNode(const std::string& useType) : useType(useType) {
+        this->type = NodeType::NODE_USE;
     }
 
-    void accept(NodeVisitor& visitor) override {
-        visitor.visit(*this);
-    }
-
-    const std::string& getDirective() const {
-        return directive;
-    }
+    const std::string& getUseType() const { return useType; }
 
 private:
-    std::string directive;
+    std::string useType;
 };
 
-#endif //CHTL_USE_NODE_H
+}

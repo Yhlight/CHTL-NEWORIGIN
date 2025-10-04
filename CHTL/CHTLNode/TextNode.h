@@ -1,29 +1,20 @@
-#ifndef CHTL_TEXT_NODE_H
-#define CHTL_TEXT_NODE_H
+#pragma once
 
 #include "BaseNode.h"
-#include "NodeVisitor.h"
 #include <string>
-#include <sstream>
 
-class TextNode : public BaseNode {
-public:
-    explicit TextNode(const std::string& text) : text(text) {}
+namespace CHTL {
 
-    std::string toString(int depth = 0) const override {
-        std::stringstream ss;
-        ss << std::string(depth * 2, ' ') << text << std::endl;
-        return ss.str();
-    }
+    class TextNode : public BaseNode {
+    public:
+        TextNode(const std::string& content) : content(content) {
+            type = NodeType::NODE_TEXT;
+        }
 
-    void accept(NodeVisitor& visitor) override {
-        visitor.visit(*this);
-    }
+        const std::string& getContent() const { return content; }
 
-    const std::string& getText() const { return text; }
+    private:
+        std::string content;
+    };
 
-private:
-    std::string text;
-};
-
-#endif //CHTL_TEXT_NODE_H
+}

@@ -1,40 +1,56 @@
-#ifndef CHTL_IMPORT_NODE_H
-#define CHTL_IMPORT_NODE_H
+#pragma once
 
 #include "BaseNode.h"
-#include "NodeVisitor.h"
 #include <string>
 #include <vector>
+#include <memory>
+
+namespace CHTL {
+
+enum class ImportType {
+    HTML,
+    STYLE,
+    JAVASCRIPT,
+    CHTL,
+    CJMOD,
+    CONFIG,
+    UNKNOWN
+};
+
+enum class ImportCategory {
+    CUSTOM,
+    TEMPLATE,
+    ORIGIN,
+    CONFIGURATION,
+    NONE
+};
 
 class ImportNode : public BaseNode {
 public:
-    ImportNode(const std::string& fullType, const std::string& entityName, const std::string& filePath, const std::string& alias)
-        : fullType(fullType), entityName(entityName), filePath(filePath), alias(alias) {}
-
-    std::string toString(int depth = 0) const override {
-        std::string indent(depth * 2, ' ');
-        std::string result = indent + "ImportNode: " + fullType + " " + entityName + " from \"" + filePath + "\"";
-        if (!alias.empty()) {
-            result += " as " + alias;
-        }
-        result += "\n";
-        return result;
+    ImportNode(ImportType importType, const std::string& path, const std::string& alias = "")
+        : importType(importType), path(path), alias(alias), category(ImportCategory::NONE), itemType(""), itemName("") {
+        type = NodeType::NODE_IMPORT;
     }
 
-    void accept(NodeVisitor& visitor) override {
-        visitor.visit(*this);
+    ImportNode(ImportCategory category, const std::string& itemType, const std::string& itemName, const std::string& path, const std::string& alias = "")
+        : importType(ImportType::CHTL), category(category), itemType(itemType), itemName(itemName), path(path), alias(alias) {
+        type = NodeType::NODE_IMPORT;
     }
 
-    const std::string& getFullType() const { return fullType; }
-    const std::string& getEntityName() const { return entityName; }
-    const std::string& getFilePath() const { return filePath; }
+    ImportType getImportType() const { return importType; }
+    ImportCategory getCategory() const { return category; }
+    const std::string& getItemType() const { return itemType; }
+    const std::string& getItemName() const { return itemName; }
+    const std::string& getPath() const { return path; }
     const std::string& getAlias() const { return alias; }
 
 private:
-    std::string fullType;
-    std::string entityName;
-    std::string filePath;
+    ImportType importType;
+    ImportCategory category;
+    std::string itemType;
+    std::string itemName;
+    std::string path;
     std::string alias;
 };
 
-#endif // CHTL_IMPORT_NODE_H
+}

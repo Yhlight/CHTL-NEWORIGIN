@@ -1,47 +1,20 @@
-#ifndef CHTL_PARSER_H
-#define CHTL_PARSER_H
+#pragma once
 
-#include "../CHTLLexer/CHTLLexer.h"
-#include "../CHTLNode/DocumentNode.h"
-#include "../CHTLNode/ElementNode.h"
-#include "../CHTLNode/CustomStyleNode.h"
-#include "../CHTLNode/CustomElementNode.h"
-#include "../CHTLNode/CustomVarNode.h"
-#include "../CHTLNode/ImportNode.h"
-#include "../CHTLNode/NamespaceNode.h"
-#include "../CHTLNode/UseNode.h"
-#include "../CHTLNode/IfNode.h"
-#include "../CHTLContext/CHTLContext.h"
+#include "../CHTLLexer/Token.h"
+#include "../CHTLNode/BaseNode.h"
+#include "CHTLParserContext.h"
+#include <vector>
 #include <memory>
 
-class CHTLParser {
-public:
-    CHTLParser(const std::string& input, CHTLContext& context, bool discoveryMode = false);
-    std::unique_ptr<DocumentNode> parse();
+namespace CHTL {
 
-private:
-    CHTLLexer lexer;
-    CHTLContext& context;
-    bool discoveryMode;
-    Token currentToken;
-    Token nextToken;
+    class CHTLParser {
+    public:
+        CHTLParser(const std::vector<Token>& tokens);
+        std::shared_ptr<BaseNode> parse();
 
-    void advance();
-    Token peek();
-    void expect(TokenType type);
-    std::unique_ptr<BaseNode> parseStatement();
-    std::unique_ptr<ElementNode> parseElement();
-    void parseAttribute(ElementNode& node);
-    std::unique_ptr<BaseNode> parseTextNode();
-    std::unique_ptr<BaseNode> parseCommentNode();
-    std::unique_ptr<BaseNode> parseStyleNode();
-    std::unique_ptr<BaseNode> parseTextAttribute();
-    std::unique_ptr<BaseNode> parseTemplateDeclaration();
-    std::unique_ptr<BaseNode> parseCustomDeclaration();
-    std::unique_ptr<BaseNode> parseImportDeclaration();
-    std::unique_ptr<BaseNode> parseNamespaceDeclaration();
-    std::unique_ptr<BaseNode> parseUseStatement();
-    std::unique_ptr<IfNode> parseIfStatement();
-};
+    private:
+        CHTLParserContext context;
+    };
 
-#endif //CHTL_PARSER_H
+}

@@ -1,6 +1,0 @@
-div {
-    except span;
-    p {
-        text: "This is allowed.";
-    }
-}
