@@ -9,12 +9,14 @@
 #include <vector>
 #include <map>
 #include <filesystem>
+#include "../CHTLContext/ConfigurationManager.h"
 
 namespace CHTL {
+class ConfigurationManager;
 
 class CHTLLoader {
 public:
-    CHTLLoader(const std::string& basePath);
+    CHTLLoader(const std::string& basePath, std::shared_ptr<ConfigurationManager> configManager);
     void loadImports(const std::shared_ptr<BaseNode>& ast);
     const std::map<std::string, std::shared_ptr<BaseNode>>& getLoadedAsts() const;
     const std::map<std::string, std::shared_ptr<OriginNode>>& getNamedOriginNodes() const;
@@ -34,6 +36,7 @@ private:
     std::map<std::string, std::shared_ptr<OriginNode>> namedOriginNodes;
     std::map<std::string, std::shared_ptr<BaseNode>> importedItems;
     std::map<std::string, std::map<std::string, std::shared_ptr<BaseNode>>> namespaces;
+    std::shared_ptr<ConfigurationManager> configManager;
 };
 
 }

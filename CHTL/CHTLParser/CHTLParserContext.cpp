@@ -1,10 +1,11 @@
 #include "CHTLParserContext.h"
 #include "../CHTLState/InitialState.h"
+#include "../CHTLContext/ConfigurationManager.h"
 
 namespace CHTL {
 
-CHTLParserContext::CHTLParserContext(const std::vector<Token>& tokens)
-    : tokens(tokens), position(0) {
+CHTLParserContext::CHTLParserContext(const std::vector<Token>& tokens, std::shared_ptr<ConfigurationManager> configManager)
+    : tokens(tokens), position(0), configManager(configManager) {
     setState(std::make_unique<InitialState>());
 }
 

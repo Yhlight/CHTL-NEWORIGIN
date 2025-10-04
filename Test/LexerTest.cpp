@@ -1,6 +1,8 @@
 #include "../third-party/catch.hpp"
 #include "../CHTL/CHTLLexer/CHTLLexer.h"
 #include "../CHTL/CHTLLexer/Token.h"
+#include "../CHTL/CHTLContext/ConfigurationManager.h"
+#include <memory>
 
 #include <vector>
 #include <string>
@@ -13,7 +15,8 @@ div {
     text { "hello" }
 }
 )";
-    CHTL::CHTLLexer lexer(input);
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
     std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
         {CHTL::TokenType::TOKEN_IDENTIFIER, "div"},
         {CHTL::TokenType::TOKEN_LBRACE, "{"},
@@ -45,7 +48,8 @@ div { # another comment
     id: "main"; // another comment
 }
 )";
-    CHTL::CHTLLexer lexer(input);
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
     std::vector<CHTL::Token> tokens;
     CHTL::Token token = lexer.getNextToken();
     while (token.type != CHTL::TokenType::TOKEN_EOF) {
@@ -77,7 +81,8 @@ div { # another comment
 
 TEST_CASE("Lexer handles different literal types", "[lexer]") {
     std::string input = "id: 'some-id'; class: some-class;";
-    CHTL::CHTLLexer lexer(input);
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
 
     std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
         {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},

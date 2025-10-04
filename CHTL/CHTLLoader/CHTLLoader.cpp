@@ -6,13 +6,14 @@
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLLexer/CHTLLexer.h"
 #include "../CHTLContext/GenerationContext.h"
+#include "../CHTLContext/ConfigurationManager.h"
 #include <fstream>
 #include <stdexcept>
 #include <filesystem>
 
 namespace CHTL {
 
-CHTLLoader::CHTLLoader(const std::string& basePath) : basePath(basePath) {
+CHTLLoader::CHTLLoader(const std::string& basePath, std::shared_ptr<ConfigurationManager> configManager) : basePath(basePath), configManager(configManager) {
     this->officialModulePath = "modules";
 }
 
@@ -67,14 +68,14 @@ void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
                      std::ifstream file(path);
                     if (!file) throw std::runtime_error("Could not open file: " + path);
                     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                    CHTLLexer lexer(content);
+                    CHTLLexer lexer(content, configManager);
                     std::vector<Token> tokens;
                     Token token = lexer.getNextToken();
                     while (token.type != TokenType::TOKEN_EOF) {
                         tokens.push_back(token);
                         token = lexer.getNextToken();
                     }
-                    CHTLParser parser(tokens);
+                    CHTLParser parser(tokens, configManager);
                     loadedAsts[path] = parser.parse();
                 }
 

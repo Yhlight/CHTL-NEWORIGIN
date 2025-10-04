@@ -4,8 +4,8 @@
 
 namespace CHTL {
 
-CHTLLexer::CHTLLexer(const std::string& source)
-    : source(source), position(0), line(1), column(1) {}
+CHTLLexer::CHTLLexer(const std::string& source, std::shared_ptr<ConfigurationManager> configManager)
+    : source(source), configManager(configManager), position(0), line(1), column(1) {}
 
 char CHTLLexer::peek() {
     if (position >= source.length()) {
@@ -104,16 +104,18 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
         return errorToken("Unexpected character");
     }
 
-    // Check for keywords
-    if (lexeme == "text") return makeToken(TokenType::TOKEN_TEXT, lexeme);
-    if (lexeme == "style") return makeToken(TokenType::TOKEN_STYLE, lexeme);
-    if (lexeme == "script") return makeToken(TokenType::TOKEN_SCRIPT, lexeme);
-    if (lexeme == "use") return makeToken(TokenType::TOKEN_KEYWORD_USE, lexeme);
-    if (lexeme == "html5") return makeToken(TokenType::TOKEN_KEYWORD_HTML5, lexeme);
-    if (lexeme == "from") return makeToken(TokenType::TOKEN_KEYWORD_FROM, lexeme);
-    if (lexeme == "if") return makeToken(TokenType::TOKEN_IF, lexeme);
-    if (lexeme == "else") return makeToken(TokenType::TOKEN_ELSE, lexeme);
-    if (lexeme == "except") return makeToken(TokenType::TOKEN_EXCEPT, lexeme);
+    // Check for keywords using the configuration manager
+    if (configManager) {
+        if (lexeme == configManager->getKeyword("text")) return makeToken(TokenType::TOKEN_TEXT, lexeme);
+        if (lexeme == configManager->getKeyword("style")) return makeToken(TokenType::TOKEN_STYLE, lexeme);
+        if (lexeme == configManager->getKeyword("script")) return makeToken(TokenType::TOKEN_SCRIPT, lexeme);
+        if (lexeme == configManager->getKeyword("use")) return makeToken(TokenType::TOKEN_KEYWORD_USE, lexeme);
+        if (lexeme == configManager->getKeyword("html5")) return makeToken(TokenType::TOKEN_KEYWORD_HTML5, lexeme);
+        if (lexeme == configManager->getKeyword("from")) return makeToken(TokenType::TOKEN_KEYWORD_FROM, lexeme);
+        if (lexeme == configManager->getKeyword("if")) return makeToken(TokenType::TOKEN_IF, lexeme);
+        if (lexeme == configManager->getKeyword("else")) return makeToken(TokenType::TOKEN_ELSE, lexeme);
+        if (lexeme == configManager->getKeyword("except")) return makeToken(TokenType::TOKEN_EXCEPT, lexeme);
+    }
 
     // Check if it's a valid identifier (starts with a letter or underscore)
     if (isalpha(lexeme[0]) || lexeme[0] == '_') {

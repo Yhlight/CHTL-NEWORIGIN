@@ -1,18 +1,21 @@
 #pragma once
 
 #include "Token.h"
+#include "../CHTLContext/ConfigurationManager.h"
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace CHTL {
 
     class CHTLLexer {
     public:
-        CHTLLexer(const std::string& source);
+        CHTLLexer(const std::string& source, std::shared_ptr<ConfigurationManager> configManager);
         Token getNextToken();
 
     private:
         std::string source;
+        std::shared_ptr<ConfigurationManager> configManager;
         size_t position;
         int line;
         int column;

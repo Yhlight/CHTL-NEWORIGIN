@@ -12,13 +12,16 @@
 #include "../CHTL/CHTLNode/NamespaceNode.h"
 #include "../CHTL/CHTLNode/ConfigurationNode.h"
 #include "../CHTL/CHTLNode/TemplateUsageNode.h"
+#include "../CHTL/CHTLContext/ConfigurationManager.h"
+#include <memory>
 
 #include <vector>
 #include <string>
 
 // Helper to get the first and only node from the parser's root
 std::shared_ptr<CHTL::BaseNode> getFirstNode(const std::string& input) {
-    CHTL::CHTLLexer lexer(input);
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
     std::vector<CHTL::Token> tokens;
     CHTL::Token token = lexer.getNextToken();
     while (token.type != CHTL::TokenType::TOKEN_EOF) {
@@ -26,7 +29,7 @@ std::shared_ptr<CHTL::BaseNode> getFirstNode(const std::string& input) {
         token = lexer.getNextToken();
     }
 
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(tokens, configManager);
     auto root = parser.parse();
     REQUIRE(root != nullptr);
     REQUIRE(root->getChildren().size() == 1);

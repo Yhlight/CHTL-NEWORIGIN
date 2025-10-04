@@ -7,33 +7,62 @@
 #include "../CHTL/CHTLLoader/CHTLLoader.h"
 #include "../CHTL/CHTLContext/GenerationContext.h"
 #include "../CHTL/SemanticAnalyzer.h"
+#include "../CHTL/CHTLContext/ConfigurationManager.h"
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <memory>
 
 // Helper to perform the full compilation process and return the generator
 inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
-    CHTL::CHTLLexer lexer(input);
-    std::vector<CHTL::Token> tokens;
-    CHTL::Token token = lexer.getNextToken();
-    while (token.type != CHTL::TokenType::TOKEN_EOF) {
-        tokens.push_back(token);
-        token = lexer.getNextToken();
-    }
-    CHTL::CHTLParser parser(tokens);
-    auto ast = parser.parse();
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
 
-    CHTL::CHTLLoader loader(".");
+    // --- First Pass: Find and apply configuration ---
+    {
+        CHTL::CHTLLexer initial_lexer(input, configManager);
+        std::vector<CHTL::Token> initial_tokens;
+        CHTL::Token token = initial_lexer.getNextToken();
+        while (token.type != CHTL::TokenType::TOKEN_EOF) {
+            initial_tokens.push_back(token);
+            token = initial_lexer.getNextToken();
+        }
+
+        CHTL::CHTLParser initial_parser(initial_tokens, configManager);
+        auto initial_ast = initial_parser.parse();
+
+        for (const auto& child : initial_ast->getChildren()) {
+            if (child->getType() == CHTL::NodeType::NODE_CONFIG) {
+                if (auto config_node = std::dynamic_pointer_cast<CHTL::ConfigurationNode>(child)) {
+                    configManager->update(config_node);
+                    break;
+                }
+            }
+        }
+    }
+
+    // --- Second Pass: Main compilation with updated configuration ---
+    CHTL::CHTLLexer main_lexer(input, configManager);
+    std::vector<CHTL::Token> main_tokens;
+    CHTL::Token main_token = main_lexer.getNextToken();
+    while (main_token.type != CHTL::TokenType::TOKEN_EOF) {
+        main_tokens.push_back(main_token);
+        main_token = main_lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser main_parser(main_tokens, configManager);
+    auto ast = main_parser.parse();
+
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(ast);
+
+    CHTL::SemanticAnalyzer semantic_analyzer;
+    semantic_analyzer.analyze(ast);
 
     CHTL::GenerationContext context;
     loader.gatherTemplates(ast, context);
     for (const auto& pair : loader.getLoadedAsts()) {
         loader.gatherTemplates(pair.second, context);
     }
-
-    CHTL::SemanticAnalyzer semantic_analyzer;
-    semantic_analyzer.analyze(ast);
 
     CHTL::CHTLGenerator generator;
     generator.generate(ast, context);

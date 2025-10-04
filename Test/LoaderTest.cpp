@@ -4,23 +4,25 @@
 #include "../CHTL/CHTLLoader/CHTLLoader.h"
 #include "../CHTL/CHTLNode/ElementNode.h"
 #include "../CHTL/CHTLNode/CustomNode.h"
+#include "../CHTL/CHTLContext/ConfigurationManager.h"
 #include <fstream>
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <memory>
 
 namespace fs = std::filesystem;
 
 // Helper to parse input string into an AST
-std::shared_ptr<CHTL::BaseNode> parseString(const std::string& input) {
-    CHTL::CHTLLexer lexer(input);
+std::shared_ptr<CHTL::BaseNode> parseString(const std::string& input, std::shared_ptr<CHTL::ConfigurationManager> configManager) {
+    CHTL::CHTLLexer lexer(input, configManager);
     std::vector<CHTL::Token> tokens;
     CHTL::Token token = lexer.getNextToken();
     while (token.type != CHTL::TokenType::TOKEN_EOF) {
         tokens.push_back(token);
         token = lexer.getNextToken();
     }
-    CHTL::CHTLParser parser(tokens);
+    CHTL::CHTLParser parser(tokens, configManager);
     return parser.parse();
 }
 
@@ -49,10 +51,11 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles a simple import", "[loader]"
     outfile << "div { text { \"imported\" } }";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] @Chtl from "test_import.chtl";)";
-    auto mainAst = parseString(mainInput);
+    auto mainAst = parseString(mainInput, configManager);
 
-    CHTL::CHTLLoader loader(".");
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto loadedAsts = loader.getLoadedAsts();
@@ -73,9 +76,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader resolves path from base directory", 
     outfile << "[Custom] @Element MyComponent {}";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] [Custom] @Element MyComponent from "component";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     REQUIRE(loader.getImportedItems().count("MyComponent") == 1);
@@ -86,9 +90,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader resolves path from local module dire
     outfile << "[Custom] @Element MyComponent {}";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] [Custom] @Element MyComponent from "component";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     REQUIRE(loader.getImportedItems().count("MyComponent") == 1);
@@ -99,9 +104,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader resolves path from official modules 
     outfile << "[Custom] @Element MyComponent {}";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] [Custom] @Element MyComponent from "component";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     REQUIRE(loader.getImportedItems().count("MyComponent") == 1);
@@ -113,9 +119,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles HTML import", "[loader]") {
     outfile << "<h1>Hello</h1>";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] @Html from "test.html" as myHtml;)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto originNodes = loader.getNamedOriginNodes();
@@ -131,9 +138,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles CSS import", "[loader]") {
     outfile << "body { color: blue; }";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] @Style from "test.css" as myCss;)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto originNodes = loader.getNamedOriginNodes();
@@ -149,9 +157,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles JS import", "[loader]") {
     outfile << "console.log('test');";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] @JavaScript from "test.js" as myJs;)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto originNodes = loader.getNamedOriginNodes();
@@ -168,9 +177,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles precise import", "[loader]")
     outfile << "[Custom] @Element MyComponent {}";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] [Custom] @Element MyComponent from "component.chtl";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto importedItems = loader.getImportedItems();
@@ -187,9 +197,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles type-based import", "[loader
     outfile << "[Custom] @Element ComponentA {} [Custom] @Element ComponentB {}";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] [Custom] @Element from "component.chtl";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto importedItems = loader.getImportedItems();
@@ -203,9 +214,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles namespace import", "[loader]
     outfile << "[Namespace] MyNS { [Custom] @Element MyComponent {} }";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] @Chtl from "namespaced.chtl";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto namespaces = loader.getNamespaces();
@@ -222,9 +234,10 @@ TEST_CASE_METHOD(LoaderTestFixture, "Loader handles default namespace import", "
     outfile << "[Custom] @Element MyComponent {}";
     outfile.close();
 
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
     std::string mainInput = R"([Import] @Chtl from "default_namespaced.chtl";)";
-    auto mainAst = parseString(mainInput);
-    CHTL::CHTLLoader loader(".");
+    auto mainAst = parseString(mainInput, configManager);
+    CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(mainAst);
 
     auto namespaces = loader.getNamespaces();

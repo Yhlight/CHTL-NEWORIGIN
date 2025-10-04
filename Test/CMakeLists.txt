@@ -6,6 +6,7 @@ add_executable(run_tests
     LoaderTest.cpp
     ConditionalRenderingTest.cpp
     ConstraintTest.cpp
+    ConfigurationTest.cpp
 )
 
 target_link_libraries(run_tests PRIVATE CHTL)
