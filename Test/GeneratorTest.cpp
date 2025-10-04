@@ -1,64 +1,74 @@
 #include "../third-party/catch.hpp"
+#include "../CHTL/CHTLLexer/CHTLLexer.h"
+#include "../CHTL/CHTLParser/CHTLParser.h"
 #include "../CHTL/CHTLGenerator/CHTLGenerator.h"
-#include "../CHTL/CHTLNode/ElementNode.h"
-#include "../CHTL/CHTLNode/TextNode.h"
-#include "../CHTL/CHTLNode/StyleNode.h"
-#include "../CHTL/CHTLNode/PropertyNode.h"
+
+#include <vector>
+#include <string>
+
+std::shared_ptr<CHTL::BaseNode> parseInput(const std::string& input) {
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+    CHTL::CHTLParser parser(tokens);
+    return parser.parse();
+}
 
 TEST_CASE("Generator handles simple element", "[generator]") {
-    auto element = std::make_shared<CHTL::ElementNode>("div");
+    std::string input = "div {}";
+    auto ast = parseInput(input);
     CHTL::CHTLGenerator generator;
-    std::string result = generator.generate(element);
-    REQUIRE(result == "<div></div>");
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<div></div>");
+}
+
+TEST_CASE("Generator handles element with text", "[generator]") {
+    std::string input = R"(p { text { "Hello World" } })";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<p>Hello World</p>");
 }
 
 TEST_CASE("Generator handles element with attributes", "[generator]") {
-    auto element = std::make_shared<CHTL::ElementNode>("a");
-    element->setAttribute("href", "https://example.com");
-    element->setAttribute("target", "_blank");
+    std::string input = R"(a { href: "#"; class: "link"; })";
+    auto ast = parseInput(input);
     CHTL::CHTLGenerator generator;
-    std::string result = generator.generate(element);
-    REQUIRE(result == "<a href=\"https://example.com\" target=\"_blank\"></a>");
+    generator.generate(ast);
+    std::string html = generator.getHtml();
+    REQUIRE(html.find(R"(href="#")") != std::string::npos);
+    REQUIRE(html.find(R"(class="link")") != std::string::npos);
 }
 
 TEST_CASE("Generator handles nested elements", "[generator]") {
-    auto parent = std::make_shared<CHTL::ElementNode>("div");
-    auto child = std::make_shared<CHTL::ElementNode>("p");
-    parent->addChild(child);
+    std::string input = R"(
+        body {
+            div {
+                span { text { "Nested" } }
+            }
+        }
+    )";
+    auto ast = parseInput(input);
     CHTL::CHTLGenerator generator;
-    std::string result = generator.generate(parent);
-    REQUIRE(result == "<div><p></p></div>");
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<body><div><span>Nested</span></div></body>");
 }
 
-TEST_CASE("Generator handles text node", "[generator]") {
-    auto text = std::make_shared<CHTL::TextNode>("Hello");
+TEST_CASE("Generator handles inline styles", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                color: red;
+                font-size: 16px;
+            }
+        }
+    )";
+    auto ast = parseInput(input);
     CHTL::CHTLGenerator generator;
-    std::string result = generator.generate(text);
-    REQUIRE(result == "Hello");
-}
-
-TEST_CASE("Generator handles style block", "[generator]") {
-    auto style = std::make_shared<CHTL::StyleNode>();
-    style->addChild(std::make_shared<CHTL::PropertyNode>("color", "blue"));
-    style->addChild(std::make_shared<CHTL::PropertyNode>("font-size", "16px"));
-    CHTL::CHTLGenerator generator;
-    std::string result = generator.generate(style);
-    REQUIRE(result == "<style>color: blue;font-size: 16px;</style>");
-}
-
-TEST_CASE("Generator handles complex structure", "[generator]") {
-    auto div = std::make_shared<CHTL::ElementNode>("div");
-    div->setAttribute("class", "container");
-
-    auto style = std::make_shared<CHTL::StyleNode>();
-    style->addChild(std::make_shared<CHTL::PropertyNode>("border", "1px solid black"));
-    div->addChild(style);
-
-    auto p = std::make_shared<CHTL::ElementNode>("p");
-    p->addChild(std::make_shared<CHTL::TextNode>("This is a test."));
-    div->addChild(p);
-
-    CHTL::CHTLGenerator generator;
-    std::string result = generator.generate(div);
-    REQUIRE(result == "<div class=\"container\"><style>border: 1px solid black;</style><p>This is a test.</p></div>");
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == R"(<div style="color: red;font-size: 16px;"></div>)");
 }

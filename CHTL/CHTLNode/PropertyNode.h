@@ -8,7 +8,7 @@ namespace CHTL {
     class PropertyNode : public BaseNode {
     public:
         PropertyNode(const std::string& key, const std::string& value) : key(key), value(value) {
-            type = NodeType::NODE_STYLE; // Or a more specific type if needed
+            type = NodeType::NODE_PROPERTY;
         }
 
         const std::string& getKey() const { return key; }

@@ -26,7 +26,8 @@ div {
     std::shared_ptr<CHTL::BaseNode> ast = parser.parse();
 
     CHTL::CHTLGenerator generator;
-    std::string html = generator.generate(ast);
+    generator.generate(ast);
+    std::string html = generator.getHtml();
 
     std::cout << "Generated HTML:" << std::endl;
     std::cout << html << std::endl;
