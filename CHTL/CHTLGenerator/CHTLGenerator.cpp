@@ -332,7 +332,13 @@ void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
     } else {
         selector = parentElement->getTagName();
     }
-    std::string media_query = "@media screen and (" + node->condition + ")";
+    std::string condition = node->condition;
+    size_t pos = 0;
+    while ((pos = condition.find("&&", pos)) != std::string::npos) {
+        condition.replace(pos, 2, "and");
+        pos += 3; // "and" is 3 chars
+    }
+    std::string media_query = "@media screen and (" + condition + ")";
     css_out << media_query << " {" << selector << " {";
     for (const auto& child : node->getChildren()) {
         if (child->getType() == NodeType::NODE_PROPERTY) {
