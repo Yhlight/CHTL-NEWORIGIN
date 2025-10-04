@@ -8,6 +8,7 @@
 #include "../CHTLStrategy/OriginParsingStrategy.h"
 #include "../CHTLStrategy/ImportParsingStrategy.h"
 #include "../CHTLStrategy/NamespaceParsingStrategy.h"
+#include "../CHTLStrategy/ConfigurationParsingStrategy.h"
 
 
 namespace CHTL {
@@ -34,6 +35,8 @@ namespace CHTL {
                     context->setStrategy(std::make_unique<ImportParsingStrategy>());
                 } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Namespace") {
                     context->setStrategy(std::make_unique<NamespaceParsingStrategy>());
+                } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Configuration") {
+                    context->setStrategy(std::make_unique<ConfigurationParsingStrategy>());
                 }
                 break;
             default:

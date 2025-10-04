@@ -1,6 +1,7 @@
 #include "OriginParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/OriginNode.h"
+#include <sstream>
 
 namespace CHTL {
 
@@ -18,12 +19,17 @@ std::shared_ptr<BaseNode> OriginParsingStrategy::parse(CHTLParserContext* contex
         context->advance(); // consume name
     }
 
-    std::string content = "";
+    std::stringstream contentStream;
     if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
         context->advance(); // consume '{'
 
+        bool firstToken = true;
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
-            content += context->getCurrentToken().lexeme;
+            if (!firstToken) {
+                contentStream << " ";
+            }
+            contentStream << context->getCurrentToken().lexeme;
+            firstToken = false;
             context->advance();
         }
 
@@ -34,7 +40,6 @@ std::shared_ptr<BaseNode> OriginParsingStrategy::parse(CHTLParserContext* contex
         }
     }
 
-    return std::make_shared<OriginNode>(originType, name, content);
+    return std::make_shared<OriginNode>(originType, name, contentStream.str());
 }
-
 }

@@ -10,6 +10,7 @@
 #include "../CHTL/CHTLNode/OriginNode.h"
 #include "../CHTL/CHTLNode/ImportNode.h"
 #include "../CHTL/CHTLNode/NamespaceNode.h"
+#include "../CHTL/CHTLNode/ConfigurationNode.h"
 
 #include <vector>
 #include <string>
@@ -209,6 +210,40 @@ TEST_CASE("Parser handles element template", "[parser]") {
     REQUIRE(div->getTagName() == "div");
 }
 
+TEST_CASE("Parser handles configuration block", "[parser]") {
+    std::string input = R"(
+[Configuration] {
+    INDEX_INITIAL_COUNT = 0;
+    DEBUG_MODE = false;
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_CONFIG);
+    auto configNode = std::dynamic_pointer_cast<CHTL::ConfigurationNode>(root);
+    REQUIRE(configNode != nullptr);
+    auto settings = configNode->getSettings();
+    REQUIRE(settings.size() == 2);
+
+    auto setting1 = settings[0];
+    REQUIRE(setting1->getKey() == "INDEX_INITIAL_COUNT");
+    REQUIRE(setting1->getValue() == "0");
+
+    auto setting2 = settings[1];
+    REQUIRE(setting2->getKey() == "DEBUG_MODE");
+    REQUIRE(setting2->getValue() == "false");
+}
+
 TEST_CASE("Parser handles custom style block", "[parser]") {
     std::string input = R"(
 [Custom] @Style MyCustomStyle {
@@ -287,7 +322,7 @@ TEST_CASE("Parser handles named origin block", "[parser]") {
     REQUIRE(originNode != nullptr);
     REQUIRE(originNode->getOriginType() == "@JavaScript");
     REQUIRE(originNode->getName() == "myScript");
-    REQUIRE(originNode->getContent() == "console.log(Hello);");
+    REQUIRE(originNode->getContent() == "console . log ( Hello ) ;");
 }
 
 TEST_CASE("Parser handles import statement", "[parser]") {

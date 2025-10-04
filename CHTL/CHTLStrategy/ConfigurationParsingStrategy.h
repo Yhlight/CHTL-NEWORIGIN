@@ -4,7 +4,7 @@
 
 namespace CHTL {
 
-class StyleParsingStrategy : public ParsingStrategy {
+class ConfigurationParsingStrategy : public ParsingStrategy {
 public:
     std::shared_ptr<BaseNode> parse(CHTLParserContext* context) override;
 };

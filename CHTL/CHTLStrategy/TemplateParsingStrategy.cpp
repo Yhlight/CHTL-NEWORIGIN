@@ -1,9 +1,10 @@
 #include "TemplateParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/TemplateNode.h"
-#include "StyleParsingStrategy.h"
-#include "TextParsingStrategy.h"
+#include "../CHTLParser/ParsingUtils.h"
 #include "ElementParsingStrategy.h"
+#include "TextParsingStrategy.h"
+#include "StyleParsingStrategy.h"
 #include "../CHTLNode/PropertyNode.h"
 
 namespace CHTL {

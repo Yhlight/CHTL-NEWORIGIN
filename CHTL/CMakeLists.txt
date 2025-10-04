@@ -2,6 +2,7 @@ add_library(CHTL STATIC
     CHTLLexer/CHTLLexer.cpp
     CHTLParser/CHTLParser.cpp
     CHTLParser/CHTLParserContext.cpp
+    CHTLParser/ParsingUtils.cpp
     CHTLState/InitialState.cpp
     CHTLStrategy/ElementParsingStrategy.cpp
     CHTLStrategy/TextParsingStrategy.cpp
@@ -11,6 +12,7 @@ add_library(CHTL STATIC
     CHTLStrategy/OriginParsingStrategy.cpp
     CHTLStrategy/ImportParsingStrategy.cpp
     CHTLStrategy/NamespaceParsingStrategy.cpp
+    CHTLStrategy/ConfigurationParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
 )
 
