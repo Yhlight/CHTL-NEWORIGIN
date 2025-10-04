@@ -2,6 +2,7 @@
 #include "TextParsingStrategy.h"
 #include "StyleParsingStrategy.h"
 #include "IfParsingStrategy.h"
+#include "ConstraintParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
@@ -55,6 +56,9 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
                 element->addChild(context->runCurrentStrategy());
             } else if (currentType == TokenType::TOKEN_IF || currentType == TokenType::TOKEN_ELSE) {
                 context->setStrategy(std::make_unique<IfParsingStrategy>());
+                element->addChild(context->runCurrentStrategy());
+            } else if (currentType == TokenType::TOKEN_EXCEPT) {
+                context->setStrategy(std::make_unique<ConstraintParsingStrategy>());
                 element->addChild(context->runCurrentStrategy());
             } else if (currentType == TokenType::TOKEN_IDENTIFIER) {
                 if (context->peek(1).type == TokenType::TOKEN_COLON || context->peek(1).type == TokenType::TOKEN_ASSIGN) {

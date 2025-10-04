@@ -4,6 +4,7 @@
 #include "CHTLGenerator/CHTLGenerator.h"
 #include "CHTLLoader/CHTLLoader.h"
 #include "CHTLContext/GenerationContext.h"
+#include "SemanticAnalyzer.h"
 
 int main() {
     std::string input = R"(
@@ -41,6 +42,9 @@ div {
     for (const auto& pair : loader.getLoadedAsts()) {
         loader.gatherTemplates(pair.second, context);
     }
+
+    CHTL::SemanticAnalyzer semantic_analyzer;
+    semantic_analyzer.analyze(ast);
 
     CHTL::CHTLGenerator generator;
     generator.generate(ast, context);

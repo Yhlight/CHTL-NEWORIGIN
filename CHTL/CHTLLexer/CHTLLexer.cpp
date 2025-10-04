@@ -113,6 +113,7 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
     if (lexeme == "from") return makeToken(TokenType::TOKEN_KEYWORD_FROM, lexeme);
     if (lexeme == "if") return makeToken(TokenType::TOKEN_IF, lexeme);
     if (lexeme == "else") return makeToken(TokenType::TOKEN_ELSE, lexeme);
+    if (lexeme == "except") return makeToken(TokenType::TOKEN_EXCEPT, lexeme);
 
     // Check if it's a valid identifier (starts with a letter or underscore)
     if (isalpha(lexeme[0]) || lexeme[0] == '_') {

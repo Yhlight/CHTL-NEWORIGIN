@@ -6,6 +6,7 @@
 #include "../CHTL/CHTLGenerator/CHTLGenerator.h"
 #include "../CHTL/CHTLLoader/CHTLLoader.h"
 #include "../CHTL/CHTLContext/GenerationContext.h"
+#include "../CHTL/SemanticAnalyzer.h"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -30,6 +31,9 @@ inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
     for (const auto& pair : loader.getLoadedAsts()) {
         loader.gatherTemplates(pair.second, context);
     }
+
+    CHTL::SemanticAnalyzer semantic_analyzer;
+    semantic_analyzer.analyze(ast);
 
     CHTL::CHTLGenerator generator;
     generator.generate(ast, context);
