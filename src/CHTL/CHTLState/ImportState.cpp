@@ -18,6 +18,7 @@ void ImportState::handle(CHTLParser& parser, Token token) {
     if (typeToken.type != TokenType::IDENTIFIER) {
         throw std::runtime_error("Expected import type (e.g., Chtl, Html) after @");
     }
+    std::string importType = typeToken.value;
 
     Token fromToken = parser.consume();
     if (fromToken.type != TokenType::KEYWORD_FROM) {
@@ -33,10 +34,13 @@ void ImportState::handle(CHTLParser& parser, Token token) {
     if (parser.peek().type == TokenType::KEYWORD_AS) {
         parser.consume(); // Consume 'as'
         Token aliasToken = parser.consume();
-        if (aliasToken.type != TokenType::STRING_LITERAL) {
-            throw std::runtime_error("Expected alias string literal after 'as'");
+        if (aliasToken.type != TokenType::IDENTIFIER) {
+            throw std::runtime_error("Expected alias identifier after 'as'");
         }
         alias = aliasToken.value;
+    } else if (importType != "Chtl") {
+        // 'as' is mandatory for non-Chtl imports
+        throw std::runtime_error("The 'as' keyword is mandatory for importing " + importType + " files.");
     }
 
     // Optional semicolon
@@ -44,7 +48,7 @@ void ImportState::handle(CHTLParser& parser, Token token) {
         parser.consume();
     }
 
-    auto importNode = std::make_unique<ImportNode>(typeToken.value, pathToken.value, alias);
+    auto importNode = std::make_unique<ImportNode>(importType, pathToken.value, alias);
     parser.addNode(std::move(importNode));
 
     parser.setState(std::make_unique<DefaultState>());

@@ -22,6 +22,7 @@ void resolveImports(BaseNode& node) {
 
             const std::string& path = importNode->getPath();
             const std::string& importType = importNode->getImportType();
+            const std::string& alias = importNode->getAlias();
 
             std::ifstream file(path);
             if (!file.is_open()) {
@@ -44,7 +45,7 @@ void resolveImports(BaseNode& node) {
                 }
             } else {
                 // For other types like Html, Css, etc., create an OriginNode
-                newChildren.push_back(std::make_unique<OriginNode>(importType, content));
+                newChildren.push_back(std::make_unique<OriginNode>(importType, alias, content));
             }
         } else {
             // Recurse on non-import nodes
