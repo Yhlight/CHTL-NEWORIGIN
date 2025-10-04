@@ -9,6 +9,7 @@
 #include "../CHTLNode/NamespaceNode.h"
 #include "../CHTLNode/ConfigurationNode.h"
 #include "../CHTLNode/PropertyNode.h"
+#include "../CHTLNode/RuleNode.h"
 #include <stdexcept>
 
 namespace CHTL {
@@ -53,6 +54,9 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
         case NodeType::NODE_PROPERTY:
              visit(std::dynamic_pointer_cast<PropertyNode>(node));
             break;
+        case NodeType::NODE_RULE:
+             visit(std::dynamic_pointer_cast<RuleNode>(node));
+            break;
         default:
             // Silently ignore other node types for now
             break;
@@ -72,9 +76,12 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
     for (const auto& child : node->getChildren()) {
         if (child->getType() == NodeType::NODE_STYLE) {
             auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
-            for (const auto& prop : styleNode->getProperties()) {
-                if (prop) {
-                    style_ss << prop->getKey() << ": " << prop->getValue() << ";";
+            for (const auto& styleChild : styleNode->getChildren()) {
+                if (styleChild->getType() == NodeType::NODE_PROPERTY) {
+                    auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
+                    if (prop) {
+                        style_ss << prop->getKey() << ": " << prop->getValue() << ";";
+                    }
                 }
             }
         }
@@ -87,11 +94,9 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
 
     html_out << ">";
 
-    // Visit non-style children
+    // Visit all children to generate their content (HTML or CSS)
     for (const auto& child : node->getChildren()) {
-        if (child->getType() != NodeType::NODE_STYLE) {
-            visit(child);
-        }
+        visit(child);
     }
 
     html_out << "</" << node->getTagName() << ">";
@@ -102,8 +107,11 @@ void CHTLGenerator::visit(const std::shared_ptr<TextNode>& node) {
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<StyleNode>& node) {
-    // Handled by the parent ElementNode to generate an inline style attribute.
-    // This method does nothing on its own.
+    // Visit children of the style node. RuleNodes will add to css_out.
+    // PropertyNodes will do nothing, as they are handled by the parent ElementNode.
+    for (const auto& child : node->getChildren()) {
+        visit(child);
+    }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {
@@ -136,6 +144,16 @@ void CHTLGenerator::visit(const std::shared_ptr<ConfigurationNode>& node) {
 
 void CHTLGenerator::visit(const std::shared_ptr<PropertyNode>& node) {
     // Property nodes are part of other nodes and are handled within their parent's visit method.
+}
+
+void CHTLGenerator::visit(const std::shared_ptr<RuleNode>& node) {
+    css_out << node->getSelector() << " {";
+    for (const auto& prop : node->getProperties()) {
+        if (prop) {
+             css_out << " " << prop->getKey() << ": " << prop->getValue() << ";";
+        }
+    }
+    css_out << " }";
 }
 
 }

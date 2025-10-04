@@ -18,6 +18,7 @@ namespace CHTL {
         NODE_CONFIG,
         NODE_NAMESPACE,
         NODE_PROPERTY,
+        NODE_RULE,
         NODE_OPERATOR
     };
 

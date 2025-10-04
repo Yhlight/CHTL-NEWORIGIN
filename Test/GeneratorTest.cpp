@@ -72,3 +72,26 @@ TEST_CASE("Generator handles inline styles", "[generator]") {
     generator.generate(ast);
     REQUIRE(generator.getHtml() == R"(<div style="color: red;font-size: 16px;"></div>)");
 }
+
+TEST_CASE("Generator handles global and inline styles", "[generator]") {
+    std::string input = R"(
+        div {
+            style {
+                color: blue;
+                .my-class {
+                    background-color: green;
+                }
+            }
+        }
+    )";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+
+    std::string html = generator.getHtml();
+    REQUIRE(html.find(R"(class="my-class")") != std::string::npos);
+    REQUIRE(html.find(R"(style="color: blue;")") != std::string::npos);
+
+    std::string css = generator.getCss();
+    REQUIRE(css == ".my-class { background-color: green; }");
+}

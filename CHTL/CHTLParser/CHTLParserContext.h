@@ -3,6 +3,7 @@
 #include "../CHTLLexer/Token.h"
 #include "../CHTLState/ParserState.h"
 #include "../CHTLStrategy/ParsingStrategy.h"
+#include "../CHTLNode/ElementNode.h"
 #include <vector>
 #include <memory>
 
@@ -20,11 +21,15 @@ namespace CHTL {
         void advance();
         bool isAtEnd();
 
+        void setCurrentElement(std::shared_ptr<ElementNode> element) { currentElement = element; }
+        std::shared_ptr<ElementNode> getCurrentElement() { return currentElement; }
+
     private:
         std::vector<Token> tokens;
         size_t position;
         std::unique_ptr<ParserState> currentState;
         std::unique_ptr<ParsingStrategy> currentStrategy;
+        std::shared_ptr<ElementNode> currentElement;
     };
 
 }

@@ -37,6 +37,9 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
     context->advance();
     auto element = std::make_shared<ElementNode>(identifier.lexeme);
 
+    auto previousElement = context->getCurrentElement();
+    context->setCurrentElement(element);
+
     if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
         context->advance(); // Consume '{'
 
@@ -67,6 +70,8 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
             // Error: unclosed element
         }
     }
+
+    context->setCurrentElement(previousElement);
 
     return element;
 }
