@@ -119,6 +119,6 @@ TEST_CASE("Generator handles @JavaScript origin block", "[generator]") {
     auto ast = parseInput(input);
     CHTL::CHTLGenerator generator;
     generator.generate(ast);
-    REQUIRE(generator.getHtml() == "<script>alert ( raw ) ;</script>");
+    REQUIRE(generator.getHtml() == "alert ( raw ) ;");
     REQUIRE(generator.getCss().empty());
 }

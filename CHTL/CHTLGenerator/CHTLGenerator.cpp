@@ -128,7 +128,7 @@ void CHTLGenerator::visit(const std::shared_ptr<OriginNode>& node) {
     } else if (node->getOriginType() == "@Style") {
         css_out << node->getContent();
     } else if (node->getOriginType() == "@JavaScript") {
-        html_out << "<script>" << node->getContent() << "</script>";
+        html_out << node->getContent();
     }
 }
 
