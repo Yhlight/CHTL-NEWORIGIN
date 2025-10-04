@@ -23,20 +23,26 @@ std::shared_ptr<BaseNode> OriginParsingStrategy::parse(CHTLParserContext* contex
     if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
         context->advance(); // consume '{'
 
+        int braceCount = 1;
         bool firstToken = true;
-        while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
-            if (!firstToken) {
-                contentStream << " ";
-            }
-            contentStream << context->getCurrentToken().lexeme;
-            firstToken = false;
-            context->advance();
-        }
 
-        if (context->getCurrentToken().type == TokenType::TOKEN_RBRACE) {
-            context->advance(); // consume '}'
-        } else {
-            // Error: unclosed origin block
+        while (!context->isAtEnd() && braceCount > 0) {
+            Token& currentToken = context->getCurrentToken();
+
+            if (currentToken.type == TokenType::TOKEN_LBRACE) {
+                braceCount++;
+            } else if (currentToken.type == TokenType::TOKEN_RBRACE) {
+                braceCount--;
+            }
+
+            if (braceCount > 0) {
+                if (!firstToken) {
+                    contentStream << " ";
+                }
+                contentStream << currentToken.lexeme;
+                firstToken = false;
+            }
+            context->advance();
         }
     }
 

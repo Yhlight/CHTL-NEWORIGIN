@@ -123,7 +123,13 @@ void CHTLGenerator::visit(const std::shared_ptr<CustomNode>& node) {
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<OriginNode>& node) {
-    // This will be implemented to handle raw output.
+    if (node->getOriginType() == "@Html") {
+        html_out << node->getContent();
+    } else if (node->getOriginType() == "@Style") {
+        css_out << node->getContent();
+    } else if (node->getOriginType() == "@JavaScript") {
+        html_out << "<script>" << node->getContent() << "</script>";
+    }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ImportNode>& node) {

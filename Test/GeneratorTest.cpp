@@ -95,3 +95,30 @@ TEST_CASE("Generator handles global and inline styles", "[generator]") {
     std::string css = generator.getCss();
     REQUIRE(css == ".my-class { background-color: green; }");
 }
+
+TEST_CASE("Generator handles @Html origin block", "[generator]") {
+    std::string input = R"([Origin] @Html { <div>Raw</div> })";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<div>Raw</div>");
+    REQUIRE(generator.getCss().empty());
+}
+
+TEST_CASE("Generator handles @Style origin block", "[generator]") {
+    std::string input = R"([Origin] @Style { .raw { color: red; } })";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+    REQUIRE(generator.getHtml().empty());
+    REQUIRE(generator.getCss() == ". raw { color : red ; }");
+}
+
+TEST_CASE("Generator handles @JavaScript origin block", "[generator]") {
+    std::string input = R"([Origin] @JavaScript { alert("raw"); })";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<script>alert ( raw ) ;</script>");
+    REQUIRE(generator.getCss().empty());
+}
