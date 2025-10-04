@@ -9,6 +9,7 @@
 #include "../CHTL/CHTLNode/PropertyNode.h"
 #include "../CHTL/CHTLNode/OriginNode.h"
 #include "../CHTL/CHTLNode/ImportNode.h"
+#include "../CHTL/CHTLNode/NamespaceNode.h"
 
 #include <vector>
 #include <string>
@@ -309,4 +310,32 @@ TEST_CASE("Parser handles import statement", "[parser]") {
     REQUIRE(importNode->getImportType() == CHTL::ImportType::CHTL);
     REQUIRE(importNode->getPath() == "./components.chtl");
     REQUIRE(importNode->getAlias() == "Components");
+}
+
+TEST_CASE("Parser handles namespace block", "[parser]") {
+    std::string input = R"(
+[Namespace] MyNamespace {
+    div {}
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_NAMESPACE);
+    auto namespaceNode = std::dynamic_pointer_cast<CHTL::NamespaceNode>(root);
+    REQUIRE(namespaceNode != nullptr);
+    REQUIRE(namespaceNode->getName() == "MyNamespace");
+    REQUIRE(namespaceNode->getChildren().size() == 1);
+    auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(namespaceNode->getChildren()[0]);
+    REQUIRE(div != nullptr);
+    REQUIRE(div->getTagName() == "div");
 }
