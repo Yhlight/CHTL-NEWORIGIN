@@ -5,6 +5,7 @@
 #include "../CHTLStrategy/TextParsingStrategy.h"
 #include "../CHTLStrategy/TemplateParsingStrategy.h"
 #include "../CHTLStrategy/CustomParsingStrategy.h"
+#include "../CHTLStrategy/OriginParsingStrategy.h"
 
 
 namespace CHTL {
@@ -25,6 +26,8 @@ namespace CHTL {
                     context->setStrategy(std::make_unique<TemplateParsingStrategy>());
                 } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Custom") {
                     context->setStrategy(std::make_unique<CustomParsingStrategy>());
+                } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Origin") {
+                    context->setStrategy(std::make_unique<OriginParsingStrategy>());
                 }
                 break;
             default:

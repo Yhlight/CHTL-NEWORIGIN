@@ -7,6 +7,7 @@
 #include "../CHTL/CHTLNode/TemplateNode.h"
 #include "../CHTL/CHTLNode/CustomNode.h"
 #include "../CHTL/CHTLNode/PropertyNode.h"
+#include "../CHTL/CHTLNode/OriginNode.h"
 
 #include <vector>
 #include <string>
@@ -233,4 +234,56 @@ TEST_CASE("Parser handles custom style block", "[parser]") {
     auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(customNode->getChildren()[0]);
     REQUIRE(prop1->getKey() == "color");
     REQUIRE(prop1->getValue() == "red");
+}
+
+TEST_CASE("Parser handles origin block", "[parser]") {
+    std::string input = R"(
+[Origin] @Html {
+    <div>Hello</div>
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_ORIGIN);
+    auto originNode = std::dynamic_pointer_cast<CHTL::OriginNode>(root);
+    REQUIRE(originNode != nullptr);
+    REQUIRE(originNode->getOriginType() == "@Html");
+    REQUIRE(originNode->getName() == "");
+    REQUIRE(originNode->getContent() == "<div>Hello</div>");
+}
+
+TEST_CASE("Parser handles named origin block", "[parser]") {
+    std::string input = R"(
+[Origin] @JavaScript myScript {
+    console.log("Hello");
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_ORIGIN);
+    auto originNode = std::dynamic_pointer_cast<CHTL::OriginNode>(root);
+    REQUIRE(originNode != nullptr);
+    REQUIRE(originNode->getOriginType() == "@JavaScript");
+    REQUIRE(originNode->getName() == "myScript");
+    REQUIRE(originNode->getContent() == "console.log(Hello);");
 }

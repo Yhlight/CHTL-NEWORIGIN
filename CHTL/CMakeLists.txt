@@ -8,6 +8,7 @@ add_library(CHTL STATIC
     CHTLStrategy/StyleParsingStrategy.cpp
     CHTLStrategy/TemplateParsingStrategy.cpp
     CHTLStrategy/CustomParsingStrategy.cpp
+    CHTLStrategy/OriginParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
 )
 
