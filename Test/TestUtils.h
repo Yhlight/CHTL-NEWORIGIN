@@ -8,6 +8,7 @@
 #include "../CHTL/CHTLContext/GenerationContext.h"
 #include "../CHTL/SemanticAnalyzer.h"
 #include "../CHTL/CHTLContext/ConfigurationManager.h"
+#include "../SharedCore/ConcreteSaltBridge.h"
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -64,8 +65,9 @@ inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
         loader.gatherTemplates(pair.second, context);
     }
 
+    CHTL::ConcreteSaltBridge bridge;
     CHTL::CHTLGenerator generator;
-    generator.generate(ast, context);
+    generator.generate(ast, context, &bridge);
 
     return generator;
 }

@@ -6,22 +6,19 @@
 #include "CHTLContext/GenerationContext.h"
 #include "SemanticAnalyzer.h"
 #include "CHTLContext/ConfigurationManager.h"
+#include "SharedCore/ConcreteSaltBridge.h"
 #include <memory>
 
 int main() {
     std::string input = R"(
-[Configuration] {
-    [Name] {
-        style: "css";
-    }
-}
-
 div {
-    id: "main";
-    css {
-        color: red;
+    script {
+        {{.my-div}}->Listen {
+            click: () => {
+                console.log("Clicked!");
+            }
+        };
     }
-    text { "Hello, CHTL!" }
 }
 )";
 
@@ -74,8 +71,9 @@ div {
         loader.gatherTemplates(pair.second, context);
     }
 
+    CHTL::ConcreteSaltBridge bridge;
     CHTL::CHTLGenerator generator;
-    generator.generate(ast, context);
+    generator.generate(ast, context, &bridge);
 
     std::string html = generator.getHtml();
     std::string css = generator.getCss();

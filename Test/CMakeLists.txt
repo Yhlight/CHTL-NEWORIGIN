@@ -9,9 +9,10 @@ add_executable(run_tests
     ConfigurationTest.cpp
     SpecializationParsingTest.cpp
     SpecializationGeneratorTest.cpp
+    CHTLJSTest.cpp
 )
 
-target_link_libraries(run_tests PRIVATE CHTL)
+target_link_libraries(run_tests PRIVATE CHTL CHTLJS)
 
 # Since catch.hpp is a header-only library, we just need to make sure
 # the compiler can find it.

@@ -15,14 +15,17 @@
 #include "../CHTLNode/IfNode.h"
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
+#include "../CHTLNode/ScriptNode.h"
+#include "../SharedCore/SaltBridge.h"
 #include <stdexcept>
 #include <set>
 #include <map>
 
 namespace CHTL {
 
-void CHTLGenerator::generate(const std::shared_ptr<BaseNode>& node, const GenerationContext& context) {
+void CHTLGenerator::generate(const std::shared_ptr<BaseNode>& node, const GenerationContext& context, SaltBridge* bridge) {
     this->context = &context;
+    this->salt_bridge = bridge;
     if (node) {
         visit(node);
     }
@@ -35,6 +38,10 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
         case NodeType::NODE_ELEMENT:
             visit(std::dynamic_pointer_cast<ElementNode>(node));
             break;
+        case NodeType::NODE_SCRIPT:
+            visit(std::dynamic_pointer_cast<ScriptNode>(node));
+            break;
+        // ... other cases from previous implementation
         case NodeType::NODE_TEXT:
             visit(std::dynamic_pointer_cast<TextNode>(node));
             break;
@@ -279,6 +286,16 @@ void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
     }
 
     find_inserts("", InsertPosition::AT_BOTTOM);
+}
+
+void CHTLGenerator::visit(const std::shared_ptr<ScriptNode>& node) {
+    if (salt_bridge) {
+        std::string processed_script = salt_bridge->processScript(node->getContent());
+        html_out << "<script>" << processed_script << "</script>";
+    } else {
+        // Fallback if no bridge is provided
+        html_out << "<script>" << node->getContent() << "</script>";
+    }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<CustomNode>& node) {}

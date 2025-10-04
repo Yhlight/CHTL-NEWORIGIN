@@ -25,10 +25,12 @@ class TemplateUsageNode;
 class IfNode;
 class DeleteNode;
 class InsertNode;
+class ScriptNode;
+class SaltBridge;
 
 class CHTLGenerator {
 public:
-    void generate(const std::shared_ptr<BaseNode>& node, const GenerationContext& context);
+    void generate(const std::shared_ptr<BaseNode>& node, const GenerationContext& context, SaltBridge* bridge);
 
     std::string getHtml() const { return html_out.str(); }
     std::string getCss() const { return css_out.str(); }
@@ -51,10 +53,12 @@ private:
     void visit(const std::shared_ptr<IfNode>& node);
     void visit(const std::shared_ptr<DeleteNode>& node);
     void visit(const std::shared_ptr<InsertNode>& node);
+    void visit(const std::shared_ptr<ScriptNode>& node);
 
     std::stringstream html_out;
     std::stringstream css_out;
     const GenerationContext* context;
+    SaltBridge* salt_bridge;
     std::vector<std::shared_ptr<ElementNode>> element_stack;
 };
 

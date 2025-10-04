@@ -18,6 +18,7 @@ add_library(CHTL STATIC
     CHTLStrategy/IfParsingStrategy.cpp
     CHTLStrategy/ConstraintParsingStrategy.cpp
     CHTLStrategy/SpecializationParsingStrategy.cpp
+    CHTLStrategy/ScriptParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
     CHTLContext/ConfigurationManager.cpp
     SemanticAnalyzer.cpp
@@ -25,4 +26,5 @@ add_library(CHTL STATIC
 
 target_include_directories(CHTL PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/SharedCore
 )
