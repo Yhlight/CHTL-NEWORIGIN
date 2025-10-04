@@ -7,6 +7,7 @@ add_executable(runTests
     ExpressionEvaluatorTest.cpp
     IfBehaviorTest.cpp
     TemplateTest.cpp
+    ConditionalRenderingTest.cpp
 )
 
 target_link_libraries(runTests
@@ -19,6 +20,7 @@ target_link_libraries(runTests
     ExpressionEvaluator
     StyleEvaluator
     TemplateEvaluator
+    HtmlGenerator
     gtest_main
 )
 

@@ -5,7 +5,16 @@
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/CHTLNode/StylePropertyNode.h"
 #include "../../CHTL/CHTLNode/ValueNode.h"
+#include "../../CHTL/CHTLNode/IfBehaviorNode.h"
 #include <sstream>
+#include <vector>
+
+std::string value_to_string(const BaseNode* node) {
+    if (auto* val = dynamic_cast<const ValueNode*>(node)) {
+        return val->getValue();
+    }
+    return "";
+}
 
 std::string HtmlGenerator::generate(BaseNode* root) {
     std::string html;
@@ -23,34 +32,39 @@ void HtmlGenerator::traverse(BaseNode* node, std::string& html, int indent) {
             auto* elementNode = static_cast<ElementNode*>(node);
             html += indentation + "<" + elementNode->getTagName();
 
-            std::string styleString;
+            // Render attributes other than style, which we will build manually.
+            for (const auto& attr : elementNode->getAttributes()) {
+                if (attr.first != "style") {
+                    html += " " + attr.first + "=\"" + attr.second + "\"";
+                }
+            }
+
+            // Collect all style properties from all StyleNode children.
+            std::stringstream style_ss;
             for (const auto& child : elementNode->getChildren()) {
-                if (child->getType() == NodeType::Style) {
-                    auto* styleNode = static_cast<StyleNode*>(child.get());
-                    for (const auto& styleChild : styleNode->getChildren()) {
-                        if (styleChild->getType() == NodeType::StyleProperty) {
-                            auto* prop = static_cast<StylePropertyNode*>(styleChild.get());
-                            if (prop->getValue()->getType() == NodeType::Value) {
-                                const auto* val = static_cast<const ValueNode*>(prop->getValue());
-                                styleString += prop->getName() + ": " + val->getValue() + ";";
-                            }
+                if (auto* styleNode = dynamic_cast<StyleNode*>(child.get())) {
+                    for (const auto& style_child : styleNode->getChildren()) {
+                        if (auto* prop = dynamic_cast<StylePropertyNode*>(style_child.get())) {
+                            style_ss << prop->getName() << ": " << value_to_string(prop->getValue()) << "; ";
                         }
                     }
                 }
             }
 
-            for (const auto& attr : elementNode->getAttributes()) {
-                html += " " + attr.first + "=\"" + attr.second + "\"";
-            }
-
-            if (!styleString.empty()) {
-                 html += " style=\"" + styleString + "\"";
+            std::string style_str = style_ss.str();
+            if (!style_str.empty()) {
+                // Remove the trailing space
+                if (style_str.back() == ' ') {
+                    style_str.pop_back();
+                }
+                html += " style=\"" + style_str + "\"";
             }
 
             html += ">\n";
 
+            // Traverse children that are not style-related.
             for (const auto& child : elementNode->getChildren()) {
-                if(child->getType() != NodeType::Style) {
+                if (child->getType() != NodeType::Style && child->getType() != NodeType::IfBehavior) {
                     traverse(child.get(), html, indent + 1);
                 }
             }
@@ -65,6 +79,9 @@ void HtmlGenerator::traverse(BaseNode* node, std::string& html, int indent) {
             html += indentation + "<!-- " + static_cast<const CommentNode*>(node)->getComment() + " -->\n";
             break;
         }
+        case NodeType::IfBehavior:
+            // No-op, this is handled by the StyleEvaluator.
+            break;
         default:
             for (const auto& child : node->getChildren()) {
                 traverse(child.get(), html, indent);
