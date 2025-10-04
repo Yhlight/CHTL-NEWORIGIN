@@ -8,6 +8,7 @@
 #include "../CHTL/CHTLNode/CustomNode.h"
 #include "../CHTL/CHTLNode/PropertyNode.h"
 #include "../CHTL/CHTLNode/OriginNode.h"
+#include "../CHTL/CHTLNode/ImportNode.h"
 
 #include <vector>
 #include <string>
@@ -286,4 +287,26 @@ TEST_CASE("Parser handles named origin block", "[parser]") {
     REQUIRE(originNode->getOriginType() == "@JavaScript");
     REQUIRE(originNode->getName() == "myScript");
     REQUIRE(originNode->getContent() == "console.log(Hello);");
+}
+
+TEST_CASE("Parser handles import statement", "[parser]") {
+    std::string input = R"([Import] @Chtl from "./components.chtl" as Components;)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_IMPORT);
+    auto importNode = std::dynamic_pointer_cast<CHTL::ImportNode>(root);
+    REQUIRE(importNode != nullptr);
+    REQUIRE(importNode->getImportType() == CHTL::ImportType::CHTL);
+    REQUIRE(importNode->getPath() == "./components.chtl");
+    REQUIRE(importNode->getAlias() == "Components");
 }

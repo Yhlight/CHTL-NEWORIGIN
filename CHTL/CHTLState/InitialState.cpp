@@ -6,6 +6,7 @@
 #include "../CHTLStrategy/TemplateParsingStrategy.h"
 #include "../CHTLStrategy/CustomParsingStrategy.h"
 #include "../CHTLStrategy/OriginParsingStrategy.h"
+#include "../CHTLStrategy/ImportParsingStrategy.h"
 
 
 namespace CHTL {
@@ -28,6 +29,8 @@ namespace CHTL {
                     context->setStrategy(std::make_unique<CustomParsingStrategy>());
                 } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Origin") {
                     context->setStrategy(std::make_unique<OriginParsingStrategy>());
+                } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Import") {
+                    context->setStrategy(std::make_unique<ImportParsingStrategy>());
                 }
                 break;
             default:
