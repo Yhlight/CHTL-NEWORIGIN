@@ -22,7 +22,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesSimpleAddition) {
     auto right = std::make_unique<ValueNode>("5px");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::PLUS, std::move(left), std::move(right));
 
-    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr), "15px");
+    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr, nullptr), "15px");
 }
 
 TEST_F(ExpressionEvaluatorTest, HandlesSimpleSubtraction) {
@@ -30,7 +30,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesSimpleSubtraction) {
     auto right = std::make_unique<ValueNode>("5em");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::MINUS, std::move(left), std::move(right));
 
-    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr), "15em");
+    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr, nullptr), "15em");
 }
 
 TEST_F(ExpressionEvaluatorTest, HandlesMultiplication) {
@@ -38,7 +38,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesMultiplication) {
     auto right = std::make_unique<ValueNode>("5");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::STAR, std::move(left), std::move(right));
 
-    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr), "50%");
+    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr, nullptr), "50%");
 }
 
 TEST_F(ExpressionEvaluatorTest, HandlesDivision) {
@@ -46,7 +46,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesDivision) {
     auto right = std::make_unique<ValueNode>("4");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::SLASH, std::move(left), std::move(right));
 
-    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr), "25px");
+    EXPECT_EQ(evaluator.evaluate(expr.get(), nullptr, nullptr), "25px");
 }
 
 TEST_F(ExpressionEvaluatorTest, HandlesComplexExpression) {
@@ -58,7 +58,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesComplexExpression) {
     auto ten_px = std::make_unique<ValueNode>("10px");
     auto add_expr = std::make_unique<BinaryOpNode>(TokenType::PLUS, std::move(ten_px), std::move(mult_expr));
 
-    EXPECT_EQ(evaluator.evaluate(add_expr.get(), nullptr), "20px");
+    EXPECT_EQ(evaluator.evaluate(add_expr.get(), nullptr, nullptr), "20px");
 }
 
 TEST_F(ExpressionEvaluatorTest, ThrowsOnMismatchedUnitsAddition) {
@@ -66,7 +66,7 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnMismatchedUnitsAddition) {
     auto right = std::make_unique<ValueNode>("5em");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::PLUS, std::move(left), std::move(right));
 
-    EXPECT_THROW(evaluator.evaluate(expr.get(), nullptr), std::runtime_error);
+    EXPECT_THROW(evaluator.evaluate(expr.get(), nullptr, nullptr), std::runtime_error);
 }
 
 TEST_F(ExpressionEvaluatorTest, ThrowsOnDivisionByZero) {
@@ -74,7 +74,7 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnDivisionByZero) {
     auto right = std::make_unique<ValueNode>("0");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::SLASH, std::move(left), std::move(right));
 
-    EXPECT_THROW(evaluator.evaluate(expr.get(), nullptr), std::runtime_error);
+    EXPECT_THROW(evaluator.evaluate(expr.get(), nullptr, nullptr), std::runtime_error);
 }
 
 TEST_F(ExpressionEvaluatorTest, ThrowsOnMultiplyTwoUnits) {
@@ -82,7 +82,7 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnMultiplyTwoUnits) {
     auto right = std::make_unique<ValueNode>("2em");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::STAR, std::move(left), std::move(right));
 
-    EXPECT_THROW(evaluator.evaluate(expr.get(), nullptr), std::runtime_error);
+    EXPECT_THROW(evaluator.evaluate(expr.get(), nullptr, nullptr), std::runtime_error);
 }
 
 // --- Reference Resolution Tests ---
@@ -101,7 +101,7 @@ TEST_F(ExpressionEvaluatorTest, ResolvesSimplePropertyReference) {
     // Expression to evaluate: #box.width
     auto expr = std::make_unique<ReferenceNode>("#box.width");
 
-    EXPECT_EQ(evaluator.evaluate(expr.get(), root.get()), "100px");
+    EXPECT_EQ(evaluator.evaluate(expr.get(), root.get(), nullptr), "100px");
 }
 
 TEST_F(ExpressionEvaluatorTest, ResolvesReferenceInExpression) {
@@ -120,7 +120,7 @@ TEST_F(ExpressionEvaluatorTest, ResolvesReferenceInExpression) {
     auto val = std::make_unique<ValueNode>("50px");
     auto expr = std::make_unique<BinaryOpNode>(TokenType::PLUS, std::move(ref), std::move(val));
 
-    EXPECT_EQ(evaluator.evaluate(expr.get(), root.get()), "150px");
+    EXPECT_EQ(evaluator.evaluate(expr.get(), root.get(), nullptr), "150px");
 }
 
 TEST_F(ExpressionEvaluatorTest, ThrowsOnCircularReference) {
@@ -149,7 +149,7 @@ TEST_F(ExpressionEvaluatorTest, ThrowsOnCircularReference) {
     // Expression to evaluate: #div1.width
     auto expr = std::make_unique<ReferenceNode>("#div1.width");
 
-    EXPECT_THROW(evaluator.evaluate(expr.get(), root.get()), std::runtime_error);
+    EXPECT_THROW(evaluator.evaluate(expr.get(), root.get(), nullptr), std::runtime_error);
 }
 
 // --- Conditional Logic Tests ---
@@ -163,7 +163,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesSimpleTernary) {
 
     auto ternary_expr = std::make_unique<ConditionalNode>(std::move(condition), std::move(true_expr), std::move(false_expr));
 
-    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr), "yes");
+    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr, nullptr), "yes");
 }
 
 TEST_F(ExpressionEvaluatorTest, HandlesComplexConditionWithLogicalAnd) {
@@ -180,7 +180,7 @@ TEST_F(ExpressionEvaluatorTest, HandlesComplexConditionWithLogicalAnd) {
 
     auto ternary_expr = std::make_unique<ConditionalNode>(std::move(condition), std::move(true_expr), std::move(false_expr));
 
-    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr), "yes");
+    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr, nullptr), "yes");
 }
 
 TEST_F(ExpressionEvaluatorTest, HandlesTernaryWithExpressionResult) {
@@ -195,5 +195,5 @@ TEST_F(ExpressionEvaluatorTest, HandlesTernaryWithExpressionResult) {
 
     auto ternary_expr = std::make_unique<ConditionalNode>(std::move(condition), std::move(true_expr), std::move(false_expr));
 
-    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr), "15px");
+    EXPECT_EQ(evaluator.evaluate(ternary_expr.get(), nullptr, nullptr), "15px");
 }

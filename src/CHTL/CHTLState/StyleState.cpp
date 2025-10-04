@@ -7,6 +7,7 @@
 #include "../CHTLNode/IdSelectorNode.h"
 #include "../CHTLNode/ContextSelectorNode.h"
 #include "../CHTLNode/ElementNode.h"
+#include "../CHTLNode/ValueNode.h"
 #include <iostream>
 
 StyleState::StyleState() : expectingValue(false), inContextualBlock(false) {}
@@ -24,10 +25,18 @@ void StyleState::handle(CHTLParser& parser, Token token) {
             } else if (token.type == TokenType::COLON || token.type == TokenType::EQUALS) {
                 expectingValue = true;
             } else if (expectingValue) {
-                parser.putback(token);
-                ExpressionParser exprParser(parser);
-                auto valueNode = exprParser.parse();
-                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                Token nextToken = parser.peek();
+                if ((token.type == TokenType::IDENTIFIER || token.type == TokenType::NUMBER || token.type == TokenType::STRING_LITERAL) &&
+                    (nextToken.type == TokenType::SEMICOLON || nextToken.type == TokenType::RIGHT_BRACE))
+                {
+                    auto valueNode = std::make_unique<ValueNode>(token.value);
+                    parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                } else {
+                    parser.putback(token);
+                    ExpressionParser exprParser(parser);
+                    auto valueNode = exprParser.parse();
+                    parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                }
                 pendingPropertyName.clear();
                 expectingValue = false;
             }
@@ -38,29 +47,27 @@ void StyleState::handle(CHTLParser& parser, Token token) {
     // If we are in the main style block
     switch (token.type) {
         case TokenType::IDENTIFIER:
-             if (expectingValue) { // This case handles unquoted literals like 'red'
-                parser.putback(token);
-                ExpressionParser exprParser(parser);
-                auto valueNode = exprParser.parse();
-                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
-                pendingPropertyName.clear();
-                expectingValue = false;
-            } else {
-                pendingPropertyName = token.value;
-            }
-            break;
-
         case TokenType::NUMBER:
         case TokenType::STRING_LITERAL:
-        case TokenType::LEFT_PAREN: // Start of a grouped expression
+        case TokenType::LEFT_PAREN:
         case TokenType::PROPERTY_REFERENCE:
             if (expectingValue) {
-                parser.putback(token);
-                ExpressionParser exprParser(parser);
-                auto valueNode = exprParser.parse();
-                parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                Token nextToken = parser.peek();
+                if ((token.type == TokenType::IDENTIFIER || token.type == TokenType::NUMBER || token.type == TokenType::STRING_LITERAL) &&
+                    (nextToken.type == TokenType::SEMICOLON || nextToken.type == TokenType::RIGHT_BRACE))
+                {
+                    auto valueNode = std::make_unique<ValueNode>(token.value);
+                    parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                } else {
+                    parser.putback(token);
+                    ExpressionParser exprParser(parser);
+                    auto valueNode = exprParser.parse();
+                    parser.addNode(std::make_unique<StylePropertyNode>(pendingPropertyName, std::move(valueNode)));
+                }
                 pendingPropertyName.clear();
                 expectingValue = false;
+            } else if (token.type == TokenType::IDENTIFIER) {
+                pendingPropertyName = token.value;
             }
             break;
 
@@ -75,7 +82,6 @@ void StyleState::handle(CHTLParser& parser, Token token) {
             break;
 
         case TokenType::RIGHT_BRACE:
-            // End of the main style block
             parser.closeScope();
             parser.setState(std::make_unique<TagState>());
             break;
@@ -93,7 +99,6 @@ void StyleState::handle(CHTLParser& parser, Token token) {
             break;
 
         case TokenType::LEFT_BRACE:
-            // This brace opens the block for the pending contextual selector
             if (!pendingContextualSelector.empty()) {
                 auto contextNode = std::make_unique<ContextSelectorNode>(pendingContextualSelector);
                 auto* contextNodePtr = contextNode.get();

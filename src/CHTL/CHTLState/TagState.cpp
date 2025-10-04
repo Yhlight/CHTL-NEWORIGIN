@@ -3,10 +3,12 @@
 #include "TextState.h"
 #include "StyleState.h"
 #include "ScriptState.h"
+#include "ConditionalBlockState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/CommentNode.h"
 #include "../CHTLNode/StyleNode.h"
+#include "../CHTLNode/ConditionalBlockNode.h"
 
 #include <iostream>
 
@@ -15,6 +17,27 @@ TagState::TagState() : expectingValue(false) {}
 void TagState::handle(CHTLParser& parser, Token token) {
     switch (token.type) {
         case TokenType::IDENTIFIER:
+            if (token.value == "if") {
+                auto conditionalNode = std::make_unique<ConditionalBlockNode>("if");
+                auto* nodePtr = conditionalNode.get();
+                parser.addNode(std::move(conditionalNode));
+                parser.openScope(nodePtr);
+                parser.setState(std::make_unique<ConditionalBlockState>("if"));
+                break;
+            } else if (token.value == "else") {
+                std::string conditionalType = "else";
+                if (parser.peek().type == TokenType::IDENTIFIER && parser.peek().value == "if") {
+                    parser.consume(); // Consume the 'if'
+                    conditionalType = "else if";
+                }
+                auto conditionalNode = std::make_unique<ConditionalBlockNode>(conditionalType);
+                auto* nodePtr = conditionalNode.get();
+                parser.addNode(std::move(conditionalNode));
+                parser.openScope(nodePtr);
+                parser.setState(std::make_unique<ConditionalBlockState>(conditionalType));
+                break;
+            }
+
             if (expectingValue) {
                 BaseNode* currentScope = parser.getCurrentScope();
                 if (currentScope && currentScope->getType() == NodeType::Element) {

@@ -14,7 +14,10 @@ add_library(CHTL
     CHTLState/DefinitionState.cpp
     CHTLState/NamespaceState.cpp
     CHTLState/OriginState.cpp
+    CHTLState/ConditionalBlockState.cpp
     CHTLNode/OriginNode.cpp
+    CHTLNode/ConditionalNode.cpp
+    CHTLNode/ConditionalBlockNode.cpp
 )
 
 target_link_libraries(CHTL PRIVATE GlobalStylesheet)

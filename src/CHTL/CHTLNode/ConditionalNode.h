@@ -6,27 +6,19 @@
 class ConditionalNode : public ExpressionNode {
 public:
     ConditionalNode(std::unique_ptr<ExpressionNode> condition,
-                    std::unique_ptr<ExpressionNode> true_expr,
-                    std::unique_ptr<ExpressionNode> false_expr)
-        : condition(std::move(condition)),
-          true_expr(std::move(true_expr)),
-          false_expr(std::move(false_expr)) {}
+                    std::unique_ptr<ExpressionNode> trueExpression,
+                    std::unique_ptr<ExpressionNode> falseExpression);
 
-    NodeType getType() const override { return NodeType::Conditional; }
+    virtual NodeType getType() const override;
 
-    const ExpressionNode* getCondition() const { return condition.get(); }
-    const ExpressionNode* getTrueExpression() const { return true_expr.get(); }
-    const ExpressionNode* getFalseExpression() const { return false_expr.get(); }
+    ExpressionNode* getCondition() const;
+    ExpressionNode* getTrueExpression() const;
+    ExpressionNode* getFalseExpression() const;
 
-    std::unique_ptr<BaseNode> clone() const override {
-        auto clonedCondition = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(condition->clone().release()));
-        auto clonedTrue = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(true_expr->clone().release()));
-        auto clonedFalse = std::unique_ptr<ExpressionNode>(static_cast<ExpressionNode*>(false_expr->clone().release()));
-        return std::make_unique<ConditionalNode>(std::move(clonedCondition), std::move(clonedTrue), std::move(clonedFalse));
-    }
+    virtual std::unique_ptr<BaseNode> clone() const override;
 
 private:
     std::unique_ptr<ExpressionNode> condition;
-    std::unique_ptr<ExpressionNode> true_expr;
-    std::unique_ptr<ExpressionNode> false_expr;
+    std::unique_ptr<ExpressionNode> trueExpression;
+    std::unique_ptr<ExpressionNode> falseExpression;
 };

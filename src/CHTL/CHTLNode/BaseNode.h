@@ -19,6 +19,7 @@ enum class NodeType {
     Value,
     BinaryOp,
     Conditional,
+    ConditionalBlock,
     TemplateDefinition,
     TemplateUsage,
     Import,

@@ -15,7 +15,7 @@
 
 namespace {
     // Forward declarations
-    std::string evaluate_recursive(const ExpressionNode* node, const BaseNode* astRoot, std::vector<const ExpressionNode*>& call_stack);
+    std::string evaluate_recursive(const ExpressionNode* node, const BaseNode* astRoot, const BaseNode* contextNode, std::vector<const ExpressionNode*>& call_stack);
     const ElementNode* find_node_by_selector(const std::string& selector, const BaseNode* astRoot);
     const ExpressionNode* find_property_in_node(const ElementNode* element, const std::string& propertyName);
 
@@ -88,7 +88,7 @@ namespace {
         return nullptr;
     }
 
-    std::string evaluate_recursive(const ExpressionNode* node, const BaseNode* astRoot, std::vector<const ExpressionNode*>& call_stack) {
+    std::string evaluate_recursive(const ExpressionNode* node, const BaseNode* astRoot, const BaseNode* contextNode, std::vector<const ExpressionNode*>& call_stack) {
         if (!node) throw std::runtime_error("Cannot evaluate null expression node.");
         if (std::find(call_stack.begin(), call_stack.end(), node) != call_stack.end()) throw std::runtime_error("Circular property reference detected.");
         call_stack.push_back(node);
@@ -101,8 +101,8 @@ namespace {
             }
             case NodeType::BinaryOp: {
                 const auto* opNode = static_cast<const BinaryOpNode*>(node);
-                NumericValue left = parse_value(evaluate_recursive(opNode->getLeft(), astRoot, call_stack));
-                NumericValue right = parse_value(evaluate_recursive(opNode->getRight(), astRoot, call_stack));
+                NumericValue left = parse_value(evaluate_recursive(opNode->getLeft(), astRoot, contextNode, call_stack));
+                NumericValue right = parse_value(evaluate_recursive(opNode->getRight(), astRoot, contextNode, call_stack));
 
                 switch (opNode->getOp()) {
                     case TokenType::PLUS:
@@ -138,32 +138,40 @@ namespace {
             }
             case NodeType::Conditional: {
                 const auto* condNode = static_cast<const ConditionalNode*>(node);
-                std::string cond_result_str = evaluate_recursive(condNode->getCondition(), astRoot, call_stack);
+                std::string cond_result_str = evaluate_recursive(condNode->getCondition(), astRoot, contextNode, call_stack);
                 NumericValue cond_val = parse_value(cond_result_str);
                 if (cond_val.value != 0) {
-                    result_str = evaluate_recursive(condNode->getTrueExpression(), astRoot, call_stack);
+                    result_str = evaluate_recursive(condNode->getTrueExpression(), astRoot, contextNode, call_stack);
                 } else {
-                    result_str = evaluate_recursive(condNode->getFalseExpression(), astRoot, call_stack);
+                    result_str = evaluate_recursive(condNode->getFalseExpression(), astRoot, contextNode, call_stack);
                 }
                 break;
             }
             case NodeType::Reference: {
-                 const auto* refNode = static_cast<const ReferenceNode*>(node);
-                 const std::string& refStr = refNode->getReference();
-                 size_t last_dot = refStr.find_last_of('.');
-                 if (last_dot == std::string::npos) throw std::runtime_error("Invalid property reference: " + refStr);
+                const auto* refNode = static_cast<const ReferenceNode*>(node);
+                const std::string& refStr = refNode->getReference();
+                size_t last_dot = refStr.find_last_of('.');
+                const ElementNode* targetNode = nullptr;
+                std::string propertyName;
 
-                 std::string selector = refStr.substr(0, last_dot);
-                 std::string propertyName = refStr.substr(last_dot + 1);
+                if (last_dot == std::string::npos) { // Self-reference
+                   if (!contextNode || contextNode->getType() != NodeType::Element) {
+                        throw std::runtime_error("Cannot resolve self-reference: no valid element context provided.");
+                   }
+                   targetNode = static_cast<const ElementNode*>(contextNode);
+                   propertyName = refStr;
+                } else { // Reference to another node
+                   std::string selector = refStr.substr(0, last_dot);
+                   propertyName = refStr.substr(last_dot + 1);
+                   targetNode = find_node_by_selector(selector, astRoot);
+                   if (!targetNode) throw std::runtime_error("Reference error: selector '" + selector + "' not found.");
+                }
 
-                 const ElementNode* targetNode = find_node_by_selector(selector, astRoot);
-                 if (!targetNode) throw std::runtime_error("Reference error: selector '" + selector + "' not found.");
+                const ExpressionNode* propertyExpr = find_property_in_node(targetNode, propertyName);
+                if (!propertyExpr) throw std::runtime_error("Reference error: property '" + propertyName + "' not found on the specified element.");
 
-                 const ExpressionNode* propertyExpr = find_property_in_node(targetNode, propertyName);
-                 if (!propertyExpr) throw std::runtime_error("Reference error: property '" + propertyName + "' not found on element with selector '" + selector + "'.");
-
-                 result_str = evaluate_recursive(propertyExpr, astRoot, call_stack);
-                 break;
+                result_str = evaluate_recursive(propertyExpr, astRoot, contextNode, call_stack);
+                break;
             }
             default:
                 throw std::runtime_error("Unknown or unsupported expression node type for evaluation.");
@@ -173,7 +181,7 @@ namespace {
     }
 }
 
-std::string ExpressionEvaluator::evaluate(const ExpressionNode* node, const BaseNode* astRoot) {
+std::string ExpressionEvaluator::evaluate(const ExpressionNode* node, const BaseNode* astRoot, const BaseNode* contextNode) {
     std::vector<const ExpressionNode*> call_stack;
-    return evaluate_recursive(node, astRoot, call_stack);
+    return evaluate_recursive(node, astRoot, contextNode, call_stack);
 }
