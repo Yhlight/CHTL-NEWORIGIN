@@ -18,6 +18,7 @@ add_library(CHTL
     CHTLNode/OriginNode.cpp
     CHTLNode/ConditionalNode.cpp
     CHTLNode/ConditionalBlockNode.cpp
+    CHTLNode/DynamicBlockNode.cpp
 )
 
 target_link_libraries(CHTL PRIVATE GlobalStylesheet)

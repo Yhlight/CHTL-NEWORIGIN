@@ -5,6 +5,44 @@
 #include "../CHTLNode/StylePropertyNode.h"
 #include "../CHTLNode/ValueNode.h"
 #include <vector>
+#include <map>
+
+// Helper to get the string representation of a token for rebuilding the condition
+static std::string tokenToString(const Token& token) {
+    // This map should cover all tokens that can appear in a condition expression
+    static const std::map<TokenType, std::string> tokenMap = {
+        {TokenType::DOT, "."},
+        {TokenType::PLUS, "+"},
+        {TokenType::MINUS, "-"},
+        {TokenType::STAR, "*"},
+        {TokenType::SLASH, "/"},
+        {TokenType::GREATER, ">"},
+        {TokenType::LESS, "<"},
+        {TokenType::GREATER_EQUAL, ">="},
+        {TokenType::LESS_EQUAL, "<="},
+        {TokenType::EQUAL_EQUAL, "=="},
+        {TokenType::NOT_EQUAL, "!="},
+        {TokenType::LOGICAL_AND, "&&"},
+        {TokenType::LOGICAL_OR, "||"},
+        {TokenType::DOUBLE_LEFT_BRACE, "{{"},
+        {TokenType::DOUBLE_RIGHT_BRACE, "}}"}
+    };
+
+    if (!token.value.empty()) {
+        if (token.type == TokenType::CLASS_SELECTOR) {
+            return "." + token.value;
+        }
+        return token.value;
+    }
+
+    auto it = tokenMap.find(token.type);
+    if (it != tokenMap.end()) {
+        return it->second;
+    }
+
+    return ""; // Should not happen for valid expression tokens
+}
+
 
 ConditionalBlockState::ConditionalBlockState(const std::string& type)
     : conditionalType(type), phase(Phase::EXPECT_KEYWORD_CONDITION) {
@@ -19,7 +57,6 @@ void ConditionalBlockState::handle(CHTLParser& parser, Token token) {
             if (token.type == TokenType::IDENTIFIER && token.value == "condition") {
                 phase = Phase::EXPECT_COLON;
             } else if (token.type == TokenType::RIGHT_BRACE) {
-                // Empty if block, just go back
                 parser.closeScope();
                 parser.setState(std::make_unique<TagState>());
             }
@@ -32,10 +69,7 @@ void ConditionalBlockState::handle(CHTLParser& parser, Token token) {
             break;
 
         case Phase::EXPECT_EXPRESSION:
-            if (token.type == TokenType::UNKNOWN && token.value == ",") {
-                if (!condition.empty() && condition.back() == ' ') {
-                    condition.pop_back(); // Trim trailing space
-                }
+            if (token.type == TokenType::COMMA) {
                 // We've finished parsing the condition. Update the node.
                 BaseNode* currentNode = parser.getCurrentScope();
                 if (currentNode && currentNode->getType() == NodeType::ConditionalBlock) {
@@ -43,7 +77,7 @@ void ConditionalBlockState::handle(CHTLParser& parser, Token token) {
                 }
                 phase = Phase::EXPECT_PROPERTY;
             } else {
-                condition += token.value + " ";
+                condition += tokenToString(token);
             }
             break;
 
@@ -61,10 +95,9 @@ void ConditionalBlockState::handle(CHTLParser& parser, Token token) {
             if (token.type == TokenType::COLON) {
                 // Explicit colon, wait for value
             } else {
-                // Simplified value parsing
                 auto valueNode = std::make_unique<ValueNode>(token.value);
                 auto propNode = std::make_unique<StylePropertyNode>(currentProperty, std::move(valueNode));
-                parser.addNode(std::move(propNode)); // Adds to current scope (the ConditionalBlockNode)
+                parser.addNode(std::move(propNode));
 
                 if (parser.peek().type == TokenType::SEMICOLON) {
                     parser.consume();

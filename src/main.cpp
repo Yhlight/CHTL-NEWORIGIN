@@ -5,6 +5,7 @@
 #include "Util/CssGenerator/CssGenerator.h"
 #include "Util/StyleEvaluator/StyleEvaluator.h"
 #include "Util/ImportResolver/ImportResolver.h"
+#include "Util/HtmlGenerator/HtmlGenerator.h"
 #include <fstream>
 #include <sstream>
 
@@ -47,6 +48,11 @@ int main(int argc, char* argv[]) {
     std::cout << "\n--- Global Stylesheet ---\n";
     std::cout << parser.getGlobalStylesheet().getStylesheet();
     std::cout << "-------------------------\n";
+
+    std::cout << "\n--- Generated HTML ---\n";
+    HtmlGenerator htmlGenerator;
+    std::cout << htmlGenerator.generate(parser.getRoot());
+    std::cout << "----------------------\n";
 
     std::cout << "Parsing complete." << std::endl;
 

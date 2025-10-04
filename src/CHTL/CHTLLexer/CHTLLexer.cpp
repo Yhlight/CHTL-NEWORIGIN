@@ -130,8 +130,18 @@ Token CHTLLexer::getNextToken() {
 
         // Handle standard single-character tokens
         switch (current) {
-            case '{': advance(); return {TokenType::LEFT_BRACE, "{", line, column};
-            case '}': advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
+            case '{':
+                if (position + 1 < input.size() && input[position + 1] == '{') {
+                    advance(); advance();
+                    return {TokenType::DOUBLE_LEFT_BRACE, "{{", line, column};
+                }
+                advance(); return {TokenType::LEFT_BRACE, "{", line, column};
+            case '}':
+                if (position + 1 < input.size() && input[position + 1] == '}') {
+                    advance(); advance();
+                    return {TokenType::DOUBLE_RIGHT_BRACE, "}}", line, column};
+                }
+                advance(); return {TokenType::RIGHT_BRACE, "}", line, column};
             case '(': advance(); return {TokenType::LEFT_PAREN, "(", line, column};
             case ')': advance(); return {TokenType::RIGHT_PAREN, ")", line, column};
             case '[': advance(); return {TokenType::LEFT_BRACKET, "[", line, column};
@@ -144,6 +154,7 @@ Token CHTLLexer::getNextToken() {
             case '%': advance(); return {TokenType::PERCENT, "%", line, column};
             case '?': advance(); return {TokenType::QUESTION_MARK, "?", line, column};
             case ';': advance(); return {TokenType::SEMICOLON, ";", line, column};
+            case ',': advance(); return {TokenType::COMMA, ",", line, column};
             case ':': advance(); return {TokenType::COLON, ":", line, column};
         }
 
@@ -228,7 +239,7 @@ Token CHTLLexer::identifier() {
     std::string value;
     int startLine = line;
     int startColumn = column;
-    while (position < input.size() && (isalnum(currentChar()) || currentChar() == '_')) {
+    while (position < input.size() && (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-')) {
         value += currentChar();
         advance();
     }

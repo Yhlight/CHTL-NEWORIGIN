@@ -3,6 +3,7 @@
 #include "../../CHTL/CHTLNode/ValueNode.h"
 #include "../../CHTL/CHTLNode/ElementNode.h"
 #include "../../CHTL/CHTLNode/ConditionalBlockNode.h"
+#include "../../CHTL/CHTLNode/DynamicBlockNode.h"
 #include "../../CHTL/CHTLNode/StyleNode.h"
 #include "../../CHTL/ExpressionParser/ExpressionParser.h"
 #include <vector>
@@ -26,9 +27,6 @@ void StyleEvaluator::traverse(BaseNode* node) {
     if (node->getType() == NodeType::StyleProperty) {
         auto* propNode = static_cast<StylePropertyNode*>(node);
         if (propNode->getValue() && propNode->getValue()->getType() != NodeType::Value) {
-            // This part of the logic is pre-existing and may need revisiting.
-            // The context isn't being properly passed down here.
-            // For now, passing nullptr for the context node.
             std::string finalValue = evaluator.evaluate(propNode->getValue(), this->astRoot, nullptr);
             propNode->setValue(std::make_unique<ValueNode>(finalValue));
         }
@@ -37,49 +35,72 @@ void StyleEvaluator::traverse(BaseNode* node) {
     // Evaluate conditional blocks within an element
     if (node->getType() == NodeType::Element) {
         auto* elementNode = static_cast<ElementNode*>(node);
-        auto& children = elementNode->getChildren();
+
+        // Move children to a temporary vector to safely iterate and modify
+        auto oldChildren = std::move(elementNode->getChildren());
+        elementNode->getChildren().clear();
+
         std::vector<std::unique_ptr<BaseNode>> propertiesToAdd;
         bool conditionMetInChain = false;
 
-        for (const auto& child : children) {
-            if (child->getType() == NodeType::ConditionalBlock) {
-                auto* conditionalNode = static_cast<ConditionalBlockNode*>(child.get());
-                std::string condType = conditionalNode->getConditionalType();
+        for (auto& child : oldChildren) {
+            if (child->getType() != NodeType::ConditionalBlock) {
+                elementNode->addChild(std::move(child));
+                continue;
+            }
 
-                if (condType == "if") {
-                    conditionMetInChain = false; // Start of a new chain
+            auto* conditionalNode = static_cast<ConditionalBlockNode*>(child.get());
+            const std::string& condition = conditionalNode->getCondition();
+
+            // Check for dynamic conditions
+            if (condition.find("{{") != std::string::npos) {
+                auto dynamicNode = std::make_unique<DynamicBlockNode>(
+                    conditionalNode->getConditionalType(),
+                    condition
+                );
+                auto& conditionalChildren = conditionalNode->getChildren();
+                for (auto& prop : conditionalChildren) {
+                    dynamicNode->addChild(std::move(prop));
                 }
+                elementNode->addChild(std::move(dynamicNode));
+                continue;
+            }
 
-                if (conditionMetInChain) {
-                    continue;
-                }
+            // --- Static evaluation logic ---
+            const std::string& condType = conditionalNode->getConditionalType();
+            if (condType == "if") {
+                conditionMetInChain = false;
+            }
 
-                bool isTrue = false;
-                if (condType == "else") {
-                    isTrue = true;
-                } else {
-                    ExpressionParser exprParser(conditionalNode->getCondition());
-                    auto exprAST = exprParser.parse();
+            if (conditionMetInChain) continue;
+
+            bool isTrue = false;
+            if (condType == "else") {
+                isTrue = true;
+            } else {
+                ExpressionParser exprParser(condition);
+                auto exprAST = exprParser.parse();
+                if (exprAST) {
                     std::string result = evaluator.evaluate(exprAST.get(), astRoot, elementNode);
                     if (result == "true" || result == "1") {
                         isTrue = true;
                     }
                 }
+            }
 
-                if (isTrue) {
-                    conditionMetInChain = true;
-                    auto& conditionalChildren = conditionalNode->getChildren();
-                    for(auto& prop : conditionalChildren) {
-                        propertiesToAdd.push_back(std::move(prop));
-                    }
-                    conditionalChildren.clear();
+            if (isTrue) {
+                conditionMetInChain = true;
+                auto& conditionalChildren = conditionalNode->getChildren();
+                for(auto& prop : conditionalChildren) {
+                    propertiesToAdd.push_back(std::move(prop));
                 }
             }
         }
 
+        // Add evaluated properties to the style node
         if (!propertiesToAdd.empty()) {
             StyleNode* styleNode = nullptr;
-            for (const auto& child : children) {
+            for (const auto& child : elementNode->getChildren()) {
                 if (child->getType() == NodeType::Style) {
                     styleNode = static_cast<StyleNode*>(child.get());
                     break;
@@ -94,10 +115,5 @@ void StyleEvaluator::traverse(BaseNode* node) {
                 styleNode->addChild(std::move(prop));
             }
         }
-
-        auto it = std::remove_if(children.begin(), children.end(), [](const std::unique_ptr<BaseNode>& child) {
-            return child->getType() == NodeType::ConditionalBlock;
-        });
-        children.erase(it, children.end());
     }
 }
