@@ -5,21 +5,17 @@
 
 class OriginNode : public BaseNode {
 public:
-    OriginNode(const std::string& type, const std::string& name, const std::string& content)
-        : originType(type), name(name), content(content) {}
+    OriginNode(const std::string& type, const std::string& content, const std::string& name = "");
 
-    NodeType getType() const override { return NodeType::Origin; }
+    virtual NodeType getType() const override;
+    std::string getOriginType() const;
+    std::string getContent() const;
+    std::string getName() const;
 
-    const std::string& getOriginType() const { return originType; }
-    const std::string& getName() const { return name; }
-    const std::string& getContent() const { return content; }
-
-    std::unique_ptr<BaseNode> clone() const override {
-        return std::make_unique<OriginNode>(originType, name, content);
-    }
+    virtual std::unique_ptr<BaseNode> clone() const override;
 
 private:
-    std::string originType; // e.g., "Html", "Style", "JavaScript"
-    std::string name;
+    std::string originType;
     std::string content;
+    std::string name;
 };

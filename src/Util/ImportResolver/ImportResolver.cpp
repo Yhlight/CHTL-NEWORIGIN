@@ -104,7 +104,7 @@ void resolveImports(BaseNode& node) {
                 }
 
             } else { // Raw content import
-                newChildren.push_back(std::make_unique<OriginNode>(importType, alias, content));
+                newChildren.push_back(std::make_unique<OriginNode>(importType, content, alias));
             }
         } else {
             // Recurse on non-import nodes

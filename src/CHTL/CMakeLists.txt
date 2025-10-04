@@ -13,6 +13,8 @@ add_library(CHTL
     CHTLState/ImportState.cpp
     CHTLState/DefinitionState.cpp
     CHTLState/NamespaceState.cpp
+    CHTLState/OriginState.cpp
+    CHTLNode/OriginNode.cpp
 )
 
 target_link_libraries(CHTL PRIVATE GlobalStylesheet)

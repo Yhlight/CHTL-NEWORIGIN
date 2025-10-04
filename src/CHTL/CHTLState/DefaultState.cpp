@@ -4,6 +4,7 @@
 #include "ImportState.h"
 #include "DefinitionState.h"
 #include "NamespaceState.h"
+#include "OriginState.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/CommentNode.h"
@@ -33,6 +34,9 @@ void DefaultState::handle(CHTLParser& parser, Token token) {
         case TokenType::KEYWORD_TEMPLATE:
         case TokenType::KEYWORD_CUSTOM:
             parser.setState(std::make_unique<DefinitionState>(token.value));
+            break;
+        case TokenType::KEYWORD_ORIGIN:
+            parser.setState(std::make_unique<OriginState>());
             break;
         case TokenType::KEYWORD_NAMESPACE:
             parser.setState(std::make_unique<NamespaceState>());
