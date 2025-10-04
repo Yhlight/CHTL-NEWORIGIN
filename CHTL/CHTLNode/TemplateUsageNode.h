@@ -2,6 +2,7 @@
 
 #include "BaseNode.h"
 #include <string>
+#include <memory>
 
 namespace CHTL {
 
@@ -22,10 +23,14 @@ public:
     TemplateUsageType getUsageType() const { return usageType; }
     const std::string& getVariableName() const { return variableName; }
 
+    void setSpecialization(std::shared_ptr<BaseNode> rules) { specialization_rules = rules; }
+    std::shared_ptr<BaseNode> getSpecialization() const { return specialization_rules; }
+
 private:
     std::string name;
     TemplateUsageType usageType;
     std::string variableName;
+    std::shared_ptr<BaseNode> specialization_rules;
 };
 
 }

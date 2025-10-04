@@ -13,7 +13,11 @@
 #include "../CHTLNode/RuleNode.h"
 #include "../CHTLNode/UseNode.h"
 #include "../CHTLNode/IfNode.h"
+#include "../CHTLNode/DeleteNode.h"
+#include "../CHTLNode/InsertNode.h"
 #include <stdexcept>
+#include <set>
+#include <map>
 
 namespace CHTL {
 
@@ -70,13 +74,18 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
         case NodeType::NODE_IF:
             visit(std::dynamic_pointer_cast<IfNode>(node));
             break;
+        case NodeType::NODE_DELETE:
+            visit(std::dynamic_pointer_cast<DeleteNode>(node));
+            break;
+        case NodeType::NODE_INSERT:
+            visit(std::dynamic_pointer_cast<InsertNode>(node));
+            break;
         default:
             break;
     }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
-    // Handle the special 'text' tag by only visiting its children
     if (node->getTagName() == "text") {
         for (const auto& child : node->getChildren()) {
             visit(child);
@@ -84,7 +93,7 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
         return;
     }
 
-    if (node->getTagName() != "root") {
+    if (node->getTagName() != "root" && node->getTagName() != "specialization-root") {
         element_stack.push_back(node);
         html_out << "<" << node->getTagName();
 
@@ -157,7 +166,7 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
         }
     }
 
-    if (node->getTagName() != "root") {
+    if (node->getTagName() != "root" && node->getTagName() != "specialization-root") {
         html_out << "</" << node->getTagName() << ">";
         element_stack.pop_back();
     }
@@ -180,92 +189,145 @@ void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {
 
 void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
     auto templateNode = context->getTemplate(node->getName());
-    if (templateNode) {
+    if (!templateNode) return;
+
+    auto specializationRoot = node->getSpecialization();
+    if (!specializationRoot) {
         for (const auto& child : templateNode->getChildren()) {
             visit(child);
         }
+        return;
     }
+
+    std::set<std::string> deleted_selectors;
+    std::vector<std::shared_ptr<InsertNode>> insert_rules;
+    std::map<std::string, std::shared_ptr<ElementNode>> modification_rules;
+
+    for (const auto& rule_node : specializationRoot->getChildren()) {
+        if (auto delete_node = std::dynamic_pointer_cast<DeleteNode>(rule_node)) {
+            for (const auto& target : delete_node->targets) {
+                deleted_selectors.insert(target);
+            }
+        } else if (auto insert_node = std::dynamic_pointer_cast<InsertNode>(rule_node)) {
+            insert_rules.push_back(insert_node);
+        } else if (auto element_node = std::dynamic_pointer_cast<ElementNode>(rule_node)) {
+            modification_rules[element_node->getTagName()] = element_node;
+        }
+    }
+
+    auto find_inserts = [&](const std::string& selector, InsertPosition pos) {
+        for(const auto& rule : insert_rules) {
+            if(rule->position == pos && (rule->target_selector == selector || (pos == InsertPosition::AT_TOP || pos == InsertPosition::AT_BOTTOM))) {
+                 for (const auto& content : rule->getChildren()) {
+                    visit(content);
+                }
+            }
+        }
+    };
+
+    find_inserts("", InsertPosition::AT_TOP);
+
+    std::map<std::string, int> tag_counters;
+    for (const auto& original_child : templateNode->getChildren()) {
+
+        auto original_element = std::dynamic_pointer_cast<ElementNode>(original_child);
+        if (!original_element) {
+            visit(original_child);
+            continue;
+        }
+
+        std::string tag_name = original_element->getTagName();
+        int index = tag_counters[tag_name]++;
+        std::string simple_selector = tag_name;
+        std::string indexed_selector = tag_name + "[" + std::to_string(index) + "]";
+
+        if (deleted_selectors.count(simple_selector) > 0 || deleted_selectors.count(indexed_selector) > 0) {
+            continue;
+        }
+
+        find_inserts(simple_selector, InsertPosition::BEFORE);
+        find_inserts(indexed_selector, InsertPosition::BEFORE);
+
+        auto it = modification_rules.find(tag_name);
+        if (it != modification_rules.end()) {
+            auto modification_element = it->second;
+            auto merged_element = std::make_shared<ElementNode>(original_element->getTagName());
+
+            for(const auto& attr : original_element->getAttributes()) merged_element->setAttribute(attr.first, attr.second);
+            for(const auto& attr : modification_element->getAttributes()) merged_element->setAttribute(attr.first, attr.second);
+
+            std::shared_ptr<StyleNode> original_style = nullptr;
+            for(const auto& child : original_element->getChildren()) if(child->getType() == NodeType::NODE_STYLE) original_style = std::dynamic_pointer_cast<StyleNode>(child);
+            std::shared_ptr<StyleNode> modification_style = nullptr;
+            for(const auto& child : modification_element->getChildren()) if(child->getType() == NodeType::NODE_STYLE) modification_style = std::dynamic_pointer_cast<StyleNode>(child);
+
+            auto merged_style = std::make_shared<StyleNode>();
+            if(original_style) for(const auto& prop : original_style->getChildren()) merged_style->addChild(prop);
+            if(modification_style) for(const auto& prop : modification_style->getChildren()) merged_style->addChild(prop);
+
+            if(!merged_style->getChildren().empty()) merged_element->addChild(merged_style);
+
+            for(const auto& child : original_element->getChildren()) if(child->getType() != NodeType::NODE_STYLE) merged_element->addChild(child);
+
+            visit(merged_element);
+        } else {
+            visit(original_child);
+        }
+
+        find_inserts(simple_selector, InsertPosition::AFTER);
+        find_inserts(indexed_selector, InsertPosition::AFTER);
+    }
+
+    find_inserts("", InsertPosition::AT_BOTTOM);
 }
 
-void CHTLGenerator::visit(const std::shared_ptr<CustomNode>& node) {
-}
-
+void CHTLGenerator::visit(const std::shared_ptr<CustomNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<OriginNode>& node) {
-    if (node->getOriginType() == "@Html") {
-        html_out << node->getContent();
-    } else if (node->getOriginType() == "@Style") {
-        css_out << node->getContent();
-    } else if (node->getOriginType() == "@JavaScript") {
-        html_out << node->getContent();
-    }
+    if (node->getOriginType() == "@Html") html_out << node->getContent();
+    else if (node->getOriginType() == "@Style") css_out << node->getContent();
+    else if (node->getOriginType() == "@JavaScript") html_out << node->getContent();
 }
-
-void CHTLGenerator::visit(const std::shared_ptr<ImportNode>& node) {
-}
-
+void CHTLGenerator::visit(const std::shared_ptr<ImportNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<NamespaceNode>& node) {
-    for (const auto& child : node->getChildren()) {
-        visit(child);
-    }
+    for (const auto& child : node->getChildren()) visit(child);
 }
-
-void CHTLGenerator::visit(const std::shared_ptr<ConfigurationNode>& node) {
-}
-
-void CHTLGenerator::visit(const std::shared_ptr<PropertyNode>& node) {
-}
-
+void CHTLGenerator::visit(const std::shared_ptr<ConfigurationNode>& node) {}
+void CHTLGenerator::visit(const std::shared_ptr<PropertyNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<RuleNode>& node) {
     css_out << node->getSelector() << "{";
     for (const auto& prop : node->getProperties()) {
-        if (prop) {
-             css_out << prop->getKey() << ":" << prop->getValue() << ";";
-        }
+        if (prop) css_out << prop->getKey() << ":" << prop->getValue() << ";";
     }
     css_out << "}";
 }
-
 void CHTLGenerator::visit(const std::shared_ptr<UseNode>& node) {
-    if (node->getUseType() == "html5") {
-        html_out << "<!DOCTYPE html>";
-    }
+    if (node->getUseType() == "html5") html_out << "<!DOCTYPE html>";
 }
-
 void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
-    if (element_stack.empty()) {
-        return; // or throw an error, as `if` should be inside an element
-    }
+    if (element_stack.empty()) return;
     auto parentElement = element_stack.back();
     std::string selector;
-
     if (parentElement->hasAttribute("id")) {
         selector = "#" + parentElement->getAttributes().at("id");
     } else if (parentElement->hasAttribute("class")) {
-        // Using the first class if multiple are present
         std::string classes = parentElement->getAttributes().at("class");
         selector = "." + classes.substr(0, classes.find(' '));
     } else {
         selector = parentElement->getTagName();
     }
-
-    // This is a simplified condition parser. A real implementation would need a more robust parser.
-    std::string condition = node->condition;
-    std::string media_query = "@media screen and (" + condition + ")";
-
-    css_out << media_query << " {";
-    css_out << selector << " {";
-
+    std::string media_query = "@media screen and (" + node->condition + ")";
+    css_out << media_query << " {" << selector << " {";
     for (const auto& child : node->getChildren()) {
         if (child->getType() == NodeType::NODE_PROPERTY) {
             auto prop = std::dynamic_pointer_cast<PropertyNode>(child);
-            if (prop) {
-                css_out << prop->getKey() << ":" << prop->getValue() << ";";
-            }
+            if (prop) css_out << prop->getKey() << ":" << prop->getValue() << ";";
         }
     }
-
-    css_out << "}";
-    css_out << "}";
+    css_out << "}}";
+}
+void CHTLGenerator::visit(const std::shared_ptr<DeleteNode>& node) {}
+void CHTLGenerator::visit(const std::shared_ptr<InsertNode>& node) {
+    for (const auto& child : node->getChildren()) visit(child);
 }
 
 }

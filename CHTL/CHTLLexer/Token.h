@@ -20,6 +20,8 @@ namespace CHTL {
         TOKEN_ELSE,
         TOKEN_ELSE_IF,
         TOKEN_EXCEPT,
+        TOKEN_DELETE,
+        TOKEN_INSERT,
         TOKEN_KEYWORD_USE,
         TOKEN_KEYWORD_HTML5,
         TOKEN_KEYWORD_FROM,

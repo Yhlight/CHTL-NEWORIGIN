@@ -17,6 +17,7 @@ add_library(CHTL STATIC
     CHTLStrategy/UseParsingStrategy.cpp
     CHTLStrategy/IfParsingStrategy.cpp
     CHTLStrategy/ConstraintParsingStrategy.cpp
+    CHTLStrategy/SpecializationParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
     CHTLContext/ConfigurationManager.cpp
     SemanticAnalyzer.cpp

@@ -3,6 +3,7 @@
 #include "StyleParsingStrategy.h"
 #include "IfParsingStrategy.h"
 #include "ConstraintParsingStrategy.h"
+#include "SpecializationParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
@@ -83,13 +84,19 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
                 std::string templateName = context->getCurrentToken().lexeme;
                 context->advance();
 
-                if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
-                    context->advance();
+                auto usageNode = std::make_shared<TemplateUsageNode>(templateName, usageType);
+
+                if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
+                    context->setStrategy(std::make_unique<SpecializationParsingStrategy>());
+                    auto specializationRoot = context->runCurrentStrategy();
+                    usageNode->setSpecialization(specializationRoot);
+                } else if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
+                    context->advance(); // consume ';'
                 } else {
-                    throw std::runtime_error("Expected ';' after template usage.");
+                    throw std::runtime_error("Expected ';' or '{' after template usage.");
                 }
 
-                element->addChild(std::make_shared<TemplateUsageNode>(templateName, usageType));
+                element->addChild(usageNode);
             }
             else {
                 context->advance();

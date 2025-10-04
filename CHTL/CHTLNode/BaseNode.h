@@ -23,7 +23,9 @@ namespace CHTL {
         NODE_USE,
         NODE_TEMPLATE_USAGE,
         NODE_IF,
-        NODE_CONSTRAINT
+        NODE_CONSTRAINT,
+        NODE_DELETE,
+        NODE_INSERT
     };
 
     class BaseNode {

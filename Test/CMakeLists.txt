@@ -7,6 +7,8 @@ add_executable(run_tests
     ConditionalRenderingTest.cpp
     ConstraintTest.cpp
     ConfigurationTest.cpp
+    SpecializationParsingTest.cpp
+    SpecializationGeneratorTest.cpp
 )
 
 target_link_libraries(run_tests PRIVATE CHTL)

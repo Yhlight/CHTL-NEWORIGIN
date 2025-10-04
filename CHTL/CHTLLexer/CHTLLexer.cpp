@@ -115,6 +115,8 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
         if (lexeme == configManager->getKeyword("if")) return makeToken(TokenType::TOKEN_IF, lexeme);
         if (lexeme == configManager->getKeyword("else")) return makeToken(TokenType::TOKEN_ELSE, lexeme);
         if (lexeme == configManager->getKeyword("except")) return makeToken(TokenType::TOKEN_EXCEPT, lexeme);
+        if (lexeme == configManager->getKeyword("delete")) return makeToken(TokenType::TOKEN_DELETE, lexeme);
+        if (lexeme == configManager->getKeyword("insert")) return makeToken(TokenType::TOKEN_INSERT, lexeme);
     }
 
     // Check if it's a valid identifier (starts with a letter or underscore)

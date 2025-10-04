@@ -10,6 +10,8 @@ void ConfigurationManager::initialize_defaults() {
     keywords["if"] = "if";
     keywords["else"] = "else";
     keywords["except"] = "except";
+    keywords["delete"] = "delete";
+    keywords["insert"] = "insert";
     keywords["use"] = "use";
     keywords["html5"] = "html5";
     keywords["from"] = "from";

@@ -23,6 +23,8 @@ class RuleNode;
 class UseNode;
 class TemplateUsageNode;
 class IfNode;
+class DeleteNode;
+class InsertNode;
 
 class CHTLGenerator {
 public:
@@ -47,6 +49,8 @@ private:
     void visit(const std::shared_ptr<UseNode>& node);
     void visit(const std::shared_ptr<TemplateUsageNode>& node);
     void visit(const std::shared_ptr<IfNode>& node);
+    void visit(const std::shared_ptr<DeleteNode>& node);
+    void visit(const std::shared_ptr<InsertNode>& node);
 
     std::stringstream html_out;
     std::stringstream css_out;
