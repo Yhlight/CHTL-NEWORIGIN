@@ -122,3 +122,19 @@ TEST_CASE("Generator handles @JavaScript origin block", "[generator]") {
     REQUIRE(generator.getHtml() == "alert ( raw ) ;");
     REQUIRE(generator.getCss().empty());
 }
+
+TEST_CASE("Generator handles 'use html5' directive", "[generator]") {
+    std::string input = "use html5;";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<!DOCTYPE html>");
+}
+
+TEST_CASE("Generator handles 'use html5' directive with element", "[generator]") {
+    std::string input = "use html5; div {}";
+    auto ast = parseInput(input);
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast);
+    REQUIRE(generator.getHtml() == "<!DOCTYPE html><div></div>");
+}

@@ -27,10 +27,13 @@ TEST_CASE("Parser handles simple element", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_ELEMENT);
-    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_ELEMENT);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
     REQUIRE(element->getTagName() == "div");
 }
 
@@ -46,10 +49,13 @@ TEST_CASE("Parser handles attributes", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_ELEMENT);
-    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_ELEMENT);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
     REQUIRE(element->getTagName() == "div");
     auto attributes = element->getAttributes();
     REQUIRE(attributes.size() == 2);
@@ -75,10 +81,13 @@ body {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_ELEMENT);
-    auto body = std::dynamic_pointer_cast<CHTL::ElementNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_ELEMENT);
+    auto body = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
     REQUIRE(body->getTagName() == "body");
     REQUIRE(body->getChildren().size() == 1);
     auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(body->getChildren()[0]);
@@ -100,10 +109,13 @@ TEST_CASE("Parser handles text nodes", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_ELEMENT);
-    auto p = std::dynamic_pointer_cast<CHTL::ElementNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_ELEMENT);
+    auto p = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
     REQUIRE(p->getTagName() == "p");
     REQUIRE(p->getChildren().size() == 1);
     auto text = std::dynamic_pointer_cast<CHTL::TextNode>(p->getChildren()[0]);
@@ -130,9 +142,12 @@ div {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
     REQUIRE(element->getTagName() == "div");
     REQUIRE(element->getChildren().size() == 1);
 
@@ -163,10 +178,13 @@ TEST_CASE("Parser handles style template", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_TEMPLATE);
-    auto templateNode = std::dynamic_pointer_cast<CHTL::TemplateNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_TEMPLATE);
+    auto templateNode = std::dynamic_pointer_cast<CHTL::TemplateNode>(node);
     REQUIRE(templateNode != nullptr);
     REQUIRE(templateNode->getName() == "DefaultText");
     REQUIRE(templateNode->getTemplateType() == CHTL::TemplateType::STYLE);
@@ -197,10 +215,13 @@ TEST_CASE("Parser handles element template", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_TEMPLATE);
-    auto templateNode = std::dynamic_pointer_cast<CHTL::TemplateNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_TEMPLATE);
+    auto templateNode = std::dynamic_pointer_cast<CHTL::TemplateNode>(node);
     REQUIRE(templateNode != nullptr);
     REQUIRE(templateNode->getName() == "MyElement");
     REQUIRE(templateNode->getTemplateType() == CHTL::TemplateType::ELEMENT);
@@ -227,10 +248,13 @@ TEST_CASE("Parser handles configuration block", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_CONFIG);
-    auto configNode = std::dynamic_pointer_cast<CHTL::ConfigurationNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_CONFIG);
+    auto configNode = std::dynamic_pointer_cast<CHTL::ConfigurationNode>(node);
     REQUIRE(configNode != nullptr);
     auto settings = configNode->getSettings();
     REQUIRE(settings.size() == 2);
@@ -260,10 +284,13 @@ TEST_CASE("Parser handles custom style block", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_CUSTOM);
-    auto customNode = std::dynamic_pointer_cast<CHTL::CustomNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_CUSTOM);
+    auto customNode = std::dynamic_pointer_cast<CHTL::CustomNode>(node);
     REQUIRE(customNode != nullptr);
     REQUIRE(customNode->getName() == "MyCustomStyle");
     REQUIRE(customNode->getCustomType() == CHTL::CustomType::STYLE);
@@ -289,10 +316,13 @@ TEST_CASE("Parser handles origin block", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_ORIGIN);
-    auto originNode = std::dynamic_pointer_cast<CHTL::OriginNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_ORIGIN);
+    auto originNode = std::dynamic_pointer_cast<CHTL::OriginNode>(node);
     REQUIRE(originNode != nullptr);
     REQUIRE(originNode->getOriginType() == "@Html");
     REQUIRE(originNode->getName() == "");
@@ -315,10 +345,13 @@ TEST_CASE("Parser handles named origin block", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_ORIGIN);
-    auto originNode = std::dynamic_pointer_cast<CHTL::OriginNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_ORIGIN);
+    auto originNode = std::dynamic_pointer_cast<CHTL::OriginNode>(node);
     REQUIRE(originNode != nullptr);
     REQUIRE(originNode->getOriginType() == "@JavaScript");
     REQUIRE(originNode->getName() == "myScript");
@@ -337,10 +370,13 @@ TEST_CASE("Parser handles import statement", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_IMPORT);
-    auto importNode = std::dynamic_pointer_cast<CHTL::ImportNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_IMPORT);
+    auto importNode = std::dynamic_pointer_cast<CHTL::ImportNode>(node);
     REQUIRE(importNode != nullptr);
     REQUIRE(importNode->getImportType() == CHTL::ImportType::CHTL);
     REQUIRE(importNode->getPath() == "./components.chtl");
@@ -363,10 +399,13 @@ TEST_CASE("Parser handles namespace block", "[parser]") {
 
     CHTL::CHTLParser parser(tokens);
     auto root = parser.parse();
-
     REQUIRE(root != nullptr);
-    REQUIRE(root->getType() == CHTL::NodeType::NODE_NAMESPACE);
-    auto namespaceNode = std::dynamic_pointer_cast<CHTL::NamespaceNode>(root);
+    REQUIRE(root->getChildren().size() == 1);
+    auto node = root->getChildren()[0];
+
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_NAMESPACE);
+    auto namespaceNode = std::dynamic_pointer_cast<CHTL::NamespaceNode>(node);
     REQUIRE(namespaceNode != nullptr);
     REQUIRE(namespaceNode->getName() == "MyNamespace");
     REQUIRE(namespaceNode->getChildren().size() == 1);

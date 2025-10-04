@@ -107,6 +107,8 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
     if (lexeme == "text") return makeToken(TokenType::TOKEN_TEXT, lexeme);
     if (lexeme == "style") return makeToken(TokenType::TOKEN_STYLE, lexeme);
     if (lexeme == "script") return makeToken(TokenType::TOKEN_SCRIPT, lexeme);
+    if (lexeme == "use") return makeToken(TokenType::TOKEN_KEYWORD_USE, lexeme);
+    if (lexeme == "html5") return makeToken(TokenType::TOKEN_KEYWORD_HTML5, lexeme);
 
     // Check if it's a valid identifier (starts with a letter or underscore)
     if (isalpha(lexeme[0]) || lexeme[0] == '_') {

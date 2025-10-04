@@ -14,6 +14,7 @@ add_library(CHTL STATIC
     CHTLStrategy/ImportParsingStrategy.cpp
     CHTLStrategy/NamespaceParsingStrategy.cpp
     CHTLStrategy/ConfigurationParsingStrategy.cpp
+    CHTLStrategy/UseParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
 )
 

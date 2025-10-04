@@ -38,9 +38,11 @@ TEST_CASE("Loader handles a simple import", "[loader]") {
 
     auto importedAst = loadedAsts.at("./test_import.chtl");
     REQUIRE(importedAst != nullptr);
-    REQUIRE(importedAst->getType() == CHTL::NodeType::NODE_ELEMENT);
+    REQUIRE(importedAst->getChildren().size() == 1);
+    auto importedNode = importedAst->getChildren()[0];
+    REQUIRE(importedNode->getType() == CHTL::NodeType::NODE_ELEMENT);
 
-    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(importedAst);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(importedNode);
     REQUIRE(element->getTagName() == "div");
 
     // Clean up the temporary file

@@ -10,13 +10,21 @@ CHTLParserContext::CHTLParserContext(const std::vector<Token>& tokens)
 }
 
 std::shared_ptr<BaseNode> CHTLParserContext::parse() {
-    if (isAtEnd()) {
-        return nullptr;
+    auto root = std::make_shared<ElementNode>("root");
+    while (!isAtEnd()) {
+        currentState->handleToken(this, getCurrentToken());
+        auto node = runCurrentStrategy();
+        if (node) {
+            root->addChild(node);
+        } else {
+            // If no strategy is set, advance to avoid an infinite loop
+            // This might happen with comments or whitespace that is not fully skipped
+             if (!isAtEnd()) {
+                advance();
+            }
+        }
     }
-
-    // The main parse loop should be here. For now, we parse one element.
-    currentState->handleToken(this, getCurrentToken());
-    return runCurrentStrategy();
+    return root;
 }
 
 std::shared_ptr<BaseNode> CHTLParserContext::runCurrentStrategy() {

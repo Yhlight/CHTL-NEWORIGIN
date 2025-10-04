@@ -19,6 +19,7 @@ class NamespaceNode;
 class ConfigurationNode;
 class PropertyNode;
 class RuleNode;
+class UseNode;
 
 class CHTLGenerator {
 public:
@@ -40,6 +41,7 @@ private:
     void visit(const std::shared_ptr<ConfigurationNode>& node);
     void visit(const std::shared_ptr<PropertyNode>& node);
     void visit(const std::shared_ptr<RuleNode>& node);
+    void visit(const std::shared_ptr<UseNode>& node);
 
     std::stringstream html_out;
     std::stringstream css_out;

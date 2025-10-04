@@ -19,7 +19,8 @@ namespace CHTL {
         NODE_NAMESPACE,
         NODE_PROPERTY,
         NODE_RULE,
-        NODE_OPERATOR
+        NODE_OPERATOR,
+        NODE_USE
     };
 
     class BaseNode {
