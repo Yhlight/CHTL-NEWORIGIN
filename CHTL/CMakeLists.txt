@@ -1,5 +1,6 @@
 add_library(CHTL STATIC
     CHTLLexer/CHTLLexer.cpp
+    CHTLLoader/CHTLLoader.cpp
     CHTLParser/CHTLParser.cpp
     CHTLParser/CHTLParserContext.cpp
     CHTLParser/ParsingUtils.cpp

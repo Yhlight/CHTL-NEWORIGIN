@@ -3,6 +3,7 @@ add_executable(run_tests
     LexerTest.cpp
     ParserTest.cpp
     GeneratorTest.cpp
+    LoaderTest.cpp
 )
 
 target_link_libraries(run_tests PRIVATE CHTL)
