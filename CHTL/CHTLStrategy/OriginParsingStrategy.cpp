@@ -10,7 +10,12 @@ std::shared_ptr<BaseNode> OriginParsingStrategy::parse(CHTLParserContext* contex
     context->advance(); // consume 'Origin'
     context->advance(); // consume ']'
 
-    std::string originType = context->getCurrentToken().lexeme;
+    std::string originType = "";
+    if (context->getCurrentToken().type == TokenType::TOKEN_AT) {
+        originType += context->getCurrentToken().lexeme;
+        context->advance(); // consume '@'
+    }
+    originType += context->getCurrentToken().lexeme;
     context->advance(); // consume origin type
 
     std::string name = "";
@@ -22,27 +27,31 @@ std::shared_ptr<BaseNode> OriginParsingStrategy::parse(CHTLParserContext* contex
     std::stringstream contentStream;
     if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
         context->advance(); // consume '{'
-
         int braceCount = 1;
-        bool firstToken = true;
 
         while (!context->isAtEnd() && braceCount > 0) {
             Token& currentToken = context->getCurrentToken();
 
-            if (currentToken.type == TokenType::TOKEN_LBRACE) {
-                braceCount++;
-            } else if (currentToken.type == TokenType::TOKEN_RBRACE) {
+            if (currentToken.type == TokenType::TOKEN_RBRACE) {
                 braceCount--;
+                if (braceCount == 0) {
+                    break;
+                }
+            } else if (currentToken.type == TokenType::TOKEN_LBRACE) {
+                braceCount++;
             }
 
-            if (braceCount > 0) {
-                if (!firstToken) {
-                    contentStream << " ";
-                }
+            if (currentToken.type == TokenType::TOKEN_STRING_LITERAL) {
+                 contentStream << "\"" << currentToken.lexeme << "\"";
+            } else {
                 contentStream << currentToken.lexeme;
-                firstToken = false;
             }
+
             context->advance();
+        }
+
+        if (!context->isAtEnd() && context->getCurrentToken().type == TokenType::TOKEN_RBRACE) {
+            context->advance(); // consume '}'
         }
     }
 

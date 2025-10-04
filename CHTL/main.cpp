@@ -3,9 +3,14 @@
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
 #include "CHTLLoader/CHTLLoader.h"
+#include "CHTLContext/GenerationContext.h"
 
 int main() {
     std::string input = R"(
+[Template] @Style MyTemplate {
+    color: blue;
+}
+
 [Import] @Chtl from "test.chtl";
 
 div {
@@ -28,14 +33,17 @@ div {
     CHTL::CHTLParser parser(tokens);
     std::shared_ptr<CHTL::BaseNode> ast = parser.parse();
 
-    CHTL::CHTLLoader loader("."); // Assuming current directory as base path
+    CHTL::CHTLLoader loader(".");
     loader.loadImports(ast);
 
-    CHTL::CHTLGenerator generator;
-    generator.generate(ast);
+    CHTL::GenerationContext context;
+    loader.gatherTemplates(ast, context);
     for (const auto& pair : loader.getLoadedAsts()) {
-        generator.generate(pair.second);
+        loader.gatherTemplates(pair.second, context);
     }
+
+    CHTL::CHTLGenerator generator;
+    generator.generate(ast, context);
 
     std::string html = generator.getHtml();
     std::string css = generator.getCss();

@@ -20,7 +20,8 @@ namespace CHTL {
         NODE_PROPERTY,
         NODE_RULE,
         NODE_OPERATOR,
-        NODE_USE
+        NODE_USE,
+        NODE_TEMPLATE_USAGE
     };
 
     class BaseNode {

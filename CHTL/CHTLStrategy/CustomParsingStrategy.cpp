@@ -6,6 +6,7 @@
 #include "TextParsingStrategy.h"
 #include "StyleParsingStrategy.h"
 #include "../CHTLNode/PropertyNode.h"
+#include <stdexcept>
 
 namespace CHTL {
 
@@ -14,18 +15,24 @@ std::shared_ptr<BaseNode> CustomParsingStrategy::parse(CHTLParserContext* contex
     context->advance(); // consume 'Custom'
     context->advance(); // consume ']'
 
+    std::string itemTypeStr = "";
+    if (context->getCurrentToken().type == TokenType::TOKEN_AT) {
+        itemTypeStr += context->getCurrentToken().lexeme;
+        context->advance(); // consume '@'
+    }
+    itemTypeStr += context->getCurrentToken().lexeme;
+    context->advance(); // consume custom type
+
     CustomType customType;
-    if (context->getCurrentToken().lexeme == "@Style") {
+    if (itemTypeStr == "@Style") {
         customType = CustomType::STYLE;
-    } else if (context->getCurrentToken().lexeme == "@Element") {
+    } else if (itemTypeStr == "@Element") {
         customType = CustomType::ELEMENT;
-    } else if (context->getCurrentToken().lexeme == "@Var") {
+    } else if (itemTypeStr == "@Var") {
         customType = CustomType::VAR;
     } else {
-        // Error: invalid custom type
         return nullptr;
     }
-    context->advance(); // consume custom type
 
     std::string customName = context->getCurrentToken().lexeme;
     context->advance(); // consume custom name
@@ -60,7 +67,7 @@ std::shared_ptr<BaseNode> CustomParsingStrategy::parse(CHTLParserContext* contex
         if (context->getCurrentToken().type == TokenType::TOKEN_RBRACE) {
             context->advance(); // consume '}'
         } else {
-            // Error: unclosed custom block
+            throw std::runtime_error("Unclosed custom block: " + customName);
         }
     }
 

@@ -4,6 +4,8 @@
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
+#include <stdexcept>
 
 namespace CHTL {
 
@@ -21,11 +23,9 @@ void parseAttributes(CHTLParserContext* context, std::shared_ptr<ElementNode> el
                     context->advance(); // consume ';'
                 }
             } else {
-                // Error: unexpected token in attribute value
                 break;
             }
         } else {
-            // Not an attribute, break the loop
             break;
         }
     }
@@ -59,7 +59,31 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
                     context->setStrategy(std::make_unique<ElementParsingStrategy>());
                     element->addChild(context->runCurrentStrategy());
                 }
-            } else {
+            } else if (currentType == TokenType::TOKEN_AT) {
+                context->advance(); // consume '@'
+
+                std::string itemTypeStr = context->getCurrentToken().lexeme;
+                context->advance();
+
+                TemplateUsageType usageType;
+                if (itemTypeStr == "Element") {
+                    usageType = TemplateUsageType::ELEMENT;
+                } else {
+                    throw std::runtime_error("Only @Element templates can be used in this context. Found: @" + itemTypeStr);
+                }
+
+                std::string templateName = context->getCurrentToken().lexeme;
+                context->advance();
+
+                if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
+                    context->advance();
+                } else {
+                    throw std::runtime_error("Expected ';' after template usage.");
+                }
+
+                element->addChild(std::make_shared<TemplateUsageNode>(templateName, usageType));
+            }
+            else {
                 context->advance();
             }
         }

@@ -6,6 +6,7 @@
 #include "TextParsingStrategy.h"
 #include "StyleParsingStrategy.h"
 #include "../CHTLNode/PropertyNode.h"
+#include <stdexcept>
 
 namespace CHTL {
 
@@ -14,18 +15,24 @@ std::shared_ptr<BaseNode> TemplateParsingStrategy::parse(CHTLParserContext* cont
     context->advance(); // consume 'Template'
     context->advance(); // consume ']'
 
+    std::string itemTypeStr = "";
+    if (context->getCurrentToken().type == TokenType::TOKEN_AT) {
+        itemTypeStr += context->getCurrentToken().lexeme;
+        context->advance(); // consume '@'
+    }
+    itemTypeStr += context->getCurrentToken().lexeme;
+    context->advance(); // consume template type
+
     TemplateType templateType;
-    if (context->getCurrentToken().lexeme == "@Style") {
+    if (itemTypeStr == "@Style") {
         templateType = TemplateType::STYLE;
-    } else if (context->getCurrentToken().lexeme == "@Element") {
+    } else if (itemTypeStr == "@Element") {
         templateType = TemplateType::ELEMENT;
-    } else if (context->getCurrentToken().lexeme == "@Var") {
+    } else if (itemTypeStr == "@Var") {
         templateType = TemplateType::VAR;
     } else {
-        // Error: invalid template type
         return nullptr;
     }
-    context->advance(); // consume template type
 
     std::string templateName = context->getCurrentToken().lexeme;
     context->advance(); // consume template name
@@ -60,7 +67,7 @@ std::shared_ptr<BaseNode> TemplateParsingStrategy::parse(CHTLParserContext* cont
         if (context->getCurrentToken().type == TokenType::TOKEN_RBRACE) {
             context->advance(); // consume '}'
         } else {
-            // Error: unclosed template block
+            throw std::runtime_error("Unclosed template block: " + templateName);
         }
     }
 

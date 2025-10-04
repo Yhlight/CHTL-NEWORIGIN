@@ -3,6 +3,7 @@
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/ImportNode.h"
+#include "../CHTLContext/GenerationContext.h"
 #include <string>
 #include <memory>
 #include <vector>
@@ -19,6 +20,7 @@ public:
     const std::map<std::string, std::shared_ptr<OriginNode>>& getNamedOriginNodes() const;
     const std::map<std::string, std::shared_ptr<BaseNode>>& getImportedItems() const;
     const std::map<std::string, std::map<std::string, std::shared_ptr<BaseNode>>>& getNamespaces() const;
+    void gatherTemplates(const std::shared_ptr<BaseNode>& ast, GenerationContext& context);
 
 private:
     void findAndLoad(const std::shared_ptr<BaseNode>& node);

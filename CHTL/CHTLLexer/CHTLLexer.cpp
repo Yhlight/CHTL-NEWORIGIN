@@ -51,6 +51,7 @@ Token CHTLLexer::getNextToken() {
     }
 
     switch (c) {
+        case '@': advance(); return makeToken(TokenType::TOKEN_AT, "@");
         case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
         case '}': advance(); return makeToken(TokenType::TOKEN_RBRACE, "}");
         case '(': advance(); return makeToken(TokenType::TOKEN_LPAREN, "(");
@@ -109,6 +110,7 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
     if (lexeme == "script") return makeToken(TokenType::TOKEN_SCRIPT, lexeme);
     if (lexeme == "use") return makeToken(TokenType::TOKEN_KEYWORD_USE, lexeme);
     if (lexeme == "html5") return makeToken(TokenType::TOKEN_KEYWORD_HTML5, lexeme);
+    if (lexeme == "from") return makeToken(TokenType::TOKEN_KEYWORD_FROM, lexeme);
 
     // Check if it's a valid identifier (starts with a letter or underscore)
     if (isalpha(lexeme[0]) || lexeme[0] == '_') {

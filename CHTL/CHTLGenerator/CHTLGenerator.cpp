@@ -3,6 +3,7 @@
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/TemplateNode.h"
+#include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/CustomNode.h"
 #include "../CHTLNode/OriginNode.h"
 #include "../CHTLNode/ImportNode.h"
@@ -15,7 +16,8 @@
 
 namespace CHTL {
 
-void CHTLGenerator::generate(const std::shared_ptr<BaseNode>& node) {
+void CHTLGenerator::generate(const std::shared_ptr<BaseNode>& node, const GenerationContext& context) {
+    this->context = &context;
     if (node) {
         visit(node);
     }
@@ -36,6 +38,9 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
             break;
         case NodeType::NODE_TEMPLATE:
             visit(std::dynamic_pointer_cast<TemplateNode>(node));
+            break;
+        case NodeType::NODE_TEMPLATE_USAGE:
+            visit(std::dynamic_pointer_cast<TemplateUsageNode>(node));
             break;
         case NodeType::NODE_CUSTOM:
             visit(std::dynamic_pointer_cast<CustomNode>(node));
@@ -62,21 +67,26 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
             visit(std::dynamic_pointer_cast<UseNode>(node));
             break;
         default:
-            // Silently ignore other node types for now
             break;
     }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
+    // Handle the special 'text' tag by only visiting its children
+    if (node->getTagName() == "text") {
+        for (const auto& child : node->getChildren()) {
+            visit(child);
+        }
+        return;
+    }
+
     if (node->getTagName() != "root") {
         html_out << "<" << node->getTagName();
 
-        // Handle explicit attributes
         for (const auto& attr : node->getAttributes()) {
             html_out << " " << attr.first << "=\"" << attr.second << "\"";
         }
 
-        // Collect inline styles from child StyleNodes
         std::stringstream style_ss;
         for (const auto& child : node->getChildren()) {
             if (child->getType() == NodeType::NODE_STYLE) {
@@ -85,14 +95,48 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                     if (styleChild->getType() == NodeType::NODE_PROPERTY) {
                         auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
                         if (prop) {
-                            style_ss << prop->getKey() << ": " << prop->getValue() << ";";
+                            if (!prop->getChildren().empty() && prop->getChildren()[0]->getType() == NodeType::NODE_TEMPLATE_USAGE) {
+                                auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(prop->getChildren()[0]);
+                                if (usageNode && usageNode->getUsageType() == TemplateUsageType::VAR) {
+                                    auto templateNode = context->getTemplate(usageNode->getName());
+                                    if (templateNode) {
+                                        for (const auto& varChild : templateNode->getChildren()) {
+                                            if (varChild->getType() == NodeType::NODE_PROPERTY) {
+                                                auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild);
+                                                if (varProp && varProp->getKey() == usageNode->getVariableName()) {
+                                                    style_ss << prop->getKey() << ":" << varProp->getValue() << ";";
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                style_ss << prop->getKey() << ":" << prop->getValue() << ";";
+                            }
                         }
+                    } else if (styleChild->getType() == NodeType::NODE_TEMPLATE_USAGE) {
+                        auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(styleChild);
+                        if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
+                             auto templateNode = context->getTemplate(usageNode->getName());
+                             if(templateNode) {
+                                 for(const auto& templateChild : templateNode->getChildren()) {
+                                     if(templateChild->getType() == NodeType::NODE_PROPERTY) {
+                                         auto prop = std::dynamic_pointer_cast<PropertyNode>(templateChild);
+                                         if (prop) {
+                                            style_ss << prop->getKey() << ":" << prop->getValue() << ";";
+                                         }
+                                     }
+                                 }
+                             }
+                        }
+                    } else if (styleChild->getType() == NodeType::NODE_RULE) {
+                        visit(styleChild);
                     }
                 }
             }
         }
 
-        // Add the style attribute if there are any styles
         if (style_ss.rdbuf()->in_avail() > 0) {
             html_out << " style=\"" << style_ss.str() << "\"";
         }
@@ -100,9 +144,10 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
         html_out << ">";
     }
 
-    // Visit all children to generate their content (HTML or CSS)
     for (const auto& child : node->getChildren()) {
-        visit(child);
+        if (child->getType() != NodeType::NODE_STYLE) {
+            visit(child);
+        }
     }
 
     if (node->getTagName() != "root") {
@@ -115,19 +160,26 @@ void CHTLGenerator::visit(const std::shared_ptr<TextNode>& node) {
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<StyleNode>& node) {
-    // Visit children of the style node. RuleNodes will add to css_out.
-    // PropertyNodes will do nothing, as they are handled by the parent ElementNode.
     for (const auto& child : node->getChildren()) {
-        visit(child);
+        if (child->getType() == NodeType::NODE_RULE) {
+            visit(child);
+        }
     }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {
-    // Templates are handled by the compiler and do not generate output directly.
+}
+
+void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
+    auto templateNode = context->getTemplate(node->getName());
+    if (templateNode) {
+        for (const auto& child : templateNode->getChildren()) {
+            visit(child);
+        }
+    }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<CustomNode>& node) {
-    // Custom blocks are handled by the compiler and do not generate output directly.
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<OriginNode>& node) {
@@ -141,33 +193,28 @@ void CHTLGenerator::visit(const std::shared_ptr<OriginNode>& node) {
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ImportNode>& node) {
-    // Import nodes are handled by a loader, not the generator.
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<NamespaceNode>& node) {
-    // Namespaces affect scope, but the block itself doesn't generate output.
-    // We will visit its children.
     for (const auto& child : node->getChildren()) {
         visit(child);
     }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ConfigurationNode>& node) {
-    // Configuration nodes affect the compiler and do not generate output.
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<PropertyNode>& node) {
-    // Property nodes are part of other nodes and are handled within their parent's visit method.
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<RuleNode>& node) {
-    css_out << node->getSelector() << " {";
+    css_out << node->getSelector() << "{";
     for (const auto& prop : node->getProperties()) {
         if (prop) {
-             css_out << " " << prop->getKey() << ": " << prop->getValue() << ";";
+             css_out << prop->getKey() << ":" << prop->getValue() << ";";
         }
     }
-    css_out << " }";
+    css_out << "}";
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<UseNode>& node) {

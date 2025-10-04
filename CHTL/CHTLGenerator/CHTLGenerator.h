@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLContext/GenerationContext.h"
 #include <string>
 #include <memory>
 #include <sstream>
@@ -20,10 +21,11 @@ class ConfigurationNode;
 class PropertyNode;
 class RuleNode;
 class UseNode;
+class TemplateUsageNode;
 
 class CHTLGenerator {
 public:
-    void generate(const std::shared_ptr<BaseNode>& node);
+    void generate(const std::shared_ptr<BaseNode>& node, const GenerationContext& context);
 
     std::string getHtml() const { return html_out.str(); }
     std::string getCss() const { return css_out.str(); }
@@ -42,9 +44,11 @@ private:
     void visit(const std::shared_ptr<PropertyNode>& node);
     void visit(const std::shared_ptr<RuleNode>& node);
     void visit(const std::shared_ptr<UseNode>& node);
+    void visit(const std::shared_ptr<TemplateUsageNode>& node);
 
     std::stringstream html_out;
     std::stringstream css_out;
+    const GenerationContext* context;
 };
 
 }

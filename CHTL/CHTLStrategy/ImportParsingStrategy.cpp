@@ -17,29 +17,24 @@ std::shared_ptr<BaseNode> ImportParsingStrategy::parse(CHTLParserContext* contex
     std::string alias = "";
     ImportType importType = ImportType::UNKNOWN;
 
-    // Check for an optional category like [Custom] or [Template]
     if (context->getCurrentToken().type == TokenType::TOKEN_LBRACKET) {
         context->advance(); // consume '['
         const std::string& categoryName = context->getCurrentToken().lexeme;
-        if (categoryName == "Custom") {
-            category = ImportCategory::CUSTOM;
-        } else if (categoryName == "Template") {
-            category = ImportCategory::TEMPLATE;
-        } else if (categoryName == "Origin") {
-            category = ImportCategory::ORIGIN;
-        } else if (categoryName == "Configuration") {
-            category = ImportCategory::CONFIGURATION;
-        }
+        if (categoryName == "Custom") category = ImportCategory::CUSTOM;
+        else if (categoryName == "Template") category = ImportCategory::TEMPLATE;
+        else if (categoryName == "Origin") category = ImportCategory::ORIGIN;
+        else if (categoryName == "Configuration") category = ImportCategory::CONFIGURATION;
         context->advance(); // consume category name
-        if (context->getCurrentToken().type != TokenType::TOKEN_RBRACKET) {
-            throw std::runtime_error("Expected ']' after import category.");
-        }
+        if (context->getCurrentToken().type != TokenType::TOKEN_RBRACKET) throw std::runtime_error("Expected ']' after import category.");
         context->advance(); // consume ']'
     }
 
-    // The next token is the type, e.g., @Element, @Chtl
-    itemType = context->getCurrentToken().lexeme;
-    context->advance(); // consume item type
+    if (context->getCurrentToken().type == TokenType::TOKEN_AT) {
+        itemType += context->getCurrentToken().lexeme;
+        context->advance();
+    }
+    itemType += context->getCurrentToken().lexeme;
+    context->advance();
 
     if (category == ImportCategory::NONE) {
         if (itemType == "@Html") importType = ImportType::HTML;
@@ -49,22 +44,21 @@ std::shared_ptr<BaseNode> ImportParsingStrategy::parse(CHTLParserContext* contex
         else if (itemType == "@CJmod") importType = ImportType::CJMOD;
         else if (itemType == "@Config") importType = ImportType::CONFIG;
     } else {
-        importType = ImportType::CHTL; // Detailed imports are a form of CHTL import
+        importType = ImportType::CHTL;
     }
 
-    // The next token might be an item name (for precise imports) or 'from'
-    if (context->getCurrentToken().lexeme != "from") {
+    if (context->getCurrentToken().type != TokenType::TOKEN_KEYWORD_FROM) {
         if (context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER || context->getCurrentToken().type == TokenType::TOKEN_UNQUOTED_LITERAL) {
              itemName = context->getCurrentToken().lexeme;
-             context->advance(); // consume item name
+             context->advance();
         }
     }
 
-    if (context->getCurrentToken().lexeme == "from") {
-        context->advance(); // consume 'from'
+    if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
+        context->advance();
         if (context->getCurrentToken().type == TokenType::TOKEN_STRING_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_UNQUOTED_LITERAL) {
             path = context->getCurrentToken().lexeme;
-            context->advance(); // consume path
+            context->advance();
         } else {
              throw std::runtime_error("Expected path after 'from' in import statement.");
         }
@@ -73,15 +67,15 @@ std::shared_ptr<BaseNode> ImportParsingStrategy::parse(CHTLParserContext* contex
     }
 
     if (context->getCurrentToken().lexeme == "as") {
-        context->advance(); // consume 'as'
+        context->advance();
         if (context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER) {
             alias = context->getCurrentToken().lexeme;
-            context->advance(); // consume alias
+            context->advance();
         }
     }
 
     if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
-        context->advance(); // consume ';'
+        context->advance();
     }
 
     if ((importType == ImportType::HTML || importType == ImportType::STYLE) && alias.empty()) {
@@ -91,7 +85,6 @@ std::shared_ptr<BaseNode> ImportParsingStrategy::parse(CHTLParserContext* contex
         return nullptr;
     }
 
-    // Use detailed constructor for all CHTL-related imports to preserve itemType
     if (importType == ImportType::CHTL) {
         return std::make_shared<ImportNode>(category, itemType, itemName, path, alias);
     } else {

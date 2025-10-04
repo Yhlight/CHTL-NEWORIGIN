@@ -5,6 +5,7 @@
 #include "../CHTLNode/NamespaceNode.h"
 #include "../CHTLParser/CHTLParser.h"
 #include "../CHTLLexer/CHTLLexer.h"
+#include "../CHTLContext/GenerationContext.h"
 #include <fstream>
 #include <stdexcept>
 #include <filesystem>
@@ -35,6 +36,22 @@ const std::map<std::string, std::map<std::string, std::shared_ptr<BaseNode>>>& C
     return namespaces;
 }
 
+void CHTLLoader::gatherTemplates(const std::shared_ptr<BaseNode>& ast, GenerationContext& context) {
+    if (!ast) {
+        return;
+    }
+    if (ast->getType() == NodeType::NODE_TEMPLATE) {
+        auto templateNode = std::dynamic_pointer_cast<TemplateNode>(ast);
+        if (templateNode) {
+            context.addTemplate(templateNode->getName(), templateNode);
+        }
+    }
+    for (const auto& child : ast->getChildren()) {
+        gatherTemplates(child, context);
+    }
+}
+
+
 void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
     if (!node) {
         return;
@@ -63,7 +80,6 @@ void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
 
                 auto importedAst = loadedAsts[path];
 
-                // Handle whole-file CHTL import with namespace
                 if (importNode->getCategory() == ImportCategory::NONE && importNode->getItemType() == "@Chtl") {
                     std::string namespaceName = "";
                     bool namespaceFound = false;
@@ -87,7 +103,6 @@ void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
                         }
                     }
                 }
-                // Handle precise and type-based imports
                 else {
                     auto foundNodes = findNodes(importedAst, importNode->getCategory(), importNode->getItemType(), importNode->getItemName());
                     for (const auto& foundNode : foundNodes) {

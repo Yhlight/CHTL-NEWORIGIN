@@ -18,8 +18,10 @@ namespace CHTL {
         TOKEN_SCRIPT,
         TOKEN_KEYWORD_USE,
         TOKEN_KEYWORD_HTML5,
+        TOKEN_KEYWORD_FROM,
 
         // Punctuation
+        TOKEN_AT,
         TOKEN_LBRACE,
         TOKEN_RBRACE,
         TOKEN_LPAREN,
