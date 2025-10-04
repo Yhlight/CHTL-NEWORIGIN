@@ -5,6 +5,7 @@
 #include "Util/CssGenerator/CssGenerator.h"
 #include "Util/StyleEvaluator/StyleEvaluator.h"
 #include "Util/ImportResolver/ImportResolver.h"
+#include "Util/TemplateEvaluator/TemplateEvaluator.h"
 #include "Util/HtmlGenerator/HtmlGenerator.h"
 #include <fstream>
 #include <sstream>
@@ -33,6 +34,9 @@ int main(int argc, char* argv[]) {
 
     AttributeAutomator automator;
     automator.process(parser.getRoot());
+
+    TemplateEvaluator templateEvaluator;
+    templateEvaluator.evaluate(parser.getRoot());
 
     StyleEvaluator styleEvaluator;
     styleEvaluator.evaluate(parser.getRoot());

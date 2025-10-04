@@ -34,7 +34,7 @@ namespace {
             }
         }
         if (first_alpha == std::string::npos) {
-            try { return {std::stod(s), ""}; } catch (const std::invalid_argument&) { return {0.0, s}; }
+            try { return {std::stod(s), ""}; } catch (const std::invalid_argument&) { throw std::runtime_error("stod"); }
         }
         double val = std::stod(s.substr(0, first_alpha));
         std::string unit = s.substr(first_alpha);
@@ -122,14 +122,12 @@ namespace {
                         if (!left.unit.empty() && !right.unit.empty()) throw std::runtime_error("Cannot divide two values with units.");
                         result_str = format_value({left.value / right.value, left.unit.empty() ? right.unit : left.unit});
                         break;
-                    // Comparison operators
                     case TokenType::GREATER: result_str = (left.value > right.value) ? "1" : "0"; break;
                     case TokenType::LESS: result_str = (left.value < right.value) ? "1" : "0"; break;
                     case TokenType::GREATER_EQUAL: result_str = (left.value >= right.value) ? "1" : "0"; break;
                     case TokenType::LESS_EQUAL: result_str = (left.value <= right.value) ? "1" : "0"; break;
                     case TokenType::EQUAL_EQUAL: result_str = (left.value == right.value) ? "1" : "0"; break;
                     case TokenType::NOT_EQUAL: result_str = (left.value != right.value) ? "1" : "0"; break;
-                    // Logical operators
                     case TokenType::LOGICAL_AND: result_str = (left.value != 0 && right.value != 0) ? "1" : "0"; break;
                     case TokenType::LOGICAL_OR: result_str = (left.value != 0 || right.value != 0) ? "1" : "0"; break;
                     default: throw std::runtime_error("Unsupported binary operator.");
@@ -148,30 +146,30 @@ namespace {
                 break;
             }
             case NodeType::Reference: {
-                const auto* refNode = static_cast<const ReferenceNode*>(node);
-                const std::string& refStr = refNode->getReference();
-                size_t last_dot = refStr.find_last_of('.');
-                const ElementNode* targetNode = nullptr;
-                std::string propertyName;
+                 const auto* refNode = static_cast<const ReferenceNode*>(node);
+                 const std::string& refStr = refNode->getReference();
+                 size_t last_dot = refStr.find_last_of('.');
+                 const ElementNode* targetNode = nullptr;
+                 std::string propertyName;
 
-                if (last_dot == std::string::npos) { // Self-reference
+                 if (last_dot == std::string::npos) {
                    if (!contextNode || contextNode->getType() != NodeType::Element) {
                         throw std::runtime_error("Cannot resolve self-reference: no valid element context provided.");
                    }
                    targetNode = static_cast<const ElementNode*>(contextNode);
                    propertyName = refStr;
-                } else { // Reference to another node
+                 } else {
                    std::string selector = refStr.substr(0, last_dot);
                    propertyName = refStr.substr(last_dot + 1);
                    targetNode = find_node_by_selector(selector, astRoot);
                    if (!targetNode) throw std::runtime_error("Reference error: selector '" + selector + "' not found.");
-                }
+                 }
 
-                const ExpressionNode* propertyExpr = find_property_in_node(targetNode, propertyName);
-                if (!propertyExpr) throw std::runtime_error("Reference error: property '" + propertyName + "' not found on the specified element.");
+                 const ExpressionNode* propertyExpr = find_property_in_node(targetNode, propertyName);
+                 if (!propertyExpr) throw std::runtime_error("Reference error: property '" + propertyName + "' not found on the specified element.");
 
-                result_str = evaluate_recursive(propertyExpr, astRoot, contextNode, call_stack);
-                break;
+                 result_str = evaluate_recursive(propertyExpr, astRoot, contextNode, call_stack);
+                 break;
             }
             default:
                 throw std::runtime_error("Unknown or unsupported expression node type for evaluation.");

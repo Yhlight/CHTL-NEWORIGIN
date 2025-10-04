@@ -73,17 +73,9 @@ int ExpressionParser::getPrecedence() {
 
 std::unique_ptr<ExpressionNode> ExpressionParser::parsePrefix() {
     Token token = consume();
-    if (token.type == TokenType::NUMBER || token.type == TokenType::STRING_LITERAL) {
+    if (token.type == TokenType::NUMBER || token.type == TokenType::STRING_LITERAL || token.type == TokenType::IDENTIFIER) {
         return std::make_unique<ValueNode>(token.value);
-    } else if (token.type == TokenType::IDENTIFIER) {
-        if (peek().type == TokenType::DOT) {
-             // This case is not handled by the current simplified expression parser
-             // and would require more context. For now, treat as a simple identifier/value.
-             return std::make_unique<ValueNode>(token.value);
-        }
-        return std::make_unique<ReferenceNode>(token.value);
-    }
-    else if (token.type == TokenType::PROPERTY_REFERENCE) {
+    } else if (token.type == TokenType::PROPERTY_REFERENCE) {
         return std::make_unique<ReferenceNode>(token.value);
     } else if (token.type == TokenType::LEFT_PAREN) {
         auto expression = parseExpression(0);
@@ -93,11 +85,10 @@ std::unique_ptr<ExpressionNode> ExpressionParser::parsePrefix() {
         return expression;
     }
     throw std::runtime_error("Unexpected token in expression prefix: " + token.value);
-    return nullptr;
 }
 
 std::unique_ptr<ExpressionNode> ExpressionParser::parseInfix(std::unique_ptr<ExpressionNode> left) {
-    Token opToken = consume(); // Consume the operator
+    Token opToken = consume();
 
     if (opToken.type == TokenType::QUESTION_MARK) {
         auto true_expr = parseExpression(0);
@@ -117,7 +108,7 @@ std::unique_ptr<ExpressionNode> ExpressionParser::parseInfix(std::unique_ptr<Exp
 std::unique_ptr<ExpressionNode> ExpressionParser::parseExpression(int precedence) {
     auto left = parsePrefix();
 
-    while (left && precedence < getPrecedence()) {
+    while (precedence < getPrecedence()) {
         left = parseInfix(std::move(left));
     }
 
