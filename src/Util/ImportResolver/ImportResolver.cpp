@@ -1,10 +1,10 @@
 #include "ImportResolver.h"
 #include "../../CHTL/CHTLNode/ImportNode.h"
+#include "../../CHTL/CHTLNode/OriginNode.h"
 #include "../../CHTL/CHTLParser/CHTLParser.h"
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-#include <iostream>
 #include <vector>
 #include <algorithm>
 
@@ -12,7 +12,6 @@
 void resolveImports(BaseNode& node) {
     auto& children = node.getChildren();
 
-    // Using a temporary vector to store new children to avoid iterator invalidation
     std::vector<std::unique_ptr<BaseNode>> newChildren;
     bool needsReplacement = false;
 
@@ -20,7 +19,9 @@ void resolveImports(BaseNode& node) {
         if (child->getType() == NodeType::Import) {
             needsReplacement = true;
             ImportNode* importNode = static_cast<ImportNode*>(child.get());
+
             const std::string& path = importNode->getPath();
+            const std::string& importType = importNode->getImportType();
 
             std::ifstream file(path);
             if (!file.is_open()) {
@@ -31,14 +32,19 @@ void resolveImports(BaseNode& node) {
             buffer << file.rdbuf();
             std::string content = buffer.str();
 
-            CHTLParser parser(content);
-            parser.parse();
+            if (importType == "Chtl") {
+                CHTLParser parser(content);
+                parser.parse();
 
-            auto importedRoot = parser.releaseRoot();
-            auto& importedChildren = importedRoot->getChildren();
+                auto importedRoot = parser.releaseRoot();
+                auto& importedChildren = importedRoot->getChildren();
 
-            for (auto& importedChild : importedChildren) {
-                newChildren.push_back(std::move(importedChild));
+                for (auto& importedChild : importedChildren) {
+                    newChildren.push_back(std::move(importedChild));
+                }
+            } else {
+                // For other types like Html, Css, etc., create an OriginNode
+                newChildren.push_back(std::make_unique<OriginNode>(importType, content));
             }
         } else {
             // Recurse on non-import nodes
@@ -49,9 +55,7 @@ void resolveImports(BaseNode& node) {
 
     if (needsReplacement) {
         children.clear();
-        for(auto& newChild : newChildren) {
-            children.push_back(std::move(newChild));
-        }
+        children = std::move(newChildren);
     }
 }
 

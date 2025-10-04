@@ -3,60 +3,81 @@
 #include "../src/CHTL/CHTLParser/CHTLParser.h"
 #include "../src/CHTL/CHTLNode/RootNode.h"
 #include "../src/CHTL/CHTLNode/ImportNode.h"
+#include "../src/CHTL/CHTLNode/OriginNode.h"
 #include "../src/CHTL/CHTLNode/ElementNode.h"
 #include <fstream>
 #include <iostream>
 
-class ImportResolverTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        // Create a file to be imported
-        std::ofstream imported_file("imported.chtl");
-        imported_file << R"(
-            div {
-                text: "Hello from imported file";
-            }
-        )";
-        imported_file.close();
+TEST(ImportResolverTest, ResolvesSimpleChtlImport) {
+    // Create a file to be imported
+    std::ofstream imported_file("imported.chtl");
+    imported_file << "div {}";
+    imported_file.close();
 
-        // Create the main file that imports the other file
-        std::ofstream main_file("main.chtl");
-        main_file << R"(
-            [Import] @Chtl from "imported.chtl";
-        )";
-        main_file.close();
-    }
+    // Create the main file that imports the other file
+    std::string main_content = R"([Import] @Chtl from "imported.chtl";)";
 
-    void TearDown() override {
-        remove("imported.chtl");
-        remove("main.chtl");
-    }
-};
-
-TEST_F(ImportResolverTest, ResolvesSimpleImport) {
-    std::ifstream file("main.chtl");
-    ASSERT_TRUE(file.is_open());
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string chtl_code = buffer.str();
-
-    CHTLParser parser(chtl_code);
+    CHTLParser parser(main_content);
     parser.parse();
-
-    // Before resolving, the root should have one child: an ImportNode
-    BaseNode* root_before = parser.getRoot();
-    ASSERT_EQ(root_before->getChildren().size(), 1);
-    ASSERT_EQ(root_before->getChildren()[0]->getType(), NodeType::Import);
 
     ImportResolver resolver;
     resolver.resolve(*parser.getRoot());
 
-    // After resolving, the root should have one child: an ElementNode
-    BaseNode* root_after = parser.getRoot();
-    ASSERT_EQ(root_after->getChildren().size(), 1);
-    ASSERT_EQ(root_after->getChildren()[0]->getType(), NodeType::Element);
-
-    ElementNode* div = static_cast<ElementNode*>(root_after->getChildren()[0].get());
+    BaseNode* root = parser.getRoot();
+    ASSERT_EQ(root->getChildren().size(), 1);
+    ASSERT_EQ(root->getChildren()[0]->getType(), NodeType::Element);
+    ElementNode* div = static_cast<ElementNode*>(root->getChildren()[0].get());
     ASSERT_EQ(div->getTagName(), "div");
+
+    remove("imported.chtl");
+}
+
+TEST(ImportResolverTest, ResolvesHtmlImport) {
+    std::string htmlContent = "<h1>Hello World</h1>";
+    std::ofstream imported_file("imported.html");
+    imported_file << htmlContent;
+    imported_file.close();
+
+    std::string main_content = R"([Import] @Html from "imported.html";)";
+
+    CHTLParser parser(main_content);
+    parser.parse();
+
+    ImportResolver resolver;
+    resolver.resolve(*parser.getRoot());
+
+    BaseNode* root = parser.getRoot();
+    ASSERT_EQ(root->getChildren().size(), 1);
+    ASSERT_EQ(root->getChildren()[0]->getType(), NodeType::Origin);
+
+    OriginNode* origin = static_cast<OriginNode*>(root->getChildren()[0].get());
+    ASSERT_EQ(origin->getOriginType(), "Html");
+    ASSERT_EQ(origin->getContent(), htmlContent);
+
+    remove("imported.html");
+}
+
+TEST(ImportResolverTest, ResolvesCssImport) {
+    std::string cssContent = "body { color: red; }";
+    std::ofstream imported_file("imported.css");
+    imported_file << cssContent;
+    imported_file.close();
+
+    std::string main_content = R"([Import] @Style from "imported.css";)";
+
+    CHTLParser parser(main_content);
+    parser.parse();
+
+    ImportResolver resolver;
+    resolver.resolve(*parser.getRoot());
+
+    BaseNode* root = parser.getRoot();
+    ASSERT_EQ(root->getChildren().size(), 1);
+    ASSERT_EQ(root->getChildren()[0]->getType(), NodeType::Origin);
+
+    OriginNode* origin = static_cast<OriginNode*>(root->getChildren()[0].get());
+    ASSERT_EQ(origin->getOriginType(), "Style");
+    ASSERT_EQ(origin->getContent(), cssContent);
+
+    remove("imported.css");
 }

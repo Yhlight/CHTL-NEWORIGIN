@@ -21,7 +21,8 @@ enum class NodeType {
     Conditional,
     TemplateDefinition,
     TemplateUsage,
-    Import
+    Import,
+    Origin
 };
 
 class BaseNode {
