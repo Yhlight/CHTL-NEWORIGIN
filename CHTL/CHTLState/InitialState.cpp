@@ -3,6 +3,8 @@
 #include "../CHTLStrategy/ElementParsingStrategy.h"
 #include "../CHTLStrategy/StyleParsingStrategy.h"
 #include "../CHTLStrategy/TextParsingStrategy.h"
+#include "../CHTLStrategy/TemplateParsingStrategy.h"
+#include "../CHTLStrategy/CustomParsingStrategy.h"
 
 
 namespace CHTL {
@@ -17,6 +19,13 @@ namespace CHTL {
                 break;
             case TokenType::TOKEN_TEXT:
                 context->setStrategy(std::make_unique<TextParsingStrategy>());
+                break;
+            case TokenType::TOKEN_LBRACKET:
+                if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Template") {
+                    context->setStrategy(std::make_unique<TemplateParsingStrategy>());
+                } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Custom") {
+                    context->setStrategy(std::make_unique<CustomParsingStrategy>());
+                }
                 break;
             default:
                 // Handle error or unknown token

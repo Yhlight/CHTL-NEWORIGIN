@@ -45,7 +45,7 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
 
             if (currentType == TokenType::TOKEN_STYLE) {
                 context->setStrategy(std::make_unique<StyleParsingStrategy>());
-                element->addChild(context->parse());
+                element->addChild(context->runCurrentStrategy());
             } else if (currentType == TokenType::TOKEN_TEXT) {
                 context->setStrategy(std::make_unique<TextParsingStrategy>());
                 element->addChild(context->runCurrentStrategy());

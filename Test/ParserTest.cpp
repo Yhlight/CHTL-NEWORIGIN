@@ -4,6 +4,9 @@
 #include "../CHTL/CHTLNode/ElementNode.h"
 #include "../CHTL/CHTLNode/TextNode.h"
 #include "../CHTL/CHTLNode/StyleNode.h"
+#include "../CHTL/CHTLNode/TemplateNode.h"
+#include "../CHTL/CHTLNode/CustomNode.h"
+#include "../CHTL/CHTLNode/PropertyNode.h"
 
 #include <vector>
 #include <string>
@@ -137,4 +140,97 @@ div {
     REQUIRE(properties[0]->getValue() == "red");
     REQUIRE(properties[1]->getKey() == "width");
     REQUIRE(properties[1]->getValue() == "100px");
+}
+
+TEST_CASE("Parser handles style template", "[parser]") {
+    std::string input = R"(
+[Template] @Style DefaultText {
+    color: black;
+    font-size: 16px;
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_TEMPLATE);
+    auto templateNode = std::dynamic_pointer_cast<CHTL::TemplateNode>(root);
+    REQUIRE(templateNode != nullptr);
+    REQUIRE(templateNode->getName() == "DefaultText");
+    REQUIRE(templateNode->getTemplateType() == CHTL::TemplateType::STYLE);
+    REQUIRE(templateNode->getChildren().size() == 2);
+    auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(templateNode->getChildren()[0]);
+    REQUIRE(prop1->getKey() == "color");
+    REQUIRE(prop1->getValue() == "black");
+    auto prop2 = std::dynamic_pointer_cast<CHTL::PropertyNode>(templateNode->getChildren()[1]);
+    REQUIRE(prop2->getKey() == "font-size");
+    REQUIRE(prop2->getValue() == "16px");
+}
+
+TEST_CASE("Parser handles element template", "[parser]") {
+    std::string input = R"(
+[Template] @Element MyElement {
+    div {
+        text { "I am a template" }
+    }
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_TEMPLATE);
+    auto templateNode = std::dynamic_pointer_cast<CHTL::TemplateNode>(root);
+    REQUIRE(templateNode != nullptr);
+    REQUIRE(templateNode->getName() == "MyElement");
+    REQUIRE(templateNode->getTemplateType() == CHTL::TemplateType::ELEMENT);
+    REQUIRE(templateNode->getChildren().size() == 1);
+    auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(templateNode->getChildren()[0]);
+    REQUIRE(div != nullptr);
+    REQUIRE(div->getTagName() == "div");
+}
+
+TEST_CASE("Parser handles custom style block", "[parser]") {
+    std::string input = R"(
+[Custom] @Style MyCustomStyle {
+    color: red;
+}
+)";
+    CHTL::CHTLLexer lexer(input);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens);
+    auto root = parser.parse();
+
+    REQUIRE(root != nullptr);
+    REQUIRE(root->getType() == CHTL::NodeType::NODE_CUSTOM);
+    auto customNode = std::dynamic_pointer_cast<CHTL::CustomNode>(root);
+    REQUIRE(customNode != nullptr);
+    REQUIRE(customNode->getName() == "MyCustomStyle");
+    REQUIRE(customNode->getCustomType() == CHTL::CustomType::STYLE);
+    REQUIRE(customNode->getChildren().size() == 1);
+    auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(customNode->getChildren()[0]);
+    REQUIRE(prop1->getKey() == "color");
+    REQUIRE(prop1->getValue() == "red");
 }
