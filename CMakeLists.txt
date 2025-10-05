@@ -15,7 +15,11 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 # CHTL Library
-add_library(chtl_lib src/CHTL/CHTLLexer/CHTLLexer.cpp src/CHTL/CHTLParser/CHTLParser.cpp)
+add_library(chtl_lib
+    src/CHTL/CHTLLexer/CHTLLexer.cpp
+    src/CHTL/CHTLParser/CHTLParser.cpp
+    src/CHTL/CHTLGenerator/CHTLGenerator.cpp
+)
 
 # Main Executable
 add_executable(chtl src/main.cpp)
@@ -31,3 +35,8 @@ add_test(NAME LexerTest COMMAND LexerTest)
 add_executable(ParserTest src/Test/ParserTest/ParserTest.cpp)
 target_link_libraries(ParserTest PRIVATE chtl_lib gtest_main)
 add_test(NAME ParserTest COMMAND ParserTest)
+
+# Generator Tests
+add_executable(GeneratorTest src/Test/GeneratorTest/GeneratorTest.cpp)
+target_link_libraries(GeneratorTest PRIVATE chtl_lib gtest_main)
+add_test(NAME GeneratorTest COMMAND GeneratorTest)

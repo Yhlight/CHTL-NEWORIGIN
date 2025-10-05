@@ -12,6 +12,8 @@ public:
         return std::string(indent, ' ') + "CommentNode: " + comment;
     }
 
+    const std::string& getComment() const { return comment; }
+
 private:
     std::string comment;
 };

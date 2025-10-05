@@ -32,6 +32,10 @@ public:
         return ss.str();
     }
 
+    const std::string& getTagName() const { return tagName; }
+    const std::map<std::string, std::string>& getAttributes() const { return attributes; }
+    const std::vector<std::unique_ptr<Node>>& getChildren() const { return children; }
+
 private:
     std::string tagName;
     std::map<std::string, std::string> attributes;

@@ -3,6 +3,7 @@
 #include <sstream>
 #include "CHTL/CHTLLexer/CHTLLexer.h"
 #include "CHTL/CHTLParser/CHTLParser.h"
+#include "CHTL/CHTLGenerator/CHTLGenerator.h"
 
 int main() {
     std::ifstream file("sample.chtl");
@@ -23,11 +24,12 @@ int main() {
     CHTLParser parser(tokens);
     std::vector<std::unique_ptr<Node>> ast = parser.parse();
 
-    // 3. Print AST
-    std::cout << "--- Abstract Syntax Tree ---" << std::endl;
-    for (const auto& node : ast) {
-        std::cout << node->toString() << std::endl;
-    }
+    // 3. Generating HTML
+    CHTLGenerator generator(ast);
+    std::string html = generator.generate();
+
+    // 4. Print HTML
+    std::cout << html << std::endl;
 
     return 0;
 }

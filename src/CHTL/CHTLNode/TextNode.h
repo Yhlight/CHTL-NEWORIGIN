@@ -12,6 +12,8 @@ public:
         return std::string(indent, ' ') + "TextNode: " + text;
     }
 
+    const std::string& getText() const { return text; }
+
 private:
     std::string text;
 };
