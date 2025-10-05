@@ -23,9 +23,10 @@ std::vector<Token> CHTLLexer::tokenize(const std::string& input) {
                 while (i + 1 < input.length() && (input[i] != '*' || input[i + 1] != '/')) {
                     i++;
                 }
-                i++;
-                i++;
+                i++; // move past '*'
+                i++; // move past '/'
                 tokens.push_back({TokenType::MULTI_LINE_COMMENT, input.substr(start, i - start)});
+                i--; // Decrement to re-evaluate the character that broke the loop
                 continue;
             }
         }

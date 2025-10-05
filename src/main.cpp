@@ -2,24 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include "CHTL/CHTLLexer/CHTLLexer.h"
-
-// Function to convert TokenType to string for printing
-std::string tokenTypeToString(TokenType type) {
-    switch (type) {
-        case TokenType::SINGLE_LINE_COMMENT: return "SINGLE_LINE_COMMENT";
-        case TokenType::MULTI_LINE_COMMENT: return "MULTI_LINE_COMMENT";
-        case TokenType::GENERATOR_COMMENT: return "GENERATOR_COMMENT";
-        case TokenType::TEXT_KEYWORD: return "TEXT_KEYWORD";
-        case TokenType::LEFT_BRACE: return "LEFT_BRACE";
-        case TokenType::RIGHT_BRACE: return "RIGHT_BRACE";
-        case TokenType::COLON: return "COLON";
-        case TokenType::SEMICOLON: return "SEMICOLON";
-        case TokenType::STRING_LITERAL: return "STRING_LITERAL";
-        case TokenType::UNQUOTED_LITERAL: return "UNQUOTED_LITERAL";
-        case TokenType::UNKNOWN: return "UNKNOWN";
-        default: return "UNDEFINED";
-    }
-}
+#include "CHTL/CHTLParser/CHTLParser.h"
 
 int main() {
     std::ifstream file("sample.chtl");
@@ -32,12 +15,18 @@ int main() {
     buffer << file.rdbuf();
     std::string content = buffer.str();
 
+    // 1. Lexing
     CHTLLexer lexer;
     std::vector<Token> tokens = lexer.tokenize(content);
 
-    for (const auto& token : tokens) {
-        std::cout << "Type: " << tokenTypeToString(token.type)
-                  << ", Value: '" << token.value << "'" << std::endl;
+    // 2. Parsing
+    CHTLParser parser(tokens);
+    std::vector<std::unique_ptr<Node>> ast = parser.parse();
+
+    // 3. Print AST
+    std::cout << "--- Abstract Syntax Tree ---" << std::endl;
+    for (const auto& node : ast) {
+        std::cout << node->toString() << std::endl;
     }
 
     return 0;
