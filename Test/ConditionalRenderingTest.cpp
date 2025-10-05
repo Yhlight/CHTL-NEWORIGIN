@@ -96,6 +96,29 @@ TEST_CASE("Generator correctly renders 'if' when condition is true", "[semantic]
     REQUIRE(normalize_html(generator.getHtml()) == normalize_html(expected_html));
 }
 
+TEST_CASE("Generator handles complex condition with logical operators and references", "[semantic][conditional]") {
+    std::string input = R"(
+        div {
+            id: box;
+            width: 150px;
+        }
+        span {
+            style {
+                if {
+                    condition: #box.width > 100 && 1 == 1,
+                    color: red,
+                }
+                else {
+                    color: blue,
+                }
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    std::string expected_html = R"(<div id="box" width="150px"></div><span style="color:red;"></span>)";
+    REQUIRE(normalize_html(generator.getHtml()) == normalize_html(expected_html));
+}
+
 TEST_CASE("Generator correctly handles property expression inside an if-else chain", "[semantic][conditional][bug]") {
     std::string input = R"(
         div {

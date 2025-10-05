@@ -27,7 +27,9 @@ namespace CHTL {
         NODE_SCRIPT,
         NODE_ANIMATE,
         NODE_BINARY_OP,
-        NODE_NUMERIC_LITERAL
+        NODE_NUMERIC_LITERAL,
+        NODE_REFERENCE,
+        NODE_BOOLEAN_LITERAL
     };
 
     class BaseNode : public std::enable_shared_from_this<BaseNode> {

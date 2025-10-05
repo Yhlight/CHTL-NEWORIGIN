@@ -6,6 +6,8 @@
 #include "CHTLNode/PropertyNode.h"
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/NumericLiteralNode.h"
+#include "CHTLNode/ReferenceNode.h"
+#include "Common/Value.h"
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
@@ -79,52 +81,38 @@ void SemanticAnalyzer::checkNodeAgainstConstraints(const std::shared_ptr<BaseNod
     }
 }
 
-bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& scope) {
-    std::string trimmed_condition = trim(condition);
-    if (trimmed_condition == "true") return true;
-    if (trimmed_condition == "false") return false;
-
-    std::istringstream iss(condition);
-    std::vector<std::string> tokens;
-    std::string token;
-    while (iss >> token) {
-        tokens.push_back(token);
+bool SemanticAnalyzer::evaluateCondition(const std::shared_ptr<BaseNode>& condition, const std::shared_ptr<ElementNode>& scope) {
+    Value result = evaluateExpression(condition, scope);
+    if (result.type != Value::Type::BOOL) {
+        throw std::runtime_error("Condition must evaluate to a boolean value.");
     }
-
-    if (tokens.size() != 3) {
-        throw std::runtime_error("Unsupported condition format: " + condition);
-    }
-
-    std::string lhs_str = tokens[0];
-    std::string op = tokens[1];
-    std::string rhs_str = tokens[2];
-
-    double lhs_val = 0.0;
-    if (scope && scope->hasAttribute(lhs_str)) {
-        lhs_val = extractNumericValue(scope->getAttributes().at(lhs_str));
-    } else {
-        lhs_val = extractNumericValue(lhs_str);
-    }
-
-    double rhs_val = extractNumericValue(rhs_str);
-
-    if (op == ">") return lhs_val > rhs_val;
-    if (op == "<") return lhs_val < rhs_val;
-    if (op == ">=") return lhs_val >= rhs_val;
-    if (op == "<=") return lhs_val <= rhs_val;
-    if (op == "==") return lhs_val == rhs_val;
-    if (op == "!=") return lhs_val != rhs_val;
-
-    throw std::runtime_error("Unsupported operator in condition: " + op);
+    return std::get<bool>(result.value);
 }
 
-std::shared_ptr<NumericLiteralNode> SemanticAnalyzer::evaluateExpression(const std::shared_ptr<BaseNode>& node) {
+Value SemanticAnalyzer::evaluateExpression(const std::shared_ptr<BaseNode>& node, const std::shared_ptr<ElementNode>& scope) {
     if (!node) {
         throw std::runtime_error("Cannot evaluate a null expression node.");
     }
 
+    if (node->getType() == NodeType::NODE_BOOLEAN_LITERAL) {
+        auto boolNode = std::dynamic_pointer_cast<BooleanLiteralNode>(node);
+        return { Value::Type::BOOL, boolNode->value };
+    }
+
     if (node->getType() == NodeType::NODE_NUMERIC_LITERAL) {
-        return std::dynamic_pointer_cast<NumericLiteralNode>(node);
+        auto numNode = std::dynamic_pointer_cast<NumericLiteralNode>(node);
+        return { Value::Type::NUMBER, std::stod(numNode->value), numNode->unit };
+    }
+
+    if (node->getType() == NodeType::NODE_REFERENCE) {
+        auto refNode = std::dynamic_pointer_cast<ReferenceNode>(node);
+        // This is a simplified implementation. A real implementation would
+        // involve a more robust search of the AST.
+        if (scope && scope->hasAttribute(refNode->propertyName)) {
+            std::string attrValue = scope->getAttributes().at(refNode->propertyName);
+            return { Value::Type::NUMBER, extractNumericValue(attrValue), ""};
+        }
+        throw std::runtime_error("Unable to resolve reference: " + refNode->selector + "." + refNode->propertyName);
     }
 
     if (node->getType() == NodeType::NODE_TEMPLATE_USAGE) {
@@ -151,7 +139,7 @@ std::shared_ptr<NumericLiteralNode> SemanticAnalyzer::evaluateExpression(const s
                                  unit_str += value[i];
                                  i++;
                              }
-                             return std::make_shared<NumericLiteralNode>(value_str, unit_str);
+                             return { Value::Type::NUMBER, std::stod(value_str), unit_str };
                         }
                     }
                 }
@@ -162,45 +150,62 @@ std::shared_ptr<NumericLiteralNode> SemanticAnalyzer::evaluateExpression(const s
 
     if (node->getType() == NodeType::NODE_BINARY_OP) {
         auto opNode = std::dynamic_pointer_cast<BinaryOpNode>(node);
-        auto left = evaluateExpression(opNode->left);
-        auto right = evaluateExpression(opNode->right);
+        auto left = evaluateExpression(opNode->left, scope);
+        auto right = evaluateExpression(opNode->right, scope);
 
-        double left_val = std::stod(left->value);
-        double right_val = std::stod(right->value);
-        double result_val = 0.0;
-
-        std::string result_unit = !left->unit.empty() ? left->unit : right->unit;
-        if (!left->unit.empty() && !right->unit.empty() && left->unit != right->unit) {
-            throw std::runtime_error("Unit mismatch in expression: " + left->unit + " and " + right->unit);
+        if (opNode->op == "+") {
+            if (left.type != Value::Type::NUMBER || right.type != Value::Type::NUMBER) throw std::runtime_error("Addition requires numeric operands.");
+            return { Value::Type::NUMBER, std::get<double>(left.value) + std::get<double>(right.value), left.unit };
+        }
+        if (opNode->op == "-") {
+            if (left.type != Value::Type::NUMBER || right.type != Value::Type::NUMBER) throw std::runtime_error("Subtraction requires numeric operands.");
+            return { Value::Type::NUMBER, std::get<double>(left.value) - std::get<double>(right.value), left.unit };
+        }
+        if (opNode->op == "*") {
+            if (left.type != Value::Type::NUMBER || right.type != Value::Type::NUMBER) throw std::runtime_error("Multiplication requires numeric operands.");
+            return { Value::Type::NUMBER, std::get<double>(left.value) * std::get<double>(right.value), left.unit };
+        }
+        if (opNode->op == "/") {
+            if (left.type != Value::Type::NUMBER || right.type != Value::Type::NUMBER) throw std::runtime_error("Division requires numeric operands.");
+            if (std::get<double>(right.value) == 0) throw std::runtime_error("Division by zero.");
+            return { Value::Type::NUMBER, std::get<double>(left.value) / std::get<double>(right.value), left.unit };
+        }
+        if (opNode->op == ">") {
+            if (left.type != Value::Type::NUMBER || right.type != Value::Type::NUMBER) throw std::runtime_error("Comparison requires numeric operands.");
+            return { Value::Type::BOOL, std::get<double>(left.value) > std::get<double>(right.value) };
+        }
+        if (opNode->op == "<") {
+            if (left.type != Value::Type::NUMBER || right.type != Value::Type::NUMBER) throw std::runtime_error("Comparison requires numeric operands.");
+            return { Value::Type::BOOL, std::get<double>(left.value) < std::get<double>(right.value) };
+        }
+        if (opNode->op == "==") {
+             if (left.type != right.type) return { Value::Type::BOOL, false };
+             return { Value::Type::BOOL, left.value == right.value };
+        }
+        if (opNode->op == "&&") {
+            if (left.type != Value::Type::BOOL || right.type != Value::Type::BOOL) throw std::runtime_error("Logical AND requires boolean operands.");
+            return { Value::Type::BOOL, std::get<bool>(left.value) && std::get<bool>(right.value) };
+        }
+        if (opNode->op == "||") {
+            if (left.type != Value::Type::BOOL || right.type != Value::Type::BOOL) throw std::runtime_error("Logical OR requires boolean operands.");
+            return { Value::Type::BOOL, std::get<bool>(left.value) || std::get<bool>(right.value) };
         }
 
-        if (opNode->op == "+") result_val = left_val + right_val;
-        else if (opNode->op == "-") result_val = left_val - right_val;
-        else if (opNode->op == "*") result_val = left_val * right_val;
-        else if (opNode->op == "/") {
-            if (right_val == 0) throw std::runtime_error("Division by zero in expression.");
-            result_val = left_val / right_val;
-        }
-        else if (opNode->op == "%") result_val = fmod(left_val, right_val);
-        else if (opNode->op == "**") result_val = pow(left_val, right_val);
-        else {
-            throw std::runtime_error("Unsupported operator in expression: " + opNode->op);
-        }
-
-        return std::make_shared<NumericLiteralNode>(std::to_string(result_val), result_unit);
+        throw std::runtime_error("Unsupported operator in expression: " + opNode->op);
     }
 
     throw std::runtime_error("Unsupported node type in expression evaluation.");
 }
 
-void SemanticAnalyzer::analyze(const std::shared_ptr<BaseNode>& root, const GenerationContext& context) {
+void SemanticAnalyzer::analyze(std::shared_ptr<BaseNode>& root, const GenerationContext& context) {
     this->context = &context;
+    this->root = root;
     if (root) {
         visit(root, {}, nullptr);
     }
 }
 
-void SemanticAnalyzer::visit(const std::shared_ptr<BaseNode>& node, const std::vector<Constraint>& active_constraints, const std::shared_ptr<ElementNode>& parent) {
+void SemanticAnalyzer::visit(std::shared_ptr<BaseNode>& node, const std::vector<Constraint>& active_constraints, std::shared_ptr<ElementNode> parent) {
     if (!node) return;
 
     checkNodeAgainstConstraints(node, active_constraints);
@@ -210,7 +215,9 @@ void SemanticAnalyzer::visit(const std::shared_ptr<BaseNode>& node, const std::v
     } else if (node->getType() == NodeType::NODE_STYLE) {
         visitStyleNode(std::dynamic_pointer_cast<StyleNode>(node), parent);
     } else {
-        for (const auto& child : node->getChildren()) {
+        // We recursively visit children for all other node types.
+        // Note that if-nodes are handled within visitStyleNode and visitElement.
+        for (auto& child : node->getChildren()) {
             visit(child, active_constraints, parent);
         }
     }
@@ -226,7 +233,7 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
         if (child->getType() == NodeType::NODE_IF) {
             auto if_node = std::dynamic_pointer_cast<IfNode>(child);
             if (if_node->if_type != IfType::IF) {
-                continue;
+                continue; // Only start processing from an 'if'
             }
 
             bool condition_met_in_chain = false;
@@ -237,20 +244,29 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
                         auto propNode = std::dynamic_pointer_cast<PropertyNode>(prop_child);
                         if (propNode && !propNode->getChildren().empty()) {
                             auto expression_root = propNode->getChildren()[0];
-                            auto result_node = evaluateExpression(expression_root);
-                            propNode->setValue(result_node->value + result_node->unit);
+                            Value result = evaluateExpression(expression_root, parent);
+                            if (result.type == Value::Type::NUMBER) {
+                                propNode->setValue(std::to_string(std::get<double>(result.value)) + result.unit);
+                            }
+                             else if (result.type == Value::Type::STRING) {
+                                propNode->setValue(std::get<std::string>(result.value));
+                            }
                             propNode->setChildren({});
                         }
                         new_children.push_back(propNode);
+                    } else {
+                        new_children.push_back(prop_child);
                     }
                 }
             };
 
+            // Process the main 'if'
             if (evaluateCondition(if_node->condition, parent)) {
                 condition_met_in_chain = true;
                 process_and_add_props(if_node);
             }
 
+            // Process 'else if' and 'else' chain
             while (i + 1 < old_children.size()) {
                 auto next_child = old_children[i + 1];
                 if (next_child->getType() != NodeType::NODE_IF) break;
@@ -258,13 +274,13 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
                 auto next_if_node = std::dynamic_pointer_cast<IfNode>(next_child);
 
                 if (next_if_node->if_type == IfType::ELSE_IF) {
-                    i++;
+                    i++; // Consume the 'else if'
                     if (!condition_met_in_chain && evaluateCondition(next_if_node->condition, parent)) {
                         condition_met_in_chain = true;
                         process_and_add_props(next_if_node);
                     }
                 } else if (next_if_node->if_type == IfType::ELSE) {
-                    i++;
+                    i++; // Consume the 'else'
                     if (!condition_met_in_chain) {
                         process_and_add_props(next_if_node);
                     }
@@ -277,8 +293,13 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
             auto propNode = std::dynamic_pointer_cast<PropertyNode>(child);
             if (propNode && !propNode->getChildren().empty()) {
                 auto expression_root = propNode->getChildren()[0];
-                auto result_node = evaluateExpression(expression_root);
-                propNode->setValue(result_node->value + result_node->unit);
+                Value result = evaluateExpression(expression_root, parent);
+                 if (result.type == Value::Type::NUMBER) {
+                    propNode->setValue(std::to_string(std::get<double>(result.value)) + result.unit);
+                }
+                else if (result.type == Value::Type::STRING) {
+                    propNode->setValue(std::get<std::string>(result.value));
+                }
                 propNode->setChildren({});
             }
             new_children.push_back(propNode);
@@ -329,7 +350,7 @@ void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, co
         node->setChildren(new_element_children);
     }
 
-    for (const auto& child : node->getChildren()) {
+    for (auto& child : node->getChildren()) {
         visit(child, current_constraints, node);
     }
 }

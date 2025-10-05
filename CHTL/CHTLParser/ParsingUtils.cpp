@@ -5,6 +5,8 @@
 #include "../CHTLNode/TemplateUsageNode.h"
 #include "../CHTLNode/BinaryOpNode.h"
 #include "../CHTLNode/NumericLiteralNode.h"
+#include "../CHTLNode/ReferenceNode.h"
+#include "../CHTLNode/BooleanLiteralNode.h"
 #include <stdexcept>
 #include <cctype>
 
@@ -17,8 +19,19 @@ std::shared_ptr<BaseNode> parseFactor(CHTLParserContext* context);
 std::shared_ptr<BaseNode> parsePrimary(CHTLParserContext* context);
 
 std::shared_ptr<BaseNode> parsePrimary(CHTLParserContext* context) {
-    if (context->getCurrentToken().type == TokenType::TOKEN_NUMERIC_LITERAL) {
-        std::string lexeme = context->getCurrentToken().lexeme;
+    Token currentToken = context->getCurrentToken();
+
+    if (currentToken.lexeme == "true") {
+        context->advance();
+        return std::make_shared<BooleanLiteralNode>(true);
+    }
+    if (currentToken.lexeme == "false") {
+        context->advance();
+        return std::make_shared<BooleanLiteralNode>(false);
+    }
+
+    if (currentToken.type == TokenType::TOKEN_NUMERIC_LITERAL) {
+        std::string lexeme = currentToken.lexeme;
         context->advance();
 
         std::string value_str;
@@ -35,7 +48,7 @@ std::shared_ptr<BaseNode> parsePrimary(CHTLParserContext* context) {
         return std::make_shared<NumericLiteralNode>(value_str, unit_str);
     }
 
-    if (context->getCurrentToken().type == TokenType::TOKEN_LPAREN) {
+    if (currentToken.type == TokenType::TOKEN_LPAREN) {
         context->advance(); // consume '('
         auto expr = parseExpression(context);
         if (context->getCurrentToken().type != TokenType::TOKEN_RPAREN) {
@@ -45,7 +58,27 @@ std::shared_ptr<BaseNode> parsePrimary(CHTLParserContext* context) {
         return expr;
     }
 
-    throw std::runtime_error("Unexpected token in expression: " + context->getCurrentToken().lexeme);
+    if (currentToken.type == TokenType::TOKEN_IDENTIFIER || currentToken.type == TokenType::TOKEN_DOT) {
+        std::string selector;
+        if (currentToken.type == TokenType::TOKEN_DOT) {
+            selector += ".";
+            context->advance();
+            selector += context->getCurrentToken().lexeme;
+            context->advance();
+        } else {
+            selector = currentToken.lexeme;
+            context->advance();
+        }
+
+        if (context->getCurrentToken().type == TokenType::TOKEN_DOT) {
+            context->advance(); // consume '.'
+            std::string propName = context->getCurrentToken().lexeme;
+            context->advance();
+            return std::make_shared<ReferenceNode>(selector, propName);
+        }
+    }
+
+    throw std::runtime_error("Unexpected token in expression: " + currentToken.lexeme);
 }
 
 std::shared_ptr<BaseNode> parseFactor(CHTLParserContext* context) {

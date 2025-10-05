@@ -44,7 +44,7 @@ namespace CHTL {
                 if (ifNode->if_type == IfType::ELSE) {
                     throw std::runtime_error("'else' block cannot have a condition.");
                 }
-                ifNode->condition = parse_property_value(context);
+                ifNode->condition = parseExpression(context);
             } else {
                 auto propNode = std::make_shared<PropertyNode>(key, "");
                 if (context->getCurrentToken().type == TokenType::TOKEN_NUMERIC_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_LPAREN) {
@@ -67,7 +67,7 @@ namespace CHTL {
         }
         context->advance(); // consume '}'
 
-        if ((ifNode->if_type == IfType::IF || ifNode->if_type == IfType::ELSE_IF) && ifNode->condition.empty()) {
+        if ((ifNode->if_type == IfType::IF || ifNode->if_type == IfType::ELSE_IF) && !ifNode->condition) {
             throw std::runtime_error("'if' and 'else if' blocks must have a 'condition' property.");
         }
 

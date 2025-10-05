@@ -15,7 +15,7 @@ enum class IfType {
 class IfNode : public BaseNode {
 public:
     IfType if_type;
-    std::string condition;
+    std::shared_ptr<BaseNode> condition;
 
     IfNode() : BaseNode(NodeType::NODE_IF) {}
 
@@ -26,7 +26,10 @@ public:
             case IfType::ELSE_IF: type_str = "Else If"; break;
             case IfType::ELSE: type_str = "Else"; break;
         }
-        std::string result = indent + (isLast ? "`-- " : "|-- ") + type_str + "Node: " + condition + "\n";
+        std::string result = indent + (isLast ? "`-- " : "|-- ") + type_str + "Node:\n";
+        if (condition) {
+            result += condition->ToString(indent + (isLast ? "    " : "|   "), false);
+        }
 
         const auto& children = getChildren();
         for (size_t i = 0; i < children.size(); ++i) {
