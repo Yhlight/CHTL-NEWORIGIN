@@ -4,11 +4,14 @@
 #include "CHTLNode/TemplateUsageNode.h"
 #include "CHTLNode/IfNode.h"
 #include "CHTLNode/PropertyNode.h"
+#include "CHTLNode/BinaryOpNode.h"
+#include "CHTLNode/NumericLiteralNode.h"
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 
 namespace CHTL {
 
@@ -115,7 +118,83 @@ bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std
     throw std::runtime_error("Unsupported operator in condition: " + op);
 }
 
-void SemanticAnalyzer::analyze(const std::shared_ptr<BaseNode>& root) {
+std::shared_ptr<NumericLiteralNode> SemanticAnalyzer::evaluateExpression(const std::shared_ptr<BaseNode>& node) {
+    if (!node) {
+        throw std::runtime_error("Cannot evaluate a null expression node.");
+    }
+
+    if (node->getType() == NodeType::NODE_NUMERIC_LITERAL) {
+        return std::dynamic_pointer_cast<NumericLiteralNode>(node);
+    }
+
+    if (node->getType() == NodeType::NODE_TEMPLATE_USAGE) {
+        auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(node);
+        if (usageNode && usageNode->getUsageType() == TemplateUsageType::VAR) {
+            if (!context) {
+                throw std::runtime_error("GenerationContext not available for template lookup.");
+            }
+            auto templateNode = context->getTemplate(usageNode->getName());
+            if (templateNode) {
+                for (const auto& varChild : templateNode->getChildren()) {
+                    if (varChild->getType() == NodeType::NODE_PROPERTY) {
+                        auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild);
+                        if (varProp && varProp->getKey() == usageNode->getVariableName()) {
+                             std::string value = varProp->getValue();
+                             std::string value_str;
+                             std::string unit_str;
+                             size_t i = 0;
+                             while (i < value.length() && (std::isdigit(value[i]) || value[i] == '.')) {
+                                 value_str += value[i];
+                                 i++;
+                             }
+                             while (i < value.length()) {
+                                 unit_str += value[i];
+                                 i++;
+                             }
+                             return std::make_shared<NumericLiteralNode>(value_str, unit_str);
+                        }
+                    }
+                }
+            }
+        }
+        throw std::runtime_error("Failed to resolve template variable in expression.");
+    }
+
+    if (node->getType() == NodeType::NODE_BINARY_OP) {
+        auto opNode = std::dynamic_pointer_cast<BinaryOpNode>(node);
+        auto left = evaluateExpression(opNode->left);
+        auto right = evaluateExpression(opNode->right);
+
+        double left_val = std::stod(left->value);
+        double right_val = std::stod(right->value);
+        double result_val = 0.0;
+
+        std::string result_unit = !left->unit.empty() ? left->unit : right->unit;
+        if (!left->unit.empty() && !right->unit.empty() && left->unit != right->unit) {
+            throw std::runtime_error("Unit mismatch in expression: " + left->unit + " and " + right->unit);
+        }
+
+        if (opNode->op == "+") result_val = left_val + right_val;
+        else if (opNode->op == "-") result_val = left_val - right_val;
+        else if (opNode->op == "*") result_val = left_val * right_val;
+        else if (opNode->op == "/") {
+            if (right_val == 0) throw std::runtime_error("Division by zero in expression.");
+            result_val = left_val / right_val;
+        }
+        else if (opNode->op == "%") result_val = fmod(left_val, right_val);
+        else if (opNode->op == "**") result_val = pow(left_val, right_val);
+        else {
+            throw std::runtime_error("Unsupported operator in expression: " + opNode->op);
+        }
+
+        return std::make_shared<NumericLiteralNode>(std::to_string(result_val), result_unit);
+    }
+
+    throw std::runtime_error("Unsupported node type in expression evaluation.");
+}
+
+void SemanticAnalyzer::analyze(const std::shared_ptr<BaseNode>& root, const GenerationContext& context) {
+    this->context = &context;
     if (root) {
         visit(root, {}, nullptr);
     }
@@ -185,7 +264,17 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
                     break;
                 }
             }
-        } else {
+        } else if (child->getType() == NodeType::NODE_PROPERTY) {
+            auto propNode = std::dynamic_pointer_cast<PropertyNode>(child);
+            if (propNode && !propNode->getChildren().empty()) {
+                auto expression_root = propNode->getChildren()[0];
+                auto result_node = evaluateExpression(expression_root);
+                propNode->setValue(result_node->value + result_node->unit);
+                propNode->setChildren({});
+            }
+            new_children.push_back(propNode);
+        }
+        else {
             new_children.push_back(child);
         }
     }

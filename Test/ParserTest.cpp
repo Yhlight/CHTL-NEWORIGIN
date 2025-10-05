@@ -12,6 +12,7 @@
 #include "../CHTL/CHTLNode/NamespaceNode.h"
 #include "../CHTL/CHTLNode/ConfigurationNode.h"
 #include "../CHTL/CHTLNode/TemplateUsageNode.h"
+#include "../CHTL/CHTLNode/NumericLiteralNode.h"
 #include "../CHTL/CHTLContext/ConfigurationManager.h"
 #include <memory>
 
@@ -95,9 +96,15 @@ TEST_CASE("Parser handles style blocks", "[parser]") {
     auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(styleNode->getChildren()[0]);
     REQUIRE(prop1->getKey() == "color");
     REQUIRE(prop1->getValue() == "red");
+
     auto prop2 = std::dynamic_pointer_cast<CHTL::PropertyNode>(styleNode->getChildren()[1]);
     REQUIRE(prop2->getKey() == "width");
-    REQUIRE(prop2->getValue() == "100px");
+    REQUIRE(prop2->getValue().empty());
+    REQUIRE(prop2->getChildren().size() == 1);
+    auto numNode = std::dynamic_pointer_cast<CHTL::NumericLiteralNode>(prop2->getChildren()[0]);
+    REQUIRE(numNode != nullptr);
+    REQUIRE(numNode->value == "100");
+    REQUIRE(numNode->unit == "px");
 }
 
 TEST_CASE("Parser handles style template", "[parser]") {
@@ -112,9 +119,15 @@ TEST_CASE("Parser handles style template", "[parser]") {
     auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(templateNode->getChildren()[0]);
     REQUIRE(prop1->getKey() == "color");
     REQUIRE(prop1->getValue() == "black");
+
     auto prop2 = std::dynamic_pointer_cast<CHTL::PropertyNode>(templateNode->getChildren()[1]);
     REQUIRE(prop2->getKey() == "font-size");
-    REQUIRE(prop2->getValue() == "16px");
+    REQUIRE(prop2->getValue().empty());
+    REQUIRE(prop2->getChildren().size() == 1);
+    auto numNode = std::dynamic_pointer_cast<CHTL::NumericLiteralNode>(prop2->getChildren()[0]);
+    REQUIRE(numNode != nullptr);
+    REQUIRE(numNode->value == "16");
+    REQUIRE(numNode->unit == "px");
 }
 
 TEST_CASE("Parser handles element template", "[parser]") {

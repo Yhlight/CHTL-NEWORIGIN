@@ -25,13 +25,17 @@ namespace CHTL {
         NODE_DELETE,
         NODE_INSERT,
         NODE_SCRIPT,
-        NODE_ANIMATE
+        NODE_ANIMATE,
+        NODE_BINARY_OP,
+        NODE_NUMERIC_LITERAL
     };
 
     class BaseNode : public std::enable_shared_from_this<BaseNode> {
     private:
         NodeType type;
         std::weak_ptr<BaseNode> parent;
+
+    protected:
         std::vector<std::shared_ptr<BaseNode>> children;
 
     public:

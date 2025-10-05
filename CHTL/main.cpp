@@ -67,14 +67,14 @@ int main(int argc, char* argv[]) {
     CHTL::CHTLLoader loader(".", configManager);
     loader.loadImports(ast);
 
-    CHTL::SemanticAnalyzer semantic_analyzer;
-    semantic_analyzer.analyze(ast);
-
     CHTL::GenerationContext context;
     loader.gatherTemplates(ast, context);
     for (const auto& pair : loader.getLoadedAsts()) {
         loader.gatherTemplates(pair.second, context);
     }
+
+    CHTL::SemanticAnalyzer semantic_analyzer;
+    semantic_analyzer.analyze(ast, context);
 
     CHTL::ConcreteSaltBridge bridge;
     CHTL::CHTLGenerator generator;

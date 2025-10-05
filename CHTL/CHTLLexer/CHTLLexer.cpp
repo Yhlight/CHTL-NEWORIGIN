@@ -65,7 +65,14 @@ Token CHTLLexer::getNextToken() {
         case '=': advance(); return makeToken(TokenType::TOKEN_ASSIGN, "=");
         case '+': advance(); return makeToken(TokenType::TOKEN_PLUS, "+");
         case '-': advance(); return makeToken(TokenType::TOKEN_MINUS, "-");
-        case '*': advance(); return makeToken(TokenType::TOKEN_MULTIPLY, "*");
+        case '*':
+            advance();
+            if (peek() == '*') {
+                advance();
+                return makeToken(TokenType::TOKEN_POWER, "**");
+            }
+            return makeToken(TokenType::TOKEN_MULTIPLY, "*");
+        case '%': advance(); return makeToken(TokenType::TOKEN_MODULO, "%");
         case '?': advance(); return makeToken(TokenType::TOKEN_QUESTION, "?");
 
         case '/':
@@ -96,7 +103,7 @@ Token CHTLLexer::getNextToken() {
 Token CHTLLexer::lexIdentifierOrLiteral() {
     std::string lexeme;
     const char* delimiters = "{}()[]:;,.=?# \t\n\r";
-    while (peek() != '\0' && strchr(delimiters, peek()) == nullptr) {
+    while (peek() != '\0' && strchr(delimiters, peek()) == nullptr && !isspace(peek())) {
         lexeme += advance();
     }
 
@@ -119,6 +126,11 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
         if (lexeme == configManager->getKeyword("insert")) return makeToken(TokenType::TOKEN_INSERT, lexeme);
     }
 
+    // Check if it's a number (potentially with a unit)
+    if (isdigit(lexeme[0]) || (lexeme.length() > 1 && lexeme[0] == '.' && isdigit(lexeme[1]))) {
+        return makeToken(TokenType::TOKEN_NUMERIC_LITERAL, lexeme);
+    }
+
     // Check if it's a valid identifier (starts with a letter or underscore)
     if (isalpha(lexeme[0]) || lexeme[0] == '_') {
         bool isIdentifier = true;
@@ -131,18 +143,6 @@ Token CHTLLexer::lexIdentifierOrLiteral() {
         if (isIdentifier) {
             return makeToken(TokenType::TOKEN_IDENTIFIER, lexeme);
         }
-    }
-
-    // Check if it's a number
-    bool isNumber = true;
-    for (char c : lexeme) {
-        if (!isdigit(c) && c != '.') {
-            isNumber = false;
-            break;
-        }
-    }
-    if (isNumber) {
-        return makeToken(TokenType::TOKEN_NUMERIC_LITERAL, lexeme);
     }
 
     // Otherwise, it's an unquoted literal

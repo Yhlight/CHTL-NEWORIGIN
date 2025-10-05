@@ -15,6 +15,7 @@ namespace CHTL {
 
         const std::string& getKey() const { return name; }
         const std::string& getValue() const { return value; }
+        void setValue(const std::string& new_value) { value = new_value; }
     };
 
 }
