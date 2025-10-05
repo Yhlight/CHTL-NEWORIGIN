@@ -26,6 +26,7 @@ class DeleteNode;
 class InsertNode;
 class ScriptNode;
 class AnimateNode;
+class IfNode;
 class SaltBridge;
 
 class CHTLGenerator {
@@ -54,7 +55,10 @@ private:
     void visit(const std::shared_ptr<InsertNode>& node);
     void visit(const std::shared_ptr<ScriptNode>& node);
     void visit(const std::shared_ptr<AnimateNode>& node);
+    void visit(const std::shared_ptr<IfNode>& node);
 
+private:
+    bool evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& context_element);
     std::stringstream html_out;
     std::stringstream css_out;
     const GenerationContext* context;

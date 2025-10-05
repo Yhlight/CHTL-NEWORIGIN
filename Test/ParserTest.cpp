@@ -12,6 +12,7 @@
 #include "../CHTL/CHTLNode/NamespaceNode.h"
 #include "../CHTL/CHTLNode/ConfigurationNode.h"
 #include "../CHTL/CHTLNode/TemplateUsageNode.h"
+#include "../CHTL/CHTLNode/IfNode.h"
 #include "../CHTL/CHTLContext/ConfigurationManager.h"
 #include <memory>
 
@@ -129,6 +130,55 @@ TEST_CASE("Parser handles element template", "[parser]") {
     auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(templateNode->getChildren()[0]);
     REQUIRE(div != nullptr);
     REQUIRE(div->getTagName() == "div");
+}
+
+TEST_CASE("Parser handles if block", "[parser]") {
+    auto node = getFirstNode("if { condition: 1 > 0, display: block, }");
+    REQUIRE(node != nullptr);
+    REQUIRE(node->getType() == CHTL::NodeType::NODE_IF);
+    auto ifNode = std::dynamic_pointer_cast<CHTL::IfNode>(node);
+    REQUIRE(ifNode != nullptr);
+    REQUIRE(ifNode->if_type == CHTL::IfType::IF);
+    REQUIRE(ifNode->condition == "1 > 0");
+    REQUIRE(ifNode->getChildren().size() == 1);
+    auto prop = std::dynamic_pointer_cast<CHTL::PropertyNode>(ifNode->getChildren()[0]);
+    REQUIRE(prop->getKey() == "display");
+    REQUIRE(prop->getValue() == "block");
+}
+
+TEST_CASE("Parser handles if-else if-else chain", "[parser]") {
+    auto node = getFirstNode(R"(
+        div {
+            style {
+                if { condition: 1 > 2, color: red, }
+                else if { condition: 1 > 0, color: blue, }
+                else { color: green, }
+            }
+        }
+    )");
+
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
+    REQUIRE(element != nullptr);
+    REQUIRE(element->getChildren().size() == 1);
+
+    auto styleNode = std::dynamic_pointer_cast<CHTL::StyleNode>(element->getChildren()[0]);
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getChildren().size() == 3);
+
+    auto ifNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[0]);
+    REQUIRE(ifNode != nullptr);
+    REQUIRE(ifNode->if_type == CHTL::IfType::IF);
+    REQUIRE(ifNode->condition == "1 > 2");
+
+    auto elseIfNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[1]);
+    REQUIRE(elseIfNode != nullptr);
+    REQUIRE(elseIfNode->if_type == CHTL::IfType::ELSE_IF);
+    REQUIRE(elseIfNode->condition == "1 > 0");
+
+    auto elseNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[2]);
+    REQUIRE(elseNode != nullptr);
+    REQUIRE(elseNode->if_type == CHTL::IfType::ELSE);
+    REQUIRE(elseNode->condition.empty());
 }
 
 TEST_CASE("Parser handles style blocks with hyphenated properties", "[parser]") {

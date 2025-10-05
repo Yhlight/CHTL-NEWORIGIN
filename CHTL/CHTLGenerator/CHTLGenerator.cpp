@@ -16,10 +16,14 @@
 #include "../CHTLNode/InsertNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/AnimateNode.h"
+#include "../CHTLNode/IfNode.h"
 #include "../SharedCore/SaltBridge.h"
 #include <stdexcept>
 #include <set>
 #include <map>
+#include <algorithm>
+#include <sstream>
+#include <charconv>
 
 namespace CHTL {
 
@@ -87,9 +91,60 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
         case NodeType::NODE_INSERT:
             visit(std::dynamic_pointer_cast<InsertNode>(node));
             break;
+        case NodeType::NODE_IF:
+            visit(std::dynamic_pointer_cast<IfNode>(node));
+            break;
         default:
             break;
     }
+}
+
+void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
+    // This node is handled by its parent ElementNode, so this visit function is a no-op.
+}
+
+bool CHTLGenerator::evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& context_element) {
+    std::stringstream ss(condition);
+    std::string left_str, op_str, right_str;
+
+    ss >> left_str >> op_str >> right_str;
+
+    if (ss.fail() || op_str.empty() || right_str.empty()) {
+        throw std::runtime_error("Unsupported condition format: " + condition);
+    }
+
+    double left_val;
+    auto from_chars_result = std::from_chars(left_str.data(), left_str.data() + left_str.size(), left_val);
+    if (from_chars_result.ec == std::errc::invalid_argument) {
+        if (context_element && context_element->hasAttribute(left_str)) {
+            std::string attr_val_str = context_element->getAttribute(left_str);
+            // remove "px" or other units before converting to double
+            attr_val_str.erase(std::remove_if(attr_val_str.begin(), attr_val_str.end(),
+                                           [](char c) { return !std::isdigit(c) && c != '.'; }),
+                             attr_val_str.end());
+            from_chars_result = std::from_chars(attr_val_str.data(), attr_val_str.data() + attr_val_str.size(), left_val);
+             if (from_chars_result.ec == std::errc::invalid_argument) {
+                throw std::runtime_error("Could not parse attribute value to number: " + left_str);
+             }
+        } else {
+            throw std::runtime_error("Condition variable not found: " + left_str);
+        }
+    }
+
+    double right_val;
+    from_chars_result = std::from_chars(right_str.data(), right_str.data() + right_str.size(), right_val);
+    if (from_chars_result.ec == std::errc::invalid_argument) {
+       throw std::runtime_error("Could not parse right side of condition to number: " + right_str);
+    }
+
+    if (op_str == ">") return left_val > right_val;
+    if (op_str == "<") return left_val < right_val;
+    if (op_str == "==") return left_val == right_val;
+    if (op_str == ">=") return left_val >= right_val;
+    if (op_str == "<=") return left_val <= right_val;
+    if (op_str == "!=") return left_val != right_val;
+
+    throw std::runtime_error("Unsupported operator in condition: " + op_str);
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
@@ -112,8 +167,39 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
         for (const auto& child : node->getChildren()) {
             if (child->getType() == NodeType::NODE_STYLE) {
                 auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+                bool condition_met_in_chain = false;
+
                 for (const auto& styleChild : styleNode->getChildren()) {
-                    if (styleChild->getType() == NodeType::NODE_PROPERTY) {
+                    if (styleChild->getType() == NodeType::NODE_IF) {
+                        auto ifNode = std::dynamic_pointer_cast<IfNode>(styleChild);
+                        if (ifNode->if_type == IfType::IF) {
+                            condition_met_in_chain = evaluateCondition(ifNode->condition, node);
+                            if (condition_met_in_chain) {
+                                for (const auto& prop_node : ifNode->getChildren()) {
+                                    if (auto prop = std::dynamic_pointer_cast<PropertyNode>(prop_node)) {
+                                        style_ss << prop->getKey() << ":" << prop->getValue() << ";";
+                                    }
+                                }
+                            }
+                        } else if (ifNode->if_type == IfType::ELSE_IF) {
+                            if (!condition_met_in_chain && evaluateCondition(ifNode->condition, node)) {
+                                condition_met_in_chain = true;
+                                for (const auto& prop_node : ifNode->getChildren()) {
+                                    if (auto prop = std::dynamic_pointer_cast<PropertyNode>(prop_node)) {
+                                        style_ss << prop->getKey() << ":" << prop->getValue() << ";";
+                                    }
+                                }
+                            }
+                        } else if (ifNode->if_type == IfType::ELSE) {
+                            if (!condition_met_in_chain) {
+                                for (const auto& prop_node : ifNode->getChildren()) {
+                                    if (auto prop = std::dynamic_pointer_cast<PropertyNode>(prop_node)) {
+                                        style_ss << prop->getKey() << ":" << prop->getValue() << ";";
+                                    }
+                                }
+                            }
+                        }
+                    } else if (styleChild->getType() == NodeType::NODE_PROPERTY) {
                         auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
                         if (prop) {
                             if (!prop->getChildren().empty() && prop->getChildren()[0]->getType() == NodeType::NODE_TEMPLATE_USAGE) {
@@ -122,9 +208,8 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                                     auto templateNode = context->getTemplate(usageNode->getName());
                                     if (templateNode) {
                                         for (const auto& varChild : templateNode->getChildren()) {
-                                            if (varChild->getType() == NodeType::NODE_PROPERTY) {
-                                                auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild);
-                                                if (varProp && varProp->getKey() == usageNode->getVariableName()) {
+                                            if (auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild)) {
+                                                if (varProp->getKey() == usageNode->getVariableName()) {
                                                     style_ss << prop->getKey() << ":" << varProp->getValue() << ";";
                                                     break;
                                                 }
@@ -142,11 +227,8 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                              auto templateNode = context->getTemplate(usageNode->getName());
                              if(templateNode) {
                                  for(const auto& templateChild : templateNode->getChildren()) {
-                                     if(templateChild->getType() == NodeType::NODE_PROPERTY) {
-                                         auto prop = std::dynamic_pointer_cast<PropertyNode>(templateChild);
-                                         if (prop) {
-                                            style_ss << prop->getKey() << ":" << prop->getValue() << ";";
-                                         }
+                                     if(auto prop = std::dynamic_pointer_cast<PropertyNode>(templateChild)) {
+                                        style_ss << prop->getKey() << ":" << prop->getValue() << ";";
                                      }
                                  }
                              }
