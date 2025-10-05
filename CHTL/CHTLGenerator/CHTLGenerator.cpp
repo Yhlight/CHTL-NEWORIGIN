@@ -34,6 +34,12 @@ void CHTLGenerator::generate(const std::shared_ptr<BaseNode>& node, const Genera
 void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
     if (!node) return;
 
+    // This check is now redundant because the semantic analyzer will have already processed and removed IfNodes.
+    // However, it's good practice to handle all node types.
+    if (node->getType() == NodeType::NODE_IF) {
+        return;
+    }
+
     switch (node->getType()) {
         case NodeType::NODE_ELEMENT:
             visit(std::dynamic_pointer_cast<ElementNode>(node));
@@ -44,7 +50,6 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
         case NodeType::NODE_ANIMATE:
              visit(std::dynamic_pointer_cast<AnimateNode>(node));
             break;
-        // ... other cases from previous implementation
         case NodeType::NODE_TEXT:
             visit(std::dynamic_pointer_cast<TextNode>(node));
             break;

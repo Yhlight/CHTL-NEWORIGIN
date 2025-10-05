@@ -77,6 +77,10 @@ void SemanticAnalyzer::checkNodeAgainstConstraints(const std::shared_ptr<BaseNod
 }
 
 bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& scope) {
+    std::string trimmed_condition = trim(condition);
+    if (trimmed_condition == "true") return true;
+    if (trimmed_condition == "false") return false;
+
     std::istringstream iss(condition);
     std::vector<std::string> tokens;
     std::string token;
@@ -127,7 +131,6 @@ void SemanticAnalyzer::visit(const std::shared_ptr<BaseNode>& node, const std::v
     } else if (node->getType() == NodeType::NODE_STYLE) {
         visitStyleNode(std::dynamic_pointer_cast<StyleNode>(node), parent);
     } else {
-        // For other node types that might have children, continue traversal.
         for (const auto& child : node->getChildren()) {
             visit(child, active_constraints, parent);
         }
@@ -135,44 +138,51 @@ void SemanticAnalyzer::visit(const std::shared_ptr<BaseNode>& node, const std::v
 }
 
 void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, const std::shared_ptr<ElementNode>& parent) {
+    auto old_children = node->getChildren();
     std::vector<std::shared_ptr<BaseNode>> new_children;
 
-    for (size_t i = 0; i < node->getChildren().size(); ++i) {
-        auto child = node->getChildren()[i];
+    for (size_t i = 0; i < old_children.size(); ++i) {
+        auto child = old_children[i];
 
         if (child->getType() == NodeType::NODE_IF) {
             auto if_node = std::dynamic_pointer_cast<IfNode>(child);
+            if (if_node->if_type != IfType::IF) {
+                continue;
+            }
 
-            if (if_node->if_type == IfType::IF) {
-                bool condition_met = false;
-                if (evaluateCondition(if_node->condition, parent)) {
-                    condition_met = true;
-                    for (const auto& c : if_node->getChildren()) new_children.push_back(c);
+            bool condition_met_in_chain = false;
+
+            if (evaluateCondition(if_node->condition, parent)) {
+                condition_met_in_chain = true;
+                for (const auto& prop : if_node->getChildren()) {
+                    new_children.push_back(prop);
                 }
+            }
 
-                if (!condition_met) {
-                     while (i + 1 < node->getChildren().size()) {
-                        auto next_child = node->getChildren()[i + 1];
-                        if (next_child->getType() == NodeType::NODE_IF) {
-                            auto next_if = std::dynamic_pointer_cast<IfNode>(next_child);
-                            if (next_if->if_type == IfType::ELSE_IF) {
-                                i++;
-                                if (evaluateCondition(next_if->condition, parent)) {
-                                    condition_met = true;
-                                    for (const auto& c : next_if->getChildren()) new_children.push_back(c);
-                                    break;
-                                }
-                            } else if (next_if->if_type == IfType::ELSE) {
-                                i++;
-                                for (const auto& c : next_if->getChildren()) new_children.push_back(c);
-                                break;
-                            } else {
-                                break;
-                            }
-                        } else {
-                            break;
+            while (i + 1 < old_children.size()) {
+                auto next_child = old_children[i + 1];
+                if (next_child->getType() != NodeType::NODE_IF) break;
+
+                auto next_if_node = std::dynamic_pointer_cast<IfNode>(next_child);
+
+                if (next_if_node->if_type == IfType::ELSE_IF) {
+                    i++;
+                    if (!condition_met_in_chain && evaluateCondition(next_if_node->condition, parent)) {
+                        condition_met_in_chain = true;
+                        for (const auto& prop : next_if_node->getChildren()) {
+                            new_children.push_back(prop);
                         }
                     }
+                } else if (next_if_node->if_type == IfType::ELSE) {
+                    i++;
+                    if (!condition_met_in_chain) {
+                        for (const auto& prop : next_if_node->getChildren()) {
+                            new_children.push_back(prop);
+                        }
+                    }
+                    break;
+                } else {
+                    break;
                 }
             }
         } else {
@@ -191,6 +201,34 @@ void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, co
                 current_constraints.push_back(c);
             }
         }
+    }
+
+    std::shared_ptr<StyleNode> styleNode = nullptr;
+    std::vector<std::shared_ptr<BaseNode>> new_element_children;
+    bool has_direct_if_children = false;
+
+    for (const auto& child : node->getChildren()) {
+        if (child->getType() == NodeType::NODE_IF) {
+            has_direct_if_children = true;
+        }
+        if (child->getType() == NodeType::NODE_STYLE) {
+            styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+        }
+    }
+
+    if (has_direct_if_children) {
+        if (!styleNode) {
+            styleNode = std::make_shared<StyleNode>();
+        }
+        for (const auto& child : node->getChildren()) {
+            if (child->getType() == NodeType::NODE_IF) {
+                styleNode->addChild(child);
+            } else if (child->getType() != NodeType::NODE_STYLE) {
+                new_element_children.push_back(child);
+            }
+        }
+        new_element_children.push_back(styleNode);
+        node->setChildren(new_element_children);
     }
 
     for (const auto& child : node->getChildren()) {

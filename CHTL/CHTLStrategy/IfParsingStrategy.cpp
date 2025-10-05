@@ -1,34 +1,15 @@
 #include "IfParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
+#include "../CHTLParser/ParsingUtils.h"
 #include "../CHTLNode/IfNode.h"
 #include "../CHTLNode/PropertyNode.h"
 #include <stdexcept>
 
 namespace CHTL {
-
-    // Helper to parse the value of a property until a comma or closing brace
-    std::string parse_property_value(CHTLParserContext* context) {
-        std::string value;
-        while (context->getCurrentToken().type != TokenType::TOKEN_COMMA &&
-               context->getCurrentToken().type != TokenType::TOKEN_RBRACE &&
-               !context->isAtEnd()) {
-            value += context->getCurrentToken().lexeme;
-            const auto& next_token = context->peek(1);
-            if (next_token.type != TokenType::TOKEN_COMMA &&
-                next_token.type != TokenType::TOKEN_RBRACE &&
-                next_token.type != TokenType::TOKEN_EOF) {
-                value += " ";
-            }
-            context->advance();
-        }
-        return value;
-    }
-
     std::shared_ptr<BaseNode> IfParsingStrategy::parse(CHTLParserContext* context) {
         auto ifNode = std::make_shared<IfNode>();
         Token currentToken = context->getCurrentToken();
 
-        // Determine the type of the if-construct (if, else if, else)
         if (currentToken.type == TokenType::TOKEN_IF) {
             ifNode->if_type = IfType::IF;
             context->advance(); // consume 'if'
@@ -47,7 +28,6 @@ namespace CHTL {
         }
         context->advance(); // consume '{'
 
-        // Parse the properties inside the block
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
             if (context->getCurrentToken().type != TokenType::TOKEN_IDENTIFIER) {
                 throw std::runtime_error("Expected property identifier in if block.");
@@ -83,8 +63,7 @@ namespace CHTL {
         }
         context->advance(); // consume '}'
 
-        // An 'if' or 'else if' must have a condition.
-        if (ifNode->if_type != IfType::ELSE && ifNode->condition.empty()) {
+        if ((ifNode->if_type == IfType::IF || ifNode->if_type == IfType::ELSE_IF) && ifNode->condition.empty()) {
             throw std::runtime_error("'if' and 'else if' blocks must have a 'condition' property.");
         }
 

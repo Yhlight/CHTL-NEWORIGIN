@@ -59,4 +59,21 @@ void parseProperties(CHTLParserContext* context, std::shared_ptr<BaseNode> paren
     }
 }
 
+std::string parse_property_value(CHTLParserContext* context) {
+    std::string value;
+    while (context->getCurrentToken().type != TokenType::TOKEN_COMMA &&
+           context->getCurrentToken().type != TokenType::TOKEN_RBRACE &&
+           !context->isAtEnd()) {
+        value += context->getCurrentToken().lexeme;
+        const auto& next_token = context->peek(1);
+        if (next_token.type != TokenType::TOKEN_COMMA &&
+            next_token.type != TokenType::TOKEN_RBRACE &&
+            next_token.type != TokenType::TOKEN_EOF) {
+            value += " ";
+        }
+        context->advance();
+    }
+    return value;
+}
+
 }

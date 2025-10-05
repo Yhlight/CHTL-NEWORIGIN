@@ -22,6 +22,7 @@ add_library(CHTL STATIC
     CHTLStrategy/AnimateParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
     CHTLContext/ConfigurationManager.cpp
+    CHTLNode/IfNode.cpp
     SemanticAnalyzer.cpp
 )
 
