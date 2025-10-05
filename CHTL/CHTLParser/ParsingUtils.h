@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include "../Common/ElementTarget.h"
 
 namespace CHTL {
 
@@ -11,5 +12,6 @@ class BaseNode;
 void parseProperties(CHTLParserContext* context, std::shared_ptr<BaseNode> parentNode);
 std::string parse_property_value(CHTLParserContext* context);
 std::shared_ptr<BaseNode> parseExpression(CHTLParserContext* context);
+ElementTarget parseElementTarget(CHTLParserContext* context);
 
 }

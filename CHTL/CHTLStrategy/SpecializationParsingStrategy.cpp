@@ -1,5 +1,6 @@
 #include "SpecializationParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
+#include "../CHTLParser/ParsingUtils.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
@@ -24,8 +25,7 @@ std::shared_ptr<BaseNode> SpecializationParsingStrategy::parse(CHTLParserContext
             auto deleteNode = std::make_shared<DeleteNode>();
 
             while(context->getCurrentToken().type != TokenType::TOKEN_SEMICOLON && !context->isAtEnd()){
-                deleteNode->addTarget(context->getCurrentToken().lexeme);
-                context->advance();
+                deleteNode->addTarget(parseElementTarget(context));
                 if(context->getCurrentToken().type == TokenType::TOKEN_COMMA){
                     context->advance();
                 }
@@ -52,12 +52,7 @@ std::shared_ptr<BaseNode> SpecializationParsingStrategy::parse(CHTLParserContext
             context->advance();
 
             if (insertNode->position == InsertPosition::AFTER || insertNode->position == InsertPosition::BEFORE || insertNode->position == InsertPosition::REPLACE) {
-                std::string selector;
-                while(context->getCurrentToken().type != TokenType::TOKEN_LBRACE && !context->isAtEnd()) {
-                    selector += context->getCurrentToken().lexeme;
-                    context->advance();
-                }
-                insertNode->target_selector = selector;
+                insertNode->target_selector = parseElementTarget(context);
             }
 
             if (context->getCurrentToken().type != TokenType::TOKEN_LBRACE) {

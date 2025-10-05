@@ -62,6 +62,10 @@ namespace CHTL {
             return children;
         }
 
+        virtual std::vector<std::shared_ptr<BaseNode>>& getChildren() {
+            return children;
+        }
+
         virtual void setChildren(const std::vector<std::shared_ptr<BaseNode>>& new_children) {
             children = new_children;
             for(const auto& child : children) {

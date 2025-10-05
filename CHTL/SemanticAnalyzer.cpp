@@ -7,6 +7,7 @@
 #include "CHTLNode/BinaryOpNode.h"
 #include "CHTLNode/NumericLiteralNode.h"
 #include "CHTLNode/ReferenceNode.h"
+#include "CHTLNode/BooleanLiteralNode.h"
 #include "Common/Value.h"
 #include <stdexcept>
 #include <iostream>
@@ -217,13 +218,14 @@ void SemanticAnalyzer::visit(std::shared_ptr<BaseNode>& node, const std::vector<
     } else {
         // We recursively visit children for all other node types.
         // Note that if-nodes are handled within visitStyleNode and visitElement.
-        for (auto& child : node->getChildren()) {
-            visit(child, active_constraints, parent);
+        auto& children = node->getChildren();
+        for (size_t i = 0; i < children.size(); ++i) {
+            visit(children[i], active_constraints, parent);
         }
     }
 }
 
-void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, const std::shared_ptr<ElementNode>& parent) {
+void SemanticAnalyzer::visitStyleNode(std::shared_ptr<StyleNode> node, std::shared_ptr<ElementNode> parent) {
     auto old_children = node->getChildren();
     std::vector<std::shared_ptr<BaseNode>> new_children;
 
@@ -311,7 +313,7 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
     node->setChildren(new_children);
 }
 
-void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, const std::vector<Constraint>& active_constraints) {
+void SemanticAnalyzer::visitElement(std::shared_ptr<ElementNode> node, const std::vector<Constraint>& active_constraints) {
     auto current_constraints = active_constraints;
     for (const auto& child : node->getChildren()) {
         if (child->getType() == NodeType::NODE_CONSTRAINT) {
@@ -350,8 +352,9 @@ void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, co
         node->setChildren(new_element_children);
     }
 
-    for (auto& child : node->getChildren()) {
-        visit(child, current_constraints, node);
+    auto& children = node->getChildren();
+    for (size_t i = 0; i < children.size(); ++i) {
+        visit(children[i], current_constraints, node);
     }
 }
 

@@ -32,11 +32,11 @@ static std::shared_ptr<CHTL::BaseNode> getSpecializationRoot(const std::string& 
 }
 
 
-TEST_CASE("Parser handles delete rule in specialization", "[parser][specialization]") {
+TEST_CASE("Parser handles delete rule with indexed and non-indexed targets in specialization", "[parser][specialization]") {
     std::string input = R"(
         div {
             @Element MyTemplate {
-                delete prop1, element2;
+                delete prop1, element2[1];
             }
         }
     )";
@@ -47,15 +47,20 @@ TEST_CASE("Parser handles delete rule in specialization", "[parser][specializati
     auto deleteNode = std::dynamic_pointer_cast<CHTL::DeleteNode>(specializationRoot->getChildren()[0]);
     REQUIRE(deleteNode != nullptr);
     REQUIRE(deleteNode->targets.size() == 2);
-    REQUIRE(deleteNode->targets[0] == "prop1");
-    REQUIRE(deleteNode->targets[1] == "element2");
+
+    REQUIRE(deleteNode->targets[0].tagName == "prop1");
+    REQUIRE(!deleteNode->targets[0].index.has_value());
+
+    REQUIRE(deleteNode->targets[1].tagName == "element2");
+    REQUIRE(deleteNode->targets[1].index.has_value());
+    REQUIRE(deleteNode->targets[1].index.value() == 1);
 }
 
-TEST_CASE("Parser handles insert rule in specialization", "[parser][specialization]") {
+TEST_CASE("Parser handles insert rule with indexed target in specialization", "[parser][specialization]") {
     std::string input = R"(
         div {
             @Element MyTemplate {
-                insert after .selector {
+                insert after div[0] {
                     p { text { "new" } }
                 }
             }
@@ -68,7 +73,10 @@ TEST_CASE("Parser handles insert rule in specialization", "[parser][specializati
     auto insertNode = std::dynamic_pointer_cast<CHTL::InsertNode>(specializationRoot->getChildren()[0]);
     REQUIRE(insertNode != nullptr);
     REQUIRE(insertNode->position == CHTL::InsertPosition::AFTER);
-    REQUIRE(insertNode->target_selector == ".selector");
+    REQUIRE(insertNode->target_selector.has_value());
+    REQUIRE(insertNode->target_selector->tagName == "div");
+    REQUIRE(insertNode->target_selector->index.has_value());
+    REQUIRE(insertNode->target_selector->index.value() == 0);
     REQUIRE(insertNode->getChildren().size() == 1);
     auto p_node = std::dynamic_pointer_cast<CHTL::ElementNode>(insertNode->getChildren()[0]);
     REQUIRE(p_node != nullptr);

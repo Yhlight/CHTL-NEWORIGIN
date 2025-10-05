@@ -190,4 +190,27 @@ std::string parse_property_value(CHTLParserContext* context) {
     return value;
 }
 
+ElementTarget parseElementTarget(CHTLParserContext* context) {
+    ElementTarget target;
+    if (context->getCurrentToken().type != TokenType::TOKEN_IDENTIFIER) {
+        throw std::runtime_error("Expected an element tag name.");
+    }
+    target.tagName = context->getCurrentToken().lexeme;
+    context->advance();
+
+    if (context->getCurrentToken().type == TokenType::TOKEN_LBRACKET) {
+        context->advance(); // consume '['
+        if (context->getCurrentToken().type != TokenType::TOKEN_NUMERIC_LITERAL) {
+            throw std::runtime_error("Expected a numeric index inside [].");
+        }
+        target.index = std::stoi(context->getCurrentToken().lexeme);
+        context->advance(); // consume numeric literal
+        if (context->getCurrentToken().type != TokenType::TOKEN_RBRACKET) {
+            throw std::runtime_error("Expected ']' to close index.");
+        }
+        context->advance(); // consume ']'
+    }
+    return target;
+}
+
 }
