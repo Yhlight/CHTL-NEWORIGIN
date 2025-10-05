@@ -40,15 +40,19 @@ namespace CHTL {
             }
             context->advance(); // consume ':'
 
-            std::string value = parse_property_value(context);
-
             if (key == "condition") {
                 if (ifNode->if_type == IfType::ELSE) {
                     throw std::runtime_error("'else' block cannot have a condition.");
                 }
-                ifNode->condition = value;
+                ifNode->condition = parse_property_value(context);
             } else {
-                ifNode->addChild(std::make_shared<PropertyNode>(key, value));
+                auto propNode = std::make_shared<PropertyNode>(key, "");
+                if (context->getCurrentToken().type == TokenType::TOKEN_NUMERIC_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_LPAREN) {
+                    propNode->addChild(parseExpression(context));
+                } else {
+                    propNode->setValue(parse_property_value(context));
+                }
+                ifNode->addChild(propNode);
             }
 
             if (context->getCurrentToken().type == TokenType::TOKEN_COMMA) {

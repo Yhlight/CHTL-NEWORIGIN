@@ -231,11 +231,24 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
 
             bool condition_met_in_chain = false;
 
+            auto process_and_add_props = [&](const std::shared_ptr<BaseNode>& container) {
+                for (const auto& prop_child : container->getChildren()) {
+                    if (prop_child->getType() == NodeType::NODE_PROPERTY) {
+                        auto propNode = std::dynamic_pointer_cast<PropertyNode>(prop_child);
+                        if (propNode && !propNode->getChildren().empty()) {
+                            auto expression_root = propNode->getChildren()[0];
+                            auto result_node = evaluateExpression(expression_root);
+                            propNode->setValue(result_node->value + result_node->unit);
+                            propNode->setChildren({});
+                        }
+                        new_children.push_back(propNode);
+                    }
+                }
+            };
+
             if (evaluateCondition(if_node->condition, parent)) {
                 condition_met_in_chain = true;
-                for (const auto& prop : if_node->getChildren()) {
-                    new_children.push_back(prop);
-                }
+                process_and_add_props(if_node);
             }
 
             while (i + 1 < old_children.size()) {
@@ -248,16 +261,12 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
                     i++;
                     if (!condition_met_in_chain && evaluateCondition(next_if_node->condition, parent)) {
                         condition_met_in_chain = true;
-                        for (const auto& prop : next_if_node->getChildren()) {
-                            new_children.push_back(prop);
-                        }
+                        process_and_add_props(next_if_node);
                     }
                 } else if (next_if_node->if_type == IfType::ELSE) {
                     i++;
                     if (!condition_met_in_chain) {
-                        for (const auto& prop : next_if_node->getChildren()) {
-                            new_children.push_back(prop);
-                        }
+                        process_and_add_props(next_if_node);
                     }
                     break;
                 } else {
