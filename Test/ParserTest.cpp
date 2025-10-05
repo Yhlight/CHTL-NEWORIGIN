@@ -131,6 +131,21 @@ TEST_CASE("Parser handles element template", "[parser]") {
     REQUIRE(div->getTagName() == "div");
 }
 
+TEST_CASE("Parser handles style blocks with hyphenated properties", "[parser]") {
+    auto node = getFirstNode("div { style { background-color: red; } }");
+    REQUIRE(node != nullptr);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
+    REQUIRE(element->getTagName() == "div");
+    REQUIRE(element->getChildren().size() == 1);
+
+    auto styleNode = std::dynamic_pointer_cast<CHTL::StyleNode>(element->getChildren()[0]);
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getChildren().size() == 1);
+    auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(styleNode->getChildren()[0]);
+    REQUIRE(prop1->getKey() == "background-color");
+    REQUIRE(prop1->getValue() == "red");
+}
+
 TEST_CASE("Parser handles variable template usage", "[parser]") {
     auto node = getFirstNode("div { style { color: MyTheme(primary); } }");
     REQUIRE(node != nullptr);

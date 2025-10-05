@@ -12,6 +12,15 @@ void parseProperties(CHTLParserContext* context, std::shared_ptr<BaseNode> paren
         std::string key = context->getCurrentToken().lexeme;
         context->advance();
 
+        // Handle multi-part property names like "background-color"
+        while (context->getCurrentToken().type == TokenType::TOKEN_MINUS &&
+               (context->peek(1).type == TokenType::TOKEN_IDENTIFIER || context->peek(1).type == TokenType::TOKEN_UNQUOTED_LITERAL)) {
+            key += "-";
+            context->advance(); // consume '-'
+            key += context->getCurrentToken().lexeme;
+            context->advance(); // consume identifier
+        }
+
         if (context->getCurrentToken().type == TokenType::TOKEN_COLON || context->getCurrentToken().type == TokenType::TOKEN_ASSIGN) {
             context->advance(); // consume ':' or '='
 
