@@ -19,6 +19,7 @@ add_library(CHTL STATIC
     CHTLStrategy/ConstraintParsingStrategy.cpp
     CHTLStrategy/SpecializationParsingStrategy.cpp
     CHTLStrategy/ScriptParsingStrategy.cpp
+    CHTLStrategy/AnimateParsingStrategy.cpp
     CHTLGenerator/CHTLGenerator.cpp
     CHTLContext/ConfigurationManager.cpp
     SemanticAnalyzer.cpp

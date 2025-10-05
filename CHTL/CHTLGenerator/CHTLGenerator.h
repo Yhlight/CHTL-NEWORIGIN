@@ -26,6 +26,7 @@ class IfNode;
 class DeleteNode;
 class InsertNode;
 class ScriptNode;
+class AnimateNode;
 class SaltBridge;
 
 class CHTLGenerator {
@@ -54,6 +55,7 @@ private:
     void visit(const std::shared_ptr<DeleteNode>& node);
     void visit(const std::shared_ptr<InsertNode>& node);
     void visit(const std::shared_ptr<ScriptNode>& node);
+    void visit(const std::shared_ptr<AnimateNode>& node);
 
     std::stringstream html_out;
     std::stringstream css_out;

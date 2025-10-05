@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <memory>
 #include "CHTLLexer/CHTLLexer.h"
 #include "CHTLParser/CHTLParser.h"
 #include "CHTLGenerator/CHTLGenerator.h"
@@ -7,20 +10,22 @@
 #include "SemanticAnalyzer.h"
 #include "CHTLContext/ConfigurationManager.h"
 #include "SharedCore/ConcreteSaltBridge.h"
-#include <memory>
 
-int main() {
-    std::string input = R"(
-div {
-    script {
-        {{.my-div}}->Listen {
-            click: () => {
-                console.log("Clicked!");
-            }
-        };
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <input_file>" << std::endl;
+        return 1;
     }
-}
-)";
+
+    std::ifstream file(argv[1]);
+    if (!file) {
+        std::cerr << "Error: Could not open file " << argv[1] << std::endl;
+        return 1;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string input = buffer.str();
 
     auto configManager = std::make_shared<CHTL::ConfigurationManager>();
 
@@ -78,10 +83,11 @@ div {
     std::string html = generator.getHtml();
     std::string css = generator.getCss();
 
-    std::cout << "Generated HTML:" << std::endl;
-    std::cout << html << std::endl;
-    std::cout << "\nGenerated CSS:" << std::endl;
-    std::cout << css << std::endl;
+    // Combine HTML and CSS for self-contained output
+    std::stringstream final_html;
+    final_html << "<html><head><style>" << css << "</style></head><body>" << html << "</body></html>";
+
+    std::cout << final_html.str() << std::endl;
 
     return 0;
 }

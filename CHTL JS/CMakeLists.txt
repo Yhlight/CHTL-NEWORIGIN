@@ -6,4 +6,5 @@ add_library(CHTLJS STATIC
 
 target_include_directories(CHTLJS PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/SharedCore
 )

@@ -14,9 +14,7 @@ public:
     std::string name;
     std::map<std::string, std::vector<std::shared_ptr<PropertyNode>>> nested_blocks;
 
-    ConfigurationNode() {
-        type = NodeType::NODE_CONFIG;
-    }
+    ConfigurationNode() : BaseNode(NodeType::NODE_CONFIG) {}
 
     const std::vector<std::shared_ptr<PropertyNode>> getSettings() const {
         std::vector<std::shared_ptr<PropertyNode>> settings;

@@ -7,16 +7,14 @@ namespace CHTL {
 
     class PropertyNode : public BaseNode {
     public:
-        PropertyNode(const std::string& key, const std::string& value) : key(key), value(value) {
-            type = NodeType::NODE_PROPERTY;
-        }
-
-        const std::string& getKey() const { return key; }
-        const std::string& getValue() const { return value; }
-
-    private:
-        std::string key;
+        std::string name;
         std::string value;
+
+        PropertyNode() : BaseNode(NodeType::NODE_PROPERTY) {}
+        PropertyNode(const std::string& name, const std::string& value) : BaseNode(NodeType::NODE_PROPERTY), name(name), value(value) {}
+
+        const std::string& getKey() const { return name; }
+        const std::string& getValue() const { return value; }
     };
 
 }

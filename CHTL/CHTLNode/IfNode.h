@@ -18,6 +18,6 @@ namespace CHTL {
         IfType if_type;
         std::string condition;
 
-        IfNode() { type = CHTL::NodeType::NODE_IF; }
+        IfNode() : BaseNode(NodeType::NODE_IF) {}
     };
 }

@@ -7,9 +7,7 @@ namespace CHTL {
 
     class TextNode : public BaseNode {
     public:
-        TextNode(const std::string& content) : content(content) {
-            type = NodeType::NODE_TEXT;
-        }
+        TextNode(const std::string& content) : BaseNode(NodeType::NODE_TEXT), content(content) {}
 
         const std::string& getContent() const { return content; }
 

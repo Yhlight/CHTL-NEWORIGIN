@@ -15,9 +15,7 @@ enum class CustomType {
 
 class CustomNode : public BaseNode {
 public:
-    CustomNode(const std::string& name, CustomType customType) : name(name), customType(customType) {
-        type = NodeType::NODE_CUSTOM;
-    }
+    CustomNode(const std::string& name, CustomType customType) : BaseNode(NodeType::NODE_CUSTOM), name(name), customType(customType) {}
 
     const std::string& getName() const { return name; }
     CustomType getCustomType() const { return customType; }

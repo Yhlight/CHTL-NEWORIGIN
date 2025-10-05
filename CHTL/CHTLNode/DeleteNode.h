@@ -10,9 +10,7 @@ class DeleteNode : public BaseNode {
 public:
     std::vector<std::string> targets;
 
-    DeleteNode() {
-        type = NodeType::NODE_DELETE;
-    }
+    DeleteNode() : BaseNode(NodeType::NODE_DELETE) {}
 
     void addTarget(const std::string& target) {
         targets.push_back(target);

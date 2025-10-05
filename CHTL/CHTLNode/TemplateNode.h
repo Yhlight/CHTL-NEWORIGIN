@@ -15,9 +15,7 @@ enum class TemplateType {
 
 class TemplateNode : public BaseNode {
 public:
-    TemplateNode(const std::string& name, TemplateType templateType) : name(name), templateType(templateType) {
-        type = NodeType::NODE_TEMPLATE;
-    }
+    TemplateNode(const std::string& name, TemplateType templateType) : BaseNode(NodeType::NODE_TEMPLATE), name(name), templateType(templateType) {}
 
     const std::string& getName() const { return name; }
     TemplateType getTemplateType() const { return templateType; }

@@ -16,6 +16,7 @@
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
 #include "../CHTLNode/ScriptNode.h"
+#include "../CHTLNode/AnimateNode.h"
 #include "../SharedCore/SaltBridge.h"
 #include <stdexcept>
 #include <set>
@@ -40,6 +41,9 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
             break;
         case NodeType::NODE_SCRIPT:
             visit(std::dynamic_pointer_cast<ScriptNode>(node));
+            break;
+        case NodeType::NODE_ANIMATE:
+             visit(std::dynamic_pointer_cast<AnimateNode>(node));
             break;
         // ... other cases from previous implementation
         case NodeType::NODE_TEXT:
@@ -289,12 +293,50 @@ void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ScriptNode>& node) {
+    if (!node->getChildren().empty()) {
+        html_out << "<script>";
+        for (const auto& child : node->getChildren()) {
+            visit(child);
+        }
+        html_out << "</script>";
+    } else if (!node->content.empty()) {
+        if (salt_bridge) {
+            html_out << salt_bridge->processScript(node->content);
+        } else {
+            html_out << node->content;
+        }
+    }
+}
+
+void CHTLGenerator::visit(const std::shared_ptr<AnimateNode>& node) {
     if (salt_bridge) {
-        std::string processed_script = salt_bridge->processScript(node->getContent());
-        html_out << "<script>" << processed_script << "</script>";
-    } else {
-        // Fallback if no bridge is provided
-        html_out << "<script>" << node->getContent() << "</script>";
+        AnimationData data;
+        data.target = node->target;
+        data.duration = node->duration;
+        data.easing = node->easing;
+        data.loop = node->loop;
+        data.direction = node->direction;
+        data.delay = node->delay;
+        data.callback = node->callback;
+
+        for(const auto& prop : node->begin_properties) {
+            data.begin_properties.push_back({prop->name, prop->value});
+        }
+
+        for(const auto& prop : node->end_properties) {
+            data.end_properties.push_back({prop->name, prop->value});
+        }
+
+        for(const auto& keyframe : node->when_keyframes) {
+            AnimationKeyframe kf;
+            kf.at = keyframe.first;
+            for(const auto& prop : keyframe.second) {
+                kf.properties.push_back({prop->name, prop->value});
+            }
+            data.when_keyframes.push_back(kf);
+        }
+
+        html_out << salt_bridge->processAnimation(data);
     }
 }
 

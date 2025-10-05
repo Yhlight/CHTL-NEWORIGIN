@@ -24,7 +24,7 @@ namespace CHTL {
     public:
         std::vector<Constraint> constraints;
 
-        ConstraintNode() { type = CHTL::NodeType::NODE_CONSTRAINT; }
+        ConstraintNode() : BaseNode(NodeType::NODE_CONSTRAINT) {}
 
         void addConstraint(const Constraint& constraint) {
             constraints.push_back(constraint);

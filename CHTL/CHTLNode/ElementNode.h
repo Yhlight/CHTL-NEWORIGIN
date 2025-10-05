@@ -8,9 +8,7 @@ namespace CHTL {
 
     class ElementNode : public BaseNode {
     public:
-        ElementNode(const std::string& tagName) : tagName(tagName) {
-            type = NodeType::NODE_ELEMENT;
-        }
+        ElementNode(const std::string& tagName) : BaseNode(NodeType::NODE_ELEMENT), tagName(tagName) {}
 
         const std::string& getTagName() const { return tagName; }
         const std::map<std::string, std::string>& getAttributes() const { return attributes; }

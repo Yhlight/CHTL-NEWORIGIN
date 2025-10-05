@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace CHTL {
 
@@ -25,15 +26,22 @@ namespace CHTL {
         NODE_IF,
         NODE_CONSTRAINT,
         NODE_DELETE,
-        NODE_INSERT
+        NODE_INSERT,
+        NODE_ANIMATE
     };
 
     class BaseNode {
     public:
+        explicit BaseNode(NodeType type) : type(type) {}
         virtual ~BaseNode() = default;
+
         NodeType getType() const { return type; }
         const std::vector<std::shared_ptr<BaseNode>>& getChildren() const { return children; }
         void addChild(std::shared_ptr<BaseNode> child) { children.push_back(child); }
+
+        virtual std::string ToString(const std::string& indent = "", bool isLast = true) const {
+            return indent + (isLast ? "└─" : "├─") + "BaseNode\n";
+        }
 
     protected:
         NodeType type;
