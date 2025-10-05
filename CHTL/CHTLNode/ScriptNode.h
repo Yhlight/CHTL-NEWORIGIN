@@ -30,8 +30,9 @@ namespace CHTL {
             }
 
             // Print children
-            for (size_t i = 0; i < children.size(); ++i) {
-                str += children[i]->ToString(newIndent, i == children.size() - 1);
+            const auto& node_children = getChildren();
+            for (size_t i = 0; i < node_children.size(); ++i) {
+                str += node_children[i]->ToString(newIndent, i == node_children.size() - 1);
             }
 
             return str;

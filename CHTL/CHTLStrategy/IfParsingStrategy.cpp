@@ -6,10 +6,29 @@
 
 namespace CHTL {
 
+    // Helper to parse the value of a property until a comma or closing brace
+    std::string parse_property_value(CHTLParserContext* context) {
+        std::string value;
+        while (context->getCurrentToken().type != TokenType::TOKEN_COMMA &&
+               context->getCurrentToken().type != TokenType::TOKEN_RBRACE &&
+               !context->isAtEnd()) {
+            value += context->getCurrentToken().lexeme;
+            const auto& next_token = context->peek(1);
+            if (next_token.type != TokenType::TOKEN_COMMA &&
+                next_token.type != TokenType::TOKEN_RBRACE &&
+                next_token.type != TokenType::TOKEN_EOF) {
+                value += " ";
+            }
+            context->advance();
+        }
+        return value;
+    }
+
     std::shared_ptr<BaseNode> IfParsingStrategy::parse(CHTLParserContext* context) {
         auto ifNode = std::make_shared<IfNode>();
         Token currentToken = context->getCurrentToken();
 
+        // Determine the type of the if-construct (if, else if, else)
         if (currentToken.type == TokenType::TOKEN_IF) {
             ifNode->if_type = IfType::IF;
             context->advance(); // consume 'if'
@@ -24,39 +43,38 @@ namespace CHTL {
         }
 
         if (context->getCurrentToken().type != TokenType::TOKEN_LBRACE) {
-            throw std::runtime_error("Expected '{' after if/else if/else.");
+            throw std::runtime_error("Expected '{' after if/else if/else construct.");
         }
         context->advance(); // consume '{'
 
+        // Parse the properties inside the block
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
-            if (context->getCurrentToken().type != TokenType::TOKEN_IDENTIFIER && context->getCurrentToken().type != TokenType::TOKEN_UNQUOTED_LITERAL) {
-                throw std::runtime_error("Expected property identifier or unquoted literal in if block.");
+            if (context->getCurrentToken().type != TokenType::TOKEN_IDENTIFIER) {
+                throw std::runtime_error("Expected property identifier in if block.");
             }
             std::string key = context->getCurrentToken().lexeme;
             context->advance();
 
             if (context->getCurrentToken().type != TokenType::TOKEN_COLON) {
-                throw std::runtime_error("Expected ':' after property key.");
+                throw std::runtime_error("Expected ':' after property key '" + key + "'.");
             }
             context->advance(); // consume ':'
 
-            std::string value;
-            while (context->getCurrentToken().type != TokenType::TOKEN_SEMICOLON && context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
-                value += context->getCurrentToken().lexeme + " ";
-                context->advance();
-            }
-             if (!value.empty()) {
-                value.pop_back(); // Trim trailing space
-            }
+            std::string value = parse_property_value(context);
 
             if (key == "condition") {
+                if (ifNode->if_type == IfType::ELSE) {
+                    throw std::runtime_error("'else' block cannot have a condition.");
+                }
                 ifNode->condition = value;
             } else {
                 ifNode->addChild(std::make_shared<PropertyNode>(key, value));
             }
 
-            if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
-                context->advance(); // consume ';'
+            if (context->getCurrentToken().type == TokenType::TOKEN_COMMA) {
+                context->advance(); // consume ','
+            } else if (context->getCurrentToken().type != TokenType::TOKEN_RBRACE) {
+                throw std::runtime_error("Expected ',' or '}' after property in if block.");
             }
         }
 
@@ -64,6 +82,11 @@ namespace CHTL {
             throw std::runtime_error("Expected '}' to close if block.");
         }
         context->advance(); // consume '}'
+
+        // An 'if' or 'else if' must have a condition.
+        if (ifNode->if_type != IfType::ELSE && ifNode->condition.empty()) {
+            throw std::runtime_error("'if' and 'else if' blocks must have a 'condition' property.");
+        }
 
         return ifNode;
     }

@@ -1,4 +1,5 @@
 #include "StyleParsingStrategy.h"
+#include "IfParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/StyleNode.h"
 #include "../CHTLNode/RuleNode.h"
@@ -19,8 +20,12 @@ std::shared_ptr<BaseNode> StyleParsingStrategy::parse(CHTLParserContext* context
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
             TokenType currentType = context->getCurrentToken().type;
 
+            if (currentType == TokenType::TOKEN_IF || currentType == TokenType::TOKEN_ELSE) {
+                context->setStrategy(std::make_unique<IfParsingStrategy>());
+                styleNode->addChild(context->runCurrentStrategy());
+            }
             // Check for a nested rule (e.g., .class, #id, &:hover)
-            if (currentType == TokenType::TOKEN_DOT ||
+            else if (currentType == TokenType::TOKEN_DOT ||
                 (currentType == TokenType::TOKEN_IDENTIFIER && (context->getCurrentToken().lexeme[0] == '#' || context->getCurrentToken().lexeme[0] == '&')) ||
                 (currentType == TokenType::TOKEN_IDENTIFIER && context->peek(1).type == TokenType::TOKEN_LBRACE))
             {

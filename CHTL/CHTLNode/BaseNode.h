@@ -1,51 +1,71 @@
 #pragma once
 
+#include <string>
 #include <vector>
 #include <memory>
-#include <string>
 
 namespace CHTL {
 
     enum class NodeType {
         NODE_ELEMENT,
         NODE_TEXT,
-        NODE_COMMENT,
+        NODE_STYLE,
         NODE_TEMPLATE,
         NODE_CUSTOM,
-        NODE_STYLE,
-        NODE_SCRIPT,
         NODE_ORIGIN,
         NODE_IMPORT,
-        NODE_CONFIG,
         NODE_NAMESPACE,
+        NODE_CONFIG,
         NODE_PROPERTY,
         NODE_RULE,
-        NODE_OPERATOR,
         NODE_USE,
         NODE_TEMPLATE_USAGE,
         NODE_IF,
         NODE_CONSTRAINT,
         NODE_DELETE,
         NODE_INSERT,
+        NODE_SCRIPT,
         NODE_ANIMATE
     };
 
-    class BaseNode {
+    class BaseNode : public std::enable_shared_from_this<BaseNode> {
+    private:
+        NodeType type;
+        std::weak_ptr<BaseNode> parent;
+        std::vector<std::shared_ptr<BaseNode>> children;
+
     public:
-        explicit BaseNode(NodeType type) : type(type) {}
+        BaseNode(NodeType type) : type(type) {}
         virtual ~BaseNode() = default;
-
         NodeType getType() const { return type; }
-        const std::vector<std::shared_ptr<BaseNode>>& getChildren() const { return children; }
-        void addChild(std::shared_ptr<BaseNode> child) { children.push_back(child); }
 
-        virtual std::string ToString(const std::string& indent = "", bool isLast = true) const {
-            return indent + (isLast ? "└─" : "├─") + "BaseNode\n";
+        void setParent(const std::shared_ptr<BaseNode>& p) {
+            this->parent = p;
         }
 
-    protected:
-        NodeType type;
-        std::vector<std::shared_ptr<BaseNode>> children;
+        std::shared_ptr<BaseNode> getParent() const {
+            return parent.lock();
+        }
+
+        virtual void addChild(std::shared_ptr<BaseNode> child) {
+            child->setParent(shared_from_this());
+            children.push_back(child);
+        }
+
+        virtual const std::vector<std::shared_ptr<BaseNode>>& getChildren() const {
+            return children;
+        }
+
+        virtual void setChildren(const std::vector<std::shared_ptr<BaseNode>>& new_children) {
+            children = new_children;
+            for(const auto& child : children) {
+                child->setParent(shared_from_this());
+            }
+        }
+
+        virtual std::string ToString(const std::string& indent = "", bool isLast = true) const {
+            return indent + (isLast ? "`-- " : "|-- ") + "BaseNode\n";
+        }
     };
 
 }

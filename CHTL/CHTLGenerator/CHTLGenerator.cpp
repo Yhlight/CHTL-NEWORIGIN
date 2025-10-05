@@ -12,7 +12,6 @@
 #include "../CHTLNode/PropertyNode.h"
 #include "../CHTLNode/RuleNode.h"
 #include "../CHTLNode/UseNode.h"
-#include "../CHTLNode/IfNode.h"
 #include "../CHTLNode/DeleteNode.h"
 #include "../CHTLNode/InsertNode.h"
 #include "../CHTLNode/ScriptNode.h"
@@ -81,9 +80,6 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
             break;
         case NodeType::NODE_USE:
             visit(std::dynamic_pointer_cast<UseNode>(node));
-            break;
-        case NodeType::NODE_IF:
-            visit(std::dynamic_pointer_cast<IfNode>(node));
             break;
         case NodeType::NODE_DELETE:
             visit(std::dynamic_pointer_cast<DeleteNode>(node));
@@ -159,8 +155,6 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                         visit(styleChild);
                     }
                 }
-            } else if (child->getType() == NodeType::NODE_IF) {
-                visit(child);
             }
         }
 
@@ -172,7 +166,7 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
     }
 
     for (const auto& child : node->getChildren()) {
-        if (child->getType() != NodeType::NODE_STYLE && child->getType() != NodeType::NODE_IF) {
+        if (child->getType() != NodeType::NODE_STYLE) {
             visit(child);
         }
     }
@@ -361,28 +355,6 @@ void CHTLGenerator::visit(const std::shared_ptr<RuleNode>& node) {
 }
 void CHTLGenerator::visit(const std::shared_ptr<UseNode>& node) {
     if (node->getUseType() == "html5") html_out << "<!DOCTYPE html>";
-}
-void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
-    if (element_stack.empty()) return;
-    auto parentElement = element_stack.back();
-    std::string selector;
-    if (parentElement->hasAttribute("id")) {
-        selector = "#" + parentElement->getAttributes().at("id");
-    } else if (parentElement->hasAttribute("class")) {
-        std::string classes = parentElement->getAttributes().at("class");
-        selector = "." + classes.substr(0, classes.find(' '));
-    } else {
-        selector = parentElement->getTagName();
-    }
-    std::string media_query = "@media screen and (" + node->condition + ")";
-    css_out << media_query << " {" << selector << " {";
-    for (const auto& child : node->getChildren()) {
-        if (child->getType() == NodeType::NODE_PROPERTY) {
-            auto prop = std::dynamic_pointer_cast<PropertyNode>(child);
-            if (prop) css_out << prop->getKey() << ":" << prop->getValue() << ";";
-        }
-    }
-    css_out << "}}";
 }
 void CHTLGenerator::visit(const std::shared_ptr<DeleteNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<InsertNode>& node) {

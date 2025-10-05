@@ -16,7 +16,7 @@ public:
 
     const std::vector<std::shared_ptr<PropertyNode>> getProperties() const {
         std::vector<std::shared_ptr<PropertyNode>> properties;
-        for (const auto& child : children) {
+        for (const auto& child : getChildren()) {
             if (child->getType() == NodeType::NODE_PROPERTY) {
                 properties.push_back(std::dynamic_pointer_cast<PropertyNode>(child));
             }
