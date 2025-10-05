@@ -1,0 +1,21 @@
+// This is a sample CHTL file for testing the lexer.
+
+# This is a generator comment that should be recognized.
+
+div {
+    text: "Hello, World!";
+    style {
+        color: red;
+    }
+}
+
+text {
+    This is an unquoted literal, which is a feature of CHTL.
+}
+
+/*
+  This is a multi-line
+  comment block.
+*/
+
+#invalid-generator-comment

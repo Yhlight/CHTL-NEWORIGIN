@@ -22,7 +22,7 @@ add_executable(chtl src/main.cpp)
 target_link_libraries(chtl PRIVATE chtl_lib)
 
 # Tests
-add_executable(CommentLexerTest src/Test/TokenTest/CommentLexerTest.cpp)
-target_link_libraries(CommentLexerTest PRIVATE chtl_lib gtest_main)
+add_executable(LexerTest src/Test/TokenTest/LexerTest.cpp)
+target_link_libraries(LexerTest PRIVATE chtl_lib gtest_main)
 
-add_test(NAME CommentLexerTest COMMAND CommentLexerTest)
+add_test(NAME LexerTest COMMAND LexerTest)
