@@ -75,11 +75,16 @@ private:
     Vector<SharedPtr<BaseNode>> parseBody();
     HashMap<String, String> parseAttributes();
     String parseAttributeValue();
+    String parseExpressionValue();  // 新增：解析包含表达式的值
     String parseTextContent();
     String parseBlockContent(TokenType endToken = TokenType::RightBrace);
     
     // 同步错误恢复
     void synchronize();
+    
+    // 元素收集和表达式重新评估
+    void collectElementsForRegistration(const SharedPtr<BaseNode>& node);
+    void reevaluateExpressionsWithReferences(const SharedPtr<BaseNode>& node);
     
     // 成员变量
     Vector<Token> tokens_;

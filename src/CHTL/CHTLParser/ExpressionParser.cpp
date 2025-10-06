@@ -1,7 +1,9 @@
 #include "ExpressionParser.h"
 #include "../../Util/StringUtil/StringUtil.h"
+#include "../../SharedCore/SaltBridge.h"
 #include <cmath>
 #include <sstream>
+#include <unordered_set>
 
 namespace CHTL {
 
@@ -178,8 +180,18 @@ String ConditionalExpression::evaluate() const {
 
 // SelectorExpression实现
 String SelectorExpression::evaluate() const {
-    // 这里需要从DOM获取属性值，暂时返回占位符
-    return "var(--selector-" + selector_ + "-" + property_ + ")";
+    // 从SaltBridge获取属性值
+    using namespace Bridge;
+    SaltBridge& bridge = SaltBridge::getInstance();
+    
+    // 查找元素的属性
+    auto value = bridge.getElementProperty(selector_, property_);
+    if (value.has_value()) {
+        return value.value();
+    }
+    
+    // 如果找不到，返回占位符注释
+    return "/* " + selector_ + "." + property_ + " not found */";
 }
 
 // ExpressionParser实现
@@ -327,16 +339,65 @@ SharedPtr<Expression> ExpressionParser::parsePrimary() {
         return std::make_shared<NumberExpression>(unit);
     }
     
-    // 标识符（属性或选择器引用）
-    if (check(TokenType::Identifier) || check(TokenType::UnquotedLiteral)) {
+    // 字符串字面量（在条件表达式的结果中常见）
+    if (check(TokenType::StringLiteral)) {
+        String value = advance().getValue();
+        // 字符串字面量作为CSS值（如颜色名、关键字等）
+        return std::make_shared<NumberExpression>(CssUnit(value, ""));
+    }
+    
+    // .class或#id选择器开头的属性引用
+    if (check(TokenType::Dot) || check(TokenType::Hash)) {
+        String selector;
+        if (match(TokenType::Dot)) {
+            selector = ".";
+            if (check(TokenType::Identifier)) {
+                selector += advance().getValue();
+            }
+        } else if (match(TokenType::Hash)) {
+            selector = "#";
+            if (check(TokenType::Identifier)) {
+                selector += advance().getValue();
+            }
+        }
+        
+        // 检查是否有.property
+        if (match(TokenType::Dot)) {
+            if (check(TokenType::Identifier)) {
+                String property = advance().getValue();
+                return std::make_shared<SelectorExpression>(selector, property);
+            }
+        }
+        
+        // 如果只是.class或#id而没有属性，返回为字面量（虽然不太可能）
+        return std::make_shared<NumberExpression>(CssUnit(selector, ""));
+    }
+    
+    // 标识符或HTML关键字（属性或选择器引用）
+    // 注意：HTML关键字也可以作为选择器（如div.width, base.height等）
+    if (check(TokenType::Identifier) || check(TokenType::UnquotedLiteral) || check(TokenType::HtmlKeyword)) {
         String identifier = advance().getValue();
         
         // 检查是否是选择器引用 (selector.property)
         if (match(TokenType::Dot)) {
-            if (check(TokenType::Identifier)) {
+            if (check(TokenType::Identifier) || check(TokenType::HtmlKeyword)) {
                 String property = advance().getValue();
                 return std::make_shared<SelectorExpression>(identifier, property);
             }
+        }
+        
+        // 检查是否是CSS关键字（如 block, none, red, blue等）
+        // 这些应该直接返回作为值，而不是属性引用
+        static const std::unordered_set<String> cssKeywords = {
+            "block", "none", "inline", "flex", "grid", "auto", "inherit", "initial",
+            "red", "blue", "green", "white", "black", "transparent", "currentColor",
+            "center", "left", "right", "top", "bottom", "middle",
+            "solid", "dotted", "dashed", "double", "hidden"
+        };
+        
+        if (cssKeywords.find(identifier) != cssKeywords.end()) {
+            // CSS关键字作为字面量值
+            return std::make_shared<NumberExpression>(CssUnit(identifier, ""));
         }
         
         // 属性引用

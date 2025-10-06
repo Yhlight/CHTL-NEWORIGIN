@@ -78,6 +78,7 @@ public:
     static String generate(const SharedPtr<BaseNode>& root, const GeneratorConfig& config = GeneratorConfig());
     
 private:
+    static void collectElements(const SharedPtr<BaseNode>& node);
     static void generateNode(const SharedPtr<BaseNode>& node, String& output, int indent, const GeneratorConfig& config);
     static void generateElement(const SharedPtr<ElementNode>& element, String& output, int indent, const GeneratorConfig& config);
     static String indentString(int indent, const GeneratorConfig& config);

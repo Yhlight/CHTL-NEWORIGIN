@@ -136,6 +136,27 @@ void CHTLGenerator::generateElement(ElementNode& node) {
     // 属性
     generateAttributes(node.getAttributes());
     
+    // 收集内联样式（从StyleNode的子节点）
+    HashMap<String, String> inlineStyles;
+    for (const auto& child : node.getChildren()) {
+        if (child->getType() == NodeType::Style) {
+            auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+            const auto& styles = styleNode->getInlineStyles();
+            inlineStyles.insert(styles.begin(), styles.end());
+        }
+    }
+    
+    // 注册元素到SaltBridge，以便其他元素可以引用其属性
+    String elemId = node.hasAttribute("id") ? node.getAttribute("id").value() : "";
+    String elemClass = node.hasAttribute("class") ? node.getAttribute("class").value() : "";
+    Bridge::SaltBridge::getInstance().registerElementWithProperties(
+        node.getTagName(), elemId, elemClass, inlineStyles);
+    
+    // 生成内联样式
+    if (!inlineStyles.empty()) {
+        generateInlineStyle(inlineStyles);
+    }
+    
     // 自闭合标签
     if (isSelfClosingTag(node.getTagName()) && node.getChildren().empty()) {
         appendHtml(" />");
@@ -262,9 +283,44 @@ void CHTLGenerator::appendJs(const String& str) {
 String HtmlGenerator::generate(const SharedPtr<BaseNode>& root, const GeneratorConfig& config) {
     String output;
     if (root) {
+        // 第一遍：收集所有元素和属性到SaltBridge
+        collectElements(root);
+        
+        // 第二遍：生成HTML
         generateNode(root, output, 0, config);
     }
     return output;
+}
+
+void HtmlGenerator::collectElements(const SharedPtr<BaseNode>& node) {
+    if (!node) {
+        return;
+    }
+    
+    if (node->getType() == NodeType::Element) {
+        auto element = std::dynamic_pointer_cast<ElementNode>(node);
+        
+        // 收集内联样式
+        HashMap<String, String> inlineStyles;
+        for (const auto& child : element->getChildren()) {
+            if (child->getType() == NodeType::Style) {
+                auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+                const auto& styles = styleNode->getInlineStyles();
+                inlineStyles.insert(styles.begin(), styles.end());
+            }
+        }
+        
+        // 注册到SaltBridge
+        String elemId = element->hasAttribute("id") ? element->getAttribute("id").value() : "";
+        String elemClass = element->hasAttribute("class") ? element->getAttribute("class").value() : "";
+        Bridge::SaltBridge::getInstance().registerElementWithProperties(
+            element->getTagName(), elemId, elemClass, inlineStyles);
+    }
+    
+    // 递归处理子节点
+    for (const auto& child : node->getChildren()) {
+        collectElements(child);
+    }
 }
 
 void HtmlGenerator::generateNode(const SharedPtr<BaseNode>& node, String& output, int indent, const GeneratorConfig& config) {
@@ -321,6 +377,30 @@ void HtmlGenerator::generateElement(const SharedPtr<ElementNode>& element, Strin
     // 属性
     for (const auto& [name, value] : element->getAttributes()) {
         output += " " + name + "=\"" + value + "\"";
+    }
+    
+    // 收集内联样式
+    HashMap<String, String> inlineStyles;
+    for (const auto& child : element->getChildren()) {
+        if (child->getType() == NodeType::Style) {
+            auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+            const auto& styles = styleNode->getInlineStyles();
+            inlineStyles.insert(styles.begin(), styles.end());
+        }
+    }
+    
+    // 生成内联样式
+    if (!inlineStyles.empty()) {
+        output += " style=\"";
+        bool first = true;
+        for (const auto& [property, value] : inlineStyles) {
+            if (!first) {
+                output += " ";
+            }
+            output += property + ": " + value + ";";
+            first = false;
+        }
+        output += "\"";
     }
     
     // 自闭合标签

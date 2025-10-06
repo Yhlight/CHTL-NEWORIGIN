@@ -81,9 +81,17 @@ public:
     
     // 注册元素（用于选择器查找）
     void registerElement(const String& tag, const String& id, const String& className);
+    void registerElementWithProperties(const String& tag, const String& id, const String& className, 
+                                       const HashMap<String, String>& properties);
     
     // 查找元素
     Optional<ContextInfo> findElement(const String& selector);
+    
+    // 获取元素的属性值
+    Optional<String> getElementProperty(const String& selector, const String& property);
+    
+    // 清理注册表（测试用）
+    void clearRegistry();
     
 private:
     SaltBridge() = default;

@@ -1,0 +1,74 @@
+# CHTL综合功能测试
+# 展示所有已实现的核心功能
+
+# 定义基础盒子
+div {
+    id: base-box;
+    class: container;
+    
+    style {
+        .container {
+            width: 200px;
+            height: 100px;
+            padding: 5px * 4;
+            margin: 10px + 5px;
+            background: white;
+        }
+        
+        .container:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+    }
+    
+    text: "基础盒子";
+}
+
+# 使用属性引用
+div {
+    class: derived-box;
+    
+    style {
+        .derived-box {
+            width: base-box.width + 100px;
+            height: base-box.height * 2;
+            padding: base-box.padding / 2;
+            background: base-box.width > 150px ? blue : red;
+            display: 1 ? block : none;
+        }
+    }
+    
+    script {
+        {{&}}->addEventListener('click', function() {
+            console.log('Derived box clicked!');
+        });
+    }
+    
+    text: "派生盒子 - 引用基础盒子的属性";
+}
+
+# 使用类选择器引用
+div {
+    style {
+        width: .container.width / 2;
+        height: (100px + 50px) * 2;
+    }
+    
+    script {
+        {{.derived-box}}->addEventListener('mouseenter', function() {
+            console.log('Mouse entered!');
+        });
+    }
+}
+
+# 复杂表达式组合
+div {
+    id: complex;
+    
+    style {
+        #complex {
+            width: (base-box.width + 50px) * 2 - 100px;
+            height: 50px ** 2 / 100;
+            margin: 100px - 50px + 20px * 2;
+        }
+    }
+}

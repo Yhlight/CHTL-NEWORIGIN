@@ -123,20 +123,72 @@ void SaltBridge::registerElement(const String& tag, const String& id, const Stri
     elementRegistry_.push_back(info);
 }
 
+void SaltBridge::registerElementWithProperties(const String& tag, const String& id, const String& className,
+                                               const HashMap<String, String>& properties) {
+    ElementInfo info;
+    info.tag = tag;
+    info.id = id;
+    info.className = className;
+    info.properties = properties;
+    elementRegistry_.push_back(info);
+}
+
+Optional<String> SaltBridge::getElementProperty(const String& selector, const String& property) {
+    // 查找元素
+    auto elemInfo = findElement(selector);
+    if (elemInfo.has_value()) {
+        auto it = elemInfo->properties.find(property);
+        if (it != elemInfo->properties.end()) {
+            return it->second;
+        }
+    }
+    return std::nullopt;
+}
+
+void SaltBridge::clearRegistry() {
+    elementRegistry_.clear();
+    contextStack_.clear();
+}
+
 Optional<ContextInfo> SaltBridge::findElement(const String& selector) {
-    // 简化处理：查找第一个匹配的元素
+    // 根据选择器类型查找元素
+    // 自动推断：优先tag -> id -> class
+    
     for (const auto& elem : elementRegistry_) {
-        if (selector == elem.tag || 
-            selector == elem.id || 
-            selector == elem.className ||
-            "." + elem.className == selector ||
-            "#" + elem.id == selector) {
-            ContextInfo ctx;
-            ctx.currentTag = elem.tag;
-            ctx.currentId = elem.id;
-            ctx.currentClass = elem.className;
-            ctx.properties = elem.properties;
-            return ctx;
+        // .class 选择器
+        if (!selector.empty() && selector[0] == '.') {
+            if (selector.substr(1) == elem.className) {
+                ContextInfo ctx;
+                ctx.currentTag = elem.tag;
+                ctx.currentId = elem.id;
+                ctx.currentClass = elem.className;
+                ctx.properties = elem.properties;
+                return ctx;
+            }
+        }
+        // #id 选择器  
+        else if (!selector.empty() && selector[0] == '#') {
+            if (selector.substr(1) == elem.id) {
+                ContextInfo ctx;
+                ctx.currentTag = elem.tag;
+                ctx.currentId = elem.id;
+                ctx.currentClass = elem.className;
+                ctx.properties = elem.properties;
+                return ctx;
+            }
+        }
+        // 自动推断：tag -> id -> class
+        else {
+            if (selector == elem.tag ||
+                selector == elem.id ||
+                selector == elem.className) {
+                ContextInfo ctx;
+                ctx.currentTag = elem.tag;
+                ctx.currentId = elem.id;
+                ctx.currentClass = elem.className;
+                ctx.properties = elem.properties;
+                return ctx;
+            }
         }
     }
     

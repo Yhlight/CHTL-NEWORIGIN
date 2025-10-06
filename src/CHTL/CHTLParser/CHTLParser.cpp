@@ -1,4 +1,7 @@
 #include "CHTLParser.h"
+#include "ExpressionParser.h"
+#include "../../Util/StringUtil/StringUtil.h"
+#include "../../SharedCore/SaltBridge.h"
 #include <sstream>
 
 namespace CHTL {
@@ -15,21 +18,69 @@ CHTLParser::CHTLParser(Vector<Token> tokens, const ParserConfig& config)
 SharedPtr<ProgramNode> CHTLParser::parse() {
     auto program = std::make_shared<ProgramNode>();
     
+    // 清理SaltBridge注册表（避免测试间干扰）
+    Bridge::SaltBridge::getInstance().clearRegistry();
+    
     // 初始化状态
     pushState(std::make_shared<InitialState>(this));
     
     try {
+        // 第一遍：解析所有节点
         while (!isAtEnd()) {
             auto node = parseTopLevel();
             if (node) {
                 program->addChild(node);
             }
         }
+        
+        // 第二遍：收集元素注册信息（为属性引用做准备）
+        collectElementsForRegistration(program);
+        
+        // 第三遍：重新评估所有包含属性引用的表达式
+        reevaluateExpressionsWithReferences(program);
+        
     } catch (const CompileError& e) {
         error(e.what());
     }
     
     return program;
+}
+
+void CHTLParser::collectElementsForRegistration(const SharedPtr<BaseNode>& node) {
+    if (!node) {
+        return;
+    }
+    
+    if (node->getType() == NodeType::Element) {
+        auto element = std::dynamic_pointer_cast<ElementNode>(node);
+        
+        // 收集内联样式
+        HashMap<String, String> inlineStyles;
+        for (const auto& child : element->getChildren()) {
+            if (child->getType() == NodeType::Style) {
+                auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+                const auto& styles = styleNode->getInlineStyles();
+                inlineStyles.insert(styles.begin(), styles.end());
+            }
+        }
+        
+        // 注册到SaltBridge
+        String elemId = element->hasAttribute("id") ? element->getAttribute("id").value() : "";
+        String elemClass = element->hasAttribute("class") ? element->getAttribute("class").value() : "";
+        Bridge::SaltBridge::getInstance().registerElementWithProperties(
+            element->getTagName(), elemId, elemClass, inlineStyles);
+    }
+    
+    // 递归处理子节点
+    for (const auto& child : node->getChildren()) {
+        collectElementsForRegistration(child);
+    }
+}
+
+void CHTLParser::reevaluateExpressionsWithReferences(const SharedPtr<BaseNode>& /* node */) {
+    // TODO: 重新评估包含属性引用的表达式
+    // 这个函数暂时为空，因为我们需要保存原始表达式token
+    // 当前实现在parseExpressionValue中立即评估，导致属性引用无法延迟评估
 }
 
 SharedPtr<BaseNode> CHTLParser::parseTopLevel() {
@@ -154,6 +205,21 @@ SharedPtr<ElementNode> CHTLParser::parseElement() {
     
     expect(TokenType::RightBrace, "Expected '}' after element body");
     
+    // 立即注册元素到SaltBridge，以便后续元素可以引用其属性
+    HashMap<String, String> inlineStyles;
+    for (const auto& child : element->getChildren()) {
+        if (child->getType() == NodeType::Style) {
+            auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+            const auto& styles = styleNode->getInlineStyles();
+            inlineStyles.insert(styles.begin(), styles.end());
+        }
+    }
+    
+    String elemId = element->hasAttribute("id") ? element->getAttribute("id").value() : "";
+    String elemClass = element->hasAttribute("class") ? element->getAttribute("class").value() : "";
+    Bridge::SaltBridge::getInstance().registerElementWithProperties(
+        element->getTagName(), elemId, elemClass, inlineStyles);
+    
     return element;
 }
 
@@ -240,7 +306,33 @@ SharedPtr<StyleNode> CHTLParser::parseStyle() {
             }
             
             expect(TokenType::LeftBrace, "Expected '{' after selector");
-            String rules = parseBlockContent(TokenType::RightBrace);
+            
+            // 解析CSS规则块，处理其中的表达式
+            String rules;
+            while (!check(TokenType::RightBrace) && !isAtEnd()) {
+                Token propToken = getCurrentToken();
+                
+                // 跳过注释
+                if (propToken.isComment()) {
+                    advance();
+                    continue;
+                }
+                
+                if (propToken.is(TokenType::Identifier) && peek().is(TokenType::Colon)) {
+                    String property = advance().getValue();
+                    advance();  // 消耗:
+                    String value = parseAttributeValue();  // 使用支持表达式的解析
+                    
+                    rules += property + " : " + value + " ; ";
+                    
+                    if (check(TokenType::Semicolon)) {
+                        advance();
+                    }
+                } else {
+                    advance();
+                }
+            }
+            
             styleNode->addCssRule(selector, rules);
             expect(TokenType::RightBrace, "Expected '}' after CSS rules");
         }
@@ -429,16 +521,96 @@ SharedPtr<ImportNode> CHTLParser::parseImport() {
 String CHTLParser::parseAttributeValue() {
     Token token = getCurrentToken();
     
+    // 对于字符串字面量，直接返回
     if (token.is(TokenType::StringLiteral)) {
         return advance().getValue();
-    } else if (token.is(TokenType::NumberLiteral)) {
-        return advance().getValue();
-    } else if (token.is(TokenType::Identifier) || token.is(TokenType::UnquotedLiteral)) {
-        return advance().getValue();
-    } else {
-        error("Expected attribute value");
-        return "";
     }
+    
+    // 对于可能包含表达式的值，使用parseExpressionValue
+    return parseExpressionValue();
+}
+
+String CHTLParser::parseExpressionValue() {
+    // 收集所有token直到遇到分隔符（; , } 等）
+    Vector<Token> exprTokens;
+    int parenDepth = 0;
+    
+    while (!isAtEnd()) {
+        Token token = getCurrentToken();
+        
+        // 遇到分隔符且不在括号内，停止
+        if (parenDepth == 0) {
+            if (token.is(TokenType::Semicolon) || 
+                token.is(TokenType::Comma) ||
+                token.is(TokenType::RightBrace)) {
+                break;
+            }
+        }
+        
+        // 跟踪括号深度
+        if (token.is(TokenType::LeftParen)) {
+            parenDepth++;
+        } else if (token.is(TokenType::RightParen)) {
+            parenDepth--;
+            if (parenDepth < 0) break;
+        }
+        
+        exprTokens.push_back(token);
+        advance();
+    }
+    
+    // 如果只有一个token，直接返回
+    if (exprTokens.size() == 1) {
+        return exprTokens[0].getValue();
+    }
+    
+    // 检查是否包含运算符或属性引用（selector.property）
+    bool hasOperator = false;
+    for (size_t i = 0; i < exprTokens.size(); ++i) {
+        const auto& t = exprTokens[i];
+        if (t.is(TokenType::Plus) || t.is(TokenType::Minus) ||
+            t.is(TokenType::Star) || t.is(TokenType::Slash) ||
+            t.is(TokenType::Percent) || t.is(TokenType::Power) ||
+            t.is(TokenType::Question) || t.is(TokenType::Greater) ||
+            t.is(TokenType::Less) || t.is(TokenType::EqualEqual)) {
+            hasOperator = true;
+            break;
+        }
+        // 检查属性引用：identifier . identifier
+        if (t.is(TokenType::Dot) && i > 0 && i + 1 < exprTokens.size()) {
+            if (exprTokens[i-1].is(TokenType::Identifier) && 
+                exprTokens[i+1].is(TokenType::Identifier)) {
+                hasOperator = true;  // 属性引用需要表达式解析
+                break;
+            }
+        }
+    }
+    
+    // 如果包含运算符，使用表达式解析器
+    if (hasOperator && !exprTokens.empty()) {
+        try {
+            // 添加EOF token
+            exprTokens.push_back(Token(TokenType::EndOfFile, "", Position()));
+            
+            ExpressionParser exprParser(exprTokens);
+            auto expr = exprParser.parse();
+            if (expr) {
+                return expr->evaluate();
+            }
+        } catch (...) {
+            // 表达式解析失败，返回原始值
+        }
+    }
+    
+    // 否则，拼接所有token的值
+    String result;
+    for (const auto& t : exprTokens) {
+        result += t.getValue();
+        if (t.isNot(TokenType::Dot) && t.isNot(TokenType::LeftParen) && t.isNot(TokenType::RightParen)) {
+            result += " ";
+        }
+    }
+    return Util::StringUtil::trim(result);
 }
 
 String CHTLParser::parseTextContent() {
