@@ -861,7 +861,6 @@ Optional<DelegateBlock> CHTLJSParser::parseDelegateBlock(const String& code) {
                     String arrayContent = blockContent.substr(valueStart + 1, arrayEnd - valueStart - 1);
                     
                     // 分割targets（简单实现：按逗号分割）
-                    size_t pos = 0;
                     String current;
                     for (size_t i = 0; i < arrayContent.length(); i++) {
                         char ch = arrayContent[i];
@@ -956,6 +955,157 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findDelegateBlock(const String
     }
     
     return std::make_pair(targetStart, endBracePos + 1);
+}
+
+// ============= Animate动画系统实现 =============
+
+Optional<AnimateBlock> CHTLJSParser::parseAnimateBlock(const String& code) {
+    // 查找 "Animate"
+    size_t animatePos = code.find("Animate");
+    if (animatePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', animatePos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取块内容
+    String blockContent = extractBlockContent(code, bracePos);
+    if (blockContent.empty()) {
+        return std::nullopt;
+    }
+    
+    AnimateBlock block;
+    
+    // 解析各个键值对
+    auto bindings = parseEventBindings(blockContent);
+    
+    for (const auto& binding : bindings) {
+        String key = binding.eventName;
+        String value = binding.handler;
+        
+        if (key == "target") {
+            // 处理target（可能是数组）
+            value = trimWhitespace(value);
+            if (!value.empty() && value[0] == '[') {
+                // 数组形式
+                size_t end = value.find(']');
+                if (end != String::npos) {
+                    String arrayContent = value.substr(1, end - 1);
+                    String current;
+                    for (size_t i = 0; i < arrayContent.length(); i++) {
+                        char ch = arrayContent[i];
+                        if (ch == ',') {
+                            String target = trimWhitespace(current);
+                            if (!target.empty()) {
+                                block.targets.push_back(target);
+                            }
+                            current.clear();
+                        } else {
+                            current += ch;
+                        }
+                    }
+                    String target = trimWhitespace(current);
+                    if (!target.empty()) {
+                        block.targets.push_back(target);
+                    }
+                }
+            } else {
+                block.targets.push_back(value);
+            }
+        } else if (key == "duration") {
+            block.duration = std::stoi(value);
+        } else if (key == "easing") {
+            block.easing = value;
+        } else if (key == "loop") {
+            block.loop = std::stoi(value);
+        } else if (key == "direction") {
+            block.direction = value;
+        } else if (key == "delay") {
+            block.delay = std::stoi(value);
+        } else if (key == "callback") {
+            block.callback = value;
+        } else if (key == "begin") {
+            block.begin = parseCssProperties(value);
+        } else if (key == "end") {
+            block.end = parseCssProperties(value);
+        } else if (key == "when") {
+            // 解析关键帧数组
+            value = trimWhitespace(value);
+            if (value.length() >= 2 && value[0] == '[' && value[value.length() - 1] == ']') {
+                String arrayContent = value.substr(1, value.length() - 2);
+                // 简化：按}分割关键帧
+                size_t pos = 0;
+                while (pos < arrayContent.length()) {
+                    size_t start = arrayContent.find('{', pos);
+                    if (start == String::npos) break;
+                    
+                    size_t end = findMatchingBrace(arrayContent, start);
+                    if (end == String::npos) break;
+                    
+                    String frameContent = arrayContent.substr(start + 1, end - start - 1);
+                    auto frameProps = parseEventBindings(frameContent);
+                    
+                    KeyFrame frame;
+                    for (const auto& prop : frameProps) {
+                        if (prop.eventName == "at") {
+                            frame.at = std::stod(prop.handler);
+                        } else {
+                            frame.properties[prop.eventName] = prop.handler;
+                        }
+                    }
+                    
+                    block.when.push_back(frame);
+                    pos = end + 1;
+                }
+            }
+        }
+    }
+    
+    return block;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findAnimateBlock(const String& code, size_t startPos) {
+    size_t animatePos = code.find("Animate", startPos);
+    if (animatePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', animatePos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的 '}'
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    return std::make_pair(animatePos, endBracePos + 1);
+}
+
+HashMap<String, String> CHTLJSParser::parseCssProperties(const String& code) {
+    HashMap<String, String> properties;
+    
+    String content = trimWhitespace(code);
+    
+    // 如果被{}包裹，去掉
+    if (!content.empty() && content[0] == '{' && content[content.length() - 1] == '}') {
+        content = content.substr(1, content.length() - 2);
+    }
+    
+    // 解析CSS属性
+    auto bindings = parseEventBindings(content);
+    for (const auto& binding : bindings) {
+        properties[binding.eventName] = binding.handler;
+    }
+    
+    return properties;
 }
 
 } // namespace JS

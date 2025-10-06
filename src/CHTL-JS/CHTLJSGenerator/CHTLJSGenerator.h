@@ -50,6 +50,7 @@ private:
     String processListenBlocks(const String& code);
     String processEventBindOperators(const String& code);
     String processDelegateBlocks(const String& code);
+    String processAnimateBlocks(const String& code);
 };
 
 } // namespace JS

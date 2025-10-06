@@ -51,6 +51,31 @@ struct DelegateBlock {
     explicit DelegateBlock(const String& p) : parent(p) {}
 };
 
+// 动画关键帧结构
+struct KeyFrame {
+    double at;  // 时间点（0.0-1.0）
+    HashMap<String, String> properties;  // CSS属性
+    
+    KeyFrame() : at(0.0) {}
+    KeyFrame(double t) : at(t) {}
+};
+
+// Animate块结构
+struct AnimateBlock {
+    Vector<String> targets;  // 目标元素（可以是数组）
+    int duration = 1000;  // 持续时间（ms）
+    String easing = "linear";  // 缓动函数
+    HashMap<String, String> begin;  // 起始状态
+    Vector<KeyFrame> when;  // 中间关键帧
+    HashMap<String, String> end;  // 结束状态
+    int loop = 1;  // 循环次数（-1为无限循环）
+    String direction = "normal";  // 播放方向
+    int delay = 0;  // 延迟（ms）
+    String callback;  // 完成回调
+    
+    AnimateBlock() = default;
+};
+
 // CHTL JS Parser配置
 struct JSParserConfig {
     bool allowUnorderedKeyValues = true;
@@ -111,6 +136,17 @@ public:
     
     // 查找Delegate块的位置
     Optional<std::pair<size_t, size_t>> findDelegateBlock(const String& code, size_t startPos = 0);
+    
+    // 解析Animate块
+    // 输入: "Animate { target: {{box}}, duration: 1000, ... }"
+    // 返回: AnimateBlock结构
+    Optional<AnimateBlock> parseAnimateBlock(const String& code);
+    
+    // 查找Animate块的位置
+    Optional<std::pair<size_t, size_t>> findAnimateBlock(const String& code, size_t startPos = 0);
+    
+    // 解析CSS属性块（用于begin/end/when）
+    HashMap<String, String> parseCssProperties(const String& code);
     
     // 辅助方法（public for generator use）
     String trimWhitespace(const String& str) const;

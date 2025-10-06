@@ -11,13 +11,16 @@ CHTLJSGenerator::CHTLJSGenerator(const JSGeneratorConfig& config)
 String CHTLJSGenerator::generate(const String& chtljsCode) {
     String result = chtljsCode;
     
-    // 第一步：处理Delegate语法
+    // 第一步：处理Animate语法
+    result = processAnimateBlocks(result);
+    
+    // 第二步：处理Delegate语法
     result = processDelegateBlocks(result);
     
-    // 第二步：处理Listen语法 (必须在处理增强选择器之前)
+    // 第三步：处理Listen语法 (必须在处理增强选择器之前)
     result = processListenBlocks(result);
     
-    // 第三步：处理事件绑定操作符 &-> (必须在处理Listen之后，增强选择器之前)
+    // 第四步：处理事件绑定操作符 &-> (必须在处理Listen之后，增强选择器之前)
     result = processEventBindOperators(result);
     
     // 第三步：处理增强选择器 {{...}}
@@ -199,12 +202,107 @@ String CHTLJSGenerator::processDelegateBlocks(const String& code) {
 
 String CHTLJSGenerator::processAnimate(const String& /* config */) {
     std::stringstream ss;
-    
-    // 动画实现
     ss << "// Animation\n";
-    ss << "// TODO: Implement animation with requestAnimationFrame\n";
-    
     return ss.str();
+}
+
+String CHTLJSGenerator::processAnimateBlocks(const String& code) {
+    String result;
+    size_t lastPos = 0;
+    size_t searchPos = 0;
+    
+    CHTLJSParser parser(code);
+    
+    while (true) {
+        auto blockPos = parser.findAnimateBlock(code, searchPos);
+        if (!blockPos.has_value()) {
+            result += code.substr(lastPos);
+            break;
+        }
+        
+        size_t startPos = blockPos->first;
+        size_t endPos = blockPos->second;
+        
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        String blockCode = code.substr(startPos, endPos - startPos);
+        auto animateBlock = parser.parseAnimateBlock(blockCode);
+        
+        if (animateBlock.has_value()) {
+            // 生成动画代码
+            std::stringstream ss;
+            
+            // 处理target
+            Vector<String> jsTargets;
+            for (const auto& target : animateBlock->targets) {
+                String jsTarget = target;
+                if (jsTarget.length() >= 4 && jsTarget.substr(0, 2) == "{{" && 
+                    jsTarget.substr(jsTarget.length() - 2) == "}}") {
+                    String selector = jsTarget.substr(2, jsTarget.length() - 4);
+                    jsTarget = bridge_.convertEnhancedSelector(selector);
+                }
+                jsTargets.push_back(jsTarget);
+            }
+            
+            // 生成动画函数IIFE
+            ss << "(function() {\n";
+            ss << "    const targets = [";
+            for (size_t i = 0; i < jsTargets.size(); i++) {
+                if (i > 0) ss << ", ";
+                ss << jsTargets[i];
+            }
+            ss << "];\n";
+            
+            ss << "    const duration = " << animateBlock->duration << ";\n";
+            ss << "    const startTime = Date.now();\n";
+            
+            // 起始状态
+            if (!animateBlock->begin.empty()) {
+                ss << "    targets.forEach(target => {\n";
+                for (const auto& [prop, val] : animateBlock->begin) {
+                    ss << "        target.style['" << prop << "'] = " << val << ";\n";
+                }
+                ss << "    });\n";
+            }
+            
+            // 动画循环
+            ss << "    function animate() {\n";
+            ss << "        const elapsed = Date.now() - startTime;\n";
+            ss << "        const progress = Math.min(elapsed / duration, 1);\n";
+            
+            // 应用结束状态
+            if (!animateBlock->end.empty()) {
+                ss << "        targets.forEach(target => {\n";
+                for (const auto& [prop, val] : animateBlock->end) {
+                    ss << "            target.style['" << prop << "'] = " << val << ";\n";
+                }
+                ss << "        });\n";
+            }
+            
+            ss << "        if (progress < 1) {\n";
+            ss << "            requestAnimationFrame(animate);\n";
+            ss << "        }";
+            
+            if (!animateBlock->callback.empty()) {
+                ss << " else {\n";
+                ss << "            (" << animateBlock->callback << ")();\n";
+                ss << "        }";
+            }
+            
+            ss << "\n    }\n";
+            ss << "    requestAnimationFrame(animate);\n";
+            ss << "})()";
+            
+            result += ss.str();
+        } else {
+            result += blockCode;
+        }
+        
+        lastPos = endPos;
+        searchPos = endPos;
+    }
+    
+    return result;
 }
 
 String CHTLJSGenerator::processRouter(const String& /* config */) {
