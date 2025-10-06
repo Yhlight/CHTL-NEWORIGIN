@@ -67,6 +67,7 @@ private:
     std::vector<std::shared_ptr<ElementNode>> element_stack;
 
     void collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties);
+    void generateConditionalCss(const std::vector<std::shared_ptr<IfNode>>& chain);
 };
 
 }

@@ -170,7 +170,9 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                 auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
                 std::vector<std::pair<std::string, std::string>> style_properties;
 
-                for (const auto& styleChild : styleNode->getChildren()) {
+                const auto& style_children = styleNode->getChildren();
+                for (size_t i = 0; i < style_children.size(); ++i) {
+                    const auto& styleChild = style_children[i];
                     if (styleChild->getType() == NodeType::NODE_PROPERTY) {
                         auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
                         if (prop) {
@@ -202,8 +204,31 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                                  collectStyleProperties(templateNode, style_properties);
                              }
                         }
-                    } else if (styleChild->getType() == NodeType::NODE_RULE || styleChild->getType() == NodeType::NODE_IF) {
-                        visit(styleChild); // Dispatch to global CSS generation
+                    } else if (styleChild->getType() == NodeType::NODE_RULE) {
+                        visit(styleChild);
+                    } else if (styleChild->getType() == NodeType::NODE_IF) {
+                        auto if_node = std::dynamic_pointer_cast<IfNode>(styleChild);
+                        if (if_node && if_node->if_type == IfType::IF) {
+                            std::vector<std::shared_ptr<IfNode>> chain;
+                            chain.push_back(if_node);
+
+                            size_t j = i + 1;
+                            while (j < style_children.size()) {
+                                if (auto next_if_node = std::dynamic_pointer_cast<IfNode>(style_children[j])) {
+                                    if (next_if_node->if_type == IfType::ELSE_IF || next_if_node->if_type == IfType::ELSE) {
+                                        chain.push_back(next_if_node);
+                                        j++;
+                                        if (next_if_node->if_type == IfType::ELSE) break;
+                                    } else {
+                                        break;
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            generateConditionalCss(chain);
+                            i = j - 1; // Advance loop counter
+                        }
                     }
                 }
 
@@ -232,38 +257,51 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
     }
 }
 
-void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
+void CHTLGenerator::generateConditionalCss(const std::vector<std::shared_ptr<IfNode>>& chain) {
     if (element_stack.empty()) {
-        throw std::runtime_error("IfNode must be a child of an ElementNode's style block.");
+        return; // Should not happen
     }
+    auto parent_element = element_stack.back();
+    std::string selector = generateElementSelector(parent_element);
 
-    // Only 'if' and 'else if' have conditions to parse.
-    if (node->if_type == IfType::IF || node->if_type == IfType::ELSE_IF) {
-        auto parent_element = element_stack.back();
-        ParsedCondition p_condition = parseCondition(node->condition);
+    for (const auto& if_node : chain) {
+        if (if_node->if_type == IfType::IF || if_node->if_type == IfType::ELSE_IF) {
+            try {
+                ParsedCondition p_condition = parseCondition(if_node->condition);
 
-        std::string media_feature;
-        if (p_condition.property == "width") {
-            media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-width" : "max-width";
-        } else if (p_condition.property == "height") {
-            media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-height" : "max-height";
-        } else {
-            // Silently ignore unsupported properties for now.
-            return;
-        }
+                std::string media_feature;
+                if (p_condition.property == "width") {
+                    media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-width" : "max-width";
+                } else if (p_condition.property == "height") {
+                    media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-height" : "max-height";
+                } else {
+                    continue; // Silently ignore unsupported properties
+                }
 
-        // For now, we only handle simple if blocks, not else if/else
-        css_out << "@media (" << media_feature << ": " << p_condition.value << ") {";
-        css_out << generateElementSelector(parent_element) << " {";
-        for (const auto& child : node->getChildren()) {
-            if (auto prop_node = std::dynamic_pointer_cast<PropertyNode>(child)) {
-                css_out << prop_node->getKey() << ": " << prop_node->getValue() << ";";
+                css_out << "@media (" << media_feature << ": " << p_condition.value << ") { ";
+                css_out << selector << " { ";
+                for (const auto& child : if_node->getChildren()) {
+                    if (auto prop_node = std::dynamic_pointer_cast<PropertyNode>(child)) {
+                        css_out << prop_node->getKey() << ": " << prop_node->getValue() << "; ";
+                    }
+                }
+                css_out << "} } ";
+            } catch (const std::runtime_error& e) {
+                // If parsing the condition fails for any reason (e.g., malformed operator),
+                // just ignore this block and continue.
+                continue;
             }
         }
-        css_out << "}";
-        css_out << "}";
+        // NOTE: 'else' blocks are currently not translated into CSS as it requires
+        // complex media query negation which is beyond the scope of the current implementation.
     }
-    // 'else' blocks are not supported for media query generation, so we do nothing.
+}
+
+
+void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
+    // This logic is now handled by generateConditionalCss, which is called
+    // from visit(ElementNode) to process entire if-else chains.
+    // This method is intentionally left empty.
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<TextNode>& node) {
