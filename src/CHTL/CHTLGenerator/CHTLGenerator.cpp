@@ -76,21 +76,28 @@ void CHTLGenerator::visit(StyleNode& node) {
 void CHTLGenerator::visit(ScriptNode& node) {
     String content = node.getContent();
     
-    // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
-    if (content.find("{{") != String::npos) {
-        JS::JSGeneratorConfig jsConfig;
-        jsConfig.wrapIIFE = false;  // 不自动包装IIFE
-        jsConfig.prettyPrint = false;
-        JS::CHTLJSGenerator jsGen(jsConfig);
-        content = jsGen.generate(content);
-    }
+    // DEBUG: 打印原始内容
+    #ifdef DEBUG_SCRIPT
+    std::cerr << "DEBUG: Original script content: '" << content << "'" << std::endl;
+    #endif
+    
+    // 总是使用CHTL JS生成器处理脚本内容（处理增强选择器和其他CHTL JS语法）
+    JS::JSGeneratorConfig jsConfig;
+    jsConfig.wrapIIFE = false;  // 不自动包装IIFE
+    jsConfig.prettyPrint = false;
+    JS::CHTLJSGenerator jsGen(jsConfig);
+    String processedContent = jsGen.generate(content);
+    
+    #ifdef DEBUG_SCRIPT
+    std::cerr << "DEBUG: Processed script content: '" << processedContent << "'" << std::endl;
+    #endif
     
     if (node.isLocal()) {
         // 局部脚本添加到全局脚本区
-        appendJs(content);
+        appendJs(processedContent);
         appendJs("\n");
     } else {
-        generateScript(content);
+        generateScript(processedContent);
     }
 }
 
@@ -405,7 +412,16 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
     
     if (node->getType() == NodeType::Script) {
         auto scriptNode = std::dynamic_pointer_cast<ScriptNode>(node);
-        output += scriptNode->getContent();
+        String content = scriptNode->getContent();
+        
+        // 使用CHTL JS生成器处理脚本内容（处理增强选择器等）
+        JS::JSGeneratorConfig jsConfig;
+        jsConfig.wrapIIFE = false;
+        jsConfig.prettyPrint = false;
+        JS::CHTLJSGenerator jsGen(jsConfig);
+        content = jsGen.generate(content);
+        
+        output += content;
         output += "\n\n";
     }
     

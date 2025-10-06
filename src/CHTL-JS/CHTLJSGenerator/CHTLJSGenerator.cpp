@@ -12,45 +12,49 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
     String result = chtljsCode;
     
     // 处理增强选择器 {{...}}
-    // 使用简单的字符串查找替换，避免regex复杂性
     size_t pos = 0;
     while ((pos = result.find("{{", pos)) != String::npos) {
         size_t endPos = result.find("}}", pos);
         if (endPos == String::npos) {
-            break;  // 没有找到结束标记
+            break;
         }
         
-        // 提取选择器内容
         String selector = result.substr(pos + 2, endPos - pos - 2);
-        
-        // 转换为JavaScript
         String jsCode = processEnhancedSelector(selector);
-        
-        // 替换
         result.replace(pos, endPos - pos + 2, jsCode);
         pos += jsCode.length();
     }
     
-    // 处理 & 引用
+    // 处理 & 引用（在增强选择器处理之后）
     pos = 0;
     while ((pos = result.find("&", pos)) != String::npos) {
-        // 检查是否是 && 或 &-> 
         if (pos + 1 < result.length()) {
             char next = result[pos + 1];
             if (next == '&' || next == '-') {
-                pos += 2;  // 跳过逻辑运算符和事件绑定
+                pos += 2;
                 continue;
             }
         }
         
-        // 单独的 & 需要替换为上下文引用
-        String contextRef = bridge_.resolveAmpersand(false);  // script中优先id
+        String contextRef = bridge_.resolveAmpersand(false);
         if (!contextRef.empty()) {
             result.replace(pos, 1, contextRef);
             pos += contextRef.length();
         } else {
             pos++;
         }
+    }
+    
+    // 处理 -> 箭头操作符（转换为.）
+    pos = 0;
+    while ((pos = result.find("->", pos)) != String::npos) {
+        // 检查是否是事件绑定 &->
+        if (pos > 0 && result[pos - 1] == '&') {
+            pos += 2;
+            continue;
+        }
+        result.replace(pos, 2, ".");
+        pos += 1;
     }
     
     // 如果配置要求，用IIFE包装
