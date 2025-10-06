@@ -185,3 +185,20 @@ TEST_CASE("Generator ignores if condition with unsupported property", "[generato
     auto generator = generateOutput(input);
     REQUIRE(generator.getCss().empty());
 }
+
+TEST_CASE("Generator handles local script block", "[generator][script]") {
+    std::string input = R"(
+        button {
+            id: "myBtn";
+            script {
+                document.getElementById('myBtn').addEventListener('click', () => { console.log('Button clicked!'); });
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    // The parser re-tokenizes and re-assembles the script, which can affect spacing and quote types.
+    // This test verifies the current, functional output.
+    std::string expected_script_content = "document.getElementById(\"myBtn\").addEventListener(\"click\",()=>{console.log(\"Button clicked!\");});";
+    std::string expected_html = R"(<button id="myBtn"><script>)" + expected_script_content + R"(</script></button>)";
+    REQUIRE(generator.getHtml() == expected_html);
+}
