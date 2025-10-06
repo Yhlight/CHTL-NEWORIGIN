@@ -9,9 +9,7 @@ namespace CHTL {
 
 class NamespaceNode : public BaseNode {
 public:
-    NamespaceNode(const std::string& name) : name(name) {
-        type = NodeType::NODE_NAMESPACE;
-    }
+    NamespaceNode(const std::string& name) : BaseNode(NodeType::NODE_NAMESPACE), name(name) {}
 
     const std::string& getName() const { return name; }
 

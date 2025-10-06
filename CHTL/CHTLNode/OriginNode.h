@@ -10,9 +10,7 @@ namespace CHTL {
 class OriginNode : public BaseNode {
 public:
     OriginNode(const std::string& originType, const std::string& name, const std::string& content)
-        : originType(originType), name(name), content(content) {
-        type = NodeType::NODE_ORIGIN;
-    }
+        : BaseNode(NodeType::NODE_ORIGIN), originType(originType), name(name), content(content) {}
 
     const std::string& getOriginType() const { return originType; }
     const std::string& getName() const { return name; }

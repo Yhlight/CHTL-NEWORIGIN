@@ -131,6 +131,21 @@ TEST_CASE("Parser handles element template", "[parser]") {
     REQUIRE(div->getTagName() == "div");
 }
 
+TEST_CASE("Parser rejects inheritance in anonymous style blocks", "[parser][error]") {
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    std::string input = "div { style: SomeBaseStyle { color: red; } }";
+    CHTL::CHTLLexer lexer(input, configManager);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
+
+    CHTL::CHTLParser parser(tokens, configManager);
+    REQUIRE_THROWS_AS(parser.parse(), std::runtime_error);
+}
+
 TEST_CASE("Parser handles variable template usage", "[parser]") {
     auto node = getFirstNode("div { style { color: MyTheme(primary); } }");
     REQUIRE(node != nullptr);

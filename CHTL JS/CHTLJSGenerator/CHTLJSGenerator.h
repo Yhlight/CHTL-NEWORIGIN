@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CHTLJSNode/BaseNode.h"
+#include "SaltBridge.h" // Include for AnimationData
 #include <string>
 #include <memory>
 #include <sstream>
@@ -14,6 +15,7 @@ class StringLiteralNode;
 class CHTLJSGenerator {
 public:
     std::string generate(const std::shared_ptr<BaseNode>& node);
+    std::string generateAnimation(const CHTL::AnimationData& data);
 
 private:
     void visit(const std::shared_ptr<BaseNode>& node);

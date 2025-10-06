@@ -106,3 +106,99 @@ TEST_CASE("Generator expands variable template", "[generator]") {
     auto generator = generateOutput(input);
     REQUIRE(generator.getHtml() == R"(<div style="background-color:blue;color:white;"></div>)");
 }
+
+TEST_CASE("Generator handles simple if condition for width", "[generator][conditional]") {
+    std::string input = R"(
+        div {
+            id: "box";
+            style {
+                if {
+                    condition: width > 600px,
+                    display: none,
+                }
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    std::string expected_css = "@media (min-width: 600px) { div#box { display: none; } }";
+    REQUIRE(normalize_css(generator.getCss()) == normalize_css(expected_css));
+}
+
+TEST_CASE("Generator handles if-else-if chain", "[generator][conditional]") {
+    std::string input = R"(
+        p {
+            class: "text";
+            style {
+                if {
+                    condition: width > 1000px,
+                    font-size: 18px,
+                }
+                else if {
+                    condition: width > 600px,
+                    font-size: 16px,
+                }
+                else {
+                    font-size: 14px,
+                }
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    std::string expected_css = R"(
+        @media (min-width: 1000px) { p.text { font-size: 18px; } }
+        @media (min-width: 600px) { p.text { font-size: 16px; } }
+    )";
+    // The 'else' block is correctly ignored as it has no media query equivalent.
+    // The inline style for 'else' is also not applied, which is the expected behavior for now.
+    REQUIRE(normalize_css(generator.getCss()) == normalize_css(expected_css));
+    REQUIRE(generator.getHtml() == R"(<p class="text"></p>)");
+}
+
+TEST_CASE("Generator handles if condition for height", "[generator][conditional]") {
+    std::string input = R"(
+        div {
+            id: "container";
+            style {
+                if {
+                    condition: height < 400px,
+                    overflow: hidden,
+                }
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    std::string expected_css = "@media (max-height: 400px) { div#container { overflow: hidden; } }";
+    REQUIRE(normalize_css(generator.getCss()) == normalize_css(expected_css));
+}
+
+TEST_CASE("Generator ignores if condition with unsupported property", "[generator][conditional]") {
+    std::string input = R"(
+        div {
+            style {
+                if {
+                    condition: color == red,
+                    display: none,
+                }
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    REQUIRE(generator.getCss().empty());
+}
+
+TEST_CASE("Generator handles local script block", "[generator][script]") {
+    std::string input = R"(
+        button {
+            id: "myBtn";
+            script {
+                document.getElementById('myBtn').addEventListener('click', () => { console.log('Button clicked!'); });
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    // The parser re-tokenizes and re-assembles the script, which can affect spacing and quote types.
+    // This test verifies the current, functional output.
+    std::string expected_script_content = "document.getElementById(\"myBtn\").addEventListener(\"click\",()=>{console.log(\"Button clicked!\");});";
+    std::string expected_html = R"(<button id="myBtn"><script>)" + expected_script_content + R"(</script></button>)";
+    REQUIRE(generator.getHtml() == expected_html);
+}

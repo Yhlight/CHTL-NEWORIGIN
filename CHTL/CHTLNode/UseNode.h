@@ -7,9 +7,7 @@ namespace CHTL {
 
 class UseNode : public BaseNode {
 public:
-    UseNode(const std::string& useType) : useType(useType) {
-        this->type = NodeType::NODE_USE;
-    }
+    UseNode(const std::string& useType) : BaseNode(NodeType::NODE_USE), useType(useType) {}
 
     const std::string& getUseType() const { return useType; }
 

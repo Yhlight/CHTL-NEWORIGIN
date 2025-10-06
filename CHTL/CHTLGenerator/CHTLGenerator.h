@@ -2,9 +2,12 @@
 
 #include "../CHTLNode/BaseNode.h"
 #include "../CHTLContext/GenerationContext.h"
+#include "../CHTLParser/ParsingUtils.h" // For parseCondition
 #include <string>
 #include <memory>
 #include <sstream>
+#include <map>
+#include <vector>
 
 namespace CHTL {
 
@@ -22,10 +25,11 @@ class PropertyNode;
 class RuleNode;
 class UseNode;
 class TemplateUsageNode;
-class IfNode;
 class DeleteNode;
 class InsertNode;
 class ScriptNode;
+class AnimateNode;
+class IfNode; // Added IfNode
 class SaltBridge;
 
 class CHTLGenerator {
@@ -50,16 +54,26 @@ private:
     void visit(const std::shared_ptr<RuleNode>& node);
     void visit(const std::shared_ptr<UseNode>& node);
     void visit(const std::shared_ptr<TemplateUsageNode>& node);
-    void visit(const std::shared_ptr<IfNode>& node);
     void visit(const std::shared_ptr<DeleteNode>& node);
     void visit(const std::shared_ptr<InsertNode>& node);
     void visit(const std::shared_ptr<ScriptNode>& node);
+    void visit(const std::shared_ptr<AnimateNode>& node);
+    void visit(const std::shared_ptr<IfNode>& node);
+
+    // Condition evaluation helpers
+    bool evaluateCondition(const std::string& condition);
+    std::shared_ptr<ElementNode> findElementBySelector(const std::string& selector);
+    std::string getElementPropertyValue(const std::shared_ptr<ElementNode>& element, const std::string& propertyName);
 
     std::stringstream html_out;
     std::stringstream css_out;
     const GenerationContext* context;
     SaltBridge* salt_bridge;
     std::vector<std::shared_ptr<ElementNode>> element_stack;
+    std::shared_ptr<BaseNode> ast_root; // To enable tree traversal
+
+    void collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties);
+    void generateConditionalCss(const std::vector<std::shared_ptr<IfNode>>& chain);
 };
 
 }

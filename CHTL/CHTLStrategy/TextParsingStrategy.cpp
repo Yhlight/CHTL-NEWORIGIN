@@ -3,6 +3,7 @@
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include <sstream>
+#include <stdexcept>
 
 namespace CHTL {
 
@@ -25,8 +26,25 @@ std::shared_ptr<BaseNode> TextParsingStrategy::parse(CHTLParserContext* context)
         if (context->getCurrentToken().type == TokenType::TOKEN_RBRACE) {
             context->advance(); // consume '}'
         } else {
-            // Error: Unclosed text block
+            throw std::runtime_error("Unclosed text block.");
         }
+    }
+    else if (context->getCurrentToken().type == TokenType::TOKEN_COLON || context->getCurrentToken().type == TokenType::TOKEN_ASSIGN) {
+        context->advance(); // consume ':' or '='
+
+        if (context->getCurrentToken().type == TokenType::TOKEN_STRING_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_UNQUOTED_LITERAL) {
+            content << context->getCurrentToken().lexeme;
+            context->advance(); // consume value
+        } else {
+            throw std::runtime_error("Expected a value after 'text:'.");
+        }
+
+        if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
+            context->advance(); // consume optional ';'
+        }
+    }
+    else {
+        throw std::runtime_error("Invalid syntax after 'text' keyword. Expected '{' or ':'.");
     }
 
     textElement->addChild(std::make_shared<TextNode>(content.str()));

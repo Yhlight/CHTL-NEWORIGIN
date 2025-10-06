@@ -20,9 +20,7 @@ public:
     InsertPosition position;
     std::string target_selector;
 
-    InsertNode() {
-        type = NodeType::NODE_INSERT;
-    }
+    InsertNode() : BaseNode(NodeType::NODE_INSERT) {}
 };
 
 }

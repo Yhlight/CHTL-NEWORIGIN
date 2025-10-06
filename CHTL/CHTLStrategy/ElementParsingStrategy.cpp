@@ -13,25 +13,6 @@
 
 namespace CHTL {
 
-void parseAttributes(CHTLParserContext* context, std::shared_ptr<ElementNode> element) {
-    while (context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER && (context->peek(1).type == TokenType::TOKEN_COLON || context->peek(1).type == TokenType::TOKEN_ASSIGN)) {
-        std::string key = context->getCurrentToken().lexeme;
-        context->advance(); // consume identifier
-        context->advance(); // consume ':' or '='
-        if (context->getCurrentToken().type == TokenType::TOKEN_STRING_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_UNQUOTED_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_NUMERIC_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER) {
-            std::string value = context->getCurrentToken().lexeme;
-            context->advance(); // consume value
-            element->setAttribute(key, value);
-            if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
-                context->advance(); // consume ';'
-            }
-        } else {
-            throw std::runtime_error("Invalid attribute value for key: " + key);
-        }
-    }
-}
-
-
 std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* context) {
     Token identifier = context->getCurrentToken();
     context->advance();
@@ -43,11 +24,15 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
     if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
         context->advance(); // Consume '{'
 
-        // First, parse all attributes.
-        parseAttributes(context, element);
-
-        // Now, parse all blocks and nested elements.
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
+            // Skip comments
+            while ((context->getCurrentToken().type == TokenType::TOKEN_SINGLE_LINE_COMMENT ||
+                    context->getCurrentToken().type == TokenType::TOKEN_MULTI_LINE_COMMENT ||
+                    context->getCurrentToken().type == TokenType::TOKEN_GENERATOR_COMMENT) && !context->isAtEnd()) {
+                context->advance();
+            }
+            if (context->getCurrentToken().type == TokenType::TOKEN_RBRACE) break;
+
             TokenType currentType = context->getCurrentToken().type;
 
             if (currentType == TokenType::TOKEN_STYLE) {
@@ -59,16 +44,36 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
             } else if (currentType == TokenType::TOKEN_TEXT) {
                 context->setStrategy(std::make_unique<TextParsingStrategy>());
                 element->addChild(context->runCurrentStrategy());
-            } else if (currentType == TokenType::TOKEN_IF || currentType == TokenType::TOKEN_ELSE) {
-                context->setStrategy(std::make_unique<IfParsingStrategy>());
+            } else if (currentType == TokenType::TOKEN_IF) {
+                context->setStrategy(std::make_unique<IfParsingStrategy>(IfParsingMode::Rendering));
                 element->addChild(context->runCurrentStrategy());
+            } else if (currentType == TokenType::TOKEN_ELSE) {
+                throw std::runtime_error("Syntax Error: 'else' or 'else if' without a preceding 'if' block.");
             } else if (currentType == TokenType::TOKEN_EXCEPT) {
                 context->setStrategy(std::make_unique<ConstraintParsingStrategy>());
                 element->addChild(context->runCurrentStrategy());
             } else if (currentType == TokenType::TOKEN_IDENTIFIER) {
-                // Since attributes are already parsed, this must be a nested element.
-                context->setStrategy(std::make_unique<ElementParsingStrategy>());
-                element->addChild(context->runCurrentStrategy());
+                // Distinguish between an attribute and a nested element.
+                if (context->peek(1).type == TokenType::TOKEN_COLON || context->peek(1).type == TokenType::TOKEN_ASSIGN) {
+                    // It's an attribute.
+                    std::string key = context->getCurrentToken().lexeme;
+                    context->advance(); // consume identifier
+                    context->advance(); // consume ':' or '='
+                    if (context->getCurrentToken().type == TokenType::TOKEN_STRING_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_UNQUOTED_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_NUMERIC_LITERAL || context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER) {
+                        std::string value = context->getCurrentToken().lexeme;
+                        context->advance(); // consume value
+                        element->setAttribute(key, value);
+                        if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
+                            context->advance(); // consume optional ';'
+                        }
+                    } else {
+                        throw std::runtime_error("Invalid attribute value for key: " + key);
+                    }
+                } else {
+                    // It's a nested element.
+                    context->setStrategy(std::make_unique<ElementParsingStrategy>());
+                    element->addChild(context->runCurrentStrategy());
+                }
             } else if (currentType == TokenType::TOKEN_AT) {
                 context->advance(); // consume '@'
                 std::string itemTypeStr = context->getCurrentToken().lexeme;

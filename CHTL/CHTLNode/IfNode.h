@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BaseNode.h"
-#include "PropertyNode.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -17,7 +16,8 @@ namespace CHTL {
     public:
         IfType if_type;
         std::string condition;
+        std::shared_ptr<IfNode> next_if = nullptr;
 
-        IfNode() { type = CHTL::NodeType::NODE_IF; }
+        IfNode() : BaseNode(NodeType::NODE_IF) {}
     };
 }

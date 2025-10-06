@@ -1,0 +1,108 @@
+// ===================================
+// 1. Style Group Template Test
+// ===================================
+[Template] @Style BasicBox {
+    width: 200px;
+    height: 200px;
+    border: 1px solid black;
+}
+
+// ===================================
+// 2. Element Template Test
+// ===================================
+[Template] @Element SimpleCard {
+    div {
+        class: "card";
+        h2 {
+            class: "card-title";
+            text: "Card Title";
+        }
+        p {
+            class: "card-body";
+            text: "This is the body of the card.";
+        }
+    }
+}
+
+// ===================================
+// 3. Variable Group Template Test
+// ===================================
+[Template] @Var ThemeColors {
+    primary: "blue";
+    secondary: "white";
+    accent: "gold";
+}
+
+// ===================================
+// 4. Template Inheritance Test
+// ===================================
+[Template] @Style BaseTheme {
+    font-family: "Arial", sans-serif;
+    font-size: 16px;
+    color: #333;
+}
+
+// Implicit inheritance, overriding color
+[Template] @Style DarkTheme {
+    @Style BaseTheme;
+    color: #FFF;
+    background-color: #222;
+}
+
+// Explicit inheritance, overriding font-size
+[Template] @Style LargeTextTheme {
+    inherit @Style BaseTheme;
+    font-size: 24px;
+}
+
+
+// ===================================
+// Main Document Body
+// ===================================
+html {
+    body {
+        // Test Style Group Template
+        div {
+            class: "my-box";
+            style {
+                @Style BasicBox;
+                background-color: "red";
+            }
+            text: "This is a styled box.";
+        }
+
+        // Test Element Template
+        @Element SimpleCard;
+
+        // Test Variable Group Template
+        div {
+            class: "themed-box";
+            style {
+                background-color: ThemeColors(primary);
+                color: ThemeColors(secondary);
+                border-color: ThemeColors(accent);
+                border-style: solid;
+                border-width: 2px;
+            }
+            text: "This box should be styled with theme colors.";
+        }
+
+        // Test Implicit Inheritance and Override
+        div {
+            class: "dark-box";
+            style {
+                @Style DarkTheme;
+            }
+            text: "This box uses the dark theme.";
+        }
+
+        // Test Explicit Inheritance and Override
+        p {
+            class: "large-text";
+            style {
+                @Style LargeTextTheme;
+            }
+            text: "This paragraph uses the large text theme.";
+        }
+    }
+}

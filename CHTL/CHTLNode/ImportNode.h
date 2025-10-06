@@ -28,14 +28,10 @@ enum class ImportCategory {
 class ImportNode : public BaseNode {
 public:
     ImportNode(ImportType importType, const std::string& path, const std::string& alias = "")
-        : importType(importType), path(path), alias(alias), category(ImportCategory::NONE), itemType(""), itemName("") {
-        type = NodeType::NODE_IMPORT;
-    }
+        : BaseNode(NodeType::NODE_IMPORT), importType(importType), path(path), alias(alias), category(ImportCategory::NONE), itemType(""), itemName("") {}
 
     ImportNode(ImportCategory category, const std::string& itemType, const std::string& itemName, const std::string& path, const std::string& alias = "")
-        : importType(ImportType::CHTL), category(category), itemType(itemType), itemName(itemName), path(path), alias(alias) {
-        type = NodeType::NODE_IMPORT;
-    }
+        : BaseNode(NodeType::NODE_IMPORT), importType(ImportType::CHTL), category(category), itemType(itemType), itemName(itemName), path(path), alias(alias) {}
 
     ImportType getImportType() const { return importType; }
     ImportCategory getCategory() const { return category; }

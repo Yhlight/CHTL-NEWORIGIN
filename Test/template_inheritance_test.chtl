@@ -1,0 +1,41 @@
+// Base template
+[Template] @Style BaseTheme {
+    font-family: "Arial", sans-serif;
+    font-size: 16px;
+    color: #333;
+}
+
+// Implicit inheritance, overriding color
+[Template] @Style DarkTheme {
+    @Style BaseTheme;
+    color: #FFF;
+    background-color: #222;
+}
+
+// Explicit inheritance, overriding font-size
+[Template] @Style LargeTextTheme {
+    inherit @Style BaseTheme;
+    font-size: 24px;
+}
+
+html {
+    body {
+        // Test implicit inheritance and override
+        div {
+            class: "dark-box";
+            style {
+                @Style DarkTheme;
+            }
+            text: "This box uses the dark theme.";
+        }
+
+        // Test explicit inheritance and override
+        p {
+            class: "large-text";
+            style {
+                @Style LargeTextTheme;
+            }
+            text: "This paragraph uses the large text theme.";
+        }
+    }
+}

@@ -1,6 +1,7 @@
 #include "TemplateParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
 #include "../CHTLNode/TemplateNode.h"
+#include "../CHTLNode/TemplateUsageNode.h" // Add this include
 #include "../CHTLParser/ParsingUtils.h"
 #include "ElementParsingStrategy.h"
 #include "TextParsingStrategy.h"
@@ -44,7 +45,60 @@ std::shared_ptr<BaseNode> TemplateParsingStrategy::parse(CHTLParserContext* cont
 
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
             if (templateType == TemplateType::STYLE || templateType == TemplateType::VAR) {
-                parseProperties(context, templateNode);
+
+                bool is_inheritance = (context->getCurrentToken().lexeme == "inherit");
+                if (is_inheritance) {
+                    context->advance(); // consume 'inherit'
+                }
+
+                // Handle both implicit and explicit inheritance
+                if (context->getCurrentToken().type == TokenType::TOKEN_AT) {
+                    context->advance(); // consume '@'
+                    std::string usageTypeStr = context->getCurrentToken().lexeme;
+                    if (usageTypeStr != "Style") throw std::runtime_error("Only @Style templates can be inherited in a Style template.");
+                    context->advance(); // consume type
+
+                    std::string templateName = context->getCurrentToken().lexeme;
+                    context->advance(); // consume name
+                    templateNode->addChild(std::make_shared<TemplateUsageNode>(templateName, TemplateUsageType::STYLE));
+
+                    if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) context->advance();
+                    continue;
+                }
+
+                if (is_inheritance) {
+                    // If we saw 'inherit', we must see '@Style'
+                    throw std::runtime_error("Expected '@Style' after 'inherit'.");
+                }
+
+                // Handle Property Declaration
+                if (context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER || context->getCurrentToken().type == TokenType::TOKEN_UNQUOTED_LITERAL) {
+                    std::string key = context->getCurrentToken().lexeme;
+                    context->advance(); // consume key
+
+                    if (context->getCurrentToken().type != TokenType::TOKEN_COLON && context->getCurrentToken().type != TokenType::TOKEN_ASSIGN) {
+                        throw std::runtime_error("Expected ':' or '=' after property key '" + key + "'.");
+                    }
+                    context->advance(); // consume ':' or '='
+
+                    std::string value;
+                    while (context->getCurrentToken().type != TokenType::TOKEN_SEMICOLON && context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
+                        value += context->getCurrentToken().lexeme;
+                        const auto& next_token = context->peek(1);
+                        if (next_token.type != TokenType::TOKEN_SEMICOLON && next_token.type != TokenType::TOKEN_RBRACE && next_token.type != TokenType::TOKEN_EOF) {
+                            value += " ";
+                        }
+                        context->advance();
+                    }
+
+                    templateNode->addChild(std::make_shared<PropertyNode>(key, value));
+
+                    if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) context->advance();
+                    continue;
+                }
+
+                throw std::runtime_error("Unexpected token in template block: " + context->getCurrentToken().lexeme);
+
             } else if (templateType == TemplateType::ELEMENT) {
                 TokenType currentType = context->getCurrentToken().type;
                 if (currentType == TokenType::TOKEN_STYLE) {
