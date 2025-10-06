@@ -25,6 +25,14 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
         context->advance(); // Consume '{'
 
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
+            // Skip comments
+            while ((context->getCurrentToken().type == TokenType::TOKEN_SINGLE_LINE_COMMENT ||
+                    context->getCurrentToken().type == TokenType::TOKEN_MULTI_LINE_COMMENT ||
+                    context->getCurrentToken().type == TokenType::TOKEN_GENERATOR_COMMENT) && !context->isAtEnd()) {
+                context->advance();
+            }
+            if (context->getCurrentToken().type == TokenType::TOKEN_RBRACE) break;
+
             TokenType currentType = context->getCurrentToken().type;
 
             if (currentType == TokenType::TOKEN_STYLE) {

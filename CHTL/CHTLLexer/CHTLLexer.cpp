@@ -50,6 +50,12 @@ Token CHTLLexer::getNextToken() {
         return makeToken(TokenType::TOKEN_EOF, "");
     }
 
+    // Handle generator comments separately to avoid conflicts with '#' in IDs/colors
+    if (c == '#' && position + 1 < source.length() && source[position + 1] == ' ') {
+        advance(); // consume '#'
+        return generatorComment();
+    }
+
     switch (c) {
         case '@': advance(); return makeToken(TokenType::TOKEN_AT, "@");
         case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
@@ -79,9 +85,7 @@ Token CHTLLexer::getNextToken() {
             }
             return makeToken(TokenType::TOKEN_DIVIDE, "/");
 
-        case '#':
-            advance();
-            return generatorComment();
+        // The '#' case is now handled above the switch
 
         case '"':
         case '\'':
@@ -95,7 +99,7 @@ Token CHTLLexer::getNextToken() {
 
 Token CHTLLexer::lexIdentifierOrLiteral() {
     std::string lexeme;
-    const char* delimiters = "{}()[]:;,.=?# \t\n\r";
+    const char* delimiters = "{}()[]:;,.=? \t\n\r";
     while (peek() != '\0' && strchr(delimiters, peek()) == nullptr) {
         lexeme += advance();
     }

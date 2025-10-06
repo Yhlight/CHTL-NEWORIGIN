@@ -21,6 +21,12 @@ inline std::string normalize_html(std::string str) {
     return str;
 }
 
+// Helper to normalize CSS strings for comparison
+inline std::string normalize_css(std::string str) {
+    str.erase(std::remove_if(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); }), str.end());
+    return str;
+}
+
 // Helper to perform the full compilation process and return the generator
 inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
     auto configManager = std::make_shared<CHTL::ConfigurationManager>();

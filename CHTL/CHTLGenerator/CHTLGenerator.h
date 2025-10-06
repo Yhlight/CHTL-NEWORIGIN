@@ -6,6 +6,8 @@
 #include <string>
 #include <memory>
 #include <sstream>
+#include <map>
+#include <vector>
 
 namespace CHTL {
 
@@ -63,6 +65,8 @@ private:
     const GenerationContext* context;
     SaltBridge* salt_bridge;
     std::vector<std::shared_ptr<ElementNode>> element_stack;
+
+    void collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties);
 };
 
 }

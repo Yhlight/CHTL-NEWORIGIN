@@ -22,6 +22,7 @@
 #include <set>
 #include <map>
 #include <sstream>
+#include <algorithm> // For std::find_if
 
 namespace CHTL {
 
@@ -115,6 +116,38 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
     }
 }
 
+void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties) {
+    if (!tNode) return;
+
+    // First, recursively collect properties from parent templates
+    for (const auto& child : tNode->getChildren()) {
+        if (child->getType() == NodeType::NODE_TEMPLATE_USAGE) {
+            auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(child);
+            if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
+                auto parentTemplate = context->getTemplate(usageNode->getName());
+                collectStyleProperties(parentTemplate, properties);
+            }
+        }
+    }
+
+    // Then, apply properties from the current template, overriding any from parents
+    for (const auto& child : tNode->getChildren()) {
+        if (child->getType() == NodeType::NODE_PROPERTY) {
+            auto propNode = std::dynamic_pointer_cast<PropertyNode>(child);
+            if (propNode) {
+                // Find and replace existing property, or add new one
+                auto it = std::find_if(properties.begin(), properties.end(),
+                                       [&](const auto& p) { return p.first == propNode->getKey(); });
+                if (it != properties.end()) {
+                    it->second = propNode->getValue();
+                } else {
+                    properties.push_back({propNode->getKey(), propNode->getValue()});
+                }
+            }
+        }
+    }
+}
+
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
     if (node->getTagName() == "text") {
         for (const auto& child : node->getChildren()) {
@@ -135,6 +168,8 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
         for (const auto& child : node->getChildren()) {
             if (child->getType() == NodeType::NODE_STYLE) {
                 auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+                std::vector<std::pair<std::string, std::string>> style_properties;
+
                 for (const auto& styleChild : styleNode->getChildren()) {
                     if (styleChild->getType() == NodeType::NODE_PROPERTY) {
                         auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
@@ -148,7 +183,7 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                                             if (varChild->getType() == NodeType::NODE_PROPERTY) {
                                                 auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild);
                                                 if (varProp && varProp->getKey() == usageNode->getVariableName()) {
-                                                    style_ss << prop->getKey() << ":" << varProp->getValue() << ";";
+                                                    style_properties.push_back({prop->getKey(), varProp->getValue()});
                                                     break;
                                                 }
                                             }
@@ -156,7 +191,7 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                                     }
                                 }
                             } else {
-                                style_ss << prop->getKey() << ":" << prop->getValue() << ";";
+                                style_properties.push_back({prop->getKey(), prop->getValue()});
                             }
                         }
                     } else if (styleChild->getType() == NodeType::NODE_TEMPLATE_USAGE) {
@@ -164,19 +199,16 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                         if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
                              auto templateNode = context->getTemplate(usageNode->getName());
                              if(templateNode) {
-                                 for(const auto& templateChild : templateNode->getChildren()) {
-                                     if(templateChild->getType() == NodeType::NODE_PROPERTY) {
-                                         auto prop = std::dynamic_pointer_cast<PropertyNode>(templateChild);
-                                         if (prop) {
-                                            style_ss << prop->getKey() << ":" << prop->getValue() << ";";
-                                         }
-                                     }
-                                 }
+                                 collectStyleProperties(templateNode, style_properties);
                              }
                         }
                     } else if (styleChild->getType() == NodeType::NODE_RULE || styleChild->getType() == NodeType::NODE_IF) {
                         visit(styleChild); // Dispatch to global CSS generation
                     }
+                }
+
+                for (const auto& pair : style_properties) {
+                    style_ss << pair.first << ":" << pair.second << ";";
                 }
             }
         }

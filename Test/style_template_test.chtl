@@ -1,0 +1,18 @@
+[Template] @Style BasicBox {
+    width: 200px;
+    height: 200px;
+    border: 1px solid black;
+}
+
+html {
+    body {
+        div {
+            class: "my-box";
+            style {
+                @Style BasicBox;
+                background-color: "red";
+            }
+            text: "This is a styled box.";
+        }
+    }
+}

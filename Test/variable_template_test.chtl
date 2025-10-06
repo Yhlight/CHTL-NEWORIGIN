@@ -1,0 +1,21 @@
+[Template] @Var ThemeColors {
+    primary: "blue";
+    secondary: "white";
+    accent: "gold";
+}
+
+html {
+    body {
+        div {
+            class: "themed-box";
+            style {
+                background-color: ThemeColors(primary);
+                color: ThemeColors(secondary);
+                border-color: ThemeColors(accent);
+                border-style: solid;
+                border-width: 2px;
+            }
+            text: "This box should be styled with theme colors.";
+        }
+    }
+}
