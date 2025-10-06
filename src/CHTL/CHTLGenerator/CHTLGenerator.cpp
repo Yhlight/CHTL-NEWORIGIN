@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
+#include <cstdio>
 
 namespace CHTL {
 
@@ -89,8 +90,17 @@ void CHTLGenerator::visit(StyleNode& node) {
 void CHTLGenerator::visit(ScriptNode& node) {
     String content = node.getContent();
     
-    // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
-    if (content.find("{{") != String::npos) {
+    // 检查是否包含CHTL JS语法
+    if (content.find("{{") != String::npos || 
+        content.find("&") != String::npos ||
+        content.find("Listen") != String::npos ||
+        content.find("Delegate") != String::npos ||
+        content.find("Animate") != String::npos ||
+        content.find("Router") != String::npos ||
+        content.find("ScriptLoader") != String::npos ||
+        content.find("Vir") != String::npos ||
+        content.find("$") != String::npos) {
+        
         JS::JSGeneratorConfig jsConfig;
         jsConfig.wrapIIFE = false;  // 不自动包装IIFE
         jsConfig.prettyPrint = false;
@@ -555,23 +565,12 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
         auto scriptNode = std::dynamic_pointer_cast<ScriptNode>(node);
         String content = scriptNode->getContent();
         
-        // 检查是否包含CHTL JS语法
-        if (content.find("{{") != String::npos || 
-            content.find("&") != String::npos ||
-            content.find("Listen") != String::npos ||
-            content.find("Delegate") != String::npos ||
-            content.find("Animate") != String::npos ||
-            content.find("Router") != String::npos ||
-            content.find("ScriptLoader") != String::npos ||
-            content.find("Vir") != String::npos ||
-            content.find("$") != String::npos) {
-            
-            JS::JSGeneratorConfig jsConfig;
-            jsConfig.wrapIIFE = false;  // 不自动包装IIFE
-            jsConfig.prettyPrint = false;
-            JS::CHTLJSGenerator jsGen(jsConfig);
-            content = jsGen.generate(content);
-        }
+        // 总是使用CHTL JS生成器处理（它会处理所有CHTL JS语法）
+        JS::JSGeneratorConfig jsConfig;
+        jsConfig.wrapIIFE = false;  // 不自动包装IIFE
+        jsConfig.prettyPrint = false;
+        JS::CHTLJSGenerator jsGen(jsConfig);
+        content = jsGen.generate(content);
         
         output += content;
         output += "\n\n";
