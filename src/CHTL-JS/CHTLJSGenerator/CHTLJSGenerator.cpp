@@ -9,25 +9,48 @@ CHTLJSGenerator::CHTLJSGenerator(const JSGeneratorConfig& config)
     : config_(config), bridge_(Bridge::SaltBridge::getInstance()) {}
 
 String CHTLJSGenerator::generate(const String& chtljsCode) {
-    String code = chtljsCode;
+    String result = chtljsCode;
     
     // 处理增强选择器 {{...}}
-    std::regex selectorRegex(R"(\{\{([^}]+)\}\})");
-    std::smatch match;
-    String result = code;
-    
-    size_t offset = 0;
-    std::string::const_iterator searchStart(code.cbegin());
-    
-    while (std::regex_search(searchStart, code.cend(), match, selectorRegex)) {
-        String selector = match[1].str();
+    // 使用简单的字符串查找替换，避免regex复杂性
+    size_t pos = 0;
+    while ((pos = result.find("{{", pos)) != String::npos) {
+        size_t endPos = result.find("}}", pos);
+        if (endPos == String::npos) {
+            break;  // 没有找到结束标记
+        }
+        
+        // 提取选择器内容
+        String selector = result.substr(pos + 2, endPos - pos - 2);
+        
+        // 转换为JavaScript
         String jsCode = processEnhancedSelector(selector);
         
-        size_t pos = match.position() + offset;
-        result.replace(pos, match[0].length(), jsCode);
-        offset += jsCode.length() - match[0].length();
+        // 替换
+        result.replace(pos, endPos - pos + 2, jsCode);
+        pos += jsCode.length();
+    }
+    
+    // 处理 & 引用
+    pos = 0;
+    while ((pos = result.find("&", pos)) != String::npos) {
+        // 检查是否是 && 或 &-> 
+        if (pos + 1 < result.length()) {
+            char next = result[pos + 1];
+            if (next == '&' || next == '-') {
+                pos += 2;  // 跳过逻辑运算符和事件绑定
+                continue;
+            }
+        }
         
-        searchStart = match.suffix().first;
+        // 单独的 & 需要替换为上下文引用
+        String contextRef = bridge_.resolveAmpersand(false);  // script中优先id
+        if (!contextRef.empty()) {
+            result.replace(pos, 1, contextRef);
+            pos += contextRef.length();
+        } else {
+            pos++;
+        }
     }
     
     // 如果配置要求，用IIFE包装

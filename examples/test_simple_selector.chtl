@@ -1,0 +1,12 @@
+html {
+    body {
+        div {
+            class: mybox;
+            text: "Test";
+            
+            script {
+                {{.mybox}}->textContent = "Updated";
+            }
+        }
+    }
+}

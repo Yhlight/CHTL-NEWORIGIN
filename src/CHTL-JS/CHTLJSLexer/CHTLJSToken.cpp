@@ -4,7 +4,7 @@ namespace CHTL {
 namespace JS {
 
 String JSToken::toString() const {
-    return jsTokenTypeToString(type) + "(\"" + value + "\") at " + position.toString();
+    return String(jsTokenTypeToString(type)) + "(\"" + value + "\") at " + position.toString();
 }
 
 const char* jsTokenTypeToString(JSTokenType type) {

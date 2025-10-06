@@ -464,6 +464,13 @@ String CHTLParser::parseBlockContent(TokenType endToken) {
     while (!isAtEnd()) {
         Token token = getCurrentToken();
         
+        // 特殊处理增强选择器 - 保留{{ }}标记
+        if (token.is(TokenType::EnhancedSelector)) {
+            content += "{{" + token.getValue() + "}}";
+            advance();
+            continue;
+        }
+        
         if (token.is(TokenType::LeftBrace)) {
             braceDepth++;
             content += advance().getValue();

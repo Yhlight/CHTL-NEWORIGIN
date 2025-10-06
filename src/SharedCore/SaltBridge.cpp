@@ -201,11 +201,7 @@ String EnhancedSelectorProcessor::toJavaScript(const SelectorInfo& info) {
             break;
             
         case SelectorType::Id:
-            if (info.index >= 0) {
-                ss << "document.querySelectorAll('#" << info.value << "')[" << info.index << "]";
-            } else {
-                ss << "document.getElementById('" << info.value << "')";
-            }
+            ss << "document.getElementById('" << info.value << "')";
             break;
             
         case SelectorType::Tag:
@@ -217,10 +213,8 @@ String EnhancedSelectorProcessor::toJavaScript(const SelectorInfo& info) {
             break;
             
         case SelectorType::Auto:
-            // 自动推断：先尝试id，再class，最后tag
-            ss << "document.getElementById('" << info.value << "') || "
-               << "document.querySelector('." << info.value << "') || "
-               << "document.querySelector('" << info.value << "')";
+            // 自动推断：优先class（最常用）
+            ss << "document.querySelector('." << info.value << "')";
             break;
             
         case SelectorType::Descendant:
@@ -228,12 +222,19 @@ String EnhancedSelectorProcessor::toJavaScript(const SelectorInfo& info) {
             break;
             
         case SelectorType::Index:
-            ss << "document.querySelectorAll('" << info.value << "')[" << info.index << "]";
+            // 检查是否以.或#开头
+            if (!info.value.empty() && info.value[0] == '.') {
+                ss << "document.querySelectorAll('" << info.value << "')[" << info.index << "]";
+            } else if (!info.value.empty() && info.value[0] == '#') {
+                ss << "document.querySelectorAll('" << info.value << "')[" << info.index << "]";
+            } else {
+                ss << "document.querySelectorAll('." << info.value << "')[" << info.index << "]";
+            }
             break;
             
         case SelectorType::Ampersand:
-            // & 需要从上下文解析
-            ss << "/* & reference */";
+            // & 从SaltBridge获取当前上下文
+            ss << "this";  // 默认使用this
             break;
     }
     
@@ -270,5 +271,3 @@ int EnhancedSelectorProcessor::extractIndex(const String& str) {
 
 } // namespace Bridge
 } // namespace CHTL
-
-#endif // CHTL_SALT_BRIDGE_H
