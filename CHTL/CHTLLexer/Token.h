@@ -30,6 +30,8 @@ namespace CHTL {
         TOKEN_AT,
         TOKEN_LBRACE,
         TOKEN_RBRACE,
+        TOKEN_LBRACE_DOUBLE,
+        TOKEN_RBRACE_DOUBLE,
         TOKEN_LPAREN,
         TOKEN_RPAREN,
         TOKEN_LBRACKET,

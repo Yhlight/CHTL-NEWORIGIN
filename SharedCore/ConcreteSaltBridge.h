@@ -48,6 +48,12 @@ public:
         // return generator.generateAnimation(data);
         return "";
     }
+
+    std::string processDynamicIf(const std::vector<std::shared_ptr<IfNode>>& if_nodes, const std::string& parent_selector) override {
+        // In a real implementation, this would call the CHTLJS compiler.
+        // For now, we return a placeholder.
+        return "<script>/* Dynamic if processed */</script>";
+    }
 };
 
 }

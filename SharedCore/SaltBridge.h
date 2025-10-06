@@ -3,8 +3,10 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 namespace CHTL {
+    class IfNode;
 
     // Data structures for passing animation data across the bridge
     struct AnimationProperty {
@@ -41,6 +43,9 @@ namespace CHTL {
 
         // This method will be called by the CHTLGenerator to process an AnimateNode.
         virtual std::string processAnimation(const AnimationData& data) = 0;
+
+        // This method will be called by the CHTLGenerator to process a dynamic IfNode.
+        virtual std::string processDynamicIf(const std::vector<std::shared_ptr<IfNode>>& if_nodes, const std::string& parent_selector) = 0;
     };
 
 }

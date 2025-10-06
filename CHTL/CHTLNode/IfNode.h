@@ -17,6 +17,7 @@ namespace CHTL {
     public:
         IfType if_type;
         std::string condition;
+        bool isDynamic = false;
 
         IfNode() : BaseNode(NodeType::NODE_IF) {}
     };

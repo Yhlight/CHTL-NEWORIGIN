@@ -172,6 +172,24 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
 
         if (child->getType() == NodeType::NODE_IF) {
             auto if_node = std::dynamic_pointer_cast<IfNode>(child);
+            if (if_node->isDynamic) {
+                new_children.push_back(child);
+                // Also keep subsequent else-if/else blocks if they are part of this dynamic chain
+                while (i + 1 < node->getChildren().size()) {
+                    auto next_child = node->getChildren()[i + 1];
+                    if (auto next_if = std::dynamic_pointer_cast<IfNode>(next_child)) {
+                        if (next_if->if_type == IfType::ELSE_IF || next_if->if_type == IfType::ELSE) {
+                            new_children.push_back(next_child);
+                            i++;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                continue;
+            }
 
             if (if_node->if_type == IfType::IF) {
                 bool condition_met = false;

@@ -8,6 +8,7 @@
 #include "../CHTL/CHTLContext/GenerationContext.h"
 #include "../CHTL/SemanticAnalyzer.h"
 #include "../CHTL/CHTLContext/ConfigurationManager.h"
+#include "../SharedCore/SaltBridge.h"
 #include "../SharedCore/ConcreteSaltBridge.h"
 #include <vector>
 #include <string>
@@ -21,8 +22,8 @@ inline std::string normalize_html(std::string str) {
     return str;
 }
 
-// Helper to perform the full compilation process and return the generator
-inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
+// Worker function for compilation
+inline CHTL::CHTLGenerator generateOutputWithBridge(const std::string& input, CHTL::SaltBridge* bridge) {
     auto configManager = std::make_shared<CHTL::ConfigurationManager>();
 
     // --- First Pass: Find and apply configuration ---
@@ -72,9 +73,14 @@ inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
         loader.gatherTemplates(pair.second, context);
     }
 
-    CHTL::ConcreteSaltBridge bridge;
     CHTL::CHTLGenerator generator;
-    generator.generate(ast, context, &bridge);
+    generator.generate(ast, context, bridge);
 
     return generator;
+}
+
+// Helper to perform the full compilation process and return the generator
+inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
+    CHTL::ConcreteSaltBridge bridge;
+    return generateOutputWithBridge(input, &bridge);
 }

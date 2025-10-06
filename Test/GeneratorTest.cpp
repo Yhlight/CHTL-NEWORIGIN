@@ -107,6 +107,46 @@ TEST_CASE("Generator expands variable template", "[generator]") {
     REQUIRE(generator.getHtml() == R"(<div style="background-color:blue;color:white;"></div>)");
 }
 
+class MockSaltBridge : public CHTL::SaltBridge {
+public:
+    mutable bool processDynamicIfCalled = false;
+    mutable std::vector<std::shared_ptr<CHTL::IfNode>> captured_if_nodes;
+    mutable std::string captured_parent_selector;
+
+    std::string processScript(const std::string& raw_script) override { return ""; }
+    std::string processAnimation(const CHTL::AnimationData& data) override { return ""; }
+    std::string processDynamicIf(const std::vector<std::shared_ptr<CHTL::IfNode>>& if_nodes, const std::string& parent_selector) override {
+        processDynamicIfCalled = true;
+        captured_if_nodes = if_nodes;
+        captured_parent_selector = parent_selector;
+        return "<script>/* Dynamic if processed */</script>";
+    }
+};
+
+TEST_CASE("Generator handles dynamic conditional rendering", "[generator]") {
+    std::string input = R"(
+        div {
+            id: my-div;
+            style {
+                if {
+                    condition: {{some.value}} > 10,
+                    color: red
+                } else {
+                    color: blue
+                }
+            }
+        }
+    )";
+
+    auto mock_bridge = std::make_shared<MockSaltBridge>();
+    auto generator = generateOutputWithBridge(input, mock_bridge.get());
+
+    REQUIRE(mock_bridge->processDynamicIfCalled == true);
+    REQUIRE(mock_bridge->captured_if_nodes.size() == 2);
+    REQUIRE(mock_bridge->captured_parent_selector == "#my-div");
+    REQUIRE(generator.getHtml().find("<script>/* Dynamic if processed */</script>") != std::string::npos);
+}
+
 TEST_CASE("Generator handles conditional rendering with if-else-if-else blocks", "[generator]") {
     SECTION("Test 'if' block is chosen") {
         std::string input = R"(

@@ -16,6 +16,7 @@
 #include "../CHTLNode/InsertNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/AnimateNode.h"
+#include "../CHTLNode/IfNode.h"
 #include "../SharedCore/SaltBridge.h"
 #include <stdexcept>
 #include <set>
@@ -43,6 +44,9 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
             break;
         case NodeType::NODE_ANIMATE:
              visit(std::dynamic_pointer_cast<AnimateNode>(node));
+            break;
+        case NodeType::NODE_IF:
+             visit(std::dynamic_pointer_cast<IfNode>(node));
             break;
         // ... other cases from previous implementation
         case NodeType::NODE_TEXT:
@@ -112,8 +116,37 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
         for (const auto& child : node->getChildren()) {
             if (child->getType() == NodeType::NODE_STYLE) {
                 auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
-                for (const auto& styleChild : styleNode->getChildren()) {
-                    if (styleChild->getType() == NodeType::NODE_PROPERTY) {
+                auto style_children = styleNode->getChildren();
+                for (size_t i = 0; i < style_children.size(); ++i) {
+                    const auto& styleChild = style_children[i];
+                    if (auto if_node = std::dynamic_pointer_cast<IfNode>(styleChild)) {
+                        if (if_node->isDynamic) {
+                            std::vector<std::shared_ptr<IfNode>> dynamic_if_chain;
+                            dynamic_if_chain.push_back(if_node);
+                            while (i + 1 < style_children.size()) {
+                                if (auto next_if_node = std::dynamic_pointer_cast<IfNode>(style_children[i + 1])) {
+                                    if (next_if_node->if_type == IfType::ELSE_IF || next_if_node->if_type == IfType::ELSE) {
+                                        dynamic_if_chain.push_back(next_if_node);
+                                        i++;
+                                    } else {
+                                        break;
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (salt_bridge) {
+                                std::string parent_selector;
+                                if (node->hasAttribute("id")) {
+                                    parent_selector = "#" + node->getAttributes().at("id");
+                                } else {
+                                    parent_selector = node->getTagName();
+                                }
+                                html_out << salt_bridge->processDynamicIf(dynamic_if_chain, parent_selector);
+                            }
+                        }
+                    }
+                    else if (styleChild->getType() == NodeType::NODE_PROPERTY) {
                         auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
                         if (prop) {
                             if (!prop->getChildren().empty() && prop->getChildren()[0]->getType() == NodeType::NODE_TEMPLATE_USAGE) {
@@ -359,6 +392,12 @@ void CHTLGenerator::visit(const std::shared_ptr<UseNode>& node) {
 void CHTLGenerator::visit(const std::shared_ptr<DeleteNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<InsertNode>& node) {
     for (const auto& child : node->getChildren()) visit(child);
+}
+
+void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
+    // This is intentionally left empty.
+    // Dynamic IfNodes are handled within the StyleNode visit method,
+    // and static IfNodes are processed by the SemanticAnalyzer and should not appear here.
 }
 
 }

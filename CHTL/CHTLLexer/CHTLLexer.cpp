@@ -52,8 +52,20 @@ Token CHTLLexer::getNextToken() {
 
     switch (c) {
         case '@': advance(); return makeToken(TokenType::TOKEN_AT, "@");
-        case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
-        case '}': advance(); return makeToken(TokenType::TOKEN_RBRACE, "}");
+        case '{':
+            advance();
+            if (peek() == '{') {
+                advance();
+                return makeToken(TokenType::TOKEN_LBRACE_DOUBLE, "{{");
+            }
+            return makeToken(TokenType::TOKEN_LBRACE, "{");
+        case '}':
+            advance();
+            if (peek() == '}') {
+                advance();
+                return makeToken(TokenType::TOKEN_RBRACE_DOUBLE, "}}");
+            }
+            return makeToken(TokenType::TOKEN_RBRACE, "}");
         case '(': advance(); return makeToken(TokenType::TOKEN_LPAREN, "(");
         case ')': advance(); return makeToken(TokenType::TOKEN_RPAREN, ")");
         case '[': advance(); return makeToken(TokenType::TOKEN_LBRACKET, "[");

@@ -190,6 +190,32 @@ div {
     REQUIRE(prop3->getValue() == "none");
 }
 
+TEST_CASE("Parser handles if block with dynamic condition", "[parser]") {
+    auto node = getFirstNode(R"(
+div {
+    style {
+        if {
+            condition: {{element.width}} > 100px,
+            display: block
+        }
+    }
+}
+)");
+    REQUIRE(node != nullptr);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
+    REQUIRE(element->getTagName() == "div");
+    REQUIRE(element->getChildren().size() == 1);
+
+    auto styleNode = std::dynamic_pointer_cast<CHTL::StyleNode>(element->getChildren()[0]);
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getChildren().size() == 1);
+
+    auto ifNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[0]);
+    REQUIRE(ifNode != nullptr);
+    REQUIRE(ifNode->isDynamic == true);
+    REQUIRE(ifNode->condition == "{{element.width}} > 100px");
+}
+
 TEST_CASE("Parser handles variable template usage", "[parser]") {
     auto node = getFirstNode("div { style { color: MyTheme(primary); } }");
     REQUIRE(node != nullptr);

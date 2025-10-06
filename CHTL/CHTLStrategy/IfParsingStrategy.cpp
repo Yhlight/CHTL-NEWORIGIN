@@ -64,14 +64,40 @@ namespace CHTL {
             }
             context->advance(); // consume ':'
 
-            std::string value = parse_property_value(context);
-
             if (key == "condition") {
                 if (ifNode->if_type == IfType::ELSE) {
                     throw std::runtime_error("'else' block cannot have a condition.");
                 }
-                ifNode->condition = value;
+
+                std::string condition_value;
+                while (context->getCurrentToken().type != TokenType::TOKEN_COMMA &&
+                       context->getCurrentToken().type != TokenType::TOKEN_RBRACE &&
+                       !context->isAtEnd()) {
+
+                    if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE_DOUBLE) {
+                        ifNode->isDynamic = true;
+                    }
+
+                    condition_value += context->getCurrentToken().lexeme;
+
+                    const auto& next_token = context->peek(1);
+                    if (next_token.type != TokenType::TOKEN_COMMA &&
+                        next_token.type != TokenType::TOKEN_RBRACE &&
+                        next_token.type != TokenType::TOKEN_EOF) {
+
+                        if (context->getCurrentToken().type != TokenType::TOKEN_LBRACE_DOUBLE &&
+                            next_token.type != TokenType::TOKEN_RBRACE_DOUBLE &&
+                            context->getCurrentToken().type != TokenType::TOKEN_DOT &&
+                            next_token.type != TokenType::TOKEN_DOT) {
+                            condition_value += " ";
+                        }
+                    }
+                    context->advance();
+                }
+                ifNode->condition = condition_value;
+
             } else {
+                std::string value = parse_property_value(context);
                 ifNode->addChild(std::make_shared<PropertyNode>(key, value));
             }
 
