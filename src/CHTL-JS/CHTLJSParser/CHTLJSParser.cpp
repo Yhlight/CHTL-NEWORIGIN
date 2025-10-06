@@ -277,6 +277,7 @@ Vector<String> CHTLJSParser::splitBindings(const String& bindingsCode) const {
     
     int parenDepth = 0;
     int braceDepth = 0;
+    int bracketDepth = 0;  // 新增：跟踪[]深度
     bool inString = false;
     char stringChar = '\0';
     bool escaped = false;
@@ -323,7 +324,13 @@ Vector<String> CHTLJSParser::splitBindings(const String& bindingsCode) const {
         } else if (ch == '}') {
             braceDepth--;
             current += ch;
-        } else if ((ch == ',' || ch == ';') && parenDepth == 0 && braceDepth == 0) {
+        } else if (ch == '[') {
+            bracketDepth++;  // 新增：跟踪[
+            current += ch;
+        } else if (ch == ']') {
+            bracketDepth--;  // 新增：跟踪]
+            current += ch;
+        } else if ((ch == ',' || ch == ';') && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
             // 分隔符 - 同时处理逗号和分号
             String trimmed = trimWhitespace(current);
             if (!trimmed.empty()) {
@@ -1111,6 +1118,148 @@ HashMap<String, String> CHTLJSParser::parseCssProperties(const String& code) {
     }
     
     return properties;
+}
+
+// ============= Router路由系统实现 =============
+
+Optional<RouterBlock> CHTLJSParser::parseRouterBlock(const String& code) {
+    // 查找 "Router"
+    size_t routerPos = code.find("Router");
+    if (routerPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', routerPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取块内容
+    String blockContent = extractBlockContent(code, bracePos);
+    if (blockContent.empty()) {
+        return std::nullopt;
+    }
+    
+    RouterBlock block;
+    
+    // 解析各个键值对
+    auto bindings = parseEventBindings(blockContent);
+    
+    Vector<String> urls;
+    Vector<String> pages;
+    
+    for (const auto& binding : bindings) {
+        String key = binding.eventName;
+        String value = trimWhitespace(binding.handler);
+        
+        if (key == "url") {
+            // 解析URL（可能是多个）
+            if (value.find(',') != String::npos) {
+                // 多个URL，按逗号分割
+                Vector<String> urlList;
+                String current;
+                int depth = 0;
+                for (char ch : value) {
+                    if (ch == '{' || ch == '(' || ch == '[') depth++;
+                    else if (ch == '}' || ch == ')' || ch == ']') depth--;
+                    else if (ch == ',' && depth == 0) {
+                        String url = trimWhitespace(current);
+                        if (!url.empty()) {
+                            // 移除引号
+                            if ((url.front() == '"' && url.back() == '"') ||
+                                (url.front() == '\'' && url.back() == '\'')) {
+                                url = url.substr(1, url.length() - 2);
+                            }
+                            urls.push_back(url);
+                        }
+                        current.clear();
+                        continue;
+                    }
+                    current += ch;
+                }
+                String url = trimWhitespace(current);
+                if (!url.empty()) {
+                    if ((url.front() == '"' && url.back() == '"') ||
+                        (url.front() == '\'' && url.back() == '\'')) {
+                        url = url.substr(1, url.length() - 2);
+                    }
+                    urls.push_back(url);
+                }
+            } else {
+                // 单个URL
+                if ((value.front() == '"' && value.back() == '"') ||
+                    (value.front() == '\'' && value.back() == '\'')) {
+                    value = value.substr(1, value.length() - 2);
+                }
+                urls.push_back(value);
+            }
+        } else if (key == "page") {
+            // 解析page（可能是多个）
+            if (value.find(',') != String::npos) {
+                // 多个page，按逗号分割
+                String current;
+                int depth = 0;
+                for (char ch : value) {
+                    if (ch == '{' || ch == '(' || ch == '[') depth++;
+                    else if (ch == '}' || ch == ')' || ch == ']') depth--;
+                    else if (ch == ',' && depth == 0) {
+                        String page = trimWhitespace(current);
+                        if (!page.empty()) {
+                            pages.push_back(page);
+                        }
+                        current.clear();
+                        continue;
+                    }
+                    current += ch;
+                }
+                String page = trimWhitespace(current);
+                if (!page.empty()) {
+                    pages.push_back(page);
+                }
+            } else {
+                pages.push_back(value);
+            }
+        } else if (key == "mode") {
+            block.mode = value;
+            // 移除引号
+            if ((block.mode.front() == '"' && block.mode.back() == '"') ||
+                (block.mode.front() == '\'' && block.mode.back() == '\'')) {
+                block.mode = block.mode.substr(1, block.mode.length() - 2);
+            }
+        } else if (key == "root") {
+            // TODO: 处理root
+            block.rootPath = value;
+        }
+    }
+    
+    // 组合URL和page
+    for (size_t i = 0; i < urls.size() && i < pages.size(); i++) {
+        block.routes.push_back(RouteRule(urls[i], pages[i]));
+    }
+    
+    return block;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findRouterBlock(const String& code, size_t startPos) {
+    size_t routerPos = code.find("Router", startPos);
+    if (routerPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', routerPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的 '}'
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    return std::make_pair(routerPos, endBracePos + 1);
 }
 
 } // namespace JS

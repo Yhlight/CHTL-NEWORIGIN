@@ -76,6 +76,25 @@ struct AnimateBlock {
     AnimateBlock() = default;
 };
 
+// 路由规则结构
+struct RouteRule {
+    String url;      // URL路径
+    String page;     // 页面选择器
+    
+    RouteRule() = default;
+    RouteRule(const String& u, const String& p) : url(u), page(p) {}
+};
+
+// Router块结构
+struct RouterBlock {
+    Vector<RouteRule> routes;    // 路由规则列表
+    String rootPath;             // 根路径
+    String rootContainer;        // 根容器选择器
+    String mode = "hash";        // 路由模式：hash或history
+    
+    RouterBlock() = default;
+};
+
 // CHTL JS Parser配置
 struct JSParserConfig {
     bool allowUnorderedKeyValues = true;
@@ -147,6 +166,14 @@ public:
     
     // 解析CSS属性块（用于begin/end/when）
     HashMap<String, String> parseCssProperties(const String& code);
+    
+    // 解析Router块
+    // 输入: "Router { url: '/home', page: {{box}} }"
+    // 返回: RouterBlock结构
+    Optional<RouterBlock> parseRouterBlock(const String& code);
+    
+    // 查找Router块的位置
+    Optional<std::pair<size_t, size_t>> findRouterBlock(const String& code, size_t startPos = 0);
     
     // 辅助方法（public for generator use）
     String trimWhitespace(const String& str) const;
