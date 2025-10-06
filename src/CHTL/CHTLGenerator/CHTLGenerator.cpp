@@ -74,12 +74,23 @@ void CHTLGenerator::visit(StyleNode& node) {
 }
 
 void CHTLGenerator::visit(ScriptNode& node) {
+    String content = node.getContent();
+    
+    // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
+    if (content.find("{{") != String::npos) {
+        JS::JSGeneratorConfig jsConfig;
+        jsConfig.wrapIIFE = false;  // 不自动包装IIFE
+        jsConfig.prettyPrint = false;
+        JS::CHTLJSGenerator jsGen(jsConfig);
+        content = jsGen.generate(content);
+    }
+    
     if (node.isLocal()) {
         // 局部脚本添加到全局脚本区
-        appendJs(node.getContent());
+        appendJs(content);
         appendJs("\n");
     } else {
-        generateScript(node.getContent());
+        generateScript(content);
     }
 }
 

@@ -3,6 +3,7 @@
 
 #include "../../Common.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../../CHTL-JS/CHTLJSGenerator/CHTLJSGenerator.h"
 
 namespace CHTL {
 
