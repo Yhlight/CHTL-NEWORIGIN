@@ -39,6 +39,31 @@ div {
     REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
 }
 
+TEST_CASE("Lexer distinguishes generator comments from hash selectors", "[lexer]") {
+    std::string input = R"(
+# a comment
+#not-a-comment
+)";
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
+
+    // First token should be a generator comment
+    CHTL::Token token1 = lexer.getNextToken();
+    REQUIRE(token1.type == CHTL::TokenType::TOKEN_GENERATOR_COMMENT);
+    REQUIRE(token1.lexeme == "a comment");
+
+    // Second token should be a hash, followed by an identifier
+    CHTL::Token token2 = lexer.getNextToken();
+    REQUIRE(token2.type == CHTL::TokenType::TOKEN_HASH);
+    REQUIRE(token2.lexeme == "#");
+
+    CHTL::Token token3 = lexer.getNextToken();
+    REQUIRE(token3.type == CHTL::TokenType::TOKEN_UNQUOTED_LITERAL);
+    REQUIRE(token3.lexeme == "not-a-comment");
+
+    REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
+}
+
 TEST_CASE("Lexer handles comments", "[lexer]") {
     std::string input = R"(
 // this is a comment

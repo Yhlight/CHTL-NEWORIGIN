@@ -38,6 +38,7 @@ namespace CHTL {
         TOKEN_SEMICOLON,
         TOKEN_COMMA,
         TOKEN_DOT,
+        TOKEN_HASH,
 
         // Operators
         TOKEN_ASSIGN,

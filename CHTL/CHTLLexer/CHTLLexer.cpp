@@ -80,8 +80,12 @@ Token CHTLLexer::getNextToken() {
             return makeToken(TokenType::TOKEN_DIVIDE, "/");
 
         case '#':
-            advance();
-            return generatorComment();
+            advance(); // Consume '#'
+            if (peek() == ' ') {
+                advance(); // Consume ' '
+                return generatorComment();
+            }
+            return makeToken(TokenType::TOKEN_HASH, "#");
 
         case '"':
         case '\'':
