@@ -1,5 +1,0 @@
-add_library(StyleEvaluator STATIC StyleEvaluator.cpp)
-
-target_include_directories(StyleEvaluator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_link_libraries(StyleEvaluator PRIVATE ExpressionEvaluator)

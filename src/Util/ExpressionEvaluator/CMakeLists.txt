@@ -1,3 +1,0 @@
-add_library(ExpressionEvaluator STATIC ExpressionEvaluator.cpp)
-
-target_include_directories(ExpressionEvaluator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

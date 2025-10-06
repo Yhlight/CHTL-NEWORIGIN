@@ -1,28 +1,19 @@
-add_executable(runTests
+add_executable(run_tests
+    TestMain.cpp
     LexerTest.cpp
     ParserTest.cpp
-    AttributeAutomatorTest.cpp
-    CssGeneratorTest.cpp
-    ExpressionParserTest.cpp
-    ExpressionEvaluatorTest.cpp
-    IfBehaviorTest.cpp
-    TemplateTest.cpp
+    GeneratorTest.cpp
+    LoaderTest.cpp
+    ConditionalRenderingTest.cpp
+    ConstraintTest.cpp
+    ConfigurationTest.cpp
+    SpecializationParsingTest.cpp
+    SpecializationGeneratorTest.cpp
+    CHTLJSTest.cpp
 )
 
-target_link_libraries(runTests
-    PRIVATE
-    CHTL
-    ASTPrinter
-    AttributeAutomator
-    CssGenerator
-    ExpressionParser
-    ExpressionEvaluator
-    StyleEvaluator
-    TemplateEvaluator
-    gtest_main
-)
+target_link_libraries(run_tests PRIVATE CHTL CHTLJS)
 
-target_include_directories(runTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
-
-include(GoogleTest)
-gtest_discover_tests(runTests)
+# Since catch.hpp is a header-only library, we just need to make sure
+# the compiler can find it.
+target_include_directories(run_tests PRIVATE ../)

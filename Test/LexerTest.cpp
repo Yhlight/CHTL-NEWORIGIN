@@ -1,84 +1,104 @@
-#include <gtest/gtest.h>
-#include "CHTLLexer/CHTLLexer.h"
-#include "CHTLLexer/Token.h"
+#include "../third-party/catch.hpp"
+#include "../CHTL/CHTLLexer/CHTLLexer.h"
+#include "../CHTL/CHTLLexer/Token.h"
+#include "../CHTL/CHTLContext/ConfigurationManager.h"
+#include <memory>
 
-// Helper function to check a token's properties
-void checkToken(const Token& token, TokenType expectedType, const std::string& expectedValue) {
-    EXPECT_EQ(token.type, expectedType);
-    EXPECT_EQ(token.value, expectedValue);
-}
+#include <vector>
+#include <string>
+#include <utility>
 
-TEST(LexerTest, TokenizesSimpleIdentifiers) {
-    std::string input = "div";
-    CHTLLexer lexer(input);
-    Token token = lexer.getNextToken();
-    checkToken(token, TokenType::IDENTIFIER, "div");
-}
-
-TEST(LexerTest, TokenizesKeywords) {
-    std::string input = "text style script";
-    CHTLLexer lexer(input);
-
-    checkToken(lexer.getNextToken(), TokenType::KEYWORD_TEXT, "text");
-    checkToken(lexer.getNextToken(), TokenType::KEYWORD_STYLE, "style");
-    checkToken(lexer.getNextToken(), TokenType::KEYWORD_SCRIPT, "script");
-}
-
-TEST(LexerTest, TokenizesPunctuation) {
-    std::string input = "{}:;=";
-    CHTLLexer lexer(input);
-
-    checkToken(lexer.getNextToken(), TokenType::LEFT_BRACE, "{");
-    checkToken(lexer.getNextToken(), TokenType::RIGHT_BRACE, "}");
-    checkToken(lexer.getNextToken(), TokenType::COLON, ":");
-    checkToken(lexer.getNextToken(), TokenType::SEMICOLON, ";");
-    checkToken(lexer.getNextToken(), TokenType::EQUALS, "=");
-}
-
-TEST(LexerTest, TokenizesStringLiterals) {
-    std::string input = R"("hello" 'world')";
-    CHTLLexer lexer(input);
-
-    checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "hello");
-    checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "world");
-}
-
-TEST(LexerTest, TokenizesUnquotedLiterals) {
-    std::string input = "red 100px";
-    CHTLLexer lexer(input);
-
-    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "red");
-    checkToken(lexer.getNextToken(), TokenType::NUMBER, "100px");
-}
-
-TEST(LexerTest, TokenizesComments) {
+TEST_CASE("Lexer tokenizes simple input", "[lexer]") {
     std::string input = R"(
-        // single line
-        /* multi
-           line */
-        # generator
-    )";
-    CHTLLexer lexer(input);
+div {
+    id: "main";
+    text { "hello" }
+}
+)";
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "div"},
+        {CHTL::TokenType::TOKEN_LBRACE, "{"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "main"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_TEXT, "text"},
+        {CHTL::TokenType::TOKEN_LBRACE, "{"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "hello"},
+        {CHTL::TokenType::TOKEN_RBRACE, "}"},
+        {CHTL::TokenType::TOKEN_RBRACE, "}"}
+    };
 
-    checkToken(lexer.getNextToken(), TokenType::SINGLE_LINE_COMMENT, " single line");
-    checkToken(lexer.getNextToken(), TokenType::MULTI_LINE_COMMENT, " multi\n           line ");
-    checkToken(lexer.getNextToken(), TokenType::GENERATOR_COMMENT, " generator");
+    for (const auto& expected : expectedTokens) {
+        CHTL::Token token = lexer.getNextToken();
+        REQUIRE(token.type == expected.first);
+        REQUIRE(token.lexeme == expected.second);
+    }
+    REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
 }
 
-TEST(LexerTest, TokenizesComplexSnippet) {
+TEST_CASE("Lexer handles comments", "[lexer]") {
     std::string input = R"(
-        div {
-            id: "main";
+// this is a comment
+div { # another comment
+    /* multi-line
+       comment */
+    id: "main"; // another comment
+}
+)";
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
+    std::vector<CHTL::Token> tokens;
+    CHTL::Token token = lexer.getNextToken();
+    while (token.type != CHTL::TokenType::TOKEN_EOF) {
+        // We are interested in non-comment tokens
+        if (token.type != CHTL::TokenType::TOKEN_SINGLE_LINE_COMMENT &&
+            token.type != CHTL::TokenType::TOKEN_MULTI_LINE_COMMENT &&
+            token.type != CHTL::TokenType::TOKEN_GENERATOR_COMMENT) {
+            tokens.push_back(token);
         }
-    )";
-    CHTLLexer lexer(input);
+        token = lexer.getNextToken();
+    }
 
-    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "div");
-    checkToken(lexer.getNextToken(), TokenType::LEFT_BRACE, "{");
-    checkToken(lexer.getNextToken(), TokenType::IDENTIFIER, "id");
-    checkToken(lexer.getNextToken(), TokenType::COLON, ":");
-    checkToken(lexer.getNextToken(), TokenType::STRING_LITERAL, "main");
-    checkToken(lexer.getNextToken(), TokenType::SEMICOLON, ";");
-    checkToken(lexer.getNextToken(), TokenType::RIGHT_BRACE, "}");
-    checkToken(lexer.getNextToken(), TokenType::END_OF_FILE, "");
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "div"},
+        {CHTL::TokenType::TOKEN_LBRACE, "{"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "main"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_RBRACE, "}"}
+    };
+
+    REQUIRE(tokens.size() == expectedTokens.size());
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        REQUIRE(tokens[i].type == expectedTokens[i].first);
+        REQUIRE(tokens[i].lexeme == expectedTokens[i].second);
+    }
+}
+
+TEST_CASE("Lexer handles different literal types", "[lexer]") {
+    std::string input = "id: 'some-id'; class: some-class;";
+    auto configManager = std::make_shared<CHTL::ConfigurationManager>();
+    CHTL::CHTLLexer lexer(input, configManager);
+
+    std::vector<std::pair<CHTL::TokenType, std::string>> expectedTokens = {
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "id"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_STRING_LITERAL, "some-id"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+        {CHTL::TokenType::TOKEN_IDENTIFIER, "class"},
+        {CHTL::TokenType::TOKEN_COLON, ":"},
+        {CHTL::TokenType::TOKEN_UNQUOTED_LITERAL, "some-class"},
+        {CHTL::TokenType::TOKEN_SEMICOLON, ";"},
+    };
+
+    for (const auto& expected : expectedTokens) {
+        CHTL::Token token = lexer.getNextToken();
+        REQUIRE(token.type == expected.first);
+        REQUIRE(token.lexeme == expected.second);
+    }
+    REQUIRE(lexer.getNextToken().type == CHTL::TokenType::TOKEN_EOF);
 }

@@ -1,0 +1,35 @@
+html {
+    head {
+        title {
+            text: "If Feature Test";
+        }
+    }
+    body {
+        div {
+            id: main-content;
+            style {
+                width: 100%;
+
+                if {
+                    condition: screen.width < 600px,
+                    background-color: "lightblue",
+                    font-size: "14px",
+                }
+            }
+            p {
+                text: "This content's background should be lightblue on small screens.";
+            }
+        }
+
+        span {
+            class: "responsive-text";
+            style {
+                if {
+                    condition: screen.width > 1200px,
+                    font-size: "24px",
+                }
+            }
+            text: "This text should be larger on wide screens.";
+        }
+    }
+}
