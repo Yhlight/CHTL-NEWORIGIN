@@ -89,15 +89,24 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
                 std::string templateName = context->getCurrentToken().lexeme;
                 context->advance();
 
-                auto usageNode = std::make_shared<TemplateUsageNode>(templateName, usageType);
+                std::string from_namespace = "";
+                if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
+                    context->advance(); // consume 'from'
+                    if (context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER) {
+                        from_namespace = context->getCurrentToken().lexeme;
+                        context->advance();
+                    } else {
+                        throw std::runtime_error("Expected namespace identifier after 'from'.");
+                    }
+                }
+
+                auto usageNode = std::make_shared<TemplateUsageNode>(templateName, usageType, "", from_namespace);
 
                 if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
                     context->setStrategy(std::make_unique<SpecializationParsingStrategy>());
                     usageNode->setSpecialization(context->runCurrentStrategy());
                 } else if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
                     context->advance();
-                } else {
-                    throw std::runtime_error("Expected ';' or '{' after template usage.");
                 }
 
                 element->addChild(usageNode);

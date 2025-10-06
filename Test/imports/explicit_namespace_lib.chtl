@@ -1,0 +1,9 @@
+[Namespace] MyExplicitNS
+
+[Template] @Element MyExplicitTemplate
+{
+    div {
+        style { color: blue; }
+        text: "Hello from the explicit namespace!";
+    }
+}

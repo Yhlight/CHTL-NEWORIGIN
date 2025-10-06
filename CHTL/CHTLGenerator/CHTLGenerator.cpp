@@ -16,15 +16,16 @@
 #include "../CHTLNode/InsertNode.h"
 #include "../CHTLNode/ScriptNode.h"
 #include "../CHTLNode/AnimateNode.h"
-#include "../CHTLNode/IfNode.h" // Include IfNode
+#include "../CHTLNode/IfNode.h"
 #include "../SharedCore/SaltBridge.h"
+#include "../CHTLContext/GenerationContext.h" // For GLOBAL_NAMESPACE
 #include <stdexcept>
 #include <set>
 #include <map>
 #include <sstream>
-#include <algorithm> // For std::find_if
-#include <functional> // For std::function
-#include <optional> // For std::optional
+#include <algorithm>
+#include <functional>
+#include <optional>
 
 namespace CHTL {
 
@@ -50,6 +51,7 @@ void CHTLGenerator::generate(const std::shared_ptr<BaseNode>& node, const Genera
     this->context = &context;
     this->salt_bridge = bridge;
     this->ast_root = node;
+    this->current_namespace = GLOBAL_NAMESPACE;
     if (node) {
         visit(node);
     }
@@ -59,86 +61,45 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
     if (!node) return;
 
     switch (node->getType()) {
-        case NodeType::NODE_ELEMENT:
-            visit(std::dynamic_pointer_cast<ElementNode>(node));
-            break;
-        case NodeType::NODE_SCRIPT:
-            visit(std::dynamic_pointer_cast<ScriptNode>(node));
-            break;
-        case NodeType::NODE_ANIMATE:
-             visit(std::dynamic_pointer_cast<AnimateNode>(node));
-            break;
-        case NodeType::NODE_IF: // Add case for IfNode
-            visit(std::dynamic_pointer_cast<IfNode>(node));
-            break;
-        // ... other cases from previous implementation
-        case NodeType::NODE_TEXT:
-            visit(std::dynamic_pointer_cast<TextNode>(node));
-            break;
-        case NodeType::NODE_STYLE:
-            visit(std::dynamic_pointer_cast<StyleNode>(node));
-            break;
-        case NodeType::NODE_TEMPLATE:
-            visit(std::dynamic_pointer_cast<TemplateNode>(node));
-            break;
-        case NodeType::NODE_TEMPLATE_USAGE:
-            visit(std::dynamic_pointer_cast<TemplateUsageNode>(node));
-            break;
-        case NodeType::NODE_CUSTOM:
-            visit(std::dynamic_pointer_cast<CustomNode>(node));
-            break;
-        case NodeType::NODE_ORIGIN:
-            visit(std::dynamic_pointer_cast<OriginNode>(node));
-            break;
-        case NodeType::NODE_IMPORT:
-            visit(std::dynamic_pointer_cast<ImportNode>(node));
-            break;
-        case NodeType::NODE_NAMESPACE:
-            visit(std::dynamic_pointer_cast<NamespaceNode>(node));
-            break;
-        case NodeType::NODE_CONFIG:
-            visit(std::dynamic_pointer_cast<ConfigurationNode>(node));
-            break;
-        case NodeType::NODE_PROPERTY:
-             visit(std::dynamic_pointer_cast<PropertyNode>(node));
-            break;
-        case NodeType::NODE_RULE:
-             visit(std::dynamic_pointer_cast<RuleNode>(node));
-            break;
-        case NodeType::NODE_USE:
-            visit(std::dynamic_pointer_cast<UseNode>(node));
-            break;
-        case NodeType::NODE_DELETE:
-            visit(std::dynamic_pointer_cast<DeleteNode>(node));
-            break;
-        case NodeType::NODE_INSERT:
-            visit(std::dynamic_pointer_cast<InsertNode>(node));
-            break;
-        default:
-            break;
+        case NodeType::NODE_ELEMENT: visit(std::dynamic_pointer_cast<ElementNode>(node)); break;
+        case NodeType::NODE_SCRIPT: visit(std::dynamic_pointer_cast<ScriptNode>(node)); break;
+        case NodeType::NODE_ANIMATE: visit(std::dynamic_pointer_cast<AnimateNode>(node)); break;
+        case NodeType::NODE_IF: visit(std::dynamic_pointer_cast<IfNode>(node)); break;
+        case NodeType::NODE_TEXT: visit(std::dynamic_pointer_cast<TextNode>(node)); break;
+        case NodeType::NODE_STYLE: visit(std::dynamic_pointer_cast<StyleNode>(node)); break;
+        case NodeType::NODE_TEMPLATE: visit(std::dynamic_pointer_cast<TemplateNode>(node)); break;
+        case NodeType::NODE_TEMPLATE_USAGE: visit(std::dynamic_pointer_cast<TemplateUsageNode>(node)); break;
+        case NodeType::NODE_CUSTOM: visit(std::dynamic_pointer_cast<CustomNode>(node)); break;
+        case NodeType::NODE_ORIGIN: visit(std::dynamic_pointer_cast<OriginNode>(node)); break;
+        case NodeType::NODE_IMPORT: visit(std::dynamic_pointer_cast<ImportNode>(node)); break;
+        case NodeType::NODE_NAMESPACE: visit(std::dynamic_pointer_cast<NamespaceNode>(node)); break;
+        case NodeType::NODE_CONFIG: visit(std::dynamic_pointer_cast<ConfigurationNode>(node)); break;
+        case NodeType::NODE_PROPERTY: visit(std::dynamic_pointer_cast<PropertyNode>(node)); break;
+        case NodeType::NODE_RULE: visit(std::dynamic_pointer_cast<RuleNode>(node)); break;
+        case NodeType::NODE_USE: visit(std::dynamic_pointer_cast<UseNode>(node)); break;
+        case NodeType::NODE_DELETE: visit(std::dynamic_pointer_cast<DeleteNode>(node)); break;
+        case NodeType::NODE_INSERT: visit(std::dynamic_pointer_cast<InsertNode>(node)); break;
+        default: break;
     }
 }
 
-void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties) {
+void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties, const std::string& ns) {
     if (!tNode) return;
 
-    // First, recursively collect properties from parent templates
     for (const auto& child : tNode->getChildren()) {
         if (child->getType() == NodeType::NODE_TEMPLATE_USAGE) {
             auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(child);
             if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
-                auto parentTemplate = context->getTemplate(usageNode->getName());
-                collectStyleProperties(parentTemplate, properties);
+                auto parentTemplate = context->getTemplate(usageNode->getName(), ns);
+                collectStyleProperties(parentTemplate, properties, ns);
             }
         }
     }
 
-    // Then, apply properties from the current template, overriding any from parents
     for (const auto& child : tNode->getChildren()) {
         if (child->getType() == NodeType::NODE_PROPERTY) {
             auto propNode = std::dynamic_pointer_cast<PropertyNode>(child);
             if (propNode) {
-                // Find and replace existing property, or add new one
                 auto it = std::find_if(properties.begin(), properties.end(),
                                        [&](const auto& p) { return p.first == propNode->getKey(); });
                 if (it != properties.end()) {
@@ -153,16 +114,13 @@ void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& 
 
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
     if (node->getTagName() == "text") {
-        for (const auto& child : node->getChildren()) {
-            visit(child);
-        }
+        for (const auto& child : node->getChildren()) visit(child);
         return;
     }
 
     if (node->getTagName() != "root" && node->getTagName() != "specialization-root") {
         element_stack.push_back(node);
         html_out << "<" << node->getTagName();
-
         for (const auto& attr : node->getAttributes()) {
             html_out << " " << attr.first << "=\"" << attr.second << "\"";
         }
@@ -172,7 +130,6 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
             if (child->getType() == NodeType::NODE_STYLE) {
                 auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
                 std::vector<std::pair<std::string, std::string>> style_properties;
-
                 const auto& style_children = styleNode->getChildren();
                 for (size_t i = 0; i < style_children.size(); ++i) {
                     const auto& styleChild = style_children[i];
@@ -182,12 +139,11 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                             if (!prop->getChildren().empty() && prop->getChildren()[0]->getType() == NodeType::NODE_TEMPLATE_USAGE) {
                                 auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(prop->getChildren()[0]);
                                 if (usageNode && usageNode->getUsageType() == TemplateUsageType::VAR) {
-                                    auto templateNode = context->getTemplate(usageNode->getName());
+                                    auto templateNode = context->getTemplate(usageNode->getName(), current_namespace);
                                     if (templateNode) {
                                         for (const auto& varChild : templateNode->getChildren()) {
-                                            if (varChild->getType() == NodeType::NODE_PROPERTY) {
-                                                auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild);
-                                                if (varProp && varProp->getKey() == usageNode->getVariableName()) {
+                                            if (auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild)) {
+                                                if (varProp->getKey() == usageNode->getVariableName()) {
                                                     style_properties.push_back({prop->getKey(), varProp->getValue()});
                                                     break;
                                                 }
@@ -202,16 +158,15 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                     } else if (styleChild->getType() == NodeType::NODE_TEMPLATE_USAGE) {
                         auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(styleChild);
                         if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
-                             auto templateNode = context->getTemplate(usageNode->getName());
+                             auto templateNode = context->getTemplate(usageNode->getName(), current_namespace);
                              if(templateNode) {
-                                 collectStyleProperties(templateNode, style_properties);
+                                 collectStyleProperties(templateNode, style_properties, current_namespace);
                              }
                         }
                     } else if (styleChild->getType() == NodeType::NODE_RULE) {
                         visit(styleChild);
                     } else if (styleChild->getType() == NodeType::NODE_IF) {
                         auto if_node = std::dynamic_pointer_cast<IfNode>(styleChild);
-                        // The parser now creates a linked list via next_if, so we build the chain here.
                         if (if_node) {
                             std::vector<std::shared_ptr<IfNode>> chain;
                             auto current = if_node;
@@ -223,17 +178,14 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                         }
                     }
                 }
-
                 for (const auto& pair : style_properties) {
                     style_ss << pair.first << ":" << pair.second << ";";
                 }
             }
         }
-
         if (style_ss.rdbuf()->in_avail() > 0) {
             html_out << " style=\"" << style_ss.str() << "\"";
         }
-
         html_out << ">";
     }
 
@@ -250,45 +202,28 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
 }
 
 void CHTLGenerator::generateConditionalCss(const std::vector<std::shared_ptr<IfNode>>& chain) {
-    if (element_stack.empty()) {
-        return; // Should not happen
-    }
+    if (element_stack.empty()) return;
     auto parent_element = element_stack.back();
     std::string selector = generateElementSelector(parent_element);
-
     for (const auto& if_node : chain) {
         if (if_node->if_type == IfType::IF || if_node->if_type == IfType::ELSE_IF) {
             try {
                 ParsedCondition p_condition = parseCondition(if_node->condition);
-
                 std::string media_feature;
-                if (p_condition.property == "width") {
-                    media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-width" : "max-width";
-                } else if (p_condition.property == "height") {
-                    media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-height" : "max-height";
-                } else {
-                    continue; // Silently ignore unsupported properties
-                }
-
-                css_out << "@media (" << media_feature << ": " << p_condition.value << ") { ";
-                css_out << selector << " { ";
+                if (p_condition.property == "width") media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-width" : "max-width";
+                else if (p_condition.property == "height") media_feature = (p_condition.op.find('>') != std::string::npos) ? "min-height" : "max-height";
+                else continue;
+                css_out << "@media (" << media_feature << ": " << p_condition.value << ") { " << selector << " { ";
                 for (const auto& child : if_node->getChildren()) {
                     if (auto prop_node = std::dynamic_pointer_cast<PropertyNode>(child)) {
                         css_out << prop_node->getKey() << ": " << prop_node->getValue() << "; ";
                     }
                 }
                 css_out << "} } ";
-            } catch (const std::runtime_error& e) {
-                // If parsing the condition fails for any reason (e.g., malformed operator),
-                // just ignore this block and continue.
-                continue;
-            }
+            } catch (const std::runtime_error&) { continue; }
         }
-        // NOTE: 'else' blocks are currently not translated into CSS as it requires
-        // complex media query negation which is beyond the scope of the current implementation.
     }
 }
-
 
 void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
     auto current_node = node;
@@ -301,140 +236,102 @@ void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
         } else if (current_node->if_type == IfType::ELSE) {
             condition_met = true;
         }
-
         if (condition_met) {
-            for (const auto& child : current_node->getChildren()) {
-                visit(child);
-            }
-            return; // Exit after rendering the first true block
+            for (const auto& child : current_node->getChildren()) visit(child);
+            return;
         }
-
         current_node = current_node->next_if;
     }
 }
 
-void CHTLGenerator::visit(const std::shared_ptr<TextNode>& node) {
-    html_out << node->getContent();
-}
-
+void CHTLGenerator::visit(const std::shared_ptr<TextNode>& node) { html_out << node->getContent(); }
 void CHTLGenerator::visit(const std::shared_ptr<StyleNode>& node) {
     for (const auto& child : node->getChildren()) {
-        if (child->getType() == NodeType::NODE_RULE) {
-            visit(child);
-        }
+        if (child->getType() == NodeType::NODE_RULE) visit(child);
     }
 }
-
-void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {
-}
+void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {}
 
 void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
-    auto templateNode = context->getTemplate(node->getName());
-    if (!templateNode) return;
+    std::string lookup_ns = node->getFromNamespace().empty() ? current_namespace : node->getFromNamespace();
+    auto templateNode = context->getTemplate(node->getName(), lookup_ns);
 
-    auto specializationRoot = node->getSpecialization();
-    if (!specializationRoot) {
-        for (const auto& child : templateNode->getChildren()) {
-            visit(child);
-        }
-        return;
+    if (!templateNode) {
+        // If not found, it might be a global template. The context handles this fallback.
+        templateNode = context->getTemplate(node->getName());
     }
 
+    if (!templateNode) return;
+    auto specializationRoot = node->getSpecialization();
+    if (!specializationRoot) {
+        for (const auto& child : templateNode->getChildren()) visit(child);
+        return;
+    }
     std::set<std::string> deleted_selectors;
     std::vector<std::shared_ptr<InsertNode>> insert_rules;
     std::map<std::string, std::shared_ptr<ElementNode>> modification_rules;
-
     for (const auto& rule_node : specializationRoot->getChildren()) {
         if (auto delete_node = std::dynamic_pointer_cast<DeleteNode>(rule_node)) {
-            for (const auto& target : delete_node->targets) {
-                deleted_selectors.insert(target);
-            }
+            for (const auto& target : delete_node->targets) deleted_selectors.insert(target);
         } else if (auto insert_node = std::dynamic_pointer_cast<InsertNode>(rule_node)) {
             insert_rules.push_back(insert_node);
         } else if (auto element_node = std::dynamic_pointer_cast<ElementNode>(rule_node)) {
             modification_rules[element_node->getTagName()] = element_node;
         }
     }
-
     auto find_inserts = [&](const std::string& selector, InsertPosition pos) {
         for(const auto& rule : insert_rules) {
             if(rule->position == pos && (rule->target_selector == selector || (pos == InsertPosition::AT_TOP || pos == InsertPosition::AT_BOTTOM))) {
-                 for (const auto& content : rule->getChildren()) {
-                    visit(content);
-                }
+                 for (const auto& content : rule->getChildren()) visit(content);
             }
         }
     };
-
     find_inserts("", InsertPosition::AT_TOP);
-
     std::map<std::string, int> tag_counters;
     for (const auto& original_child : templateNode->getChildren()) {
-
         auto original_element = std::dynamic_pointer_cast<ElementNode>(original_child);
         if (!original_element) {
             visit(original_child);
             continue;
         }
-
         std::string tag_name = original_element->getTagName();
         int index = tag_counters[tag_name]++;
         std::string simple_selector = tag_name;
         std::string indexed_selector = tag_name + "[" + std::to_string(index) + "]";
-
-        if (deleted_selectors.count(simple_selector) > 0 || deleted_selectors.count(indexed_selector) > 0) {
-            continue;
-        }
-
+        if (deleted_selectors.count(simple_selector) > 0 || deleted_selectors.count(indexed_selector) > 0) continue;
         find_inserts(simple_selector, InsertPosition::BEFORE);
         find_inserts(indexed_selector, InsertPosition::BEFORE);
-
         auto it = modification_rules.find(tag_name);
         if (it != modification_rules.end()) {
             auto modification_element = it->second;
             auto merged_element = std::make_shared<ElementNode>(original_element->getTagName());
-
             for(const auto& attr : original_element->getAttributes()) merged_element->setAttribute(attr.first, attr.second);
             for(const auto& attr : modification_element->getAttributes()) merged_element->setAttribute(attr.first, attr.second);
-
-            std::shared_ptr<StyleNode> original_style = nullptr;
-            for(const auto& child : original_element->getChildren()) if(child->getType() == NodeType::NODE_STYLE) original_style = std::dynamic_pointer_cast<StyleNode>(child);
-            std::shared_ptr<StyleNode> modification_style = nullptr;
-            for(const auto& child : modification_element->getChildren()) if(child->getType() == NodeType::NODE_STYLE) modification_style = std::dynamic_pointer_cast<StyleNode>(child);
-
+            auto original_style = std::dynamic_pointer_cast<StyleNode>(original_element->getChildren().front());
+            auto modification_style = std::dynamic_pointer_cast<StyleNode>(modification_element->getChildren().front());
             auto merged_style = std::make_shared<StyleNode>();
             if(original_style) for(const auto& prop : original_style->getChildren()) merged_style->addChild(prop);
             if(modification_style) for(const auto& prop : modification_style->getChildren()) merged_style->addChild(prop);
-
             if(!merged_style->getChildren().empty()) merged_element->addChild(merged_style);
-
             for(const auto& child : original_element->getChildren()) if(child->getType() != NodeType::NODE_STYLE) merged_element->addChild(child);
-
             visit(merged_element);
         } else {
             visit(original_child);
         }
-
         find_inserts(simple_selector, InsertPosition::AFTER);
         find_inserts(indexed_selector, InsertPosition::AFTER);
     }
-
     find_inserts("", InsertPosition::AT_BOTTOM);
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ScriptNode>& node) {
     if (!node->getChildren().empty()) {
         html_out << "<script>";
-        for (const auto& child : node->getChildren()) {
-            visit(child);
-        }
+        for (const auto& child : node->getChildren()) visit(child);
         html_out << "</script>";
     } else if (!node->content.empty()) {
-        if (salt_bridge) {
-            html_out << salt_bridge->processScript(node->content);
-        } else {
-            html_out << node->content;
-        }
+        if (salt_bridge) html_out << salt_bridge->processScript(node->content);
+        else html_out << node->content;
     }
 }
 
@@ -448,24 +345,14 @@ void CHTLGenerator::visit(const std::shared_ptr<AnimateNode>& node) {
         data.direction = node->direction;
         data.delay = node->delay;
         data.callback = node->callback;
-
-        for(const auto& prop : node->begin_properties) {
-            data.begin_properties.push_back({prop->name, prop->value});
-        }
-
-        for(const auto& prop : node->end_properties) {
-            data.end_properties.push_back({prop->name, prop->value});
-        }
-
+        for(const auto& prop : node->begin_properties) data.begin_properties.push_back({prop->name, prop->value});
+        for(const auto& prop : node->end_properties) data.end_properties.push_back({prop->name, prop->value});
         for(const auto& keyframe : node->when_keyframes) {
             AnimationKeyframe kf;
             kf.at = keyframe.first;
-            for(const auto& prop : keyframe.second) {
-                kf.properties.push_back({prop->name, prop->value});
-            }
+            for(const auto& prop : keyframe.second) kf.properties.push_back({prop->name, prop->value});
             data.when_keyframes.push_back(kf);
         }
-
         html_out << salt_bridge->processAnimation(data);
     }
 }
@@ -478,7 +365,12 @@ void CHTLGenerator::visit(const std::shared_ptr<OriginNode>& node) {
 }
 void CHTLGenerator::visit(const std::shared_ptr<ImportNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<NamespaceNode>& node) {
-    for (const auto& child : node->getChildren()) visit(child);
+    std::string previous_namespace = current_namespace;
+    current_namespace = node->getName();
+    for (const auto& child : node->getChildren()) {
+        visit(child);
+    }
+    current_namespace = previous_namespace;
 }
 void CHTLGenerator::visit(const std::shared_ptr<ConfigurationNode>& node) {}
 void CHTLGenerator::visit(const std::shared_ptr<PropertyNode>& node) {}
@@ -497,45 +389,31 @@ void CHTLGenerator::visit(const std::shared_ptr<InsertNode>& node) {
     for (const auto& child : node->getChildren()) visit(child);
 }
 
-// Recursive helper for findElementBySelector
 void findNodesRecursive(const std::shared_ptr<BaseNode>& currentNode, const std::function<bool(const std::shared_ptr<ElementNode>&)>& predicate, std::vector<std::shared_ptr<ElementNode>>& foundNodes) {
     if (!currentNode) return;
     if (currentNode->getType() == NodeType::NODE_ELEMENT) {
         auto elementNode = std::dynamic_pointer_cast<ElementNode>(currentNode);
-        if (predicate(elementNode)) {
-            foundNodes.push_back(elementNode);
-        }
+        if (predicate(elementNode)) foundNodes.push_back(elementNode);
     }
-    for (const auto& child : currentNode->getChildren()) {
-        findNodesRecursive(child, predicate, foundNodes);
-    }
+    for (const auto& child : currentNode->getChildren()) findNodesRecursive(child, predicate, foundNodes);
 }
 
 std::shared_ptr<ElementNode> CHTLGenerator::findElementBySelector(const std::string& selector) {
-    // This is a simplified implementation. It does not handle descendant selectors
-    // or the 'auto-inference' feature from the CHTL.md spec.
     std::string simpleSelector = selector;
     std::optional<int> index;
-
     size_t bracketPos = selector.find('[');
     if (bracketPos != std::string::npos) {
         size_t endBracketPos = selector.find(']');
         if (endBracketPos > bracketPos) {
             simpleSelector = selector.substr(0, bracketPos);
-            try {
-                index = std::stoi(selector.substr(bracketPos + 1, endBracketPos - bracketPos - 1));
-            } catch (...) { return nullptr; }
+            try { index = std::stoi(selector.substr(bracketPos + 1, endBracketPos - bracketPos - 1)); } catch (...) { return nullptr; }
         }
     }
-
     std::vector<std::shared_ptr<ElementNode>> foundNodes;
     std::function<bool(const std::shared_ptr<ElementNode>&)> predicate;
-
     if (simpleSelector[0] == '#') {
         std::string id = simpleSelector.substr(1);
-        predicate = [&](const std::shared_ptr<ElementNode>& n) {
-            return n->hasAttribute("id") && n->getAttributes().at("id") == id;
-        };
+        predicate = [&](const std::shared_ptr<ElementNode>& n) { return n->hasAttribute("id") && n->getAttributes().at("id") == id; };
     } else if (simpleSelector[0] == '.') {
         std::string className = simpleSelector.substr(1);
         predicate = [&](const std::shared_ptr<ElementNode>& n) {
@@ -546,33 +424,22 @@ std::shared_ptr<ElementNode> CHTLGenerator::findElementBySelector(const std::str
             return false;
         };
     } else {
-        predicate = [&](const std::shared_ptr<ElementNode>& n) {
-            return n->getTagName() == simpleSelector;
-        };
+        predicate = [&](const std::shared_ptr<ElementNode>& n) { return n->getTagName() == simpleSelector; };
     }
-
     findNodesRecursive(ast_root, predicate, foundNodes);
-
-    if (index.has_value()) {
-        return (*index >= 0 && *index < foundNodes.size()) ? foundNodes[*index] : nullptr;
-    }
+    if (index.has_value()) return (*index >= 0 && *index < foundNodes.size()) ? foundNodes[*index] : nullptr;
     return !foundNodes.empty() ? foundNodes[0] : nullptr;
 }
 
 std::string CHTLGenerator::getElementPropertyValue(const std::shared_ptr<ElementNode>& element, const std::string& propertyName) {
     if (!element) return "";
-    if (element->hasAttribute(propertyName)) {
-        return element->getAttributes().at(propertyName);
-    }
+    if (element->hasAttribute(propertyName)) return element->getAttributes().at(propertyName);
     for (const auto& child : element->getChildren()) {
         if (child->getType() == NodeType::NODE_STYLE) {
             auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
             for (const auto& styleChild : styleNode->getChildren()) {
-                if (styleChild->getType() == NodeType::NODE_PROPERTY) {
-                    auto propNode = std::dynamic_pointer_cast<PropertyNode>(styleChild);
-                    if (propNode && propNode->getKey() == propertyName) {
-                        return propNode->getValue();
-                    }
+                if (auto propNode = std::dynamic_pointer_cast<PropertyNode>(styleChild)) {
+                    if (propNode->getKey() == propertyName) return propNode->getValue();
                 }
             }
         }
@@ -583,39 +450,29 @@ std::string CHTLGenerator::getElementPropertyValue(const std::shared_ptr<Element
 bool CHTLGenerator::evaluateCondition(const std::string& conditionStr) {
     try {
         ParsedCondition condition = parseCondition(conditionStr);
-
         std::shared_ptr<ElementNode> targetElement;
-        if (!condition.selector.empty()) {
-            targetElement = findElementBySelector(condition.selector);
-        } else {
+        if (!condition.selector.empty()) targetElement = findElementBySelector(condition.selector);
+        else {
             if (element_stack.empty()) return false;
             targetElement = element_stack.back();
         }
-
         if (!targetElement) return false;
-
         std::string actualValueStr = getElementPropertyValue(targetElement, condition.property);
         if (actualValueStr.empty()) return false;
-
         auto extract_numeric = [](const std::string& s) -> double {
             std::string num_part;
             for (char c : s) if (std::isdigit(c) || c == '.') num_part += c; else break;
             try { return std::stod(num_part); } catch(...) { return 0.0; }
         };
-
         double actualValue = extract_numeric(actualValueStr);
         double conditionValue = extract_numeric(condition.value);
-
         if (condition.op == "==") return actualValue == conditionValue;
         if (condition.op == "!=") return actualValue != conditionValue;
         if (condition.op == ">")  return actualValue > conditionValue;
         if (condition.op == "<")  return actualValue < conditionValue;
         if (condition.op == ">=") return actualValue >= conditionValue;
         if (condition.op == "<=") return actualValue <= conditionValue;
-
-    } catch (const std::runtime_error&) {
-        return false;
-    }
+    } catch (const std::runtime_error&) { return false; }
     return false;
 }
 

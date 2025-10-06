@@ -71,8 +71,9 @@ private:
     SaltBridge* salt_bridge;
     std::vector<std::shared_ptr<ElementNode>> element_stack;
     std::shared_ptr<BaseNode> ast_root; // To enable tree traversal
+    std::string current_namespace;
 
-    void collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties);
+    void collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties, const std::string& ns);
     void generateConditionalCss(const std::vector<std::shared_ptr<IfNode>>& chain);
 };
 

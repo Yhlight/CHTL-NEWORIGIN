@@ -10,6 +10,7 @@
 #include "../CHTLStrategy/NamespaceParsingStrategy.h"
 #include "../CHTLStrategy/ConfigurationParsingStrategy.h"
 #include "../CHTLStrategy/UseParsingStrategy.h"
+#include <stdexcept>
 
 
 namespace CHTL {
@@ -36,6 +37,12 @@ namespace CHTL {
                 } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Origin") {
                     context->setStrategy(std::make_unique<OriginParsingStrategy>());
                 } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Import") {
+                    context->advance(); // consume '['
+                    context->advance(); // consume 'Import'
+                    if (context->getCurrentToken().type != TokenType::TOKEN_RBRACKET) {
+                        throw std::runtime_error("Expected ']' after [Import");
+                    }
+                    context->advance(); // consume ']'
                     context->setStrategy(std::make_unique<ImportParsingStrategy>());
                 } else if (context->peek(1).type == TokenType::TOKEN_IDENTIFIER && context->peek(1).lexeme == "Namespace") {
                     context->setStrategy(std::make_unique<NamespaceParsingStrategy>());
