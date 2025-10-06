@@ -1,23 +1,23 @@
 #pragma once
 
+#include <string>
 #include <vector>
 #include <memory>
 
 namespace CHTLJS {
 
-enum class NodeType {
-    NODE_SELECTOR,
-    NODE_STRING_LITERAL,
-    // Other node types will be added here
-};
+    enum class NodeType {
+        NODE_SCRIPT_LOADER
+    };
 
-class BaseNode {
-public:
-    virtual ~BaseNode() = default;
-    NodeType getType() const { return type; }
+    class BaseNode {
+    public:
+        BaseNode(NodeType type) : type(type) {}
+        virtual ~BaseNode() = default;
+        NodeType getType() const { return type; }
 
-protected:
-    NodeType type;
-};
+    private:
+        NodeType type;
+    };
 
 }

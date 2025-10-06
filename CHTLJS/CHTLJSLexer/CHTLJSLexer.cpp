@@ -3,92 +3,89 @@
 
 namespace CHTLJS {
 
-CHTLJSLexer::CHTLJSLexer(const std::string& source) : source(source), position(0) {}
+CHTLJSLexer::CHTLJSLexer(const std::string& source)
+    : source(source), position(0), line(1), column(1) {}
 
 char CHTLJSLexer::peek() {
-    if (position >= source.length()) return '\0';
+    if (position >= source.length()) {
+        return '\0';
+    }
     return source[position];
 }
 
 char CHTLJSLexer::advance() {
-    if (position >= source.length()) return '\0';
-    return source[position++];
+    if (position >= source.length()) {
+        return '\0';
+    }
+    char currentChar = source[position];
+    position++;
+    column++;
+    if (currentChar == '\n') {
+        line++;
+        column = 1;
+    }
+    return currentChar;
 }
 
 void CHTLJSLexer::skipWhitespace() {
-    while (position < source.length() && isspace(source[position])) {
-        position++;
+    while (isspace(peek())) {
+        advance();
     }
+}
+
+Token CHTLJSLexer::makeToken(TokenType type, const std::string& lexeme) {
+    return Token{type, lexeme, line, column - (int)lexeme.length()};
+}
+
+Token CHTLJSLexer::errorToken(const std::string& message) {
+    return Token{TokenType::TOKEN_UNKNOWN, message, line, column};
 }
 
 Token CHTLJSLexer::getNextToken() {
     skipWhitespace();
+    char c = peek();
 
-    if (position >= source.length()) {
-        return {TokenType::TOKEN_EOF, ""};
-    }
-
-    char current = peek();
-
-    if (current == '{' && position + 1 < source.length() && source[position + 1] == '{') {
-        advance();
-        advance();
-        return {TokenType::TOKEN_DOUBLE_LBRACE, "{{"};
+    if (c == '\0') {
+        return makeToken(TokenType::TOKEN_EOF, "");
     }
 
-    if (current == '}' && position + 1 < source.length() && source[position + 1] == '}') {
-        advance();
-        advance();
-        return {TokenType::TOKEN_DOUBLE_RBRACE, "}}"};
+    switch (c) {
+        case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
+        case '}': advance(); return makeToken(TokenType::TOKEN_RBRACE, "}");
+        case ':': advance(); return makeToken(TokenType::TOKEN_COLON, ":");
+        case ',': advance(); return makeToken(TokenType::TOKEN_COMMA, ",");
+        case '"':
+            advance();
+            return stringLiteral();
+        default:
+            return lexIdentifier();
+    }
+}
+
+Token CHTLJSLexer::lexIdentifier() {
+    std::string lexeme;
+    while (!isspace(peek()) && peek() != '\0' && peek() != '{' && peek() != '}' && peek() != ':' && peek() != ',') {
+        lexeme += advance();
     }
 
-    if (current == '.') {
-        return {TokenType::TOKEN_DOT, std::string(1, advance())};
-    }
-    if (current == '#') {
-        return {TokenType::TOKEN_HASH, std::string(1, advance())};
-    }
-    if (current == '[') {
-        return {TokenType::TOKEN_LBRACKET, std::string(1, advance())};
-    }
-    if (current == ']') {
-        return {TokenType::TOKEN_RBRACKET, std::string(1, advance())};
-    }
-    if (current == '=') {
-        return {TokenType::TOKEN_ASSIGN, std::string(1, advance())};
-    }
-    if (current == ';') {
-        return {TokenType::TOKEN_SEMICOLON, std::string(1, advance())};
+    if (lexeme == "ScriptLoader" || lexeme == "load") {
+        return makeToken(TokenType::TOKEN_IDENTIFIER, lexeme);
     }
 
-    if (current == '"' || current == '\'') {
-        char quote_type = current;
-        advance(); // consume opening quote
-        std::string lexeme;
-        while (position < source.length() && source[position] != quote_type) {
-            lexeme += advance();
-        }
-        advance(); // consume closing quote
-        return {TokenType::TOKEN_STRING_LITERAL, lexeme};
-    }
+    return makeToken(TokenType::TOKEN_UNQUOTED_LITERAL, lexeme);
+}
 
-    if (isalpha(current) || current == '_') {
-        std::string lexeme;
-        while (position < source.length() && (isalnum(source[position]) || source[position] == '_')) {
-            lexeme += advance();
-        }
-        return {TokenType::TOKEN_IDENTIFIER, lexeme};
+Token CHTLJSLexer::stringLiteral() {
+    std::string lexeme;
+    while (peek() != '"' && peek() != '\0') {
+        lexeme += advance();
     }
-
-    if (isdigit(current)) {
-        std::string lexeme;
-        while (position < source.length() && isdigit(source[position])) {
-            lexeme += advance();
-        }
-        return {TokenType::TOKEN_NUMERIC_LITERAL, lexeme};
+    if (peek() == '"') {
+        advance(); // consume the closing quote
+    } else {
+        return errorToken("Unterminated string literal");
     }
-
-    return {TokenType::TOKEN_UNKNOWN, std::string(1, advance())};
+    return makeToken(TokenType::TOKEN_STRING_LITERAL, lexeme);
 }
 
 }

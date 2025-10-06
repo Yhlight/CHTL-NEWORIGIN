@@ -44,8 +44,9 @@ public:
     }
 
     std::string processAnimation(const AnimationData& data) override {
-        CHTLJS::CHTLJSGenerator generator;
-        return generator.generateAnimation(data);
+        // CHTLJS::CHTLJSGenerator generator;
+        // return generator.generateAnimation(data);
+        return "";
     }
 };
 

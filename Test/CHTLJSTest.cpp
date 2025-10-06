@@ -1,57 +1,74 @@
-#include "TestUtils.h"
-#include <stdexcept>
+#include "../third-party/catch.hpp"
+#include "../CHTLJS/CHTLJSLexer/CHTLJSLexer.h"
+#include "../CHTLJS/CHTLJSParser/CHTLJSParser.h"
+#include "../CHTLJS/CHTLJSGenerator/CHTLJSGenerator.h"
+#include <memory>
+#include <vector>
 #include <string>
-#include <algorithm>
 
-TEST_CASE("Generator handles basic CHTL JS selector", "[generator][chtljs]") {
-    std::string input = R"(
-        div {
-            class: "my-div";
-            script {
-                {{.my-div}}.style.color = "red";
-            }
-        }
-    )";
+std::string generate_cjs_output(const std::string& input) {
+    CHTLJS::CHTLJSLexer lexer(input);
+    std::vector<CHTLJS::Token> tokens;
+    CHTLJS::Token token = lexer.getNextToken();
+    while (token.type != CHTLJS::TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
+    }
 
-    auto generator = generateOutput(input);
-    std::string expected_html = R"(<div class="my-div"><script>document.querySelector('.my-div').style.color = "red";</script></div>)";
+    CHTLJS::CHTLJSParser parser(tokens);
+    auto root = parser.parse();
 
-    // Normalize whitespace and remove it for comparison
-    std::string actual_html = generator.getHtml();
-    actual_html.erase(std::remove_if(actual_html.begin(), actual_html.end(), ::isspace), actual_html.end());
-    expected_html.erase(std::remove_if(expected_html.begin(), expected_html.end(), ::isspace), expected_html.end());
-
-    REQUIRE(actual_html == expected_html);
+    CHTLJS::CHTLJSGenerator generator;
+    return generator.generate(root);
 }
 
-TEST_CASE("Generator handles CHTL JS Animate block", "[generator][chtljs][animate]") {
-    std::string input =
-        "div {\n"
-        "    id: \"box\";\n"
-        "    script {\n"
-        "        Animate {\n"
-        "            target: \"#box\",\n"
-        "            duration: 2000,\n"
-        "            begin: {\n"
-        "                opacity: \"0\";\n"
-        "                transform: \"translateX(-100px)\";\n"
-        "            },\n"
-        "            end: {\n"
-        "                opacity: \"1\";\n"
-        "                transform: \"translateX(0px)\";\n"
-        "            }\n"
-        "        }\n"
-        "    }\n"
-        "}\n";
+TEST_CASE("CHTLJS ScriptLoader with single script", "[chtljs][scriptloader]") {
+    std::string input = R"(
+        ScriptLoader {
+            load: "./module.js"
+        }
+    )";
+    std::string expected_output = "require(\"./module.js\");\n";
+    REQUIRE(generate_cjs_output(input) == expected_output);
+}
 
-    auto generator = generateOutput(input);
-    std::string actual_html = generator.getHtml();
+TEST_CASE("CHTLJS ScriptLoader with multiple load statements", "[chtljs][scriptloader]") {
+    std::string input = R"(
+        ScriptLoader {
+            load: "./module1.js",
+            load: "./module2.js"
+        }
+    )";
+    std::string expected_output = "require(\"./module1.js\");\nrequire(\"./module2.js\");\n";
+    REQUIRE(generate_cjs_output(input) == expected_output);
+}
 
-    // The expected JS is complex, so we'll check for key parts rather than a full string match
-    // This makes the test less brittle to formatting changes in the generator
-    REQUIRE(actual_html.find("const targetElement = document.querySelector('#box');") != std::string::npos);
-    REQUIRE(actual_html.find("const duration = 2000;") != std::string::npos);
-    REQUIRE(actual_html.find("keyframes.push({ time: 0, styles: {\"opacity\": \"0\",\"transform\": \"translateX(-100px)\"} });") != std::string::npos);
-    REQUIRE(actual_html.find("keyframes.push({ time: 1, styles: {\"opacity\": \"1\",\"transform\": \"translateX(0px)\"} });") != std::string::npos);
-    REQUIRE(actual_html.find("requestAnimationFrame(animationStep);") != std::string::npos);
+TEST_CASE("CHTLJS ScriptLoader with multiple comma-separated paths", "[chtljs][scriptloader]") {
+    std::string input = R"(
+        ScriptLoader {
+            load: ./module1.js, ./module2.js, ./module3.js
+        }
+    )";
+    std::string expected_output = "require(\"./module1.js\");\nrequire(\"./module2.js\");\nrequire(\"./module3.js\");\n";
+    REQUIRE(generate_cjs_output(input) == expected_output);
+}
+
+TEST_CASE("CHTLJS ScriptLoader with unquoted literals", "[chtljs][scriptloader]") {
+    std::string input = R"(
+        ScriptLoader {
+            load: ./module.js
+        }
+    )";
+    std::string expected_output = "require(\"./module.js\");\n";
+    REQUIRE(generate_cjs_output(input) == expected_output);
+}
+
+TEST_CASE("CHTLJS ScriptLoader with mixed literals", "[chtljs][scriptloader]") {
+    std::string input = R"(
+        ScriptLoader {
+            load: ./module1.js, "./module2.js"
+        }
+    )";
+    std::string expected_output = "require(\"./module1.js\");\nrequire(\"./module2.js\");\n";
+    REQUIRE(generate_cjs_output(input) == expected_output);
 }

@@ -1,66 +1,108 @@
 #include "CHTLJSParser.h"
-#include "../CHTLJSNode/SelectorNode.h"
-#include "../CHTLJSNode/StringLiteralNode.h"
+#include "../CHTLJSNode/ScriptLoaderNode.h"
 #include <stdexcept>
 
 namespace CHTLJS {
 
-CHTLJSParser::CHTLJSParser(const std::vector<Token>& tokens) : tokens(tokens), position(0) {}
-
-Token& CHTLJSParser::getCurrentToken() {
-    if (position >= tokens.size()) {
-        static Token eof_token = {TokenType::TOKEN_EOF, ""};
-        return eof_token;
-    }
-    return tokens[position];
-}
-
-void CHTLJSParser::advance() {
-    if (position < tokens.size()) {
-        position++;
-    }
-}
-
-bool CHTLJSParser::isAtEnd() {
-    return position >= tokens.size();
-}
+CHTLJSParser::CHTLJSParser(const std::vector<Token>& tokens)
+    : tokens(tokens), position(0) {}
 
 std::shared_ptr<BaseNode> CHTLJSParser::parse() {
-    if (isAtEnd()) {
-        return nullptr;
-    }
+    if (match({TokenType::TOKEN_IDENTIFIER}) && previous().lexeme == "ScriptLoader") {
+        if (!match({TokenType::TOKEN_LBRACE})) {
+            throw std::runtime_error("Expected '{' after ScriptLoader.");
+        }
 
-    Token& current_token = getCurrentToken();
+        auto node = std::make_shared<ScriptLoaderNode>();
 
-    if (current_token.type == TokenType::TOKEN_DOUBLE_LBRACE) {
-        return parseSelector();
-    }
+        while (!check(TokenType::TOKEN_RBRACE) && !isAtEnd()) {
+            if (match({TokenType::TOKEN_IDENTIFIER}) && previous().lexeme == "load") {
+                if (!match({TokenType::TOKEN_COLON})) {
+                    throw std::runtime_error("Expected ':' after 'load' keyword.");
+                }
 
-    if (current_token.type == TokenType::TOKEN_STRING_LITERAL) {
-        auto node = std::make_shared<StringLiteralNode>(current_token.lexeme);
-        advance();
+                // Parse one or more paths
+                while (true) {
+                    if (match({TokenType::TOKEN_STRING_LITERAL, TokenType::TOKEN_UNQUOTED_LITERAL})) {
+                        node->scripts.push_back(previous().lexeme);
+                    } else {
+                        throw std::runtime_error("Expected a script path (string or unquoted literal).");
+                    }
+
+                    if (!check(TokenType::TOKEN_COMMA)) {
+                        break; // End of path list for this load statement
+                    }
+
+                    // If the comma is followed by another 'load' keyword or the closing brace,
+                    // it's a trailing comma, so we break.
+                    if (peek(1).type == TokenType::TOKEN_IDENTIFIER || peek(1).type == TokenType::TOKEN_RBRACE) {
+                        break;
+                    }
+
+                    // Consume the comma and continue parsing paths.
+                    advance();
+                }
+            } else {
+                throw std::runtime_error("Expected 'load' keyword inside ScriptLoader block.");
+            }
+
+            // Consume optional comma between load statements
+            if (check(TokenType::TOKEN_COMMA) && peek(1).type != TokenType::TOKEN_RBRACE) {
+                advance();
+            }
+        }
+
+        if (!match({TokenType::TOKEN_RBRACE})) {
+            throw std::runtime_error("Expected '}' to close ScriptLoader block.");
+        }
+
         return node;
     }
-
-    // For other tokens, return nullptr for the SaltBridge to handle as raw text.
     return nullptr;
 }
 
-std::shared_ptr<BaseNode> CHTLJSParser::parseSelector() {
-    advance(); // consume '{{'
+bool CHTLJSParser::isAtEnd() {
+    return position >= tokens.size() || peek().type == TokenType::TOKEN_EOF;
+}
 
-    std::string selector_str;
-    while (!isAtEnd() && getCurrentToken().type != TokenType::TOKEN_DOUBLE_RBRACE) {
-        selector_str += getCurrentToken().lexeme;
-        advance();
+Token& CHTLJSParser::getCurrentToken() {
+    return tokens[position];
+}
+
+Token CHTLJSParser::peek(size_t offset) {
+    if (position + offset >= tokens.size()) {
+        static Token eof{TokenType::TOKEN_EOF, "", 0, 0};
+        return eof;
     }
+    return tokens[position + offset];
+}
 
-    if (getCurrentToken().type != TokenType::TOKEN_DOUBLE_RBRACE) {
-        throw std::runtime_error("Unclosed selector expression. Expected '}}'.");
+Token CHTLJSParser::previous() {
+    return tokens[position - 1];
+}
+
+Token CHTLJSParser::advance() {
+    if (!isAtEnd()) {
+        position++;
     }
-    advance(); // consume '}}'
+    return previous();
+}
 
-    return std::make_shared<SelectorNode>(selector_str);
+bool CHTLJSParser::check(TokenType type) {
+    if (isAtEnd()) {
+        return false;
+    }
+    return peek().type == type;
+}
+
+bool CHTLJSParser::match(const std::vector<TokenType>& types) {
+    for (TokenType type : types) {
+        if (check(type)) {
+            advance();
+            return true;
+        }
+    }
+    return false;
 }
 
 }

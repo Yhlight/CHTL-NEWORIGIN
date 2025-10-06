@@ -7,20 +7,22 @@
 
 namespace CHTLJS {
 
-class CHTLJSParser {
-public:
-    CHTLJSParser(const std::vector<Token>& tokens);
-    std::shared_ptr<BaseNode> parse();
+    class CHTLJSParser {
+    public:
+        CHTLJSParser(const std::vector<Token>& tokens);
+        std::shared_ptr<BaseNode> parse();
+        bool isAtEnd();
+        Token& getCurrentToken();
+        Token advance();
 
-    Token& getCurrentToken();
-    void advance();
-    bool isAtEnd();
+    private:
+        std::vector<Token> tokens;
+        size_t position;
 
-private:
-    std::vector<Token> tokens;
-    size_t position;
-
-    std::shared_ptr<BaseNode> parseSelector();
-};
+        Token peek(size_t offset = 0);
+        Token previous();
+        bool check(TokenType type);
+        bool match(const std::vector<TokenType>& types);
+    };
 
 }
