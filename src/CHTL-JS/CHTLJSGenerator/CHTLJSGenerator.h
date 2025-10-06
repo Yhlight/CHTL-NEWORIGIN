@@ -3,6 +3,7 @@
 
 #include "../../Common.h"
 #include "../CHTLJSLexer/CHTLJSToken.h"
+#include "../CHTLJSParser/CHTLJSParser.h"
 #include "../../SharedCore/SaltBridge.h"
 
 namespace CHTL {

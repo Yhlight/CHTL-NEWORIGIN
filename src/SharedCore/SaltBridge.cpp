@@ -1,6 +1,8 @@
 #include "SaltBridge.h"
 #include "../Util/StringUtil/StringUtil.h"
 #include <sstream>
+#include <algorithm>
+#include <unordered_set>
 
 namespace CHTL {
 namespace Bridge {
@@ -264,10 +266,31 @@ String EnhancedSelectorProcessor::toJavaScript(const SelectorInfo& info) {
             }
             break;
             
-        case SelectorType::Auto:
-            // 自动推断：优先class（最常用）
-            ss << "document.querySelector('." << info.value << "')";
+        case SelectorType::Auto: {
+            // 自动推断：先检查是否是HTML标签，否则当作class
+            // 检查常见HTML标签
+            String lower = info.value;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            
+            // 常见HTML标签列表
+            static const std::unordered_set<String> htmlTags = {
+                "div", "span", "p", "a", "button", "input", "form", "label",
+                "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li",
+                "table", "tr", "td", "th", "tbody", "thead", "img", "br",
+                "section", "article", "header", "footer", "nav", "main",
+                "aside", "body", "html", "head", "title", "meta", "link",
+                "script", "style", "canvas", "svg", "video", "audio"
+            };
+            
+            if (htmlTags.find(lower) != htmlTags.end()) {
+                // 是HTML标签
+                ss << "document.querySelector('" << lower << "')";
+            } else {
+                // 当作class处理
+                ss << "document.querySelector('." << info.value << "')";
+            }
             break;
+        }
             
         case SelectorType::Descendant:
             ss << "document.querySelector('" << info.value << "')";

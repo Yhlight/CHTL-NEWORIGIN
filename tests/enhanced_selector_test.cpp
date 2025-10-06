@@ -22,8 +22,9 @@ TEST_CASE("Enhanced Selector - Basic Conversions", "[enhanced-selector]") {
     }
     
     SECTION("Tag selector") {
+        // Auto type now correctly recognizes HTML tags
         String result = bridge.convertEnhancedSelector("button");
-        REQUIRE(result == "document.querySelector('.button')");
+        REQUIRE(result == "document.querySelector('button')");
     }
     
     SECTION("Descendant selector") {

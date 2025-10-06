@@ -37,6 +37,11 @@ file(GLOB_RECURSE CHTLJS_SOURCES
     "${SRC_DIR}/CHTL-JS/*.cpp"
 )
 
+# 确保包含新的Parser文件
+list(APPEND CHTLJS_SOURCES 
+    "${SRC_DIR}/CHTL-JS/CHTLJSParser/CHTLJSParser.cpp"
+)
+
 # 盐桥核心
 file(GLOB_RECURSE SHARED_SOURCES 
     "${SRC_DIR}/SharedCore/*.cpp"

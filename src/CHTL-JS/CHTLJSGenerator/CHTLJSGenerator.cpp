@@ -1,7 +1,6 @@
 #include "CHTLJSGenerator.h"
 #include <sstream>
 #include <iostream>
-#include <regex>
 
 namespace CHTL {
 namespace JS {
@@ -132,94 +131,69 @@ String CHTLJSGenerator::wrapWithIIFE(const String& code) {
 }
 
 String CHTLJSGenerator::processListenBlocks(const String& code) {
-    String result = code;
-    
-    // 使用regex查找并替换Listen块
-    // 模式: {{...}}->Listen { ... } 或 identifier->Listen { ... }
-    std::regex listenPattern(R"(((?:\{\{[^}]+\}\}|\w+))\s*->\s*Listen\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\})");
-    
-    std::string input = code;
-    std::smatch match;
-    std::string output;
-    
+    String result;
     size_t lastPos = 0;
-    auto searchStart = input.cbegin();
+    size_t searchPos = 0;
     
-    while (std::regex_search(searchStart, input.cend(), match, listenPattern)) {
-        // 添加匹配前的内容
-        output.append(input, lastPos, match.position());
-        
-        String target = match[1].str();
-        String eventsBlock = match[2].str();
-        
-        // 如果target是{{...}}，转换它
-        if (target.length() >= 4 && target.substr(0, 2) == "{{" && target.substr(target.length() - 2) == "}}") {
-            String selector = target.substr(2, target.length() - 4);
-            target = bridge_.convertEnhancedSelector(selector);
+    // 创建解析器
+    CHTLJSParser parser(code);
+    
+    // 查找所有Listen块
+    while (true) {
+        auto blockPos = parser.findListenBlock(code, searchPos);
+        if (!blockPos.has_value()) {
+            // 没有更多Listen块，添加剩余内容
+            result += code.substr(lastPos);
+            break;
         }
         
-        // 简单解析事件绑定 - 使用字符串处理而不是复杂regex
-        std::stringstream replacement;
-        size_t eventPos = 0;
+        size_t startPos = blockPos->first;
+        size_t endPos = blockPos->second;
         
-        while (eventPos < eventsBlock.length()) {
-            // 跳过空白
-            while (eventPos < eventsBlock.length() && std::isspace(eventsBlock[eventPos])) {
-                eventPos++;
-            }
-            if (eventPos >= eventsBlock.length()) break;
+        // 添加Listen块之前的内容
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        // 提取并解析Listen块
+        String blockCode = code.substr(startPos, endPos - startPos);
+        auto listenBlock = parser.parseListenBlock(blockCode);
+        
+        if (listenBlock.has_value()) {
+            // 生成addEventListener代码
+            String target = listenBlock->target;
             
-            // 查找事件名 (identifier:)
-            size_t colonPos = eventsBlock.find(':', eventPos);
-            if (colonPos == String::npos) break;
-            
-            String eventName = eventsBlock.substr(eventPos, colonPos - eventPos);
-            // 去除空白
-            eventName.erase(eventName.find_last_not_of(" \t\n\r") + 1);
-            
-            // 查找handler - 从:到逗号或块结束
-            size_t handlerStart = colonPos + 1;
-            while (handlerStart < eventsBlock.length() && std::isspace(eventsBlock[handlerStart])) {
-                handlerStart++;
+            // 如果target是{{...}}，转换它
+            if (target.length() >= 4 && target.substr(0, 2) == "{{" && 
+                target.substr(target.length() - 2) == "}}") {
+                String selector = target.substr(2, target.length() - 4);
+                target = bridge_.convertEnhancedSelector(selector);
             }
             
-            size_t handlerEnd = handlerStart;
-            int parenDepth = 0, braceDepth = 0;
-            
-            while (handlerEnd < eventsBlock.length()) {
-                char ch = eventsBlock[handlerEnd];
-                if (ch == '(') parenDepth++;
-                else if (ch == ')') parenDepth--;
-                else if (ch == '{') braceDepth++;
-                else if (ch == '}') braceDepth--;
-                else if (ch == ',' && parenDepth == 0 && braceDepth == 0) {
-                    break;  // 找到分隔符
+            // 生成每个事件绑定
+            std::stringstream ss;
+            for (size_t i = 0; i < listenBlock->bindings.size(); i++) {
+                const auto& binding = listenBlock->bindings[i];
+                
+                ss << target << ".addEventListener('" 
+                   << binding.eventName << "', " 
+                   << binding.handler << ")";
+                
+                // 添加分号和换行（除了最后一个）
+                if (i < listenBlock->bindings.size() - 1) {
+                    ss << ";\n    ";
                 }
-                handlerEnd++;
             }
             
-            String handler = eventsBlock.substr(handlerStart, handlerEnd - handlerStart);
-            // 去除尾部空白和分号
-            size_t trimEnd = handler.find_last_not_of(" \t\n\r,;");
-            if (trimEnd != String::npos) {
-                handler = handler.substr(0, trimEnd + 1);
-            }
-            
-            replacement << target << ".addEventListener('" << eventName << "', " << handler << ");\n    ";
-            
-            eventPos = handlerEnd + 1;
+            result += ss.str();
+        } else {
+            // 解析失败，保留原始代码
+            result += blockCode;
         }
         
-        output.append(replacement.str());
-        
-        lastPos = match.position() + match.length();
-        searchStart = match.suffix().first;
+        lastPos = endPos;
+        searchPos = endPos;
     }
     
-    // 添加剩余内容
-    output.append(input, lastPos, std::string::npos);
-    
-    return output;
+    return result;
 }
 
 } // namespace JS
