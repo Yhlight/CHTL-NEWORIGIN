@@ -147,6 +147,17 @@ void CHTLGenerator::generateElement(ElementNode& node) {
     
     appendHtml(">");
     
+    // 推送上下文信息到SaltBridge，以便script块能够正确解析&引用
+    Bridge::ContextInfo context;
+    context.currentTag = node.getTagName();
+    if (node.hasAttribute("id")) {
+        context.currentId = node.getAttribute("id").value();
+    }
+    if (node.hasAttribute("class")) {
+        context.currentClass = node.getAttribute("class").value();
+    }
+    Bridge::SaltBridge::getInstance().pushContext(context);
+    
     // 子节点
     bool hasBlockChildren = false;
     for (const auto& child : node.getChildren()) {
@@ -169,6 +180,9 @@ void CHTLGenerator::generateElement(ElementNode& node) {
         decreaseIndent();
         appendHtml(indent());
     }
+    
+    // 弹出上下文
+    Bridge::SaltBridge::getInstance().popContext();
     
     // 结束标签
     appendHtml("</" + node.getTagName() + ">");
@@ -404,12 +418,28 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
         return;
     }
     
+    // 如果是元素节点，推送上下文
+    bool pushedContext = false;
+    if (node->getType() == NodeType::Element) {
+        auto elementNode = std::dynamic_pointer_cast<ElementNode>(node);
+        Bridge::ContextInfo context;
+        context.currentTag = elementNode->getTagName();
+        if (elementNode->hasAttribute("id")) {
+            context.currentId = elementNode->getAttribute("id").value();
+        }
+        if (elementNode->hasAttribute("class")) {
+            context.currentClass = elementNode->getAttribute("class").value();
+        }
+        Bridge::SaltBridge::getInstance().pushContext(context);
+        pushedContext = true;
+    }
+    
     if (node->getType() == NodeType::Script) {
         auto scriptNode = std::dynamic_pointer_cast<ScriptNode>(node);
         String content = scriptNode->getContent();
         
         // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
-        if (content.find("{{") != String::npos) {
+        if (content.find("{{") != String::npos || content.find("&") != String::npos) {
             JS::JSGeneratorConfig jsConfig;
             jsConfig.wrapIIFE = false;  // 不自动包装IIFE
             jsConfig.prettyPrint = false;
@@ -423,6 +453,11 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
     
     for (const auto& child : node->getChildren()) {
         collectScripts(child, output, config);
+    }
+    
+    // 如果推送了上下文，弹出它
+    if (pushedContext) {
+        Bridge::SaltBridge::getInstance().popContext();
     }
 }
 

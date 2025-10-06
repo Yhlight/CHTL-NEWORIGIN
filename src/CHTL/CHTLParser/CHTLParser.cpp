@@ -464,6 +464,12 @@ String CHTLParser::parseBlockContent(TokenType endToken) {
     while (!isAtEnd()) {
         Token token = getCurrentToken();
         
+        // 跳过生成器注释（在script/style块中）
+        if (token.is(TokenType::GeneratorComment)) {
+            advance();
+            continue;
+        }
+        
         // 特殊处理增强选择器 - 保留{{ }}标记
         if (token.is(TokenType::EnhancedSelector)) {
             content += "{{" + token.getValue() + "}}";

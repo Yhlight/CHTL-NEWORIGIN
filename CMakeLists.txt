@@ -74,8 +74,6 @@ if(TEST_SOURCES)
         ${THIRD_PARTY_SOURCES}
     )
     
-    target_compile_definitions(chtl_tests PRIVATE CATCH_CONFIG_MAIN)
-    
     add_test(NAME chtl_tests COMMAND chtl_tests)
 endif()
 

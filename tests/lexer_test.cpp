@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include "../third-party/catch.hpp"
 #include "CHTL/CHTLLexer/Lexer.h"
 #include "CHTL/CHTLLexer/Token.h"
 

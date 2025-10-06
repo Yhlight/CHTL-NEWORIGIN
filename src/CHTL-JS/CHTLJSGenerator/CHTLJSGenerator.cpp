@@ -1,5 +1,6 @@
 #include "CHTLJSGenerator.h"
 #include <sstream>
+#include <iostream>
 #include <regex>
 
 namespace CHTL {
@@ -51,10 +52,14 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
         // 单独的 & 需要替换为上下文引用
         String contextRef = bridge_.resolveAmpersand(false);  // script中优先id
         if (!contextRef.empty()) {
-            result.replace(pos, 1, contextRef);
-            pos += contextRef.length();
+            // 将选择器转换为JavaScript代码
+            String jsRef = bridge_.convertEnhancedSelector(contextRef);
+            result.replace(pos, 1, jsRef);
+            pos += jsRef.length();
         } else {
-            pos++;
+            // 如果没有上下文，使用this
+            result.replace(pos, 1, "this");
+            pos += 4;
         }
     }
     

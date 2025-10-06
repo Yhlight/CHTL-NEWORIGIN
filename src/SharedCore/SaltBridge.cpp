@@ -232,10 +232,22 @@ String EnhancedSelectorProcessor::toJavaScript(const SelectorInfo& info) {
             }
             break;
             
-        case SelectorType::Ampersand:
+        case SelectorType::Ampersand: {
             // & 从SaltBridge获取当前上下文
-            ss << "this";  // 默认使用this
+            SaltBridge& bridge = SaltBridge::getInstance();
+            if (bridge.hasContext()) {
+                // 从上下文获取选择器，然后递归转换
+                String contextSelector = bridge.resolveAmpersand(false);  // script中优先id
+                if (!contextSelector.empty()) {
+                    // 解析上下文选择器并转换为JavaScript
+                    SelectorInfo contextInfo = parse(contextSelector);
+                    return toJavaScript(contextInfo);
+                }
+            }
+            // 如果没有上下文，使用this
+            ss << "this";
             break;
+        }
     }
     
     return ss.str();
