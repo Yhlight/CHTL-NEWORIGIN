@@ -2,6 +2,7 @@
 #include "ExpressionParser.h"
 #include "../../Util/StringUtil/StringUtil.h"
 #include "../../SharedCore/SaltBridge.h"
+#include "../CHTLTemplate/TemplateRegistry.h"
 #include <sstream>
 
 namespace CHTL {
@@ -336,6 +337,40 @@ SharedPtr<StyleNode> CHTLParser::parseStyle() {
             styleNode->addCssRule(selector, rules);
             expect(TokenType::RightBrace, "Expected '}' after CSS rules");
         }
+        // 模板引用 @Style TemplateName;
+        else if (token.is(TokenType::AtStyle)) {
+            advance();  // 消耗@Style
+            
+            // 获取模板名称
+            Token nameToken = getCurrentToken();
+            if (!nameToken.is(TokenType::Identifier) && !nameToken.is(TokenType::HtmlKeyword)) {
+                error("Expected template name after @Style");
+                advance();
+                continue;
+            }
+            String templateName = advance().getValue();
+            
+            // 从TemplateRegistry获取模板
+            auto templateDef = TemplateRegistry::getInstance().findTemplate(
+                templateName, TemplateNode::TemplateType::Style);
+            
+            if (templateDef.has_value()) {
+                // 展开模板：将模板中的样式添加到当前styleNode
+                for (const auto& child : templateDef->children) {
+                    if (child->getType() == NodeType::Style) {
+                        auto templateStyle = std::dynamic_pointer_cast<StyleNode>(child);
+                        const auto& inlineStyles = templateStyle->getInlineStyles();
+                        for (const auto& [prop, val] : inlineStyles) {
+                            styleNode->addInlineStyle(prop, val);
+                        }
+                    }
+                }
+            }
+            
+            if (check(TokenType::Semicolon)) {
+                advance();
+            }
+        }
         // 内联样式
         else if (token.is(TokenType::Identifier) && peek().is(TokenType::Colon)) {
             String property = advance().getValue();
@@ -387,8 +422,13 @@ SharedPtr<TemplateNode> CHTLParser::parseTemplate() {
         return nullptr;
     }
     
-    Token nameToken = expectToken(TokenType::Identifier, "Expected template name");
-    String name = nameToken.getValue();
+    // 模板名称可以是Identifier或HtmlKeyword
+    Token nameToken = getCurrentToken();
+    if (!nameToken.is(TokenType::Identifier) && !nameToken.is(TokenType::HtmlKeyword)) {
+        error("Expected template name, got " + nameToken.toString());
+        return nullptr;
+    }
+    String name = advance().getValue();
     
     auto templateNode = std::make_shared<TemplateNode>(type, name);
     
@@ -426,6 +466,23 @@ SharedPtr<TemplateNode> CHTLParser::parseTemplate() {
     }
     
     expect(TokenType::RightBrace, "Expected '}' after template body");
+    
+    // 注册模板到TemplateRegistry
+    if (type == TemplateNode::TemplateType::Var) {
+        // 对于变量组，提取变量
+        HashMap<String, String> variables;
+        for (const auto& child : templateNode->getChildren()) {
+            if (child->getType() == NodeType::Style) {
+                auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+                const auto& inlineStyles = styleNode->getInlineStyles();
+                variables.insert(inlineStyles.begin(), inlineStyles.end());
+            }
+        }
+        TemplateRegistry::getInstance().registerVarTemplate(name, variables);
+    } else {
+        // 对于样式模板和元素模板
+        TemplateRegistry::getInstance().registerTemplate(name, type, templateNode->getChildren());
+    }
     
     return templateNode;
 }
