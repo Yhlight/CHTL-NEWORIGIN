@@ -85,7 +85,6 @@ void CHTLGenerator::visit(const std::shared_ptr<BaseNode>& node) {
 
 void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& tNode, std::vector<std::pair<std::string, std::string>>& properties, const std::string& ns) {
     if (!tNode) return;
-
     for (const auto& child : tNode->getChildren()) {
         if (child->getType() == NodeType::NODE_TEMPLATE_USAGE) {
             auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(child);
@@ -95,110 +94,113 @@ void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& 
             }
         }
     }
-
     for (const auto& child : tNode->getChildren()) {
-        if (child->getType() == NodeType::NODE_PROPERTY) {
-            auto propNode = std::dynamic_pointer_cast<PropertyNode>(child);
-            if (propNode) {
-                auto it = std::find_if(properties.begin(), properties.end(),
-                                       [&](const auto& p) { return p.first == propNode->getKey(); });
-                if (it != properties.end()) {
-                    it->second = propNode->getValue();
-                } else {
-                    properties.push_back({propNode->getKey(), propNode->getValue()});
-                }
-            }
+        if (auto propNode = std::dynamic_pointer_cast<PropertyNode>(child)) {
+            auto it = std::find_if(properties.begin(), properties.end(),
+                                   [&](const auto& p) { return p.first == propNode->getKey(); });
+            if (it != properties.end()) it->second = propNode->getValue();
+            else properties.push_back({propNode->getKey(), propNode->getValue()});
         }
     }
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
-    if (node->getTagName() == "text") {
+    if (node->getTagName() == "text" || node->getTagName() == "root" || node->getTagName() == "specialization-root") {
         for (const auto& child : node->getChildren()) visit(child);
         return;
     }
 
-    if (node->getTagName() != "root" && node->getTagName() != "specialization-root") {
-        element_stack.push_back(node);
-        html_out << "<" << node->getTagName();
-        for (const auto& attr : node->getAttributes()) {
-            html_out << " " << attr.first << "=\"" << attr.second << "\"";
-        }
+    element_stack.push_back(node);
 
-        std::stringstream style_ss;
-        for (const auto& child : node->getChildren()) {
-            if (child->getType() == NodeType::NODE_STYLE) {
-                auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
-                std::vector<std::pair<std::string, std::string>> style_properties;
-                const auto& style_children = styleNode->getChildren();
-                for (size_t i = 0; i < style_children.size(); ++i) {
-                    const auto& styleChild = style_children[i];
-                    if (styleChild->getType() == NodeType::NODE_PROPERTY) {
-                        auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild);
-                        if (prop) {
-                            if (!prop->getChildren().empty() && prop->getChildren()[0]->getType() == NodeType::NODE_TEMPLATE_USAGE) {
-                                auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(prop->getChildren()[0]);
-                                if (usageNode && usageNode->getUsageType() == TemplateUsageType::VAR) {
-                                    auto templateNode = context->getTemplate(usageNode->getName(), current_namespace);
-                                    if (templateNode) {
-                                        for (const auto& varChild : templateNode->getChildren()) {
-                                            if (auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild)) {
-                                                if (varProp->getKey() == usageNode->getVariableName()) {
-                                                    style_properties.push_back({prop->getKey(), varProp->getValue()});
-                                                    break;
-                                                }
-                                            }
+    // Step 1: First pass to collect styles and content nodes.
+    std::vector<std::pair<std::string, std::string>> style_properties;
+    std::vector<std::shared_ptr<BaseNode>> content_nodes;
+
+    for (const auto& child : node->getChildren()) {
+        if (child->getType() == NodeType::NODE_STYLE) {
+            auto styleNode = std::dynamic_pointer_cast<StyleNode>(child);
+            for (const auto& styleChild : styleNode->getChildren()) {
+                if (auto prop = std::dynamic_pointer_cast<PropertyNode>(styleChild)) {
+                    // Check if the property is a variable template usage
+                    if (!prop->getChildren().empty() && prop->getChildren()[0]->getType() == NodeType::NODE_TEMPLATE_USAGE) {
+                        auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(prop->getChildren()[0]);
+                        if (usageNode && usageNode->getUsageType() == TemplateUsageType::VAR) {
+                            auto templateNode = context->getTemplate(usageNode->getName(), current_namespace);
+                            if (templateNode) {
+                                for (const auto& varChild : templateNode->getChildren()) {
+                                    if (auto varProp = std::dynamic_pointer_cast<PropertyNode>(varChild)) {
+                                        if (varProp->getKey() == usageNode->getVariableName()) {
+                                            style_properties.push_back({prop->getKey(), varProp->getValue()});
+                                            break;
                                         }
                                     }
                                 }
-                            } else {
-                                style_properties.push_back({prop->getKey(), prop->getValue()});
                             }
                         }
-                    } else if (styleChild->getType() == NodeType::NODE_TEMPLATE_USAGE) {
-                        auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(styleChild);
-                        if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
-                             auto templateNode = context->getTemplate(usageNode->getName(), current_namespace);
-                             if(templateNode) {
-                                 collectStyleProperties(templateNode, style_properties, current_namespace);
-                             }
-                        }
-                    } else if (styleChild->getType() == NodeType::NODE_RULE) {
-                        visit(styleChild);
-                    } else if (styleChild->getType() == NodeType::NODE_IF) {
-                        auto if_node = std::dynamic_pointer_cast<IfNode>(styleChild);
-                        if (if_node) {
-                            std::vector<std::shared_ptr<IfNode>> chain;
-                            auto current = if_node;
-                            while (current) {
-                                chain.push_back(current);
-                                current = current->next_if;
-                            }
-                            generateConditionalCss(chain);
-                        }
+                    } else {
+                        style_properties.push_back({prop->getKey(), prop->getValue()});
+                    }
+                } else if (auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(styleChild)) {
+                    if (usageNode->getUsageType() == TemplateUsageType::STYLE) {
+                        auto templateNode = context->getTemplate(usageNode->getName(), current_namespace);
+                        if (templateNode) collectStyleProperties(templateNode, style_properties, current_namespace);
+                    }
+                } else if (styleChild->getType() == NodeType::NODE_RULE) {
+                    visit(styleChild);
+                } else if (styleChild->getType() == NodeType::NODE_IF) {
+                    auto if_node = std::dynamic_pointer_cast<IfNode>(styleChild);
+                    if (if_node) {
+                        std::vector<std::shared_ptr<IfNode>> chain;
+                        auto current = if_node;
+                        while(current) { chain.push_back(current); current = current->next_if; }
+                        generateConditionalCss(chain);
                     }
                 }
-                for (const auto& pair : style_properties) {
-                    style_ss << pair.first << ":" << pair.second << ";";
-                }
             }
+        } else if (child->getType() == NodeType::NODE_IF) {
+            auto current_if = std::dynamic_pointer_cast<IfNode>(child);
+            while(current_if) {
+                bool condition_met = (current_if->if_type == IfType::ELSE) || evaluateCondition(current_if->condition);
+                if (condition_met) {
+                    for (const auto& if_child : current_if->getChildren()) {
+                        if (auto prop = std::dynamic_pointer_cast<PropertyNode>(if_child)) {
+                            style_properties.push_back({prop->getKey(), prop->getValue()});
+                        } else {
+                            content_nodes.push_back(if_child);
+                        }
+                    }
+                    break;
+                }
+                current_if = current_if->next_if;
+            }
+        } else {
+            content_nodes.push_back(child);
         }
-        if (style_ss.rdbuf()->in_avail() > 0) {
-            html_out << " style=\"" << style_ss.str() << "\"";
-        }
-        html_out << ">";
     }
 
-    for (const auto& child : node->getChildren()) {
-        if (child->getType() != NodeType::NODE_STYLE) {
-            visit(child);
+    // Step 2: Construct the parent element's opening tag.
+    html_out << "<" << node->getTagName();
+    for (const auto& attr : node->getAttributes()) {
+        html_out << " " << attr.first << "=\"" << attr.second << "\"";
+    }
+    if (!style_properties.empty()) {
+        html_out << " style=\"";
+        for (const auto& pair : style_properties) {
+            html_out << pair.first << ":" << pair.second << ";";
         }
+        html_out << "\"";
+    }
+    html_out << ">";
+
+    // Step 3: Visit the collected content nodes.
+    for (const auto& content_node : content_nodes) {
+        visit(content_node);
     }
 
-    if (node->getTagName() != "root" && node->getTagName() != "specialization-root") {
-        html_out << "</" << node->getTagName() << ">";
-        element_stack.pop_back();
-    }
+    // Step 4: Close the parent tag.
+    html_out << "</" << node->getTagName() << ">";
+
+    element_stack.pop_back();
 }
 
 void CHTLGenerator::generateConditionalCss(const std::vector<std::shared_ptr<IfNode>>& chain) {
@@ -226,41 +228,21 @@ void CHTLGenerator::generateConditionalCss(const std::vector<std::shared_ptr<IfN
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
-    auto current_node = node;
-    while (current_node) {
-        bool condition_met = false;
-        if (current_node->if_type == IfType::IF || current_node->if_type == IfType::ELSE_IF) {
-            if (evaluateCondition(current_node->condition)) {
-                condition_met = true;
-            }
-        } else if (current_node->if_type == IfType::ELSE) {
-            condition_met = true;
-        }
-        if (condition_met) {
-            for (const auto& child : current_node->getChildren()) visit(child);
-            return;
-        }
-        current_node = current_node->next_if;
-    }
+    // This node is handled within the visit(ElementNode) method to correctly
+    // separate its children (properties vs. renderable nodes) and apply
+    // styles to the parent element. A top-level 'if' is not rendered.
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<TextNode>& node) { html_out << node->getContent(); }
 void CHTLGenerator::visit(const std::shared_ptr<StyleNode>& node) {
-    for (const auto& child : node->getChildren()) {
-        if (child->getType() == NodeType::NODE_RULE) visit(child);
-    }
+    // This node is handled within the visit(ElementNode) method.
 }
 void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {}
 
 void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
     std::string lookup_ns = node->getFromNamespace().empty() ? current_namespace : node->getFromNamespace();
     auto templateNode = context->getTemplate(node->getName(), lookup_ns);
-
-    if (!templateNode) {
-        // If not found, it might be a global template. The context handles this fallback.
-        templateNode = context->getTemplate(node->getName());
-    }
-
+    if (!templateNode) templateNode = context->getTemplate(node->getName());
     if (!templateNode) return;
     auto specializationRoot = node->getSpecialization();
     if (!specializationRoot) {

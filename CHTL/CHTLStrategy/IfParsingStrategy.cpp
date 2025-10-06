@@ -140,9 +140,25 @@ namespace {
     void parse_rendering_children(CHTLParserContext* context, std::shared_ptr<BaseNode> parentNode) {
         while (context->getCurrentToken().type != TokenType::TOKEN_RBRACE && !context->isAtEnd()) {
             TokenType currentType = context->getCurrentToken().type;
-            if (currentType == TokenType::TOKEN_IDENTIFIER) {
-                context->setStrategy(std::make_unique<ElementParsingStrategy>());
-                parentNode->addChild(context->runCurrentStrategy());
+            if (currentType == TokenType::TOKEN_IDENTIFIER || currentType == TokenType::TOKEN_UNQUOTED_LITERAL) {
+                // Look ahead to distinguish between a property and a nested element.
+                if (context->peek(1).type == TokenType::TOKEN_COLON || context->peek(1).type == TokenType::TOKEN_ASSIGN) {
+                    // It's a property (e.g., display: none)
+                    std::string key = context->getCurrentToken().lexeme;
+                    context->advance(); // consume identifier
+                    context->advance(); // consume ':' or '='
+
+                    std::string value = parse_value_in_block(context);
+                    parentNode->addChild(std::make_shared<PropertyNode>(key, value));
+
+                    if (context->getCurrentToken().type == TokenType::TOKEN_COMMA) {
+                        context->advance();
+                    }
+                } else {
+                    // It's a nested element.
+                    context->setStrategy(std::make_unique<ElementParsingStrategy>());
+                    parentNode->addChild(context->runCurrentStrategy());
+                }
             } else if (currentType == TokenType::TOKEN_TEXT) {
                 context->setStrategy(std::make_unique<TextParsingStrategy>());
                 parentNode->addChild(context->runCurrentStrategy());

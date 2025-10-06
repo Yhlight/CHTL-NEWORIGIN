@@ -113,6 +113,52 @@ TEST_CASE("Generator creates correct media query for 'if' with '>'", "[generator
     REQUIRE(normalize_css(generator.getCss()) == normalize_css(expected_css));
 }
 
+TEST_CASE("Conditional Rendering: 'if' block applies style to parent", "[generator][conditional-rendering]") {
+    std::string input = R"(
+        div {
+            id: header;
+            style { width: 400px; }
+        }
+        body {
+            if {
+                condition: #header.width < 500px,
+                background-color: red,
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    std::string expected_html = R"(
+        <div id="header" style="width:400px;"></div>
+        <body style="background-color:red;"></body>
+    )";
+    REQUIRE(normalize_html(generator.getHtml()) == normalize_html(expected_html));
+}
+
+TEST_CASE("Conditional Rendering: 'if' block with mixed content", "[generator][conditional-rendering]") {
+    std::string input = R"(
+        div {
+            id: header;
+            style { width: 600px; }
+        }
+        div {
+            id: main;
+            if {
+                condition: #header.width > 500px,
+                border: 1px solid black,
+                p { text: "Content inside if"; }
+            }
+        }
+    )";
+    auto generator = generateOutput(input);
+    std::string expected_html = R"(
+        <div id="header" style="width:600px;"></div>
+        <div id="main" style="border:1px solid black;">
+            <p>Content inside if</p>
+        </div>
+    )";
+    REQUIRE(normalize_html(generator.getHtml()) == normalize_html(expected_html));
+}
+
 // =================================================================================================
 // Generation Tests for Conditional Rendering
 // =================================================================================================
