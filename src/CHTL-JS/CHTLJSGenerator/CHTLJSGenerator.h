@@ -46,6 +46,7 @@ private:
     Bridge::SaltBridge& bridge_;
     
     String wrapWithIIFE(const String& code);
+    String processListenBlocks(const String& code);
 };
 
 } // namespace JS
