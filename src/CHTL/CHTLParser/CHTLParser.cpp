@@ -4,6 +4,7 @@
 #include "../../SharedCore/SaltBridge.h"
 #include "../CHTLTemplate/TemplateRegistry.h"
 #include <sstream>
+#include <regex>
 
 namespace CHTL {
 
@@ -192,9 +193,17 @@ SharedPtr<ElementNode> CHTLParser::parseElement() {
             continue;
         }
         
-        // 模板使用
-        if (token.is(TokenType::AtElement) || token.is(TokenType::AtStyle)) {
-            // TODO: 处理模板引用
+        // @Element模板引用
+        if (token.is(TokenType::AtElement)) {
+            auto templateRef = parseElementTemplateReference();
+            if (templateRef) {
+                element->addChild(templateRef);
+            }
+            continue;
+        }
+        
+        // @Style模板引用（已在parseStyle中处理）
+        if (token.is(TokenType::AtStyle)) {
             advance();
             continue;
         }
@@ -434,11 +443,11 @@ SharedPtr<TemplateNode> CHTLParser::parseTemplate() {
     
     expect(TokenType::LeftBrace, "Expected '{' after template name");
     
-    // 解析模板体（对于样式模板，直接解析CSS属性）
-    if (type == TemplateNode::TemplateType::Style) {
-        // 样式模板直接包含CSS属性
+    // 解析模板体
+    if (type == TemplateNode::TemplateType::Style || type == TemplateNode::TemplateType::Var) {
+        // 样式模板和变量组模板直接包含CSS属性格式
         while (!check(TokenType::RightBrace) && !isAtEnd()) {
-            if (check(TokenType::Identifier) && peek().is(TokenType::Colon)) {
+            if ((check(TokenType::Identifier) || check(TokenType::HtmlKeyword)) && peek().is(TokenType::Colon)) {
                 String property = advance().getValue();
                 advance();  // 消耗:
                 String value = parseAttributeValue();
@@ -456,7 +465,7 @@ SharedPtr<TemplateNode> CHTLParser::parseTemplate() {
             }
         }
     } else {
-        // 元素模板和变量组模板
+        // 元素模板
         while (!check(TokenType::RightBrace) && !isAtEnd()) {
             auto node = parseStatement();
             if (node) {
@@ -485,6 +494,45 @@ SharedPtr<TemplateNode> CHTLParser::parseTemplate() {
     }
     
     return templateNode;
+}
+
+SharedPtr<BaseNode> CHTLParser::parseElementTemplateReference() {
+    advance();  // 消耗@Element
+    
+    // 获取模板名称
+    Token nameToken = getCurrentToken();
+    if (!nameToken.is(TokenType::Identifier) && !nameToken.is(TokenType::HtmlKeyword)) {
+        error("Expected template name after @Element");
+        return nullptr;
+    }
+    String templateName = advance().getValue();
+    
+    // 消耗分号（如果存在）
+    if (check(TokenType::Semicolon)) {
+        advance();
+    }
+    
+    // 从TemplateRegistry获取模板
+    auto templateDef = TemplateRegistry::getInstance().findTemplate(
+        templateName, TemplateNode::TemplateType::Element);
+    
+    if (!templateDef.has_value()) {
+        error("Element template not found: " + templateName);
+        return nullptr;
+    }
+    
+    // 创建一个容器节点来包含模板展开的所有子节点
+    // 我们使用ProgramNode作为容器，因为它可以包含多个子节点
+    auto container = std::make_shared<ProgramNode>();
+    
+    // 展开模板：克隆模板中的所有子节点
+    for (const auto& child : templateDef->children) {
+        if (child) {
+            container->addChild(child->clone());
+        }
+    }
+    
+    return container;
 }
 
 SharedPtr<CustomNode> CHTLParser::parseCustom() {
@@ -619,6 +667,48 @@ String CHTLParser::parseExpressionValue() {
     // 如果只有一个token，直接返回
     if (exprTokens.size() == 1) {
         return exprTokens[0].getValue();
+    }
+    
+    // 检查并处理变量组引用：VarName(propertyName)
+    // propertyName可以是Identifier或HtmlKeyword
+    if (exprTokens.size() >= 4 && 
+        exprTokens[0].is(TokenType::Identifier) &&
+        exprTokens[1].is(TokenType::LeftParen) &&
+        (exprTokens[2].is(TokenType::Identifier) || exprTokens[2].is(TokenType::HtmlKeyword)) &&
+        exprTokens[3].is(TokenType::RightParen)) {
+        
+        String varGroupName = exprTokens[0].getValue();
+        String propertyName = exprTokens[2].getValue();
+        
+        // 从TemplateRegistry查找变量组
+        auto varTemplate = TemplateRegistry::getInstance().findVarTemplate(varGroupName);
+        if (varTemplate.has_value()) {
+            auto it = varTemplate->find(propertyName);
+            if (it != varTemplate->end()) {
+                String varValue = it->second;
+                
+                // 如果后面还有其他token（比如运算符），需要继续处理
+                if (exprTokens.size() > 4) {
+                    // 将变量值替换到表达式中
+                    Vector<Token> newTokens;
+                    // 解析变量值以获取正确的token类型
+                    // 如果值包含单位（如10px），应该作为NumberLiteral
+                    if (std::regex_match(varValue, std::regex(R"(\d+(\.\d+)?(px|em|rem|%|vh|vw|vmin|vmax)?)"))) {
+                        newTokens.push_back(Token(TokenType::NumberLiteral, varValue, exprTokens[0].getPosition()));
+                    } else {
+                        newTokens.push_back(Token(TokenType::UnquotedLiteral, varValue, exprTokens[0].getPosition()));
+                    }
+                    // 添加剩余的tokens
+                    for (size_t i = 4; i < exprTokens.size(); ++i) {
+                        newTokens.push_back(exprTokens[i]);
+                    }
+                    exprTokens = newTokens;
+                } else {
+                    // 直接返回变量值
+                    return varValue;
+                }
+            }
+        }
     }
     
     // 检查是否包含运算符或属性引用（selector.property）

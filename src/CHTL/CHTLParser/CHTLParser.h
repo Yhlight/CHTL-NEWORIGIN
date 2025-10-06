@@ -82,6 +82,9 @@ private:
     // 同步错误恢复
     void synchronize();
     
+    // 模板引用展开
+    SharedPtr<BaseNode> parseElementTemplateReference();
+    
     // 元素收集和表达式重新评估
     void collectElementsForRegistration(const SharedPtr<BaseNode>& node);
     void reevaluateExpressionsWithReferences(const SharedPtr<BaseNode>& node);

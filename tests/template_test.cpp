@@ -142,3 +142,130 @@ TEST_CASE("Template System - Template Override", "[template]") {
         REQUIRE(html.find("background: red") != String::npos);
     }
 }
+
+TEST_CASE("Template System - @Element Template", "[template]") {
+    TemplateRegistry::getInstance().clear();
+    
+    SECTION("Basic element template") {
+        String source = R"(
+            [Template] @Element Box {
+                div {
+                    class: box-item;
+                    style {
+                        width: 100px;
+                        height: 100px;
+                    }
+                }
+                span {
+                    text: "Box content";
+                }
+            }
+            
+            body {
+                @Element Box;
+            }
+        )";
+        
+        CHTLParser parser(source);
+        auto ast = parser.parse();
+        
+        REQUIRE(!parser.hasErrors());
+        
+        String html = HtmlGenerator::generate(ast);
+        
+        // 应该包含模板中的div
+        REQUIRE(html.find("<div") != String::npos);
+        REQUIRE(html.find("box-item") != String::npos);
+        REQUIRE(html.find("width: 100px") != String::npos);
+        // 应该包含模板中的span
+        REQUIRE(html.find("<span") != String::npos);
+        REQUIRE(html.find("Box content") != String::npos);
+    }
+    
+    SECTION("Multiple element template usage") {
+        String source = R"(
+            [Template] @Element Card {
+                div {
+                    class: card;
+                    style {
+                        padding: 20px;
+                    }
+                }
+            }
+            
+            body {
+                @Element Card;
+                @Element Card;
+            }
+        )";
+        
+        CHTLParser parser(source);
+        auto ast = parser.parse();
+        
+        REQUIRE(!parser.hasErrors());
+        
+        String html = HtmlGenerator::generate(ast);
+        
+        // 应该包含两个card div
+        size_t first = html.find("class=\"card\"");
+        REQUIRE(first != String::npos);
+        size_t second = html.find("class=\"card\"", first + 1);
+        REQUIRE(second != String::npos);
+    }
+}
+
+TEST_CASE("Template System - @Var Template", "[template]") {
+    TemplateRegistry::getInstance().clear();
+    
+    SECTION("Basic variable template") {
+        String source = R"(
+            [Template] @Var Colors {
+                primary: blue;
+                secondary: red;
+            }
+            
+            div {
+                style {
+                    color: Colors(primary);
+                    background: Colors(secondary);
+                }
+            }
+        )";
+        
+        CHTLParser parser(source);
+        auto ast = parser.parse();
+        
+        REQUIRE(!parser.hasErrors());
+        
+        String html = HtmlGenerator::generate(ast);
+        
+        REQUIRE(html.find("color: blue") != String::npos);
+        REQUIRE(html.find("background: red") != String::npos);
+    }
+    
+    SECTION("Variable template in expressions") {
+        String source = R"(
+            [Template] @Var Sizes {
+                base: 10px;
+                large: 20px;
+            }
+            
+            div {
+                style {
+                    width: Sizes(base) * 2;
+                    height: Sizes(large) + 10px;
+                }
+            }
+        )";
+        
+        CHTLParser parser(source);
+        auto ast = parser.parse();
+        
+        REQUIRE(!parser.hasErrors());
+        
+        String html = HtmlGenerator::generate(ast);
+        
+        REQUIRE(html.find("20px") != String::npos);
+        REQUIRE(html.find("30px") != String::npos);
+    }
+}
