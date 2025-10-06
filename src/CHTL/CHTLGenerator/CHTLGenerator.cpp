@@ -19,11 +19,23 @@ String CHTLGenerator::generate(const SharedPtr<BaseNode>& root) {
     // 组合最终输出
     std::stringstream result;
     
-    if (config_.prettyPrint) {
-        result << html_;
-    } else {
-        // 简化版：去除多余空白
-        result << html_;
+    // 输出HTML
+    result << html_;
+    
+    // 输出CSS（如果有）
+    if (!css_.empty()) {
+        if (config_.prettyPrint) {
+            result << "\n";
+        }
+        result << "<style>\n" << css_ << "</style>\n";
+    }
+    
+    // 输出JavaScript（如果有）
+    if (!js_.empty()) {
+        if (config_.prettyPrint) {
+            result << "\n";
+        }
+        result << "<script>\n" << js_ << "</script>\n";
     }
     
     return result.str();
@@ -281,15 +293,40 @@ void CHTLGenerator::appendJs(const String& str) {
 
 // HtmlGenerator实现
 String HtmlGenerator::generate(const SharedPtr<BaseNode>& root, const GeneratorConfig& config) {
-    String output;
+    String htmlOutput;
     if (root) {
         // 第一遍：收集所有元素和属性到SaltBridge
         collectElements(root);
         
         // 第二遍：生成HTML
-        generateNode(root, output, 0, config);
+        generateNode(root, htmlOutput, 0, config);
     }
-    return output;
+    
+    // 收集CSS
+    String cssOutput = CssGenerator::generate(root, config);
+    
+    // 收集JavaScript
+    String jsOutput = JsGenerator::generate(root, config);
+    
+    // 组合完整输出
+    std::stringstream result;
+    result << htmlOutput;
+    
+    if (!cssOutput.empty()) {
+        if (config.prettyPrint) {
+            result << "\n";
+        }
+        result << "<style>\n" << cssOutput << "</style>\n";
+    }
+    
+    if (!jsOutput.empty()) {
+        if (config.prettyPrint) {
+            result << "\n";
+        }
+        result << "<script>\n" << jsOutput << "</script>\n";
+    }
+    
+    return result.str();
 }
 
 void HtmlGenerator::collectElements(const SharedPtr<BaseNode>& node) {

@@ -11,10 +11,16 @@ CHTLJSGenerator::CHTLJSGenerator(const JSGeneratorConfig& config)
 String CHTLJSGenerator::generate(const String& chtljsCode) {
     String result = chtljsCode;
     
-    // 第一步：处理Listen语法 (必须在处理增强选择器之前)
+    // 第一步：处理Delegate语法
+    result = processDelegateBlocks(result);
+    
+    // 第二步：处理Listen语法 (必须在处理增强选择器之前)
     result = processListenBlocks(result);
     
-    // 第二步：处理增强选择器 {{...}}
+    // 第三步：处理事件绑定操作符 &-> (必须在处理Listen之后，增强选择器之前)
+    result = processEventBindOperators(result);
+    
+    // 第三步：处理增强选择器 {{...}}
     size_t pos = 0;
     while ((pos = result.find("{{", pos)) != String::npos) {
         size_t endPos = result.find("}}", pos);
@@ -28,18 +34,25 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
         pos += jsCode.length();
     }
     
-    // 第三步：处理 -> 操作符
+    // 第四步：处理 -> 操作符
     pos = 0;
     while ((pos = result.find("->", pos)) != String::npos) {
         result.replace(pos, 2, ".");
         pos += 1;
     }
     
-    // 第四步：处理 & 引用
+    // 第五步：处理 & 引用（跳过 && 和 &->）
     pos = 0;
     while ((pos = result.find("&", pos)) != String::npos) {
+        // 跳过 &&（逻辑运算符）
         if (pos + 1 < result.length() && result[pos + 1] == '&') {
             pos += 2;
+            continue;
+        }
+        
+        // 跳过 &->（事件绑定操作符，应该已被处理）
+        if (pos + 2 < result.length() && result[pos + 1] == '-' && result[pos + 2] == '>') {
+            pos += 3;
             continue;
         }
         
@@ -54,7 +67,7 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
         }
     }
     
-    // 第五步：如果配置要求，用IIFE包装
+    // 第六步：如果配置要求，用IIFE包装
     if (config_.wrapIIFE) {
         result = wrapWithIIFE(result);
     }
@@ -86,11 +99,102 @@ String CHTLJSGenerator::processEventBind(const String& target, const String& eve
 String CHTLJSGenerator::processDelegate(const String& parent, const String& /* config */) {
     std::stringstream ss;
     
-    // 事件委托实现
+    // 事件委托实现（简化版）
     ss << "// Event delegation for " << parent << "\n";
-    ss << "// TODO: Implement full delegation\n";
     
     return ss.str();
+}
+
+String CHTLJSGenerator::processDelegateBlocks(const String& code) {
+    String result;
+    size_t lastPos = 0;
+    size_t searchPos = 0;
+    
+    // 创建解析器
+    CHTLJSParser parser(code);
+    
+    // 查找所有Delegate块
+    while (true) {
+        auto blockPos = parser.findDelegateBlock(code, searchPos);
+        if (!blockPos.has_value()) {
+            // 没有更多Delegate块
+            result += code.substr(lastPos);
+            break;
+        }
+        
+        size_t startPos = blockPos->first;
+        size_t endPos = blockPos->second;
+        
+        // 添加Delegate块之前的内容
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        // 提取并解析Delegate块
+        String blockCode = code.substr(startPos, endPos - startPos);
+        auto delegateBlock = parser.parseDelegateBlock(blockCode);
+        
+        if (delegateBlock.has_value()) {
+            // 生成事件委托代码
+            String parent = delegateBlock->parent;
+            
+            // 如果parent是{{...}}，转换它
+            if (parent.length() >= 4 && parent.substr(0, 2) == "{{" && 
+                parent.substr(parent.length() - 2) == "}}") {
+                String selector = parent.substr(2, parent.length() - 4);
+                parent = bridge_.convertEnhancedSelector(selector);
+            }
+            
+            // 生成每个事件的委托
+            std::stringstream ss;
+            for (size_t i = 0; i < delegateBlock->eventBindings.size(); i++) {
+                const auto& binding = delegateBlock->eventBindings[i];
+                String eventName = binding.eventName;
+                String handler = binding.handler;
+                
+                // 生成事件委托代码
+                ss << parent << ".addEventListener('" << eventName << "', function(e) {\n";
+                ss << "    // 事件委托：检查目标是否匹配\n";
+                
+                for (const auto& target : delegateBlock->targets) {
+                    String targetSelector = target;
+                    
+                    // 转换{{...}}
+                    if (targetSelector.length() >= 4 && targetSelector.substr(0, 2) == "{{" && 
+                        targetSelector.substr(targetSelector.length() - 2) == "}}") {
+                        String selector = targetSelector.substr(2, targetSelector.length() - 4);
+                        
+                        // 提取选择器字符串（用于matches）
+                        if (selector.length() > 0 && selector[0] == '.') {
+                            targetSelector = selector;
+                        } else if (selector.length() > 0 && selector[0] == '#') {
+                            targetSelector = selector;
+                        } else {
+                            targetSelector = selector;
+                        }
+                    }
+                    
+                    ss << "    if (e.target.matches('" << targetSelector << "') || e.target.closest('" << targetSelector << "')) {\n";
+                    ss << "        (" << handler << ")(e);\n";
+                    ss << "    }\n";
+                }
+                
+                ss << "})";
+                
+                if (i < delegateBlock->eventBindings.size() - 1) {
+                    ss << ";\n";
+                }
+            }
+            
+            result += ss.str();
+        } else {
+            // 解析失败，保留原始代码
+            result += blockCode;
+        }
+        
+        lastPos = endPos;
+        searchPos = endPos;
+    }
+    
+    return result;
 }
 
 String CHTLJSGenerator::processAnimate(const String& /* config */) {
@@ -187,6 +291,140 @@ String CHTLJSGenerator::processListenBlocks(const String& code) {
         } else {
             // 解析失败，保留原始代码
             result += blockCode;
+        }
+        
+        lastPos = endPos;
+        searchPos = endPos;
+    }
+    
+    return result;
+}
+
+String CHTLJSGenerator::processEventBindOperators(const String& code) {
+    String result;
+    size_t lastPos = 0;
+    size_t searchPos = 0;
+    
+    // 创建解析器
+    CHTLJSParser parser(code);
+    
+    // 查找所有&->操作符
+    while (true) {
+        auto opPos = parser.findEventBindOperator(code, searchPos);
+        if (!opPos.has_value()) {
+            // 没有更多&->操作符，添加剩余内容
+            result += code.substr(lastPos);
+            break;
+        }
+        
+        size_t startPos = opPos->first;
+        size_t endPos = opPos->second;
+        
+        // 添加&->之前的内容
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        // 提取并解析&->操作符
+        String opCode = code.substr(startPos, endPos - startPos);
+        
+        // 检查是否是链式绑定（包含多个&->）
+        size_t count = 0;
+        size_t checkPos = 0;
+        while ((checkPos = opCode.find("&->", checkPos)) != String::npos) {
+            count++;
+            checkPos += 3;
+        }
+        
+        if (count > 1) {
+            // 链式绑定，使用parseChainBinding
+            Vector<EventBindOperator> chainOps = parser.parseChainBinding(opCode);
+            
+            std::stringstream ss;
+            for (size_t i = 0; i < chainOps.size(); i++) {
+                String target = chainOps[i].target;
+                
+                // 如果target是{{...}}，转换它
+                if (target.length() >= 4 && target.substr(0, 2) == "{{" && 
+                    target.substr(target.length() - 2) == "}}") {
+                    String selector = target.substr(2, target.length() - 4);
+                    target = bridge_.convertEnhancedSelector(selector);
+                }
+                
+                // 生成每个事件的addEventListener
+                for (const auto& eventName : chainOps[i].eventNames) {
+                    ss << target << ".addEventListener('" 
+                       << eventName << "', " 
+                       << chainOps[i].handler << ")";
+                    
+                    if (i < chainOps.size() - 1 || chainOps[i].eventNames.size() > 1) {
+                        ss << ";\n    ";
+                    }
+                }
+            }
+            
+            result += ss.str();
+        } else {
+            // 单个&->，使用原有逻辑
+            auto eventBindOp = parser.parseEventBindOperator(opCode);
+            
+            if (eventBindOp.has_value()) {
+                // 生成addEventListener代码
+                String target = eventBindOp->target;
+            
+            // 如果target是{{...}}，转换它
+            if (target.length() >= 4 && target.substr(0, 2) == "{{" && 
+                target.substr(target.length() - 2) == "}}") {
+                String selector = target.substr(2, target.length() - 4);
+                target = bridge_.convertEnhancedSelector(selector);
+            }
+            
+            // 处理绑定块形式
+            if (eventBindOp->isBlock) {
+                // 重新解析块内容获取所有绑定
+                // 从&->之后查找{
+                size_t arrowPos = opCode.find("&->");
+                size_t blockStart = String::npos;
+                if (arrowPos != String::npos) {
+                    blockStart = opCode.find('{', arrowPos + 3);
+                }
+                if (blockStart != String::npos) {
+                    String blockContent = parser.extractBlockContent(opCode, blockStart);
+                    auto bindings = parser.parseEventBindings(blockContent);
+                    
+                    std::stringstream ss;
+                    for (size_t i = 0; i < bindings.size(); i++) {
+                        ss << target << ".addEventListener('" 
+                           << bindings[i].eventName << "', " 
+                           << bindings[i].handler << ")";
+                        
+                        if (i < bindings.size() - 1) {
+                            ss << ";\n    ";
+                        } else {
+                            // 最后一个不加分号（会在后面统一处理）
+                        }
+                    }
+                    result += ss.str();
+                } else {
+                    // 没有找到块，保留原始代码
+                    result += opCode;
+                }
+            } else {
+                // 单行或多事件形式
+                std::stringstream ss;
+                for (size_t i = 0; i < eventBindOp->eventNames.size(); i++) {
+                    ss << target << ".addEventListener('" 
+                       << eventBindOp->eventNames[i] << "', " 
+                       << eventBindOp->handler << ")";
+                    
+                    if (i < eventBindOp->eventNames.size() - 1) {
+                        ss << ";\n    ";
+                    }
+                }
+                result += ss.str();
+            }
+            } else {
+                // 解析失败，保留原始代码
+                result += opCode;
+            }
         }
         
         lastPos = endPos;

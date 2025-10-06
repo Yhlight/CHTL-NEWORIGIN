@@ -29,6 +29,28 @@ struct ListenBlock {
     explicit ListenBlock(const String& t) : target(t) {}
 };
 
+// 事件绑定操作符结构
+struct EventBindOperator {
+    String target;  // 目标选择器
+    Vector<String> eventNames;  // 事件名称列表（支持多事件）
+    String handler;  // 处理器
+    bool isBlock = false;  // 是否是绑定块形式
+    
+    EventBindOperator() = default;
+    EventBindOperator(const String& t, const Vector<String>& events, const String& h)
+        : target(t), eventNames(events), handler(h) {}
+};
+
+// Delegate块结构
+struct DelegateBlock {
+    String parent;  // 父元素选择器
+    Vector<String> targets;  // 要委托的目标选择器（可能是数组）
+    Vector<EventBinding> eventBindings;  // 事件绑定列表
+    
+    DelegateBlock() = default;
+    explicit DelegateBlock(const String& p) : parent(p) {}
+};
+
 // CHTL JS Parser配置
 struct JSParserConfig {
     bool allowUnorderedKeyValues = true;
@@ -60,22 +82,48 @@ public:
     // 返回: {开始位置, 结束位置} 或 nullopt
     Optional<std::pair<size_t, size_t>> findListenBlock(const String& code, size_t startPos = 0);
     
+    // 解析事件绑定操作符 &->
+    // 输入: "{{box}} &-> click: fn" 或 "{{box}} &-> click, hover: fn" 或 "{{box}} &-> { ... }"
+    // 返回: EventBindOperator结构
+    Optional<EventBindOperator> parseEventBindOperator(const String& code);
+    
+    // 解析链式绑定（包含多个&->）
+    // 输入: "{{box}} &-> click: fn1, &-> hover: fn2, &-> leave: fn3;"
+    // 返回: Vector<EventBindOperator>
+    Vector<EventBindOperator> parseChainBinding(const String& code);
+    
+    // 查找事件绑定操作符的位置
+    // 返回: {开始位置, 结束位置} 或 nullopt
+    Optional<std::pair<size_t, size_t>> findEventBindOperator(const String& code, size_t startPos = 0);
+    
+    // 解析多个事件名称（逗号分隔）
+    // 输入: "click, mouseenter, mouseleave"
+    // 返回: Vector<String>
+    Vector<String> parseEventNames(const String& namesCode);
+    
+    // 检查是否是事件绑定块形式 &-> { ... }
+    bool isEventBindBlock(const String& code, size_t bindPos);
+    
+    // 解析Delegate块
+    // 输入: "{{parent}}->Delegate { target: {{child}}, click: fn }"
+    // 返回: DelegateBlock结构
+    Optional<DelegateBlock> parseDelegateBlock(const String& code);
+    
+    // 查找Delegate块的位置
+    Optional<std::pair<size_t, size_t>> findDelegateBlock(const String& code, size_t startPos = 0);
+    
+    // 辅助方法（public for generator use）
+    String trimWhitespace(const String& str) const;
+    String extractBlockContent(const String& code, size_t startPos) const;
+    String extractTarget(const String& code, size_t pos) const;
+    
 private:
     JSParserConfig config_;
     String source_;
     
     // 辅助方法
-    String trimWhitespace(const String& str) const;
     bool isWhitespace(char ch) const;
     bool isIdentifierChar(char ch) const;
-    
-    // 提取目标选择器
-    // 输入: "{{box}}->Listen" 返回 "{{box}}"
-    String extractTarget(const String& code, size_t listenPos) const;
-    
-    // 提取块内容
-    // 输入: "{ ... }" 返回 "..."
-    String extractBlockContent(const String& code, size_t startPos) const;
     
     // 查找匹配的右大括号
     size_t findMatchingBrace(const String& code, size_t leftBracePos) const;

@@ -48,6 +48,8 @@ private:
     
     String wrapWithIIFE(const String& code);
     String processListenBlocks(const String& code);
+    String processEventBindOperators(const String& code);
+    String processDelegateBlocks(const String& code);
 };
 
 } // namespace JS
