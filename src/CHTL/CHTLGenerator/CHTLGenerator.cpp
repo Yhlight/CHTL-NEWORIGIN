@@ -1,5 +1,6 @@
 #include "CHTLGenerator.h"
 #include <sstream>
+#include <iostream>
 #include <unordered_set>
 
 namespace CHTL {
@@ -405,7 +406,18 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
     
     if (node->getType() == NodeType::Script) {
         auto scriptNode = std::dynamic_pointer_cast<ScriptNode>(node);
-        output += scriptNode->getContent();
+        String content = scriptNode->getContent();
+        
+        // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
+        if (content.find("{{") != String::npos) {
+            JS::JSGeneratorConfig jsConfig;
+            jsConfig.wrapIIFE = false;  // 不自动包装IIFE
+            jsConfig.prettyPrint = false;
+            JS::CHTLJSGenerator jsGen(jsConfig);
+            content = jsGen.generate(content);
+        }
+        
+        output += content;
         output += "\n\n";
     }
     

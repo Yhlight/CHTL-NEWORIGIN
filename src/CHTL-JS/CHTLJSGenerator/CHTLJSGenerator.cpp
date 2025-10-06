@@ -31,16 +31,21 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
         pos += jsCode.length();
     }
     
+    // 处理 -> 操作符（CHTL JS语法糖，转换为.）
+    // 注意：必须在处理&之前，避免&->被误处理
+    pos = 0;
+    while ((pos = result.find("->", pos)) != String::npos) {
+        result.replace(pos, 2, ".");
+        pos += 1;
+    }
+    
     // 处理 & 引用
     pos = 0;
     while ((pos = result.find("&", pos)) != String::npos) {
-        // 检查是否是 && 或 &-> 
-        if (pos + 1 < result.length()) {
-            char next = result[pos + 1];
-            if (next == '&' || next == '-') {
-                pos += 2;  // 跳过逻辑运算符和事件绑定
-                continue;
-            }
+        // 检查是否是 && 
+        if (pos + 1 < result.length() && result[pos + 1] == '&') {
+            pos += 2;  // 跳过逻辑运算符
+            continue;
         }
         
         // 单独的 & 需要替换为上下文引用
