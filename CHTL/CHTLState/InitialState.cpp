@@ -10,12 +10,16 @@
 #include "../CHTLStrategy/NamespaceParsingStrategy.h"
 #include "../CHTLStrategy/ConfigurationParsingStrategy.h"
 #include "../CHTLStrategy/UseParsingStrategy.h"
+#include "../CHTLStrategy/IfParsingStrategy.h"
 
 
 namespace CHTL {
 
     void InitialState::handleToken(CHTLParserContext* context, const Token& token) {
         switch (token.type) {
+            case TokenType::TOKEN_IF:
+                context->setStrategy(std::make_unique<IfParsingStrategy>());
+                break;
             case TokenType::TOKEN_KEYWORD_USE:
                 context->setStrategy(std::make_unique<UseParsingStrategy>());
                 break;

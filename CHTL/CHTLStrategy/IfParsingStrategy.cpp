@@ -13,11 +13,15 @@ namespace CHTL {
                context->getCurrentToken().type != TokenType::TOKEN_RBRACE &&
                !context->isAtEnd()) {
             value += context->getCurrentToken().lexeme;
+
             const auto& next_token = context->peek(1);
             if (next_token.type != TokenType::TOKEN_COMMA &&
                 next_token.type != TokenType::TOKEN_RBRACE &&
                 next_token.type != TokenType::TOKEN_EOF) {
-                value += " ";
+
+                if (context->getCurrentToken().type != TokenType::TOKEN_DOT && next_token.type != TokenType::TOKEN_DOT) {
+                    value += " ";
+                }
             }
             context->advance();
         }

@@ -31,6 +31,26 @@ double extractNumericValue(const std::string& str) {
     return num_str.empty() ? 0.0 : std::stod(num_str);
 }
 
+// Helper to find a node by a simple tag selector
+std::shared_ptr<ElementNode> findNodeBySelector(const std::shared_ptr<BaseNode>& root, const std::string& selector) {
+    if (!root) return nullptr;
+
+    if (root->getType() == NodeType::NODE_ELEMENT) {
+        auto elementNode = std::dynamic_pointer_cast<ElementNode>(root);
+        if (elementNode->getTagName() == selector) {
+            return elementNode;
+        }
+    }
+
+    for (const auto& child : root->getChildren()) {
+        auto found = findNodeBySelector(child, selector);
+        if (found) return found;
+    }
+
+    return nullptr;
+}
+
+
 void SemanticAnalyzer::checkNodeAgainstConstraints(const std::shared_ptr<BaseNode>& node, const std::vector<Constraint>& constraints) {
     if (!node || node->getType() == NodeType::NODE_CONSTRAINT) return;
 
@@ -76,7 +96,7 @@ void SemanticAnalyzer::checkNodeAgainstConstraints(const std::shared_ptr<BaseNod
     }
 }
 
-bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& scope) {
+bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& scope, const std::shared_ptr<BaseNode>& root) {
     std::istringstream iss(condition);
     std::vector<std::string> tokens;
     std::string token;
@@ -93,10 +113,20 @@ bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std
     std::string rhs_str = tokens[2];
 
     double lhs_val = 0.0;
-    if (scope && scope->hasAttribute(lhs_str)) {
-        lhs_val = extractNumericValue(scope->getAttributes().at(lhs_str));
+    size_t dot_pos = lhs_str.find('.');
+    if (dot_pos != std::string::npos) {
+        std::string selector = lhs_str.substr(0, dot_pos);
+        std::string prop = lhs_str.substr(dot_pos + 1);
+        auto target_node = findNodeBySelector(root, selector);
+        if (target_node && target_node->hasAttribute(prop)) {
+            lhs_val = extractNumericValue(target_node->getAttributes().at(prop));
+        }
     } else {
-        lhs_val = extractNumericValue(lhs_str);
+        if (scope && scope->hasAttribute(lhs_str)) {
+            lhs_val = extractNumericValue(scope->getAttributes().at(lhs_str));
+        } else {
+            lhs_val = extractNumericValue(lhs_str);
+        }
     }
 
     double rhs_val = extractNumericValue(rhs_str);
@@ -113,28 +143,28 @@ bool SemanticAnalyzer::evaluateCondition(const std::string& condition, const std
 
 void SemanticAnalyzer::analyze(const std::shared_ptr<BaseNode>& root) {
     if (root) {
-        visit(root, {}, nullptr);
+        visit(root, {}, nullptr, root);
     }
 }
 
-void SemanticAnalyzer::visit(const std::shared_ptr<BaseNode>& node, const std::vector<Constraint>& active_constraints, const std::shared_ptr<ElementNode>& parent) {
+void SemanticAnalyzer::visit(const std::shared_ptr<BaseNode>& node, const std::vector<Constraint>& active_constraints, const std::shared_ptr<ElementNode>& parent, const std::shared_ptr<BaseNode>& root) {
     if (!node) return;
 
     checkNodeAgainstConstraints(node, active_constraints);
 
     if (node->getType() == NodeType::NODE_ELEMENT) {
-        visitElement(std::dynamic_pointer_cast<ElementNode>(node), active_constraints);
+        visitElement(std::dynamic_pointer_cast<ElementNode>(node), active_constraints, root);
     } else if (node->getType() == NodeType::NODE_STYLE) {
-        visitStyleNode(std::dynamic_pointer_cast<StyleNode>(node), parent);
+        visitStyleNode(std::dynamic_pointer_cast<StyleNode>(node), parent, root);
     } else {
         // For other node types that might have children, continue traversal.
         for (const auto& child : node->getChildren()) {
-            visit(child, active_constraints, parent);
+            visit(child, active_constraints, parent, root);
         }
     }
 }
 
-void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, const std::shared_ptr<ElementNode>& parent) {
+void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, const std::shared_ptr<ElementNode>& parent, const std::shared_ptr<BaseNode>& root) {
     std::vector<std::shared_ptr<BaseNode>> new_children;
 
     for (size_t i = 0; i < node->getChildren().size(); ++i) {
@@ -145,7 +175,7 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
 
             if (if_node->if_type == IfType::IF) {
                 bool condition_met = false;
-                if (evaluateCondition(if_node->condition, parent)) {
+                if (evaluateCondition(if_node->condition, parent, root)) {
                     condition_met = true;
                     for (const auto& c : if_node->getChildren()) new_children.push_back(c);
                 }
@@ -157,7 +187,7 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
                             auto next_if = std::dynamic_pointer_cast<IfNode>(next_child);
                             if (next_if->if_type == IfType::ELSE_IF) {
                                 i++;
-                                if (evaluateCondition(next_if->condition, parent)) {
+                                if (evaluateCondition(next_if->condition, parent, root)) {
                                     condition_met = true;
                                     for (const auto& c : next_if->getChildren()) new_children.push_back(c);
                                     break;
@@ -182,7 +212,7 @@ void SemanticAnalyzer::visitStyleNode(const std::shared_ptr<StyleNode>& node, co
     node->setChildren(new_children);
 }
 
-void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, const std::vector<Constraint>& active_constraints) {
+void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, const std::vector<Constraint>& active_constraints, const std::shared_ptr<BaseNode>& root) {
     auto current_constraints = active_constraints;
     for (const auto& child : node->getChildren()) {
         if (child->getType() == NodeType::NODE_CONSTRAINT) {
@@ -194,7 +224,7 @@ void SemanticAnalyzer::visitElement(const std::shared_ptr<ElementNode>& node, co
     }
 
     for (const auto& child : node->getChildren()) {
-        visit(child, current_constraints, node);
+        visit(child, current_constraints, node, root);
     }
 }
 

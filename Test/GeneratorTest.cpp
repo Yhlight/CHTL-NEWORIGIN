@@ -106,3 +106,80 @@ TEST_CASE("Generator expands variable template", "[generator]") {
     auto generator = generateOutput(input);
     REQUIRE(generator.getHtml() == R"(<div style="background-color:blue;color:white;"></div>)");
 }
+
+TEST_CASE("Generator handles conditional rendering with if-else-if-else blocks", "[generator]") {
+    SECTION("Test 'if' block is chosen") {
+        std::string input = R"(
+            html {
+                width: 200px;
+                body {
+                    div {
+                        style {
+                            if {
+                                condition: html.width > 100px,
+                                display: block
+                            } else if {
+                                condition: html.width < 50px,
+                                display: inline-block
+                            } else {
+                                display: none
+                            }
+                        }
+                    }
+                }
+            }
+        )";
+        auto generator = generateOutput(input);
+        REQUIRE(generator.getHtml() == R"(<html width="200px"><body><div style="display:block;"></div></body></html>)");
+    }
+
+    SECTION("Test 'else if' block is chosen") {
+        std::string input = R"(
+            html {
+                width: 40px;
+                body {
+                    div {
+                        style {
+                            if {
+                                condition: html.width > 100px,
+                                display: block
+                            } else if {
+                                condition: html.width < 50px,
+                                display: inline-block
+                            } else {
+                                display: none
+                            }
+                        }
+                    }
+                }
+            }
+        )";
+        auto generator = generateOutput(input);
+        REQUIRE(generator.getHtml() == R"(<html width="40px"><body><div style="display:inline-block;"></div></body></html>)");
+    }
+
+    SECTION("Test 'else' block is chosen") {
+        std::string input = R"(
+            html {
+                width: 75px;
+                body {
+                    div {
+                        style {
+                            if {
+                                condition: html.width > 100px,
+                                display: block
+                            } else if {
+                                condition: html.width < 50px,
+                                display: inline-block
+                            } else {
+                                display: none
+                            }
+                        }
+                    }
+                }
+            }
+        )";
+        auto generator = generateOutput(input);
+        REQUIRE(generator.getHtml() == R"(<html width="75px"><body><div style="display:none;"></div></body></html>)");
+    }
+}

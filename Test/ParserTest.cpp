@@ -12,6 +12,7 @@
 #include "../CHTL/CHTLNode/NamespaceNode.h"
 #include "../CHTL/CHTLNode/ConfigurationNode.h"
 #include "../CHTL/CHTLNode/TemplateUsageNode.h"
+#include "../CHTL/CHTLNode/IfNode.h"
 #include "../CHTL/CHTLContext/ConfigurationManager.h"
 #include <memory>
 
@@ -129,6 +130,64 @@ TEST_CASE("Parser handles element template", "[parser]") {
     auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(templateNode->getChildren()[0]);
     REQUIRE(div != nullptr);
     REQUIRE(div->getTagName() == "div");
+}
+
+TEST_CASE("Parser handles if-else-if-else blocks", "[parser]") {
+    auto node = getFirstNode(R"(
+div {
+    style {
+        if {
+            condition: width > 100px,
+            display: block
+        }
+        else if {
+            condition: width < 50px,
+            display: inline-block
+        }
+        else {
+            display: none
+        }
+    }
+}
+)");
+    REQUIRE(node != nullptr);
+    auto element = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
+    REQUIRE(element->getTagName() == "div");
+    REQUIRE(element->getChildren().size() == 1);
+
+    auto styleNode = std::dynamic_pointer_cast<CHTL::StyleNode>(element->getChildren()[0]);
+    REQUIRE(styleNode != nullptr);
+    REQUIRE(styleNode->getChildren().size() == 3);
+
+    // Check the 'if' block
+    auto ifNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[0]);
+    REQUIRE(ifNode != nullptr);
+    REQUIRE(ifNode->if_type == CHTL::IfType::IF);
+    REQUIRE(ifNode->condition == "width > 100px");
+    REQUIRE(ifNode->getChildren().size() == 1);
+    auto prop1 = std::dynamic_pointer_cast<CHTL::PropertyNode>(ifNode->getChildren()[0]);
+    REQUIRE(prop1->getKey() == "display");
+    REQUIRE(prop1->getValue() == "block");
+
+    // Check the 'else if' block
+    auto elseIfNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[1]);
+    REQUIRE(elseIfNode != nullptr);
+    REQUIRE(elseIfNode->if_type == CHTL::IfType::ELSE_IF);
+    REQUIRE(elseIfNode->condition == "width < 50px");
+    REQUIRE(elseIfNode->getChildren().size() == 1);
+    auto prop2 = std::dynamic_pointer_cast<CHTL::PropertyNode>(elseIfNode->getChildren()[0]);
+    REQUIRE(prop2->getKey() == "display");
+    REQUIRE(prop2->getValue() == "inline-block");
+
+    // Check the 'else' block
+    auto elseNode = std::dynamic_pointer_cast<CHTL::IfNode>(styleNode->getChildren()[2]);
+    REQUIRE(elseNode != nullptr);
+    REQUIRE(elseNode->if_type == CHTL::IfType::ELSE);
+    REQUIRE(elseNode->condition.empty());
+    REQUIRE(elseNode->getChildren().size() == 1);
+    auto prop3 = std::dynamic_pointer_cast<CHTL::PropertyNode>(elseNode->getChildren()[0]);
+    REQUIRE(prop3->getKey() == "display");
+    REQUIRE(prop3->getValue() == "none");
 }
 
 TEST_CASE("Parser handles variable template usage", "[parser]") {
