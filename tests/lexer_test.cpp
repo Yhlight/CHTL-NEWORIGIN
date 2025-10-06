@@ -196,3 +196,101 @@ TEST_CASE("Lexer - Enhanced Selector", "[lexer]") {
         REQUIRE(tokens[0].getValue() == "div.container button[0]");
     }
 }
+
+// ===== Parser Tests =====
+#include "CHTL/CHTLParser/CHTLParser.h"
+#include "CHTL/CHTLNode/BaseNode.h"
+
+TEST_CASE("Parser - Simple Element", "[parser]") {
+    String source = R"(
+        div {
+            text: "Hello World";
+        }
+    )";
+    
+    CHTLParser parser(source);
+    auto program = parser.parse();
+    
+    REQUIRE(program != nullptr);
+    REQUIRE(program->getChildren().size() == 1);
+    
+    auto element = std::dynamic_pointer_cast<ElementNode>(program->getChildren()[0]);
+    REQUIRE(element != nullptr);
+    REQUIRE(element->getTagName() == "div");
+}
+
+TEST_CASE("Parser - Nested Elements", "[parser]") {
+    String source = R"(
+        html {
+            body {
+                div {
+                    text: "Hello";
+                }
+            }
+        }
+    )";
+    
+    CHTLParser parser(source);
+    auto program = parser.parse();
+    
+    REQUIRE(program != nullptr);
+    REQUIRE(program->getChildren().size() == 1);
+    
+    auto html = std::dynamic_pointer_cast<ElementNode>(program->getChildren()[0]);
+    REQUIRE(html != nullptr);
+    REQUIRE(html->getTagName() == "html");
+    REQUIRE(html->getChildren().size() == 1);
+    
+    auto body = std::dynamic_pointer_cast<ElementNode>(html->getChildren()[0]);
+    REQUIRE(body != nullptr);
+    REQUIRE(body->getTagName() == "body");
+}
+
+TEST_CASE("Parser - Element with Attributes", "[parser]") {
+    String source = R"(
+        div {
+            id: container;
+            class: box;
+        }
+    )";
+    
+    CHTLParser parser(source);
+    auto program = parser.parse();
+    
+    auto element = std::dynamic_pointer_cast<ElementNode>(program->getChildren()[0]);
+    REQUIRE(element != nullptr);
+    REQUIRE(element->hasAttribute("id"));
+    REQUIRE(element->getAttribute("id").value() == "container");
+    REQUIRE(element->hasAttribute("class"));
+    REQUIRE(element->getAttribute("class").value() == "box");
+}
+
+TEST_CASE("Parser - Complex Structure", "[parser]") {
+    String source = R"(
+        html {
+            head {
+                text {
+                    "CHTL Example"
+                }
+            }
+            
+            body {
+                div {
+                    class: container;
+                    
+                    style {
+                        width: 100%;
+                    }
+                    
+                    text: "Hello, CHTL!";
+                }
+            }
+        }
+    )";
+    
+    CHTLParser parser(source);
+    auto program = parser.parse();
+    
+    REQUIRE(program != nullptr);
+    REQUIRE(!parser.hasErrors());
+}

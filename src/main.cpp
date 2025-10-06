@@ -1,6 +1,9 @@
 #include <iostream>
+#include <sstream>
 #include "Common.h"
 #include "CHTL/CHTLLexer/Lexer.h"
+#include "CHTL/CHTLParser/CHTLParser.h"
+#include "CHTL/CHTLGenerator/CHTLGenerator.h"
 #include "Util/FileSystem/FileSystem.h"
 
 using namespace CHTL;
@@ -93,13 +96,85 @@ int main(int argc, char** argv) {
             return 0;
         }
         
-        // TODO: 语法分析
-        // TODO: 代码生成
+        // 语法分析
+        CHTLParser parser(tokens);
+        auto ast = parser.parse();
         
-        std::cout << "Compilation successful!\n";
-        std::cout << "Input: " << inputFile << "\n";
-        if (!outputFile.empty()) {
-            std::cout << "Output: " << outputFile << "\n";
+        if (parser.hasErrors()) {
+            std::cerr << "Parse errors:\n";
+            for (const auto& error : parser.getErrors()) {
+                std::cerr << "  " << error << "\n";
+            }
+            return 1;
+        }
+        
+        if (showAst) {
+            std::cout << "AST:\n";
+            std::cout << "----\n";
+            std::cout << ast->toString() << "\n";
+            return 0;
+        }
+        
+        // 代码生成
+        GeneratorConfig genConfig;
+        genConfig.prettyPrint = true;
+        genConfig.includeComments = false;
+        
+        String html = HtmlGenerator::generate(ast, genConfig);
+        String css = CssGenerator::generate(ast, genConfig);
+        String js = JsGenerator::generate(ast, genConfig);
+        
+        // 输出文件名
+        if (outputFile.empty()) {
+            String baseName = Util::FileSystem::getFileNameWithoutExtension(inputFile);
+            outputFile = baseName + ".html";
+        }
+        
+        // 构建完整HTML
+        std::stringstream fullHtml;
+        fullHtml << "<!DOCTYPE html>\n";
+        fullHtml << html;
+        
+        // 如果有CSS，添加style标签
+        if (!css.empty()) {
+            // 在head中插入style
+            size_t headPos = fullHtml.str().find("</head>");
+            if (headPos != String::npos) {
+                String current = fullHtml.str();
+                current.insert(headPos, "  <style>\n" + css + "  </style>\n");
+                fullHtml.str(current);
+            } else {
+                // 如果没有head，添加到开头
+                fullHtml << "<style>\n" << css << "</style>\n";
+            }
+        }
+        
+        // 如果有JS，添加script标签
+        if (!js.empty()) {
+            size_t bodyEndPos = fullHtml.str().find("</body>");
+            if (bodyEndPos != String::npos) {
+                String current = fullHtml.str();
+                current.insert(bodyEndPos, "  <script>\n" + js + "  </script>\n");
+                fullHtml.str(current);
+            } else {
+                fullHtml << "<script>\n" << js << "</script>\n";
+            }
+        }
+        
+        // 写入文件
+        if (Util::FileSystem::writeFile(outputFile, fullHtml.str())) {
+            std::cout << "✅ Compilation successful!\n";
+            std::cout << "   Input:  " << inputFile << "\n";
+            std::cout << "   Output: " << outputFile << "\n";
+            if (!css.empty()) {
+                std::cout << "   CSS:    " << css.length() << " bytes\n";
+            }
+            if (!js.empty()) {
+                std::cout << "   JS:     " << js.length() << " bytes\n";
+            }
+        } else {
+            std::cerr << "❌ Failed to write output file: " << outputFile << "\n";
+            return 1;
         }
         
         return 0;

@@ -4,55 +4,74 @@ CHTL是基于C++17实现的超文本语言编译器，提供了一种更符合�
 
 ## 项目状态
 
-### ✅ 已完成功能
+### ✅ 已完成功能（v0.2.0-alpha）
 
-#### 1. 项目基础结构
-- ✅ 完整的CMake构建系统
-- ✅ Python构建脚本（避免路径问题）
-- ✅ .gitignore版本控制配置
-- ✅ 项目目录结构（遵循状态机+策略模式架构）
+#### 1. 完整的编译流程 ✅
+- ✅ 词法分析器（Lexer）- 70+种Token类型
+- ✅ 语法分析器（Parser）- 完整的CHTL语法解析
+- ✅ AST节点系统 - 11种节点类型
+- ✅ 代码生成器（Generator）- HTML/CSS生成
+- ✅ 状态机架构 - 状态驱动的解析
+- ✅ 策略模式架构 - 可插拔的策略系统
 
 #### 2. 工具层（Util）
-- ✅ **StringUtil**: 字符串处理工具
-  - 去除空白、分割、拼接
-  - 大小写转换
-  - 字符串判断和替换
-  - 转义处理
-  
-- ✅ **FileSystem**: 文件系统操作
-  - 文件读写
-  - 路径操作
-  - 文件搜索
+- ✅ **StringUtil**: 17个字符串处理方法
+- ✅ **FileSystem**: 15个文件系统操作方法
 
 #### 3. CHTL词法分析器（CHTLLexer）
-- ✅ **Token系统**: 完整的Token类型定义
-  - 支持所有CHTL语法元素
-  - 支持CHTL JS关键字
-  - 详细的位置信息追踪
-  
-- ✅ **GlobalMap**: 关键字和HTML标签映射
-  - HTML5所有标签支持
-  - CHTL关键字识别
-  - CHTL JS关键字识别
-  
-- ✅ **Lexer**: 词法分析器核心
-  - 注释支持（//、/**/、#）
-  - 字面量支持（字符串、数字、无修饰）
-  - 关键字识别
-  - 增强选择器 {{...}}
-  - 完整的错误处理
+- ✅ **Token系统**: 70+种Token类型，完整支持CHTL语法
+- ✅ **GlobalMap**: 60+个HTML5标签，30+个CHTL关键字
+- ✅ **Lexer**: 完整的词法分析器实现
 
-#### 4. 测试系统
-- ✅ 使用Catch2测试框架
-- ✅ 完整的词法分析器测试用例
-- ✅ 所有测试通过
+#### 4. CHTL语法分析器（CHTLParser）
+- ✅ **Parser**: 状态机驱动的语法分析
+- ✅ **State**: 9种解析状态
+- ✅ **Strategy**: 策略模式支持
+- ✅ **错误处理**: 详细的错误信息和恢复机制
 
-### 🚧 进行中的工作
+#### 5. AST节点系统（CHTLNode）
+- ✅ **BaseNode**: 节点基类
+- ✅ **ElementNode**: 元素节点（支持属性）
+- ✅ **TextNode**: 文本节点
+- ✅ **StyleNode**: 样式节点（内联+CSS规则）
+- ✅ **ScriptNode**: 脚本节点
+- ✅ **CommentNode**: 注释节点
+- ✅ **TemplateNode**: 模板节点
+- ✅ **CustomNode**: 自定义节点
+- ✅ **OriginNode**: 原始嵌入节点
+- ✅ **ImportNode**: 导入节点
+- ✅ **ProgramNode**: 程序根节点
 
-- 状态机架构（CHTLState）
-- 策略模式架构（CHTLStrategy）
-- 语法分析器（CHTLParser）
-- AST节点系统（CHTLNode）
+#### 6. 代码生成器（CHTLGenerator）
+- ✅ **HtmlGenerator**: HTML代码生成
+- ✅ **CssGenerator**: CSS代码生成
+- ✅ **JsGenerator**: JavaScript代码收集
+- ✅ **美化输出**: 可配置的格式化选项
+
+#### 7. 测试系统
+- ✅ Catch2测试框架集成
+- ✅ 10个测试用例，100%通过
+- ✅ 词法分析器测试
+- ✅ 语法分析器测试
+
+#### 8. CLI工具
+- ✅ 完整的命令行界面
+- ✅ --tokens选项（显示Token）
+- ✅ --ast选项（显示AST）
+- ✅ -o选项（指定输出文件）
+
+### 🎯 支持的CHTL语法
+
+- ✅ HTML元素（所有HTML5标签）
+- ✅ 属性定义（class、id等）
+- ✅ 文本节点（text关键字和属性）
+- ✅ 注释（//、/**/、#）
+- ✅ 局部样式块（style {}）
+- ✅ CSS选择器（.class、#id）
+- ✅ 脚本块（script {}）
+- ✅ 模板（[Template] @Style/@Element/@Var）
+- ✅ 自定义（[Custom] @Style/@Element/@Var）
+- ✅ 原始嵌入（[Origin] @Html/@Style/@JavaScript）
 
 ### 📋 待实现功能
 
@@ -78,7 +97,7 @@ CHTL是基于C++17实现的超文本语言编译器，提供了一种更符合�
    - [ ] CSS编译器集成
    - [ ] JavaScript编译器集成
 
-## 构建和运行
+## 快速开始
 
 ### 前置要求
 
@@ -89,32 +108,73 @@ CHTL是基于C++17实现的超文本语言编译器，提供了一种更符合�
 ### 构建步骤
 
 ```bash
-# 使用Python构建脚本（推荐）
+# 一键构建（推荐）
 python3 build.py all
 
 # 或者分步构建
-python3 build.py configure
-python3 build.py build
-python3 build.py test
-
-# 清理构建
-python3 build.py clean
+python3 build.py clean       # 清理
+python3 build.py configure   # 配置
+python3 build.py build       # 编译
+python3 build.py test        # 测试
 ```
 
-### 运行编译器
+### 使用编译器
 
 ```bash
-# 查看帮助
-./build/chtl --help
+# 编译CHTL文件到HTML
+./build/chtl examples/simple.chtl
 
-# 显示Token列表
+# 指定输出文件
+./build/chtl input.chtl -o output.html
+
+# 查看Token列表
 ./build/chtl examples/simple.chtl --tokens
 
-# 显示AST（待实现）
+# 查看AST
 ./build/chtl examples/simple.chtl --ast
 
-# 编译CHTL文件
-./build/chtl input.chtl -o output.html
+# 查看帮助
+./build/chtl --help
+```
+
+### 示例
+
+**输入 (simple.chtl):**
+```chtl
+html {
+    body {
+        div {
+            class: container;
+            
+            style {
+                .container {
+                    width: 100%;
+                    max-width: 1200px;
+                }
+            }
+            
+            text: "Hello, CHTL!";
+        }
+    }
+}
+```
+
+**输出 (simple.html):**
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+.container {
+  width: 100%; 
+  max-width: 1200px;
+}
+    </style>
+  </head>
+  <body>
+    <div class="container">Hello, CHTL!</div>
+  </body>
+</html>
 ```
 
 ## 项目架构
