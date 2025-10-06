@@ -1,0 +1,51 @@
+# CMake构建产物
+build/
+Build/
+BUILD/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+Makefile
+
+# 编译产物
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+
+# IDE和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试产物
+Testing/
+test_results/
+*.log
+
+# 生成的文件
+*.html
+*.css
+*.js
+!third-party/*.js
+!third-party/*.css
+
+# 模块文件
+*.cmod
+*.cjmod
+module/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
