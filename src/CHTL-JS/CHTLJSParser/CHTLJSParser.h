@@ -105,6 +105,16 @@ struct VirObject {
     explicit VirObject(const String& n) : name(n) {}
 };
 
+// ScriptLoader块结构
+struct ScriptLoaderBlock {
+    Vector<String> scripts;                // 要加载的脚本列表
+    String onload;                         // 加载完成回调
+    String onerror;                        // 加载错误回调
+    bool async = true;                     // 是否异步加载
+    
+    ScriptLoaderBlock() = default;
+};
+
 // CHTL JS Parser配置
 struct JSParserConfig {
     bool allowUnorderedKeyValues = true;
@@ -192,6 +202,14 @@ public:
     
     // 查找Vir声明的位置
     Optional<std::pair<size_t, size_t>> findVirDeclaration(const String& code, size_t startPos = 0);
+    
+    // 解析ScriptLoader块
+    // 输入: "ScriptLoader { src: 'lib.js', onload: callback }"
+    // 返回: ScriptLoaderBlock结构
+    Optional<ScriptLoaderBlock> parseScriptLoaderBlock(const String& code);
+    
+    // 查找ScriptLoader块的位置
+    Optional<std::pair<size_t, size_t>> findScriptLoaderBlock(const String& code, size_t startPos = 0);
     
     // 辅助方法（public for generator use）
     String trimWhitespace(const String& str) const;

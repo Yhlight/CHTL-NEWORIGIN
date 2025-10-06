@@ -46,6 +46,9 @@ private:
     JSGeneratorConfig config_;
     Bridge::SaltBridge& bridge_;
     
+    // Delegate去重表
+    HashMap<String, Vector<String>> delegateRegistry_;
+    
     String wrapWithIIFE(const String& code);
     String processListenBlocks(const String& code);
     String processEventBindOperators(const String& code);
@@ -53,6 +56,7 @@ private:
     String processAnimateBlocks(const String& code);
     String processRouterBlocks(const String& code);
     String processVirDeclarations(const String& code);
+    String processScriptLoaderBlocks(const String& code);
 };
 
 } // namespace JS

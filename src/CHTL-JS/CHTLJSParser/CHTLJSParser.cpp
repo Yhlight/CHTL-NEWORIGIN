@@ -1344,5 +1344,75 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findVirDeclaration(const Strin
     return std::make_pair(virPos, endBracePos + 1);
 }
 
+// ============= ScriptLoader实现 =============
+
+Optional<ScriptLoaderBlock> CHTLJSParser::parseScriptLoaderBlock(const String& code) {
+    size_t loaderPos = code.find("ScriptLoader");
+    if (loaderPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t bracePos = code.find('{', loaderPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    String content = code.substr(bracePos + 1, endBracePos - bracePos - 1);
+    auto bindings = splitBindings(content);
+    
+    ScriptLoaderBlock loader;
+    
+    for (const auto& binding : bindings) {
+        size_t colonPos = binding.find(':');
+        if (colonPos == String::npos) continue;
+        
+        String key = trimWhitespace(binding.substr(0, colonPos));
+        String value = trimWhitespace(binding.substr(colonPos + 1));
+        
+        // 移除引号
+        if (value.length() >= 2 && 
+            ((value[0] == '"' && value[value.length()-1] == '"') ||
+             (value[0] == '\'' && value[value.length()-1] == '\''))) {
+            value = value.substr(1, value.length() - 2);
+        }
+        
+        if (key == "src") {
+            loader.scripts.push_back(value);
+        } else if (key == "onload") {
+            loader.onload = value;
+        } else if (key == "onerror") {
+            loader.onerror = value;
+        } else if (key == "async") {
+            loader.async = (value == "true" || value == "1");
+        }
+    }
+    
+    return loader;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findScriptLoaderBlock(const String& code, size_t startPos) {
+    size_t loaderPos = code.find("ScriptLoader", startPos);
+    if (loaderPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t bracePos = code.find('{', loaderPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    return std::make_pair(loaderPos, endBracePos + 1);
+}
+
 } // namespace JS
 } // namespace CHTL

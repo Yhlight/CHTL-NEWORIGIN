@@ -11,13 +11,19 @@ CHTLJSGenerator::CHTLJSGenerator(const JSGeneratorConfig& config)
 String CHTLJSGenerator::generate(const String& chtljsCode) {
     String result = chtljsCode;
     
-    // 第一步：处理Router语法
+    // 第零步：处理Vir虚对象（编译期语法糖，需要最先处理）
+    result = processVirDeclarations(result);
+    
+    // 第一步：处理ScriptLoader（需要早期处理）
+    result = processScriptLoaderBlocks(result);
+    
+    // 第二步：处理Router语法
     result = processRouterBlocks(result);
     
-    // 第二步：处理Animate语法
+    // 第三步：处理Animate语法
     result = processAnimateBlocks(result);
     
-    // 第三步：处理Delegate语法
+    // 第四步：处理Delegate语法
     result = processDelegateBlocks(result);
     
     // 第四步：处理Listen语法 (必须在处理增强选择器之前)
@@ -451,6 +457,72 @@ String CHTLJSGenerator::processVirDeclarations(const String& code) {
             result += generated;
         } else {
             result += virCode;
+        }
+        
+        lastPos = endPos;
+        searchPos = endPos;
+    }
+    
+    return result;
+}
+
+String CHTLJSGenerator::processScriptLoaderBlocks(const String& code) {
+    String result;
+    size_t lastPos = 0;
+    size_t searchPos = 0;
+    
+    CHTLJSParser parser(code);
+    
+    while (true) {
+        auto loaderPos = parser.findScriptLoaderBlock(code, searchPos);
+        if (!loaderPos.has_value()) {
+            result += code.substr(lastPos);
+            break;
+        }
+        
+        size_t startPos = loaderPos->first;
+        size_t endPos = loaderPos->second;
+        
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        String loaderCode = code.substr(startPos, endPos - startPos);
+        auto loader = parser.parseScriptLoaderBlock(loaderCode);
+        
+        if (loader.has_value()) {
+            std::stringstream ss;
+            
+            ss << "(function() {\n";
+            ss << "    const scripts = " << "[";
+            for (size_t i = 0; i < loader->scripts.size(); i++) {
+                if (i > 0) ss << ", ";
+                ss << "'" << loader->scripts[i] << "'";
+            }
+            ss << "];\n";
+            ss << "    let loaded = 0;\n";
+            ss << "    scripts.forEach(src => {\n";
+            ss << "        const script = document.createElement('script');\n";
+            ss << "        script.src = src;\n";
+            if (loader->async) {
+                ss << "        script.async = true;\n";
+            }
+            ss << "        script.onload = () => {\n";
+            ss << "            loaded++;\n";
+            ss << "            if (loaded === scripts.length) {\n";
+            if (!loader->onload.empty()) {
+                ss << "                (" << loader->onload << ")();\n";
+            }
+            ss << "            }\n";
+            ss << "        };\n";
+            if (!loader->onerror.empty()) {
+                ss << "        script.onerror = " << loader->onerror << ";\n";
+            }
+            ss << "        document.head.appendChild(script);\n";
+            ss << "    });\n";
+            ss << "})()";
+            
+            result += ss.str();
+        } else {
+            result += loaderCode;
         }
         
         lastPos = endPos;
