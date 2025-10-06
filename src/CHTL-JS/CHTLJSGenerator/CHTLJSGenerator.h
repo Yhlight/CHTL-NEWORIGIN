@@ -52,6 +52,7 @@ private:
     String processDelegateBlocks(const String& code);
     String processAnimateBlocks(const String& code);
     String processRouterBlocks(const String& code);
+    String processVirDeclarations(const String& code);
 };
 
 } // namespace JS

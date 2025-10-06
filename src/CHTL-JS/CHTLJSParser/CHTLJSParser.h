@@ -95,6 +95,16 @@ struct RouterBlock {
     RouterBlock() = default;
 };
 
+// Vir虚对象结构
+struct VirObject {
+    String name;                           // 虚对象名称
+    String sourceType;                     // 源类型（Listen, Animate等）
+    HashMap<String, String> members;       // 成员映射
+    
+    VirObject() = default;
+    explicit VirObject(const String& n) : name(n) {}
+};
+
 // CHTL JS Parser配置
 struct JSParserConfig {
     bool allowUnorderedKeyValues = true;
@@ -174,6 +184,14 @@ public:
     
     // 查找Router块的位置
     Optional<std::pair<size_t, size_t>> findRouterBlock(const String& code, size_t startPos = 0);
+    
+    // 解析Vir虚对象声明
+    // 输入: "Vir test = Listen { click: fn }"
+    // 返回: VirObject结构
+    Optional<VirObject> parseVirDeclaration(const String& code);
+    
+    // 查找Vir声明的位置
+    Optional<std::pair<size_t, size_t>> findVirDeclaration(const String& code, size_t startPos = 0);
     
     // 辅助方法（public for generator use）
     String trimWhitespace(const String& str) const;

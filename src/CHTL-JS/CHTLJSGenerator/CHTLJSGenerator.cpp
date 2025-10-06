@@ -11,19 +11,36 @@ CHTLJSGenerator::CHTLJSGenerator(const JSGeneratorConfig& config)
 String CHTLJSGenerator::generate(const String& chtljsCode) {
     String result = chtljsCode;
     
-    // 第一步：处理Animate语法
+    // 第一步：处理Router语法
+    result = processRouterBlocks(result);
+    
+    // 第二步：处理Animate语法
     result = processAnimateBlocks(result);
     
-    // 第二步：处理Delegate语法
+    // 第三步：处理Delegate语法
     result = processDelegateBlocks(result);
     
-    // 第三步：处理Listen语法 (必须在处理增强选择器之前)
+    // 第四步：处理Listen语法 (必须在处理增强选择器之前)
     result = processListenBlocks(result);
     
-    // 第四步：处理事件绑定操作符 &-> (必须在处理Listen之后，增强选择器之前)
+    // 第五步：处理事件绑定操作符 &-> (必须在处理Listen之后，增强选择器之前)
     result = processEventBindOperators(result);
     
-    // 第三步：处理增强选择器 {{...}}
+    // 第六步：处理响应式值 $variable$
+    size_t dollarPos = 0;
+    while ((dollarPos = result.find("$", dollarPos)) != String::npos) {
+        size_t endDollarPos = result.find("$", dollarPos + 1);
+        if (endDollarPos != String::npos) {
+            String varName = result.substr(dollarPos + 1, endDollarPos - dollarPos - 1);
+            // 简单替换为变量引用（未来可以添加响应式系统）
+            result.replace(dollarPos, endDollarPos - dollarPos + 1, varName);
+            dollarPos += varName.length();
+        } else {
+            dollarPos++;
+        }
+    }
+    
+    // 第七步：处理增强选择器 {{...}}
     size_t pos = 0;
     while ((pos = result.find("{{", pos)) != String::npos) {
         size_t endPos = result.find("}}", pos);
@@ -323,12 +340,124 @@ String CHTLJSGenerator::processAnimateBlocks(const String& code) {
 
 String CHTLJSGenerator::processRouter(const String& /* config */) {
     std::stringstream ss;
-    
-    // 路由实现
     ss << "// Router\n";
-    ss << "// TODO: Implement SPA router\n";
-    
     return ss.str();
+}
+
+String CHTLJSGenerator::processRouterBlocks(const String& code) {
+    String result;
+    size_t lastPos = 0;
+    size_t searchPos = 0;
+    
+    CHTLJSParser parser(code);
+    
+    while (true) {
+        auto blockPos = parser.findRouterBlock(code, searchPos);
+        if (!blockPos.has_value()) {
+            result += code.substr(lastPos);
+            break;
+        }
+        
+        size_t startPos = blockPos->first;
+        size_t endPos = blockPos->second;
+        
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        String blockCode = code.substr(startPos, endPos - startPos);
+        auto routerBlock = parser.parseRouterBlock(blockCode);
+        
+        if (routerBlock.has_value()) {
+            std::stringstream ss;
+            
+            ss << "(function() {\n";
+            ss << "    const routes = {};\n";
+            
+            for (const auto& route : routerBlock->routes) {
+                String page = route.page;
+                if (page.length() >= 4 && page.substr(0, 2) == "{{" && 
+                    page.substr(page.length() - 2) == "}}") {
+                    String selector = page.substr(2, page.length() - 4);
+                    page = bridge_.convertEnhancedSelector(selector);
+                }
+                ss << "    routes['" << route.url << "'] = " << page << ";\n";
+            }
+            
+            ss << "    \n";
+            ss << "    function navigate(path) {\n";
+            ss << "        Object.values(routes).forEach(el => {\n";
+            ss << "            if (el) el.style.display = 'none';\n";
+            ss << "        });\n";
+            ss << "        const target = routes[path];\n";
+            ss << "        if (target) target.style.display = '';\n";
+            ss << "    }\n";
+            ss << "    \n";
+            
+            if (routerBlock->mode == "history") {
+                ss << "    window.addEventListener('popstate', () => {\n";
+                ss << "        navigate(window.location.pathname);\n";
+                ss << "    });\n";
+                ss << "    navigate(window.location.pathname);\n";
+            } else {
+                ss << "    window.addEventListener('hashchange', () => {\n";
+                ss << "        const path = window.location.hash.slice(1) || '/';\n";
+                ss << "        navigate(path);\n";
+                ss << "    });\n";
+                ss << "    const initialPath = window.location.hash.slice(1) || '/';\n";
+                ss << "    navigate(initialPath);\n";
+            }
+            
+            ss << "})()";
+            
+            result += ss.str();
+        } else {
+            result += blockCode;
+        }
+        
+        lastPos = endPos;
+        searchPos = endPos;
+    }
+    
+    return result;
+}
+
+String CHTLJSGenerator::processVirDeclarations(const String& code) {
+    String result;
+    size_t lastPos = 0;
+    size_t searchPos = 0;
+    
+    CHTLJSParser parser(code);
+    
+    while (true) {
+        auto virPos = parser.findVirDeclaration(code, searchPos);
+        if (!virPos.has_value()) {
+            result += code.substr(lastPos);
+            break;
+        }
+        
+        size_t startPos = virPos->first;
+        size_t endPos = virPos->second;
+        
+        result += code.substr(lastPos, startPos - lastPos);
+        
+        String virCode = code.substr(startPos, endPos - startPos);
+        auto virObj = parser.parseVirDeclaration(virCode);
+        
+        if (virObj.has_value()) {
+            // TODO: 注册到全局VirRegistry（未来实现）
+            
+            // Vir是编译期语法糖，生成时保留原始代码（去掉Vir关键字）
+            // Vir test = Listen {...}; → const test = Listen {...};
+            String generated = "const " + virCode.substr(4);  // 去掉"Vir "
+            result += generated;
+        } else {
+            result += virCode;
+        }
+        
+        lastPos = endPos;
+        searchPos = endPos;
+    }
+    
+    return result;
 }
 
 String CHTLJSGenerator::wrapWithIIFE(const String& code) {

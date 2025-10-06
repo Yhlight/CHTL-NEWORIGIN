@@ -1262,5 +1262,87 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findRouterBlock(const String& 
     return std::make_pair(routerPos, endBracePos + 1);
 }
 
+// ============= Vir虚对象实现 =============
+
+Optional<VirObject> CHTLJSParser::parseVirDeclaration(const String& code) {
+    size_t virPos = code.find("Vir");
+    if (virPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找对象名称（Vir之后，=之前）
+    size_t equalPos = code.find('=', virPos);
+    if (equalPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    String nameSection = code.substr(virPos + 3, equalPos - virPos - 3);
+    String name = trimWhitespace(nameSection);
+    
+    VirObject vir(name);
+    
+    // 查找源类型（Listen、Animate等）
+    size_t afterEqual = equalPos + 1;
+    while (afterEqual < code.length() && isWhitespace(code[afterEqual])) {
+        afterEqual++;
+    }
+    
+    // 检测源类型
+    if (code.substr(afterEqual, 6) == "Listen") {
+        vir.sourceType = "Listen";
+        // 解析Listen块获取成员
+        auto listenBlock = parseListenBlock(code.substr(afterEqual));
+        if (listenBlock.has_value()) {
+            for (const auto& binding : listenBlock->bindings) {
+                vir.members[binding.eventName] = binding.handler;
+            }
+        }
+    } else if (code.substr(afterEqual, 7) == "Animate") {
+        vir.sourceType = "Animate";
+        // Vir Animate不常用，暂不解析成员
+    }
+    
+    return vir;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findVirDeclaration(const String& code, size_t startPos) {
+    size_t virPos = code.find("Vir", startPos);
+    if (virPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找=
+    size_t equalPos = code.find('=', virPos);
+    if (equalPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找源类型块的结束
+    size_t afterEqual = equalPos + 1;
+    while (afterEqual < code.length() && isWhitespace(code[afterEqual])) {
+        afterEqual++;
+    }
+    
+    // 查找{
+    size_t bracePos = code.find('{', afterEqual);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的}
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找分号
+    size_t semiPos = code.find(';', endBracePos);
+    if (semiPos != String::npos && semiPos < endBracePos + 20) {
+        return std::make_pair(virPos, semiPos + 1);
+    }
+    
+    return std::make_pair(virPos, endBracePos + 1);
+}
+
 } // namespace JS
 } // namespace CHTL
