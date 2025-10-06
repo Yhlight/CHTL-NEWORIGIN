@@ -11,6 +11,11 @@ namespace CHTL {
 
 std::shared_ptr<BaseNode> StyleParsingStrategy::parse(CHTLParserContext* context) {
     context->advance(); // consume 'style' keyword
+
+    if (context->getCurrentToken().type == TokenType::TOKEN_COLON) {
+        throw std::runtime_error("Explicit inheritance is not allowed in anonymous style templates.");
+    }
+
     auto styleNode = std::make_shared<StyleNode>();
     auto parentElement = context->getCurrentElement();
 
