@@ -53,6 +53,7 @@ namespace CHTL {
         TOKEN_LTE,
         TOKEN_EQ,
         TOKEN_NEQ,
+        TOKEN_NOT,
         TOKEN_AND,
         TOKEN_OR,
         TOKEN_QUESTION,

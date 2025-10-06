@@ -25,7 +25,14 @@ namespace CHTL {
         NODE_DELETE,
         NODE_INSERT,
         NODE_SCRIPT,
-        NODE_ANIMATE
+        NODE_ANIMATE,
+
+        // Expression Nodes
+        NODE_EXPRESSION_LITERAL,
+        NODE_EXPRESSION_UNARY,
+        NODE_EXPRESSION_BINARY,
+        NODE_EXPRESSION_GROUPING,
+        NODE_EXPRESSION_VARIABLE
     };
 
     class BaseNode : public std::enable_shared_from_this<BaseNode> {

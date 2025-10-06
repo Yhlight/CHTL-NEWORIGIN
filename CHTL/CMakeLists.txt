@@ -4,6 +4,8 @@ add_library(CHTL STATIC
     CHTLParser/CHTLParser.cpp
     CHTLParser/CHTLParserContext.cpp
     CHTLParser/ParsingUtils.cpp
+    CHTLParser/ExpressionParser.cpp
+    CHTLEvaluator/ExpressionEvaluator.cpp
     CHTLState/InitialState.cpp
     CHTLStrategy/ElementParsingStrategy.cpp
     CHTLStrategy/TextParsingStrategy.cpp

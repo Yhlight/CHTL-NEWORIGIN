@@ -24,6 +24,9 @@
 #include <algorithm>
 #include <sstream>
 #include <charconv>
+#include "../CHTLLexer/CHTLLexer.h"
+#include "../CHTLParser/ExpressionParser.h"
+#include "../CHTLEvaluator/ExpressionEvaluator.h"
 
 namespace CHTL {
 
@@ -104,47 +107,38 @@ void CHTLGenerator::visit(const std::shared_ptr<IfNode>& node) {
 }
 
 bool CHTLGenerator::evaluateCondition(const std::string& condition, const std::shared_ptr<ElementNode>& context_element) {
-    std::stringstream ss(condition);
-    std::string left_str, op_str, right_str;
-
-    ss >> left_str >> op_str >> right_str;
-
-    if (ss.fail() || op_str.empty() || right_str.empty()) {
-        throw std::runtime_error("Unsupported condition format: " + condition);
+    // 1. Tokenize the condition string
+    CHTLLexer lexer(condition, nullptr); // configManager is not needed for expressions
+    std::vector<Token> tokens;
+    Token token = lexer.getNextToken();
+    while (token.type != TokenType::TOKEN_EOF) {
+        tokens.push_back(token);
+        token = lexer.getNextToken();
     }
 
-    double left_val;
-    auto from_chars_result = std::from_chars(left_str.data(), left_str.data() + left_str.size(), left_val);
-    if (from_chars_result.ec == std::errc::invalid_argument) {
-        if (context_element && context_element->hasAttribute(left_str)) {
-            std::string attr_val_str = context_element->getAttribute(left_str);
-            // remove "px" or other units before converting to double
-            attr_val_str.erase(std::remove_if(attr_val_str.begin(), attr_val_str.end(),
-                                           [](char c) { return !std::isdigit(c) && c != '.'; }),
-                             attr_val_str.end());
-            from_chars_result = std::from_chars(attr_val_str.data(), attr_val_str.data() + attr_val_str.size(), left_val);
-             if (from_chars_result.ec == std::errc::invalid_argument) {
-                throw std::runtime_error("Could not parse attribute value to number: " + left_str);
-             }
-        } else {
-            throw std::runtime_error("Condition variable not found: " + left_str);
-        }
+    // 2. Parse the tokens into an expression tree
+    ExpressionParser parser(tokens);
+    auto expression_tree = parser.parse();
+    if (!expression_tree) {
+        throw std::runtime_error("Failed to parse condition: " + condition);
     }
 
-    double right_val;
-    from_chars_result = std::from_chars(right_str.data(), right_str.data() + right_str.size(), right_val);
-    if (from_chars_result.ec == std::errc::invalid_argument) {
-       throw std::runtime_error("Could not parse right side of condition to number: " + right_str);
+    // 3. Evaluate the expression tree
+    ExpressionEvaluator evaluator(context_element);
+    std::any result = evaluator.evaluate(expression_tree);
+
+    // 4. Return the truthiness of the result
+    if (result.type() == typeid(bool)) {
+        return std::any_cast<bool>(result);
+    }
+    if (result.type() == typeid(double)) {
+        return std::any_cast<double>(result) != 0.0;
+    }
+    if (result.type() == typeid(std::string)) {
+        return !std::any_cast<std::string>(result).empty();
     }
 
-    if (op_str == ">") return left_val > right_val;
-    if (op_str == "<") return left_val < right_val;
-    if (op_str == "==") return left_val == right_val;
-    if (op_str == ">=") return left_val >= right_val;
-    if (op_str == "<=") return left_val <= right_val;
-    if (op_str == "!=") return left_val != right_val;
-
-    throw std::runtime_error("Unsupported operator in condition: " + op_str);
+    return false; // Default to false if type is unknown or not "truthy"
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {

@@ -50,6 +50,17 @@ Token CHTLLexer::getNextToken() {
         return makeToken(TokenType::TOKEN_EOF, "");
     }
 
+    if (c == '&' && position + 1 < source.length() && source[position + 1] == '&') {
+        advance();
+        advance();
+        return makeToken(TokenType::TOKEN_AND, "&&");
+    }
+    if (c == '|' && position + 1 < source.length() && source[position + 1] == '|') {
+        advance();
+        advance();
+        return makeToken(TokenType::TOKEN_OR, "||");
+    }
+
     switch (c) {
         case '@': advance(); return makeToken(TokenType::TOKEN_AT, "@");
         case '{': advance(); return makeToken(TokenType::TOKEN_LBRACE, "{");
@@ -62,7 +73,34 @@ Token CHTLLexer::getNextToken() {
         case ';': advance(); return makeToken(TokenType::TOKEN_SEMICOLON, ";");
         case ',': advance(); return makeToken(TokenType::TOKEN_COMMA, ",");
         case '.': advance(); return makeToken(TokenType::TOKEN_DOT, ".");
-        case '=': advance(); return makeToken(TokenType::TOKEN_ASSIGN, "=");
+        case '=':
+            advance();
+            if (peek() == '=') {
+                advance();
+                return makeToken(TokenType::TOKEN_EQ, "==");
+            }
+            return makeToken(TokenType::TOKEN_ASSIGN, "=");
+        case '>':
+            advance();
+            if (peek() == '=') {
+                advance();
+                return makeToken(TokenType::TOKEN_GTE, ">=");
+            }
+            return makeToken(TokenType::TOKEN_GT, ">");
+        case '<':
+            advance();
+            if (peek() == '=') {
+                advance();
+                return makeToken(TokenType::TOKEN_LTE, "<=");
+            }
+            return makeToken(TokenType::TOKEN_LT, "<");
+        case '!':
+            advance();
+            if (peek() == '=') {
+                advance();
+                return makeToken(TokenType::TOKEN_NEQ, "!=");
+            }
+            return makeToken(TokenType::TOKEN_NOT, "!");
         case '+': advance(); return makeToken(TokenType::TOKEN_PLUS, "+");
         case '-': advance(); return makeToken(TokenType::TOKEN_MINUS, "-");
         case '*': advance(); return makeToken(TokenType::TOKEN_MULTIPLY, "*");
