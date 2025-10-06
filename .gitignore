@@ -33,12 +33,15 @@ Testing/
 test_results/
 *.log
 
-# 生成的文件
+# 生成的文件（不包括examples中的示例输出）
 *.html
+!examples/*.html
 *.css
 *.js
 !third-party/*.js
 !third-party/*.css
+!examples/*.js
+!examples/*.css
 
 # 模块文件
 *.cmod

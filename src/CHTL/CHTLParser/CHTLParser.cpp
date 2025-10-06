@@ -190,20 +190,53 @@ SharedPtr<StyleNode> CHTLParser::parseStyle() {
     
     auto styleNode = std::make_shared<StyleNode>();
     
-    // 简单处理：将整个style块内容作为字符串保存
-    // TODO: 实现完整的CSS解析
+    // 解析style块内容
     while (!check(TokenType::RightBrace) && !isAtEnd()) {
         Token token = getCurrentToken();
         
-        // 检查是否是CSS选择器（.class, #id等）
-        if (token.is(TokenType::Dot) || token.is(TokenType::Hash)) {
+        // 检查是否是CSS选择器（.class, #id, &:hover等）
+        if (token.is(TokenType::Dot) || token.is(TokenType::Hash) || token.is(TokenType::Ampersand)) {
             String selector;
+            
             if (token.is(TokenType::Dot)) {
                 advance();
                 selector = "." + expectToken(TokenType::Identifier, "Expected class name").getValue();
-            } else {
+            } else if (token.is(TokenType::Hash)) {
                 advance();
                 selector = "#" + expectToken(TokenType::Identifier, "Expected id name").getValue();
+            } else if (token.is(TokenType::Ampersand)) {
+                advance();
+                selector = "&";
+                // 检查是否有伪类或伪元素
+                if (check(TokenType::Colon)) {
+                    advance();
+                    if (check(TokenType::Colon)) {
+                        // 伪元素 ::
+                        advance();
+                        selector += "::";
+                    } else {
+                        // 伪类 :
+                        selector += ":";
+                    }
+                    if (check(TokenType::Identifier)) {
+                        selector += advance().getValue();
+                    }
+                }
+            }
+            
+            // 检查是否还有伪类/伪元素（如 .box:hover）
+            if (check(TokenType::Colon)) {
+                advance();
+                if (check(TokenType::Colon)) {
+                    // 伪元素 ::
+                    advance();
+                    selector += "::";
+                } else {
+                    selector += ":";
+                }
+                if (check(TokenType::Identifier)) {
+                    selector += advance().getValue();
+                }
             }
             
             expect(TokenType::LeftBrace, "Expected '{' after selector");
@@ -269,11 +302,34 @@ SharedPtr<TemplateNode> CHTLParser::parseTemplate() {
     
     expect(TokenType::LeftBrace, "Expected '{' after template name");
     
-    // 解析模板体
-    while (!check(TokenType::RightBrace) && !isAtEnd()) {
-        auto node = parseStatement();
-        if (node) {
-            templateNode->addChild(node);
+    // 解析模板体（对于样式模板，直接解析CSS属性）
+    if (type == TemplateNode::TemplateType::Style) {
+        // 样式模板直接包含CSS属性
+        while (!check(TokenType::RightBrace) && !isAtEnd()) {
+            if (check(TokenType::Identifier) && peek().is(TokenType::Colon)) {
+                String property = advance().getValue();
+                advance();  // 消耗:
+                String value = parseAttributeValue();
+                
+                // 创建一个临时的样式节点来存储
+                auto styleNode = std::make_shared<StyleNode>();
+                styleNode->addInlineStyle(property, value);
+                templateNode->addChild(styleNode);
+                
+                if (check(TokenType::Semicolon)) {
+                    advance();
+                }
+            } else {
+                advance();
+            }
+        }
+    } else {
+        // 元素模板和变量组模板
+        while (!check(TokenType::RightBrace) && !isAtEnd()) {
+            auto node = parseStatement();
+            if (node) {
+                templateNode->addChild(node);
+            }
         }
     }
     

@@ -201,6 +201,9 @@ TEST_CASE("Lexer - Enhanced Selector", "[lexer]") {
 #include "CHTL/CHTLParser/CHTLParser.h"
 #include "CHTL/CHTLNode/BaseNode.h"
 
+// ===== Expression Parser Tests =====
+#include "CHTL/CHTLParser/ExpressionParser.h"
+
 TEST_CASE("Parser - Simple Element", "[parser]") {
     String source = R"(
         div {
@@ -293,4 +296,126 @@ TEST_CASE("Parser - Complex Structure", "[parser]") {
     
     REQUIRE(program != nullptr);
     REQUIRE(!parser.hasErrors());
+}
+// 表达式解析器测试
+// 注意：这个文件会被合并到lexer_test.cpp中
+
+TEST_CASE("Expression - Number Literals", "[expression]") {
+    SECTION("Simple numbers") {
+        Lexer lexer("100");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "100");
+    }
+    
+    SECTION("Numbers with units") {
+        Lexer lexer("100px");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "100px");
+    }
+}
+
+TEST_CASE("Expression - Arithmetic Operations", "[expression]") {
+    SECTION("Addition") {
+        Lexer lexer("100px + 50px");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "150px");
+    }
+    
+    SECTION("Subtraction") {
+        Lexer lexer("200px - 50px");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "150px");
+    }
+    
+    SECTION("Multiplication") {
+        Lexer lexer("100px * 2");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "200px");
+    }
+    
+    SECTION("Division") {
+        Lexer lexer("100px / 2");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "50px");
+    }
+    
+    SECTION("Power") {
+        Lexer lexer("2 ** 3");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "8");
+    }
+}
+
+TEST_CASE("Expression - Complex Expressions", "[expression]") {
+    SECTION("Multiple operations") {
+        Lexer lexer("100px + 50px * 2");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        // 应该遵循运算符优先级: 100px + (50px * 2) = 100px + 100px = 200px
+        REQUIRE(expr->evaluate() == "200px");
+    }
+    
+    SECTION("Parentheses") {
+        Lexer lexer("(100px + 50px) * 2");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        // (100px + 50px) * 2 = 150px * 2 = 300px
+        REQUIRE(expr->evaluate() == "300px");
+    }
+}
+
+TEST_CASE("Expression - Conditional Expressions", "[expression]") {
+    SECTION("Simple conditional") {
+        Lexer lexer("1 ? 100px : 50px");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "100px");
+    }
+    
+    SECTION("Conditional with comparison") {
+        Lexer lexer("100 > 50 ? 200px : 50px");
+        auto tokens = lexer.tokenize();
+        ExpressionParser parser(tokens);
+        auto expr = parser.parse();
+        
+        REQUIRE(expr != nullptr);
+        REQUIRE(expr->evaluate() == "200px");
+    }
 }
