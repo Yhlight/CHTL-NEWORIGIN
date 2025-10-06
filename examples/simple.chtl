@@ -1,0 +1,27 @@
+# CHTL示例文件 - 简单的HTML页面
+
+html {
+    head {
+        text {
+            "CHTL示例页面"
+        }
+    }
+    
+    body {
+        div {
+            class: container;
+            
+            style {
+                .container {
+                    width: 100%;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+            }
+            
+            text {
+                "Hello, CHTL!"
+            }
+        }
+    }
+}
