@@ -270,13 +270,29 @@ String CHTLJSGenerator::processAnimateBlocks(const String& code) {
             ss << "        const elapsed = Date.now() - startTime;\n";
             ss << "        const progress = Math.min(elapsed / duration, 1);\n";
             
+            // 处理关键帧
+            if (!animateBlock->when.empty()) {
+                ss << "        // 关键帧\n";
+                for (const auto& kf : animateBlock->when) {
+                    ss << "        if (progress >= " << kf.at << ") {\n";
+                    ss << "            targets.forEach(target => {\n";
+                    for (const auto& [prop, val] : kf.properties) {
+                        ss << "                target.style['" << prop << "'] = " << val << ";\n";
+                    }
+                    ss << "            });\n";
+                    ss << "        }\n";
+                }
+            }
+            
             // 应用结束状态
             if (!animateBlock->end.empty()) {
-                ss << "        targets.forEach(target => {\n";
+                ss << "        if (progress >= 1) {\n";
+                ss << "            targets.forEach(target => {\n";
                 for (const auto& [prop, val] : animateBlock->end) {
-                    ss << "            target.style['" << prop << "'] = " << val << ";\n";
+                    ss << "                target.style['" << prop << "'] = " << val << ";\n";
                 }
-                ss << "        });\n";
+                ss << "            });\n";
+                ss << "        }\n";
             }
             
             ss << "        if (progress < 1) {\n";

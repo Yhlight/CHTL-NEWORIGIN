@@ -1,6 +1,7 @@
 #include "CHTLJSParser.h"
 #include <algorithm>
 #include <cctype>
+#include <iostream>
 
 namespace CHTL {
 namespace JS {
@@ -1035,6 +1036,8 @@ Optional<AnimateBlock> CHTLJSParser::parseAnimateBlock(const String& code) {
         } else if (key == "when") {
             // 解析关键帧数组
             value = trimWhitespace(value);
+            // TODO: 修复splitBindings来正确处理嵌套数组
+            // 当前问题：when: [{ at: 0.25 }, { at: 0.5 }] 在第一个逗号处被错误分割
             if (value.length() >= 2 && value[0] == '[' && value[value.length() - 1] == ']') {
                 String arrayContent = value.substr(1, value.length() - 2);
                 // 简化：按}分割关键帧
@@ -1047,7 +1050,9 @@ Optional<AnimateBlock> CHTLJSParser::parseAnimateBlock(const String& code) {
                     if (end == String::npos) break;
                     
                     String frameContent = arrayContent.substr(start + 1, end - start - 1);
+                    // std::cerr << "  frameContent: '" << frameContent << "'\n";
                     auto frameProps = parseEventBindings(frameContent);
+                    // std::cerr << "  frameProps.size(): " << frameProps.size() << "\n";
                     
                     KeyFrame frame;
                     for (const auto& prop : frameProps) {
