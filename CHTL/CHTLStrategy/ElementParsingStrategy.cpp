@@ -87,7 +87,14 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
                 std::string templateName = context->getCurrentToken().lexeme;
                 context->advance();
 
-                auto usageNode = std::make_shared<TemplateUsageNode>(templateName, usageType);
+                std::string from_namespace;
+                if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
+                    context->advance(); // consume 'from'
+                    from_namespace = context->getCurrentToken().lexeme;
+                    context->advance(); // consume namespace
+                }
+
+                auto usageNode = std::make_shared<TemplateUsageNode>(templateName, usageType, "", from_namespace);
 
                 if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
                     context->setStrategy(std::make_unique<SpecializationParsingStrategy>());

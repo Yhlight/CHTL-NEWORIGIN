@@ -1,0 +1,11 @@
+[Namespace] MyTheme {
+    [Template] @Style BasicStyle {
+        color: blue;
+    }
+
+    [Template] @Element BasicElement {
+        p {
+            text: "Hello from BasicElement";
+        }
+    }
+}

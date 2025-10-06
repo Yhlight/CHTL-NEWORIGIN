@@ -10,6 +10,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <filesystem>
+#include <functional>
 
 namespace CHTL {
 
@@ -37,21 +38,42 @@ const std::map<std::string, std::map<std::string, std::shared_ptr<BaseNode>>>& C
     return namespaces;
 }
 
-void CHTLLoader::gatherTemplates(const std::shared_ptr<BaseNode>& ast, GenerationContext& context) {
+void CHTLLoader::gatherTemplates(const std::shared_ptr<BaseNode>& ast, GenerationContext& context, const std::string& default_namespace) {
     if (!ast) {
         return;
     }
-    if (ast->getType() == NodeType::NODE_TEMPLATE) {
-        auto templateNode = std::dynamic_pointer_cast<TemplateNode>(ast);
-        if (templateNode) {
-            context.addTemplate(templateNode->getName(), templateNode);
+
+    bool namespaceFound = false;
+    for (const auto& child : ast->getChildren()) {
+        if (child->getType() == NodeType::NODE_NAMESPACE) {
+            namespaceFound = true;
+            auto ns_node = std::dynamic_pointer_cast<NamespaceNode>(child);
+            for (const auto& ns_child : ns_node->getChildren()) {
+                if (ns_child->getType() == NodeType::NODE_TEMPLATE) {
+                    auto templateNode = std::dynamic_pointer_cast<TemplateNode>(ns_child);
+                    if (templateNode) {
+                        context.addTemplate(templateNode->getName(), templateNode, ns_node->getName());
+                    }
+                }
+            }
         }
     }
+
+    if (!namespaceFound) {
+        for (const auto& child : ast->getChildren()) {
+            if (child->getType() == NodeType::NODE_TEMPLATE) {
+                auto templateNode = std::dynamic_pointer_cast<TemplateNode>(child);
+                if (templateNode) {
+                    context.addTemplate(templateNode->getName(), templateNode, default_namespace);
+                }
+            }
+        }
+    }
+
     for (const auto& child : ast->getChildren()) {
-        gatherTemplates(child, context);
+        gatherTemplates(child, context, default_namespace);
     }
 }
-
 
 void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
     if (!node) {
@@ -62,6 +84,7 @@ void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
         auto importNode = std::dynamic_pointer_cast<ImportNode>(node);
         if (importNode) {
             std::string path = resolvePath(importNode->getPath());
+            std::string default_namespace = std::filesystem::path(path).stem().string();
 
             if (importNode->getImportType() == ImportType::CHTL) {
                 if (loadedAsts.find(path) == loadedAsts.end()) {
@@ -77,6 +100,8 @@ void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
                     }
                     CHTLParser parser(tokens, configManager);
                     loadedAsts[path] = parser.parse();
+                    // Associate the default namespace with the loaded AST right away
+                    loadedAsts[path]->default_namespace = default_namespace;
                 }
 
                 auto importedAst = loadedAsts[path];
@@ -93,14 +118,13 @@ void CHTLLoader::findAndLoad(const std::shared_ptr<BaseNode>& node) {
                                 if (auto custom = std::dynamic_pointer_cast<CustomNode>(nsChild)) namespaces[namespaceName][custom->getName()] = nsChild;
                                 else if (auto templ = std::dynamic_pointer_cast<TemplateNode>(nsChild)) namespaces[namespaceName][templ->getName()] = nsChild;
                             }
-                            break;
                         }
                     }
                     if (!namespaceFound) {
-                        namespaceName = std::filesystem::path(path).stem().string();
+                        namespaceName = default_namespace;
                         for (const auto& child : importedAst->getChildren()) {
-                            if (auto custom = std::dynamic_pointer_cast<CustomNode>(child)) namespaces[namespaceName][custom->getName()] = child;
-                            else if (auto templ = std::dynamic_pointer_cast<TemplateNode>(child)) namespaces[namespaceName][templ->getName()] = child;
+                             if (auto custom = std::dynamic_pointer_cast<CustomNode>(child)) namespaces[namespaceName][custom->getName()] = child;
+                             else if (auto templ = std::dynamic_pointer_cast<TemplateNode>(child)) namespaces[namespaceName][templ->getName()] = child;
                         }
                     }
                 }
@@ -189,7 +213,6 @@ std::string CHTLLoader::resolvePath(const std::string& importPath) {
         if (fs::exists(fullPath) && fs::is_directory(fullPath)) {
             throw std::runtime_error("Import path cannot be a directory: " + importPath);
         }
-        throw std::runtime_error("Could not find file for specific path: " + importPath);
     }
 
     std::vector<fs::path> searchPaths;

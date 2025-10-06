@@ -124,7 +124,7 @@ void CHTLGenerator::collectStyleProperties(const std::shared_ptr<TemplateNode>& 
         if (child->getType() == NodeType::NODE_TEMPLATE_USAGE) {
             auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(child);
             if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
-                auto parentTemplate = context->getTemplate(usageNode->getName());
+                auto parentTemplate = context->getTemplate(usageNode->getName(), usageNode->getFromNamespace());
                 collectStyleProperties(parentTemplate, properties);
             }
         }
@@ -197,7 +197,7 @@ void CHTLGenerator::visit(const std::shared_ptr<ElementNode>& node) {
                     } else if (styleChild->getType() == NodeType::NODE_TEMPLATE_USAGE) {
                         auto usageNode = std::dynamic_pointer_cast<TemplateUsageNode>(styleChild);
                         if (usageNode && usageNode->getUsageType() == TemplateUsageType::STYLE) {
-                             auto templateNode = context->getTemplate(usageNode->getName());
+                             auto templateNode = context->getTemplate(usageNode->getName(), usageNode->getFromNamespace());
                              if(templateNode) {
                                  collectStyleProperties(templateNode, style_properties);
                              }
@@ -282,7 +282,7 @@ void CHTLGenerator::visit(const std::shared_ptr<TemplateNode>& node) {
 }
 
 void CHTLGenerator::visit(const std::shared_ptr<TemplateUsageNode>& node) {
-    auto templateNode = context->getTemplate(node->getName());
+    auto templateNode = context->getTemplate(node->getName(), node->getFromNamespace());
     if (!templateNode) return;
 
     auto specializationRoot = node->getSpecialization();

@@ -28,7 +28,7 @@ inline std::string normalize_css(std::string str) {
 }
 
 // Helper to perform the full compilation process and return the generator
-inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
+inline CHTL::CHTLGenerator generateOutput(const std::string& input, const std::string& basePath = ".") {
     auto configManager = std::make_shared<CHTL::ConfigurationManager>();
 
     // --- First Pass: Find and apply configuration ---
@@ -66,7 +66,7 @@ inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
     CHTL::CHTLParser main_parser(main_tokens, configManager);
     auto ast = main_parser.parse();
 
-    CHTL::CHTLLoader loader(".", configManager);
+    CHTL::CHTLLoader loader(basePath, configManager);
     loader.loadImports(ast);
 
     CHTL::SemanticAnalyzer semantic_analyzer;
@@ -75,7 +75,7 @@ inline CHTL::CHTLGenerator generateOutput(const std::string& input) {
     CHTL::GenerationContext context;
     loader.gatherTemplates(ast, context);
     for (const auto& pair : loader.getLoadedAsts()) {
-        loader.gatherTemplates(pair.second, context);
+        loader.gatherTemplates(pair.second, context, pair.second->default_namespace);
     }
 
     CHTL::ConcreteSaltBridge bridge;

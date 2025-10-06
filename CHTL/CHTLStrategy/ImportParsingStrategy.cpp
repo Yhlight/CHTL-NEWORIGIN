@@ -30,11 +30,15 @@ std::shared_ptr<BaseNode> ImportParsingStrategy::parse(CHTLParserContext* contex
     }
 
     if (context->getCurrentToken().type == TokenType::TOKEN_AT) {
-        itemType += context->getCurrentToken().lexeme;
+        itemType += context->getCurrentToken().lexeme; // Consume '@'
         context->advance();
+        if (context->getCurrentToken().type == TokenType::TOKEN_IDENTIFIER) {
+            itemType += context->getCurrentToken().lexeme; // Consume type, e.g., 'Chtl'
+            context->advance();
+        } else {
+            throw std::runtime_error("Expected identifier after '@' in import statement.");
+        }
     }
-    itemType += context->getCurrentToken().lexeme;
-    context->advance();
 
     if (category == ImportCategory::NONE) {
         if (itemType == "@Html") importType = ImportType::HTML;

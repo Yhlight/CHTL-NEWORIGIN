@@ -29,6 +29,8 @@ namespace CHTL {
     };
 
     class BaseNode : public std::enable_shared_from_this<BaseNode> {
+    public:
+        std::string default_namespace;
     private:
         NodeType type;
         std::weak_ptr<BaseNode> parent;

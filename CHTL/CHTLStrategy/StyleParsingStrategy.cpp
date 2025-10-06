@@ -122,13 +122,20 @@ std::shared_ptr<BaseNode> StyleParsingStrategy::parse(CHTLParserContext* context
                 std::string templateName = context->getCurrentToken().lexeme;
                 context->advance();
 
+                std::string from_namespace;
+                if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
+                    context->advance(); // consume 'from'
+                    from_namespace = context->getCurrentToken().lexeme;
+                    context->advance(); // consume namespace
+                }
+
                 if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
                     context->advance();
                 } else {
                     throw std::runtime_error("Expected ';' after template usage.");
                 }
 
-                styleNode->addChild(std::make_shared<TemplateUsageNode>(templateName, usageType));
+                styleNode->addChild(std::make_shared<TemplateUsageNode>(templateName, usageType, "", from_namespace));
             }
             else {
                 context->advance();
