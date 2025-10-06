@@ -1,9 +1,9 @@
 #pragma once
 
 #include "SaltBridge.h"
-#include "../CHTL JS/CHTLJSLexer/CHTLJSLexer.h"
-#include "../CHTL JS/CHTLJSParser/CHTLJSParser.h"
-#include "../CHTL JS/CHTLJSGenerator/CHTLJSGenerator.h"
+#include "../CHTLJS/CHTLJSLexer/CHTLJSLexer.h"
+#include "../CHTLJS/CHTLJSParser/CHTLJSParser.h"
+#include "../CHTLJS/CHTLJSGenerator/CHTLJSGenerator.h"
 #include <vector>
 #include <memory>
 #include <sstream>

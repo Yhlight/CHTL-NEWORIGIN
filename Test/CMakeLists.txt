@@ -10,7 +10,6 @@ add_executable(run_tests
     SpecializationParsingTest.cpp
     SpecializationGeneratorTest.cpp
     CHTLJSTest.cpp
-    ExpressionTest.cpp
 )
 
 target_link_libraries(run_tests PRIVATE CHTL CHTLJS)

@@ -9,7 +9,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 add_subdirectory(CHTL)
-add_subdirectory("CHTL JS")
+add_subdirectory(CHTLJS)
 add_subdirectory(third-party/libzippp)
 # add_subdirectory(third-party/antlr4/runtime/Cpp) # Not needed yet
 # add_subdirectory(third-party/libsass) # libsass does not use CMake, will be added later
