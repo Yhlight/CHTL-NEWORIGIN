@@ -191,6 +191,38 @@ TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
     }
 }
 
+TEST_CASE("New Compiler - Element Templates", "[new_compiler_element_template]") {
+    SECTION("Defines and uses an element template") {
+        std::string source = R"(
+            [Template] @Element MyCard {
+                h1 { text { "Card Title" } }
+                p { text { "Card content." } }
+            }
+
+            body {
+                @Element MyCard;
+            }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto body = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(body != nullptr);
+        REQUIRE(body->tagName == "body");
+        REQUIRE(body->children.size() == 2);
+
+        auto h1 = std::dynamic_pointer_cast<ElementNode>(body->children[0]);
+        REQUIRE(h1 != nullptr);
+        REQUIRE(h1->tagName == "h1");
+
+        auto p = std::dynamic_pointer_cast<ElementNode>(body->children[1]);
+        REQUIRE(p != nullptr);
+        REQUIRE(p->tagName == "p");
+    }
+}
+
 TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {
     SECTION("Parses a style block and adds it as an attribute") {
         std::string source = R"(

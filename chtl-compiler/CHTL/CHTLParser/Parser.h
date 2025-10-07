@@ -25,7 +25,8 @@ private:
     void parseAttributes(std::shared_ptr<ElementNode> element);
     void parseStyleBlock(std::shared_ptr<ElementNode> element);
     NodePtr parseTemplateDefinition();
+    NodeList parseElementUsage();
     NodePtr parseText();
     NodePtr parseComment();
-    NodePtr parseStatement();
+    NodeList parseStatement();
 };

@@ -28,7 +28,6 @@ void Parser::eat(TokenType type) {
 NodeList Parser::parse() {
     NodeList nodes;
     while(currentToken.type != TokenType::EndOfFile) {
-        // Skip comments that are not part of the AST
         while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
             consume();
         }
@@ -37,10 +36,10 @@ NodeList Parser::parse() {
         if (currentToken.type == TokenType::LeftBracket) {
             parseTemplateDefinition();
         } else {
-            NodePtr stmt = parseStatement();
-            if (stmt) {
-                nodes.push_back(stmt);
-            } else {
+            NodeList stmts = parseStatement();
+            if (!stmts.empty()) {
+                nodes.insert(nodes.end(), stmts.begin(), stmts.end());
+            } else if (currentToken.type != TokenType::EndOfFile) {
                 throw std::runtime_error("Unexpected top-level token: " + currentToken.value);
             }
         }
@@ -48,16 +47,18 @@ NodeList Parser::parse() {
     return nodes;
 }
 
-NodePtr Parser::parseStatement() {
+NodeList Parser::parseStatement() {
     if (currentToken.type == TokenType::Identifier) {
         if (currentToken.value == "text") {
-            return parseText();
+            return {parseText()};
         }
-        return parseElement();
+        return {parseElement()};
     } else if (currentToken.type == TokenType::GeneratorComment) {
-        return parseComment();
+        return {parseComment()};
+    } else if (currentToken.type == TokenType::At) {
+        return parseElementUsage();
     }
-    return nullptr;
+    return {};
 }
 
 NodePtr Parser::parseElement() {
@@ -69,7 +70,6 @@ NodePtr Parser::parseElement() {
     eat(TokenType::LeftBrace);
 
     while (currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
-        // Skip non-generator comments
         while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
             consume();
         }
@@ -80,9 +80,9 @@ NodePtr Parser::parseElement() {
         } else if (currentToken.type == TokenType::Identifier && currentToken.value == "style" && peekToken.type == TokenType::LeftBrace) {
             parseStyleBlock(element);
         } else {
-            NodePtr child = parseStatement();
-            if (child) {
-                element->children.push_back(child);
+            NodeList children = parseStatement();
+            if (!children.empty()) {
+                element->children.insert(element->children.end(), children.begin(), children.end());
             } else {
                  throw std::runtime_error("Unexpected token in element body: " + currentToken.value);
             }
@@ -221,46 +221,77 @@ NodePtr Parser::parseTemplateDefinition() {
     eat(TokenType::RightBracket);
 
     eat(TokenType::At);
-    if (currentToken.value != "Style") {
-        throw std::runtime_error("Expected 'Style' keyword in template definition.");
-    }
-    eat(TokenType::Identifier);
+    std::string templateType = currentToken.value;
+    eat(TokenType::Identifier); // Consume "Style" or "Element"
 
     std::string templateName = currentToken.value;
     eat(TokenType::Identifier);
 
     eat(TokenType::LeftBrace);
 
-    StyleTemplate style_template;
-    while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
-        // Skip comments
-        while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
-            consume();
-        }
-        if (currentToken.type == TokenType::RightBrace) break;
+    if (templateType == "Style") {
+        StyleTemplate style_template;
+        while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+            while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) consume();
+            if (currentToken.type == TokenType::RightBrace) break;
 
-        std::string property = currentToken.value;
-        eat(TokenType::Identifier);
+            std::string property = currentToken.value;
+            eat(TokenType::Identifier);
 
-        if (currentToken.type == TokenType::Colon) { // Property with value
-            eat(TokenType::Colon);
-            std::vector<Token> value_tokens;
-            while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::EndOfFile) {
-                value_tokens.push_back(currentToken);
-                consume();
+            if (currentToken.type == TokenType::Colon) {
+                eat(TokenType::Colon);
+                std::vector<Token> value_tokens;
+                while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::EndOfFile) {
+                    value_tokens.push_back(currentToken);
+                    consume();
+                }
+                style_template[property] = ExpressionParser::parseAndEvaluate(value_tokens);
+            } else {
+                style_template[property] = "";
             }
-            std::string value = ExpressionParser::parseAndEvaluate(value_tokens);
-            style_template[property] = value;
-        } else { // Valueless property
-            style_template[property] = ""; // Store with empty value
+            eat(TokenType::Semicolon);
         }
+        TemplateRegistry::registerStyleTemplate(templateName, style_template);
 
-        eat(TokenType::Semicolon);
+    } else if (templateType == "Element") {
+        NodeList element_template_nodes;
+        while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+            while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) consume();
+            if (currentToken.type == TokenType::RightBrace) break;
+
+            NodeList stmts = parseStatement();
+            if (!stmts.empty()) {
+                element_template_nodes.insert(element_template_nodes.end(), stmts.begin(), stmts.end());
+            } else {
+                throw std::runtime_error("Unexpected token in element template: " + currentToken.value);
+            }
+        }
+        TemplateRegistry::registerElementTemplate(templateName, element_template_nodes);
+
+    } else {
+        throw std::runtime_error("Unsupported template type: @" + templateType);
     }
 
     eat(TokenType::RightBrace);
-
-    TemplateRegistry::registerStyleTemplate(templateName, style_template);
-
     return nullptr; // Definitions don't produce a node in the main AST
+}
+
+NodeList Parser::parseElementUsage() {
+    eat(TokenType::At);
+    if (currentToken.value != "Element") {
+        throw std::runtime_error("Expected 'Element' keyword for template usage.");
+    }
+    eat(TokenType::Identifier); // Consume "Element"
+
+    std::string templateName = currentToken.value;
+    eat(TokenType::Identifier);
+
+    eat(TokenType::Semicolon);
+
+    NodeList templateNodes = TemplateRegistry::getElementTemplate(templateName);
+    NodeList clonedNodes;
+    for (const auto& node : templateNodes) {
+        clonedNodes.push_back(node->clone());
+    }
+    return clonedNodes;
 }
