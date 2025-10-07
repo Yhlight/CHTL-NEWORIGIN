@@ -348,8 +348,82 @@ Arg CJMODScanner::scanWithTwoPointers(const Arg& pattern, const String& keyword,
 }
 
 Arg CJMODScanner::scanWithDynamicAwareness(const Arg& pattern, const String& keyword, const String& code) {
-    // TODO: 实现动态感知算法
-    return scanWithTwoPointers(pattern, keyword, code);
+    // 实现动态感知算法
+    // 动态感知算法：根据代码结构动态调整匹配策略
+    
+    // 1. 先尝试双指针算法
+    Arg result = scanWithTwoPointers(pattern, keyword, code);
+    
+    // 2. 如果双指针失败，尝试递归下降
+    if (result.getValues().empty()) {
+        // 查找关键字位置
+        size_t keywordPos = code.find(keyword);
+        if (keywordPos == String::npos) {
+            return result;
+        }
+        
+        // 跳过关键字
+        size_t pos = keywordPos + keyword.length();
+        pos = skipWhitespace(code, pos);
+        
+        // 根据模式动态提取
+        Vector<AtomArg> atoms = pattern.getAtoms();
+        for (const auto& atom : atoms) {
+            if (atom.getType() == AtomArg::Type::Literal) {
+                // 字面量：直接匹配
+                String literal = atom.getValue();
+                if (code.substr(pos, literal.length()) == literal) {
+                    result.add(AtomArg(AtomArg::Type::Literal, literal));
+                    pos += literal.length();
+                    pos = skipWhitespace(code, pos);
+                }
+            } else if (atom.getType() == AtomArg::Type::Required ||
+                       atom.getType() == AtomArg::Type::Optional) {
+                // 占位符：智能提取
+                size_t end = pos;
+                int braceDepth = 0;
+                int parenDepth = 0;
+                bool inString = false;
+                char stringChar = '\0';
+                
+                while (end < code.length()) {
+                    char ch = code[end];
+                    
+                    if (!inString) {
+                        if (ch == '"' || ch == '\'') {
+                            inString = true;
+                            stringChar = ch;
+                        } else if (ch == '{') {
+                            braceDepth++;
+                        } else if (ch == '}') {
+                            if (braceDepth == 0) break;
+                            braceDepth--;
+                        } else if (ch == '(') {
+                            parenDepth++;
+                        } else if (ch == ')') {
+                            if (parenDepth == 0) break;
+                            parenDepth--;
+                        } else if ((ch == ',' || ch == ';') && braceDepth == 0 && parenDepth == 0) {
+                            break;
+                        }
+                    } else {
+                        if (ch == stringChar && (end == 0 || code[end-1] != '\\')) {
+                            inString = false;
+                        }
+                    }
+                    
+                    end++;
+                }
+                
+                String value = extractFragment(code, pos, end);
+                result.add(AtomArg(atom.getType(), value));
+                pos = end;
+                pos = skipWhitespace(code, pos);
+            }
+        }
+    }
+    
+    return result;
 }
 
 String CJMODScanner::extractFragment(const String& code, size_t start, size_t end) {
@@ -437,7 +511,99 @@ Arg CHTLJSFunction::parseFunctionDefinition(const String& def) {
 
 Vector<String> CHTLJSFunction::extractKeys(const String& def) {
     Vector<String> keys;
-    // TODO: 实现键提取逻辑
+    
+    // 实现键提取逻辑
+    // 从 Vir 函数定义中提取虚对象的键
+    // 例如: "Listen { click: handler, hover: fn }" -> ["click", "hover"]
+    
+    // 查找函数体 {...}
+    size_t braceStart = def.find('{');
+    if (braceStart == String::npos) {
+        return keys;
+    }
+    
+    // 查找匹配的右括号
+    size_t braceEnd = def.rfind('}');
+    if (braceEnd == String::npos || braceEnd <= braceStart) {
+        return keys;
+    }
+    
+    // 提取函数体内容
+    String body = def.substr(braceStart + 1, braceEnd - braceStart - 1);
+    
+    // 解析键值对
+    size_t pos = 0;
+    while (pos < body.length()) {
+        // 跳过空白
+        while (pos < body.length() && std::isspace(body[pos])) {
+            pos++;
+        }
+        
+        if (pos >= body.length()) break;
+        
+        // 提取键
+        size_t keyStart = pos;
+        while (pos < body.length() && (std::isalnum(body[pos]) || body[pos] == '_' || body[pos] == '$')) {
+            pos++;
+        }
+        
+        if (pos > keyStart) {
+            String key = body.substr(keyStart, pos - keyStart);
+            
+            // 跳过空白
+            while (pos < body.length() && std::isspace(body[pos])) {
+                pos++;
+            }
+            
+            // 检查是否是键值对（后面有冒号）
+            if (pos < body.length() && body[pos] == ':') {
+                keys.push_back(key);
+                
+                // 跳过值（可能很复杂，需要处理嵌套）
+                pos++; // 跳过冒号
+                int braceDepth = 0;
+                int parenDepth = 0;
+                bool inString = false;
+                char stringChar = '\0';
+                
+                while (pos < body.length()) {
+                    char ch = body[pos];
+                    
+                    if (!inString) {
+                        if (ch == '"' || ch == '\'') {
+                            inString = true;
+                            stringChar = ch;
+                        } else if (ch == '{') {
+                            braceDepth++;
+                        } else if (ch == '}') {
+                            if (braceDepth == 0) break;
+                            braceDepth--;
+                        } else if (ch == '(') {
+                            parenDepth++;
+                        } else if (ch == ')') {
+                            if (parenDepth == 0) break;
+                            parenDepth--;
+                        } else if (ch == ',' && braceDepth == 0 && parenDepth == 0) {
+                            pos++;
+                            break;
+                        }
+                    } else {
+                        if (ch == stringChar && (pos == 0 || body[pos-1] != '\\')) {
+                            inString = false;
+                        }
+                    }
+                    
+                    pos++;
+                }
+            } else {
+                // 不是键值对，跳过
+                pos++;
+            }
+        } else {
+            pos++;
+        }
+    }
+    
     return keys;
 }
 

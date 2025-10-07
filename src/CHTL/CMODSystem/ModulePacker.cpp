@@ -505,9 +505,41 @@ bool ModuleCache::loadCacheFromDisk(const String& moduleName) {
         return false;
     }
     
-    // TODO: 实现从磁盘反序列化
-    // 当前返回 false
-    return false;
+    // 从磁盘反序列化模块缓存
+    std::ifstream file(cachePath);
+    if (!file) {
+        return false;
+    }
+    
+    ModuleData data;
+    String line;
+    
+    // 读取版本
+    if (std::getline(file, line) && line.find("version:") == 0) {
+        data.info.version = line.substr(8);
+    } else {
+        return false;
+    }
+    
+    // 跳过时间戳行（如果有）
+    if (std::getline(file, line) && line.find("timestamp:") != 0) {
+        // 不是时间戳，可能是其他字段，回退一行
+        file.seekg(-(line.length() + 1), std::ios::cur);
+    }
+    
+    // 读取依赖数量
+    if (std::getline(file, line) && line.find("dependencies:") == 0) {
+        size_t depCount = std::stoul(line.substr(13));
+        for (size_t i = 0; i < depCount; i++) {
+            if (std::getline(file, line)) {
+                data.info.dependencies.push_back(line);
+            }
+        }
+    }
+    
+    // 成功读取基本信息
+    // 实际模块内容在需要时从模块路径加载
+    return true;
 }
 
 void ModuleCache::saveCacheToDisk(const String& moduleName, const ModuleData& data) {
@@ -518,14 +550,24 @@ void ModuleCache::saveCacheToDisk(const String& moduleName, const ModuleData& da
     
     String cachePath = getCacheFilePath(moduleName);
     
-    // TODO: 实现序列化到磁盘
-    // 简单实现：将模块信息写入文本文件
+    // 序列化模块缓存到磁盘
     std::ofstream file(cachePath);
-    if (file) {
-        file << "name=" << data.info.name << "\n";
-        file << "version=" << data.info.version << "\n";
-        file << "description=" << data.info.description << "\n";
+    if (!file) {
+        return;
     }
+    
+    // 写入模块信息
+    file << "name:" << data.info.name << "\n";
+    file << "version:" << data.info.version << "\n";
+    file << "description:" << data.info.description << "\n";
+    
+    // 写入依赖
+    file << "dependencies:" << data.info.dependencies.size() << "\n";
+    for (const auto& dep : data.info.dependencies) {
+        file << dep << "\n";
+    }
+    
+    file.close();
 }
 
 // ========================================

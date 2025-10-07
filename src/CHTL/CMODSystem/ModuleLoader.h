@@ -3,8 +3,10 @@
 
 #include "../../Common.h"
 #include "ModuleInfo.h"
+#include "ModulePacker.h"
 #include "../../Util/FileSystem/FileSystem.h"
 #include <filesystem>
+#include <ctime>
 
 namespace CHTL {
 namespace CMOD {

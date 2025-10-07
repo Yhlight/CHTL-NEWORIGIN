@@ -66,14 +66,86 @@ Optional<ModuleData> ModuleLoader::loadModuleFromPath(const String& path) {
     return std::nullopt;
 }
 
-Optional<ModuleData> ModuleLoader::loadCMODFile(const String&) {
-    // TODO: Implement .cmod unpacking
-    return std::nullopt;
+Optional<ModuleData> ModuleLoader::loadCMODFile(const String& filePath) {
+    // 实现 .cmod 文件解包
+    // .cmod 文件是压缩的模块包，使用 ModulePacker 解包
+    
+    namespace fs = std::filesystem;
+    if (!fs::exists(filePath)) {
+        return std::nullopt;
+    }
+    
+    // 创建临时目录解包
+    String tempDir = fs::temp_directory_path().string() + "/chtl_cmod_" + 
+                     std::to_string(std::time(nullptr));
+    
+    // 使用 ModulePacker 解包
+    ModulePacker packer;
+    if (!packer.decompressZip(filePath, tempDir)) {
+        return std::nullopt;
+    }
+    
+    // 加载解包后的模块
+    ModuleData resultData = loadFromDirectory(tempDir);
+    Optional<ModuleData> result = resultData;
+    
+    // 清理临时目录
+    try {
+        fs::remove_all(tempDir);
+    } catch (...) {
+        // 忽略清理错误
+    }
+    
+    return result;
 }
 
-Optional<ModuleData> ModuleLoader::loadCJMODFile(const String&) {
-    // TODO: Implement .cjmod loading
-    return std::nullopt;
+Optional<ModuleData> ModuleLoader::loadCJMODFile(const String& filePath) {
+    // 实现 .cjmod 文件加载
+    // CJMOD 是 CHTL JS 扩展模块，包含 C++ 源代码和 info
+    
+    namespace fs = std::filesystem;
+    if (!fs::exists(filePath)) {
+        return std::nullopt;
+    }
+    
+    // 创建临时目录解包
+    String tempDir = fs::temp_directory_path().string() + "/chtl_cjmod_" + 
+                     std::to_string(std::time(nullptr));
+    
+    // 使用 ModulePacker 解包
+    ModulePacker packer;
+    if (!packer.decompressZip(filePath, tempDir)) {
+        return std::nullopt;
+    }
+    
+    // CJMOD 只需要加载 info，C++ 代码在编译时处理
+    String infoPath = tempDir + "/info";
+    Optional<ModuleData> result;
+    
+    if (fs::exists(infoPath)) {
+        // 查找 info 文件
+        for (const auto& entry : fs::directory_iterator(infoPath)) {
+            if (entry.path().extension() == ".chtl") {
+                auto info = parseInfoFile(entry.path().string());
+                if (info.has_value()) {
+                    ModuleData data;
+                    data.info = info.value();
+                    data.info.type = ModuleType::CJMOD;
+                    result = data;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // 清理临时目录
+    try {
+        fs::remove_all(tempDir);
+    } catch (...) {
+        // 忽略清理错误
+    }
+    
+    return result;
 }
 
 Optional<ModuleInfo> ModuleLoader::parseInfoFile(const String& filePath) {

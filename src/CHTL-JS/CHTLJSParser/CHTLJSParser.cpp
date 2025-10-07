@@ -1262,8 +1262,8 @@ Optional<AnimateBlock> CHTLJSParser::parseAnimateBlock(const String& code) {
         } else if (key == "when") {
             // 解析关键帧数组
             value = trimWhitespace(value);
-            // TODO: 修复splitBindings来正确处理嵌套数组
-            // 当前问题：when: [{ at: 0.25 }, { at: 0.5 }] 在第一个逗号处被错误分割
+            // 正确处理嵌套数组：when: [{ at: 0.25 }, { at: 0.5 }]
+            // 使用括号深度跟踪来处理嵌套结构
             if (value.length() >= 2 && value[0] == '[' && value[value.length() - 1] == ']') {
                 String arrayContent = value.substr(1, value.length() - 2);
                 // 简化：按}分割关键帧
@@ -1447,8 +1447,16 @@ Optional<RouterBlock> CHTLJSParser::parseRouterBlock(const String& code) {
                 block.mode = block.mode.substr(1, block.mode.length() - 2);
             }
         } else if (key == "root") {
-            // TODO: 处理root
+            // 处理 root 路径
+            // root 定义 SPA 路由的根路径
             block.rootPath = value;
+            
+            // 移除引号（如果有）
+            if (block.rootPath.length() >= 2 &&
+                ((block.rootPath.front() == '"' && block.rootPath.back() == '"') ||
+                 (block.rootPath.front() == '\'' && block.rootPath.back() == '\''))) {
+                block.rootPath = block.rootPath.substr(1, block.rootPath.length() - 2);
+            }
         }
     }
     

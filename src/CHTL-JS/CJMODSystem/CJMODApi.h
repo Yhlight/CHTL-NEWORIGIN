@@ -79,6 +79,18 @@ public:
     // 获取原子参数数量
     size_t size() const { return atoms_.size(); }
     
+    // 获取所有原子参数
+    Vector<AtomArg> getAtoms() const { return atoms_; }
+    
+    // 获取所有值
+    Vector<String> getValues() const {
+        Vector<String> values;
+        for (const auto& atom : atoms_) {
+            values.push_back(atom.getValue());
+        }
+        return values;
+    }
+    
     // 打印（调试用）
     void print() const;
     

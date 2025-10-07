@@ -24,11 +24,11 @@ public:
     // 生成模块的JSON查询表（用于VSCode IDE）
     String generateJSONManifest(const ModuleData& moduleData);
     
-private:
-    // 使用miniz压缩/解压
+    // 使用 libzip 压缩/解压（公开以供 ModuleLoader 使用）
     bool compressDirectory(const String& dirPath, const String& zipPath);
     bool decompressZip(const String& zipPath, const String& outputDir);
     
+private:
     // 收集模块文件
     Vector<String> collectModuleFiles(const String& modulePath);
     

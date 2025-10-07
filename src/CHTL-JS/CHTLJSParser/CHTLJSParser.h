@@ -98,8 +98,11 @@ struct RouterBlock {
 // Vir虚对象结构
 struct VirObject {
     String name;                           // 虚对象名称
+    String type;                           // 类型（Listen, Delegate, Animate, Router等）
     String sourceType;                     // 源类型（Listen, Animate等）
     HashMap<String, String> members;       // 成员映射
+    bool hasVirtualObject = false;         // 是否有虚对象
+    Vector<String> virtualKeys;            // 虚对象的键列表
     
     VirObject() = default;
     explicit VirObject(const String& n) : name(n) {}

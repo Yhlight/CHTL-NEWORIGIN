@@ -5,6 +5,7 @@
 #include "../CHTLJSLexer/CHTLJSToken.h"
 #include "../CHTLJSParser/CHTLJSParser.h"
 #include "../../SharedCore/SaltBridge.h"
+#include "VirRegistry.h"
 
 namespace CHTL {
 namespace JS {

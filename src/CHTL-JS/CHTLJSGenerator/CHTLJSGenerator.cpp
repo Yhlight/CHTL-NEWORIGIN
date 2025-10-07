@@ -408,6 +408,15 @@ String CHTLJSGenerator::processRouterBlocks(const String& code) {
             std::stringstream ss;
             
             ss << "(function() {\n";
+            // 设置路由器配置
+            ss << "    const config = {\n";
+            ss << "        mode: '" << routerBlock->mode << "',\n";
+            if (!routerBlock->rootPath.empty()) {
+                ss << "        root: '" << routerBlock->rootPath << "'\n";
+            } else {
+                ss << "        root: '/'\n";
+            }
+            ss << "    };\n";
             ss << "    const routes = {};\n";
             
             for (const auto& route : routerBlock->routes) {
@@ -431,10 +440,17 @@ String CHTLJSGenerator::processRouterBlocks(const String& code) {
             ss << "    \n";
             
             if (routerBlock->mode == "history") {
+                ss << "    function getPath() {\n";
+                ss << "        let path = window.location.pathname;\n";
+                ss << "        if (config.root !== '/') {\n";
+                ss << "            path = path.replace(config.root, '');\n";
+                ss << "        }\n";
+                ss << "        return path || '/';\n";
+                ss << "    }\n";
                 ss << "    window.addEventListener('popstate', () => {\n";
-                ss << "        navigate(window.location.pathname);\n";
+                ss << "        navigate(getPath());\n";
                 ss << "    });\n";
-                ss << "    navigate(window.location.pathname);\n";
+                ss << "    navigate(getPath());\n";
             } else {
                 ss << "    window.addEventListener('hashchange', () => {\n";
                 ss << "        const path = window.location.hash.slice(1) || '/';\n";
@@ -481,7 +497,11 @@ String CHTLJSGenerator::processVirDeclarations(const String& code) {
         auto virObj = parser.parseVirDeclaration(virCode);
         
         if (virObj.has_value()) {
-            // TODO: 注册到全局VirRegistry（未来实现）
+            // 注册到全局 VirRegistry
+            VirObjectInfo virInfo(virObj->name, virObj->type, virCode);
+            virInfo.hasVirtualObject = virObj->hasVirtualObject;
+            virInfo.virtualKeys = virObj->virtualKeys;
+            VirRegistry::getInstance().registerVir(virObj->name, virInfo);
             
             // Vir是编译期语法糖，生成时保留原始代码（去掉Vir关键字）
             // Vir test = Listen {...}; → const test = Listen {...};
