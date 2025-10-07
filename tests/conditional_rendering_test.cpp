@@ -37,7 +37,7 @@ TEST_CASE("Conditional Rendering - Basic if block structure", "[conditional][if]
         
         bool hasIfKeyword = false;
         for (const auto& token : tokens) {
-            if (token.value == "if") {
+            if (token.getValue() == "if") {
                 hasIfKeyword = true;
                 break;
             }
@@ -76,7 +76,7 @@ TEST_CASE("Conditional Rendering - If block with condition key", "[conditional][
     SECTION("Condition key is recognized") {
         bool hasConditionKey = false;
         for (size_t i = 0; i < tokens.size() - 1; i++) {
-            if (tokens[i].value == "condition" && tokens[i + 1].type == TokenType::Colon) {
+            if (tokens[i].getValue() == "condition" && tokens[i + 1].getType() == TokenType::Colon) {
                 hasConditionKey = true;
                 break;
             }
@@ -231,7 +231,7 @@ TEST_CASE("Conditional Rendering - Else if block", "[conditional][else-if]") {
         bool hasIf = false;
         
         for (size_t i = 0; i < tokens.size() - 1; i++) {
-            if (tokens[i].value == "else" && tokens[i + 1].value == "if") {
+            if (tokens[i].getValue() == "else" && tokens[i + 1].getValue() == "if") {
                 hasElse = true;
                 hasIf = true;
                 break;
@@ -266,7 +266,7 @@ TEST_CASE("Conditional Rendering - Else block", "[conditional][else]") {
         bool hasElse = false;
         
         for (const auto& token : tokens) {
-            if (token.value == "else") {
+            if (token.getValue() == "else") {
                 hasElse = true;
                 break;
             }
@@ -380,7 +380,7 @@ TEST_CASE("Conditional Rendering - Dynamic condition with {{}}", "[conditional][
         bool hasEnhancedSelector = false;
         
         for (size_t i = 0; i < tokens.size(); i++) {
-            if (tokens[i].value.find("{{") != String::npos) {
+            if (tokens[i].getValue().find("{{") != String::npos) {
                 hasEnhancedSelector = true;
                 break;
             }

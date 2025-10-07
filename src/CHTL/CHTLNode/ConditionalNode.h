@@ -55,10 +55,22 @@ public:
     ~ConditionalNode() override = default;
     
     /**
-     * @brief Get node type
+     * @brief Get node type name
      * @return Node type string
      */
-    String getType() const override { return "ConditionalNode"; }
+    String getTypeName() const { return "ConditionalNode"; }
+    
+    /**
+     * @brief Accept visitor
+     * @param visitor The visitor
+     */
+    void accept(NodeVisitor& visitor) override;
+    
+    /**
+     * @brief Clone this node
+     * @return Cloned node
+     */
+    SharedPtr<BaseNode> clone() const override;
     
     /**
      * @brief Check if this is a dynamic conditional (contains {{}})

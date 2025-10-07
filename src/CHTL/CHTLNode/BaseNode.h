@@ -24,6 +24,7 @@ enum class NodeType {
     Configuration,   // 配置节点
     Expression,      // 表达式节点
     Selector,        // 选择器节点
+    Conditional,     // 条件渲染节点 (if/else if/else)
 };
 
 // AST节点基类

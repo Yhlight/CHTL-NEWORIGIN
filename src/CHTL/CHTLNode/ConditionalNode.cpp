@@ -15,7 +15,7 @@ namespace CHTL {
 // ============================================================================
 
 ConditionalNode::ConditionalNode() 
-    : BaseNode()
+    : BaseNode(NodeType::Conditional)
     , condition_("")
     , styles_()
     , elseIfBlocks_()
@@ -23,6 +23,31 @@ ConditionalNode::ConditionalNode()
     , isDynamic_(false)
     , blockType_(BlockType::If)
     , parentSelector_("") {
+}
+
+void ConditionalNode::accept(NodeVisitor& /* visitor */) {
+    // TODO: Implement visitor pattern for ConditionalNode
+}
+
+SharedPtr<BaseNode> ConditionalNode::clone() const {
+    auto node = std::make_shared<ConditionalNode>();
+    node->condition_ = condition_;
+    node->styles_ = styles_;
+    node->isDynamic_ = isDynamic_;
+    node->blockType_ = blockType_;
+    node->parentSelector_ = parentSelector_;
+    
+    // Clone else-if blocks
+    for (const auto& elseIf : elseIfBlocks_) {
+        node->elseIfBlocks_.push_back(std::static_pointer_cast<ConditionalNode>(elseIf->clone()));
+    }
+    
+    // Clone else block
+    if (elseBlock_) {
+        node->elseBlock_ = std::static_pointer_cast<ConditionalNode>(elseBlock_->clone());
+    }
+    
+    return node;
 }
 
 void ConditionalNode::addStyle(const String& property, const String& value) {
@@ -82,7 +107,7 @@ Vector<String> ConditionalUtils::extractEnhancedSelectors(const String& conditio
             String selector = condition.substr(pos + 2, end - pos - 2);
             
             // Remove any whitespace
-            selector = StringUtil::trim(selector);
+            selector = Util::StringUtil::trim(selector);
             
             selectors.push_back(selector);
             pos = end + 2;
@@ -125,8 +150,8 @@ Tuple<String, String, String> ConditionalUtils::parseCondition(const String& con
     for (const auto& op : operators) {
         size_t pos = condition.find(op);
         if (pos != String::npos) {
-            String left = StringUtil::trim(condition.substr(0, pos));
-            String right = StringUtil::trim(condition.substr(pos + op.length()));
+            String left = Util::StringUtil::trim(condition.substr(0, pos));
+            String right = Util::StringUtil::trim(condition.substr(pos + op.length()));
             return std::make_tuple(left, op, right);
         }
     }

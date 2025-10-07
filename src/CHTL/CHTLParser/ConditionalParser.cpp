@@ -194,16 +194,13 @@ String ConditionalParser::parseCondition(size_t& currentPos) {
         
         const auto& token = getToken(currentPos);
         
-        if (token.type == TokenType::Whitespace) {
-            condition << " ";
-        } else {
-            condition << token.value;
-        }
+        // Note: TokenType doesn't have Whitespace, skip for now
+        condition << token.getValue();
         
         currentPos++;
     }
     
-    return StringUtil::trim(condition.str());
+    return Util::StringUtil::trim(condition.str());
 }
 
 Pair<String, String> ConditionalParser::parseProperty(size_t& currentPos) {
@@ -213,11 +210,11 @@ Pair<String, String> ConditionalParser::parseProperty(size_t& currentPos) {
     
     // Get property name
     const auto& propToken = getToken(currentPos);
-    if (propToken.type != TokenType::Identifier) {
+    if (propToken.getType() != TokenType::Identifier) {
         return {"", ""};
     }
     
-    String property = propToken.value;
+    String property = propToken.getValue();
     currentPos++;
     
     // Expect ':' or '=' (CE对等式)
@@ -238,11 +235,8 @@ Pair<String, String> ConditionalParser::parseProperty(size_t& currentPos) {
         
         const auto& token = getToken(currentPos);
         
-        if (token.type == TokenType::Whitespace) {
-            value << " ";
-        } else {
-            value << token.value;
-        }
+        // Note: TokenType doesn't have Whitespace, just collect value
+        value << token.getValue();
         
         currentPos++;
     }
@@ -252,7 +246,7 @@ Pair<String, String> ConditionalParser::parseProperty(size_t& currentPos) {
         currentPos++;
     }
     
-    return {property, StringUtil::trim(value.str())};
+    return {property, Util::StringUtil::trim(value.str())};
 }
 
 // ============================================================================
@@ -274,7 +268,15 @@ bool ConditionalParser::isAtElseIfKeywords(size_t pos) const {
     
     // Check next token is 'if'
     size_t nextPos = pos + 1;
-    skipWhitespaceAndComments(nextPos);
+    // Can't call non-const method from const method, just check directly
+    while (nextPos < tokens_.size()) {
+        const auto& token = tokens_[nextPos];
+        if (token.isComment()) {
+            nextPos++;
+        } else {
+            break;
+        }
+    }
     
     return matchKeyword(nextPos, "if");
 }
@@ -316,7 +318,7 @@ bool ConditionalParser::matchToken(size_t pos, TokenType type) const {
         return false;
     }
     
-    return tokens_[pos].type == type;
+    return tokens_[pos].getType() == type;
 }
 
 bool ConditionalParser::matchKeyword(size_t pos, const String& keyword) const {
@@ -325,7 +327,7 @@ bool ConditionalParser::matchKeyword(size_t pos, const String& keyword) const {
     }
     
     const auto& token = tokens_[pos];
-    return token.type == TokenType::Identifier && token.value == keyword;
+    return token.getType() == TokenType::Identifier && token.getValue() == keyword;
 }
 
 const Token& ConditionalParser::getToken(size_t pos) const {
@@ -348,9 +350,8 @@ void ConditionalParser::skipWhitespaceAndComments(size_t& currentPos) {
     while (isValidPosition(currentPos)) {
         const auto& token = tokens_[currentPos];
         
-        if (token.type == TokenType::Whitespace ||
-            token.type == TokenType::Comment ||
-            token.type == TokenType::MultilineComment) {
+        // Skip comments (TokenType doesn't have Whitespace)
+        if (token.isComment()) {
             currentPos++;
         } else {
             break;
