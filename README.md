@@ -1,9 +1,9 @@
-# CHTL v2.0.0 - Compact HTML Template Language
+# CHTL v2.1.0 - Compact HTML Template Language
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/chtl-lang/chtl)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/chtl-lang/chtl)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
-[![Tests](https://img.shields.io/badge/tests-98.5%25-success.svg)]()
+[![Tests](https://img.shields.io/badge/tests-100%25-brightgreen.svg)]()
 
 **CHTL** is a modern, powerful HTML template language with extensive JavaScript integration capabilities.
 

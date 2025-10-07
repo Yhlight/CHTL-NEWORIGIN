@@ -761,11 +761,13 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findEventBindOperator(const St
         }
         endPos++; // 包含 }
     } else {
-        // 单行形式，查找分号或逗号后的&->或行尾
+        // 单行形式: target &-> event1, event2: handler;
+        // 需要找到冒号，然后继续到分号
         endPos = pos;
         int parenDepth = 0, braceDepth = 0;
         bool inString = false;
         char stringChar = '\0';
+        bool foundColon = false;
         
         while (endPos < code.length()) {
             char ch = code[endPos];
@@ -782,21 +784,31 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findEventBindOperator(const St
                     braceDepth++;
                 } else if (ch == '}') {
                     braceDepth--;
+                } else if (ch == ':' && parenDepth == 0 && braceDepth == 0) {
+                    foundColon = true;
                 } else if (ch == ';' && parenDepth == 0 && braceDepth == 0) {
                     endPos++;
                     break;
-                } else if (ch == ',' && parenDepth == 0 && braceDepth == 0) {
-                    // 检查下一个是否是 &->（链式绑定）
+                } else if (ch == '\n' && parenDepth == 0 && braceDepth == 0 && foundColon) {
+                    // 找到了冒号后遇到换行，结束
+                    break;
+                } else if (ch == ',' && parenDepth == 0 && braceDepth == 0 && !foundColon) {
+                    // 逗号在冒号之前：是多事件列表，继续（不需要endPos++，while会自动++）
+                    // endPos++会在循环末尾自动执行
+                    // 不要break，继续循环
+                } else if (ch == ',' && parenDepth == 0 && braceDepth == 0 && foundColon) {
+                    // 逗号在冒号之后：检查是否是链式&->
                     size_t nextPos = endPos + 1;
                     while (nextPos < code.length() && isWhitespace(code[nextPos])) {
                         nextPos++;
                     }
                     if (nextPos + 3 <= code.length() && code.substr(nextPos, 3) == "&->") {
-                        // 链式绑定：继续查找，包含所有链式&->
-                        endPos = nextPos + 3;  // 跳过 &->
-                        continue;  // 继续查找更多的链式绑定
+                        // 链式绑定
+                        endPos = nextPos + 3;
+                        foundColon = false;  // 重置，开始新的绑定
+                        continue;
                     } else {
-                        // 不是链式绑定，在逗号处结束
+                        // 不是链式绑定，结束
                         endPos++;
                         break;
                     }
@@ -943,24 +955,43 @@ Vector<EventBindOperator> CHTLJSParser::parseChainBinding(const String& code) {
 // ============= Delegate事件委托实现 =============
 
 Optional<DelegateBlock> CHTLJSParser::parseDelegateBlock(const String& code) {
-    // 查找 "->Delegate" 或 ".Delegate"
-    size_t delegatePos = code.find("->Delegate");
-    if (delegatePos == String::npos) {
-        delegatePos = code.find(".Delegate");
-    }
-    
-    if (delegatePos == String::npos) {
+    // 查找 "Delegate"
+    size_t delegateKeywordPos = code.find("Delegate");
+    if (delegateKeywordPos == String::npos) {
         return std::nullopt;
     }
     
-    // 提取父元素选择器
-    String parent = extractTarget(code, delegatePos);
+    // 向前跳过空白，找到->或.
+    size_t pos = delegateKeywordPos;
+    while (pos > 0 && isWhitespace(code[pos - 1])) {
+        pos--;
+    }
+    
+    if (pos < 1) {
+        return std::nullopt;
+    }
+    
+    // 检查是->还是.
+    size_t sepPos;
+    
+    if (pos >= 2 && code.substr(pos - 2, 2) == "->") {
+        sepPos = pos - 2;
+    } else if (code[pos - 1] == '.') {
+        sepPos = pos - 1;
+    } else {
+        return std::nullopt;
+    }
+    
+    // 提取parent（从代码开始到sepPos）
+    String parent = code.substr(0, sepPos);
+    parent = trimWhitespace(parent);
+    
     if (parent.empty()) {
         return std::nullopt;
     }
     
-    // 查找 '{'
-    size_t bracePos = code.find('{', delegatePos);
+    // 查找 '{'（在Delegate关键字之后）
+    size_t bracePos = code.find('{', delegateKeywordPos);
     if (bracePos == String::npos) {
         return std::nullopt;
     }
@@ -1014,12 +1045,37 @@ Optional<DelegateBlock> CHTLJSParser::parseDelegateBlock(const String& code) {
                     }
                 }
             } else {
-                // 单个target
+                // 单个target（可能是{{}}增强选择器或普通选择器）
                 size_t valueEnd = valueStart;
-                while (valueEnd < blockContent.length() && blockContent[valueEnd] != ',' && 
-                       blockContent[valueEnd] != ';' && blockContent[valueEnd] != '\n') {
-                    valueEnd++;
+                
+                // 如果是{{}}，找到完整的}}
+                if (valueStart + 1 < blockContent.length() && 
+                    blockContent[valueStart] == '{' && blockContent[valueStart + 1] == '{') {
+                    // 查找匹配的}}
+                    int depth = 1;
+                    valueEnd = valueStart + 2;
+                    while (valueEnd + 1 < blockContent.length() && depth > 0) {
+                        if (blockContent[valueEnd] == '{' && blockContent[valueEnd + 1] == '{') {
+                            depth++;
+                            valueEnd += 2;
+                        } else if (blockContent[valueEnd] == '}' && blockContent[valueEnd + 1] == '}') {
+                            depth--;
+                            valueEnd += 2;
+                            if (depth == 0) break;
+                        } else {
+                            valueEnd++;
+                        }
+                    }
+                } else {
+                    // 普通值，查找到逗号或分号
+                    while (valueEnd < blockContent.length() && 
+                           blockContent[valueEnd] != ',' && 
+                           blockContent[valueEnd] != ';' && 
+                           blockContent[valueEnd] != '\n') {
+                        valueEnd++;
+                    }
                 }
+                
                 String target = blockContent.substr(valueStart, valueEnd - valueStart);
                 target = trimWhitespace(target);
                 if (!target.empty()) {
@@ -1047,14 +1103,21 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findDelegateBlock(const String
         return std::nullopt;
     }
     
+    // 向前查找最近的非空白字符（与Listen相同）
+    size_t checkPos = delegatePos;
+    while (checkPos > 0 && isWhitespace(code[checkPos - 1])) {
+        checkPos--;
+    }
+    
     // 确保Delegate前面是-> 或 .
-    if (delegatePos >= 2) {
-        String prefix = code.substr(delegatePos - 2, 2);
-        if (prefix != "->" && code[delegatePos - 1] != '.') {
-            // 继续查找下一个
-            return findDelegateBlock(code, delegatePos + 1);
-        }
-    } else if (delegatePos >= 1 && code[delegatePos - 1] != '.') {
+    bool hasValidPrefix = false;
+    if (checkPos >= 2 && code.substr(checkPos - 2, 2) == "->") {
+        hasValidPrefix = true;
+    } else if (checkPos >= 1 && code[checkPos - 1] == '.') {
+        hasValidPrefix = true;
+    }
+    
+    if (!hasValidPrefix) {
         return findDelegateBlock(code, delegatePos + 1);
     }
     
@@ -1070,21 +1133,52 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findDelegateBlock(const String
         return std::nullopt;
     }
     
-    // 找到目标的起始位置
-    size_t targetStart = delegatePos;
-    while (targetStart > startPos && !isWhitespace(code[targetStart - 1])) {
-        targetStart--;
-        // 处理 {{...}}
-        if (code[targetStart] == '}' && targetStart >= 1 && code[targetStart - 1] == '}') {
-            // 向前查找 {{
-            while (targetStart > startPos) {
-                targetStart--;
-                if (targetStart >= 1 && code[targetStart] == '{' && code[targetStart - 1] == '{') {
-                    targetStart--;
+    // 找到目标的起始位置（与findListenBlock相同的逻辑）
+    size_t targetStart = 0;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int enhancedSelectorDepth = 0;
+    
+    // 从delegatePos向前扫描
+    for (size_t i = delegatePos; i > 0; i--) {
+        size_t idx = i - 1;
+        char c = code[idx];
+        
+        // 处理{{}}增强选择器
+        if (idx >= 1 && code[idx - 1] == '}' && c == '}') {
+            enhancedSelectorDepth++;
+            i--;
+            continue;
+        }
+        if (idx >= 1 && code[idx - 1] == '{' && c == '{') {
+            enhancedSelectorDepth--;
+            i--;
+            continue;
+        }
+        
+        if (c == ')') parenDepth++;
+        if (c == '(') parenDepth--;
+        if (c == ']') bracketDepth++;
+        if (c == '[') bracketDepth--;
+        
+        if (parenDepth == 0 && bracketDepth == 0 && enhancedSelectorDepth == 0) {
+            if (c == ';' || c == '\n') {
+                targetStart = idx + 1;
+                break;
+            }
+            if (c == '{' || c == '}') {
+                bool isDouble = (idx >= 1 && code[idx - 1] == c) || 
+                               (idx + 1 < code.length() && code[idx + 1] == c);
+                if (!isDouble) {
+                    targetStart = idx + 1;
                     break;
                 }
             }
         }
+    }
+    
+    while (targetStart < delegatePos && isWhitespace(code[targetStart])) {
+        targetStart++;
     }
     
     return std::make_pair(targetStart, endBracePos + 1);

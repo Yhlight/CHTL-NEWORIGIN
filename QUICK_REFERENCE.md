@@ -1,4 +1,4 @@
-# CHTL v2.0.0 Quick Reference
+# CHTL v2.1.0 Quick Reference
 
 ## 🚀 Quick Start
 
@@ -100,4 +100,4 @@ Status:          Production Ready ✅
 
 ---
 
-**CHTL v2.0.0 - Simple, Powerful, Elegant** 🌟
+**CHTL v2.1.0 - Simple, Powerful, Elegant, Perfect** 🌟
