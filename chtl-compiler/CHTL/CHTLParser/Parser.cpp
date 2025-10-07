@@ -34,11 +34,15 @@ NodeList Parser::parse() {
         }
         if (currentToken.type == TokenType::EndOfFile) break;
 
-        NodePtr stmt = parseStatement();
-        if (stmt) {
-            nodes.push_back(stmt);
+        if (currentToken.type == TokenType::LeftBracket) {
+            parseTemplateDefinition();
         } else {
-            throw std::runtime_error("Unexpected top-level token: " + currentToken.value);
+            NodePtr stmt = parseStatement();
+            if (stmt) {
+                nodes.push_back(stmt);
+            } else {
+                throw std::runtime_error("Unexpected top-level token: " + currentToken.value);
+            }
         }
     }
     return nodes;
@@ -134,17 +138,32 @@ void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
 
     std::stringstream style_content;
     while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
-        std::string property = currentToken.value;
-        eat(TokenType::Identifier);
+        if (currentToken.type == TokenType::At) {
+            eat(TokenType::At);
+            if (currentToken.value != "Style") {
+                throw std::runtime_error("Expected 'Style' keyword for template usage.");
+            }
+            eat(TokenType::Identifier); // Consume "Style"
 
-        eat(TokenType::Colon);
+            std::string templateName = currentToken.value;
+            eat(TokenType::Identifier);
 
-        std::string value = currentToken.value;
-        eat(TokenType::Identifier);
+            style_content << TemplateRegistry::getStyleTemplate(templateName);
 
-        style_content << property << ":" << value << ";";
+            eat(TokenType::Semicolon);
+        } else {
+            std::string property = currentToken.value;
+            eat(TokenType::Identifier);
 
-        eat(TokenType::Semicolon);
+            eat(TokenType::Colon);
+
+            std::string value = currentToken.value;
+            eat(TokenType::Identifier);
+
+            style_content << property << ":" << value << ";";
+
+            eat(TokenType::Semicolon);
+        }
     }
 
     eat(TokenType::RightBrace);
@@ -155,4 +174,41 @@ void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
     } else {
         element->attributes["style"] = style_content.str();
     }
+}
+
+NodePtr Parser::parseTemplateDefinition() {
+    eat(TokenType::LeftBracket);
+    if (currentToken.value != "Template") {
+        throw std::runtime_error("Expected 'Template' keyword in template definition.");
+    }
+    eat(TokenType::Identifier);
+    eat(TokenType::RightBracket);
+
+    eat(TokenType::At);
+    if (currentToken.value != "Style") {
+        throw std::runtime_error("Expected 'Style' keyword in template definition.");
+    }
+    eat(TokenType::Identifier);
+
+    std::string templateName = currentToken.value;
+    eat(TokenType::Identifier);
+
+    eat(TokenType::LeftBrace);
+
+    std::stringstream template_content;
+    while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+        std::string property = currentToken.value;
+        eat(TokenType::Identifier);
+        eat(TokenType::Colon);
+        std::string value = currentToken.value;
+        eat(TokenType::Identifier);
+        eat(TokenType::Semicolon);
+        template_content << property << ":" << value << ";";
+    }
+
+    eat(TokenType::RightBrace);
+
+    TemplateRegistry::registerStyleTemplate(templateName, template_content.str());
+
+    return nullptr; // Definitions don't produce a node in the main AST
 }

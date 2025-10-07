@@ -212,3 +212,30 @@ TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {
         REQUIRE(element->attributes["style"] == "width:100px;color:red;");
     }
 }
+
+TEST_CASE("New Compiler - Style Templates", "[new_compiler_style_template]") {
+    SECTION("Defines and uses a style template") {
+        std::string source = R"(
+            [Template] @Style DefaultText {
+                font-size: 16px;
+                color: black;
+            }
+
+            p {
+                style {
+                    @Style DefaultText;
+                    font-weight: bold;
+                }
+            }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto p_element = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(p_element != nullptr);
+        REQUIRE(p_element->attributes.count("style") == 1);
+        REQUIRE(p_element->attributes["style"] == "font-size:16px;color:black;font-weight:bold;");
+    }
+}

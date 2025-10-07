@@ -124,6 +124,7 @@ add_executable(chtl-compiler
     chtl-compiler/CHTL/CHTLLexer/Lexer.cpp
     chtl-compiler/CHTL/CHTLParser/Parser.cpp
     chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
+    chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.cpp
 )
 
 # New CHTL Compiler Tests
@@ -132,5 +133,6 @@ add_executable(chtl_compiler_tests
     chtl-compiler/CHTL/CHTLLexer/Lexer.cpp
     chtl-compiler/CHTL/CHTLParser/Parser.cpp
     chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
+    chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.cpp
 )
 add_test(NAME chtl_compiler_tests COMMAND chtl_compiler_tests)

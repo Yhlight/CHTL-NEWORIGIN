@@ -14,11 +14,14 @@ enum class TokenType {
     UnquotedLiteral,
 
     // Punctuation
-    LeftBrace,  // {
-    RightBrace, // }
-    Semicolon,  // ;
-    Colon,      // :
-    Equal,      // =
+    LeftBrace,      // {
+    RightBrace,     // }
+    Semicolon,      // ;
+    Colon,          // :
+    Equal,          // =
+    LeftBracket,    // [
+    RightBracket,   // ]
+    At,             // @
 
     // Comments
     LineComment,      // //

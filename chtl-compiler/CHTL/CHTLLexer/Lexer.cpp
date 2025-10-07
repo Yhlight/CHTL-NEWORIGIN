@@ -104,6 +104,21 @@ Token Lexer::getNextToken() {
         return generatorComment();
     }
 
+    if (current == '[') {
+        advance();
+        return {TokenType::LeftBracket, "[", line, column - 1};
+    }
+
+    if (current == ']') {
+        advance();
+        return {TokenType::RightBracket, "]", line, column - 1};
+    }
+
+    if (current == '@') {
+        advance();
+        return {TokenType::At, "@", line, column - 1};
+    }
+
     advance();
     return {TokenType::Unknown, std::string(1, current), line, column - 1};
 }
