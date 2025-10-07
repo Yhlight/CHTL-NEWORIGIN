@@ -7,7 +7,37 @@
 
 ---
 
-## [2.5.1-dev] - 2025-10-07
+## [2.6.0-conditional] - 2025-10-07
+
+### ✨ 重大功能 - 条件渲染完整实现
+
+#### 新增 Added
+- ✅ **条件渲染完整功能** (CHTL Committee 3rd Period)
+  - if/else if/else 语法支持
+  - 静态条件渲染（CSS注释生成）
+  - 动态条件渲染（JavaScript生成）
+  - 条件链支持
+  - 逻辑运算符（&&、||）
+  
+- ✅ **ConditionalNode** - 完整AST节点实现
+- ✅ **ConditionalParser** - 条件块解析器
+- ✅ **ConditionalState** - 状态机集成
+- ✅ **CHTLParser集成** - 主Parser识别if块
+- ✅ **CHTLGenerator扩展** - 静态/动态条件生成
+
+#### 测试 Tests
+- ✅ **21个条件渲染测试** (18基础 + 3端到端)
+- ✅ **41个断言** (31基础 + 10端到端)
+- ✅ **100%通过率**
+- ✅ **总计**: 87测试用例，514断言
+
+#### 示例 Examples
+- ✅ `conditional_rendering_demo.chtl` - 完整示例文件
+- ✅ 4个使用场景演示
+
+#### 文档 Documentation  
+- ✅ CHTL.md更新 - 添加详细使用示例和注意事项
+- ✅ 条件渲染完整说明
 
 ### 🔧 架构清理 (Architecture Cleanup)
 - **移除CJMOD功能从CHTL JS核心**

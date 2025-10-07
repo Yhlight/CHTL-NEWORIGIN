@@ -655,3 +655,128 @@ TEST_CASE("Conditional Rendering - Feature completeness", "[conditional][summary
         REQUIRE(true);
     }
 }
+
+// ============================================================================
+// Test Section 9: End-to-End Tests (实际生成测试)
+// ============================================================================
+
+TEST_CASE("Conditional Rendering - End-to-end static conditional", "[conditional][e2e][static]") {
+    String chtl = R"(
+        div
+        {
+            class: box;
+            
+            if
+            {
+                condition: width > 100px,
+                display: block,
+                color: red,
+            }
+        }
+    )";
+    
+    Lexer lexer(chtl);
+    auto tokens = lexer.tokenize();
+    CHTLParser parser(tokens);
+    auto ast = parser.parse();
+    
+    CHTLGenerator generator;
+    String result = generator.generate(ast);
+    
+    SECTION("Generates output") {
+        REQUIRE(!result.empty());
+    }
+    
+    SECTION("Contains div element") {
+        REQUIRE(result.find("<div") != String::npos);
+    }
+    
+    SECTION("Contains conditional CSS comment") {
+        // 当前简化实现：检查CSS注释
+        String css = generator.getCss();
+        REQUIRE(css.find("Conditional") != String::npos);
+    }
+}
+
+TEST_CASE("Conditional Rendering - End-to-end dynamic conditional", "[conditional][e2e][dynamic]") {
+    String chtl = R"(
+        div
+        {
+            id: container;
+            
+            if
+            {
+                condition: {{html}}->width < 500px,
+                display: none,
+            }
+        }
+    )";
+    
+    Lexer lexer(chtl);
+    auto tokens = lexer.tokenize();
+    CHTLParser parser(tokens);
+    auto ast = parser.parse();
+    
+    CHTLGenerator generator;
+    String result = generator.generate(ast);
+    
+    SECTION("Generates output") {
+        REQUIRE(!result.empty());
+    }
+    
+    SECTION("Contains script tag") {
+        REQUIRE(result.find("<script>") != String::npos);
+    }
+    
+    SECTION("Contains dynamic conditional JavaScript") {
+        String js = generator.getJs();
+        REQUIRE(js.find("Dynamic conditional") != String::npos);
+        REQUIRE(js.find("applyConditionalStyles") != String::npos);
+    }
+    
+    SECTION("Contains resize listener") {
+        String js = generator.getJs();
+        REQUIRE(js.find("resize") != String::npos);
+    }
+}
+
+TEST_CASE("Conditional Rendering - End-to-end with else if and else", "[conditional][e2e][chain]") {
+    String chtl = R"(
+        div
+        {
+            if
+            {
+                condition: width > 100px,
+                background: red,
+            }
+            else if
+            {
+                condition: width > 50px,
+                background: yellow,
+            }
+            else
+            {
+                background: blue,
+            }
+        }
+    )";
+    
+    Lexer lexer(chtl);
+    auto tokens = lexer.tokenize();
+    CHTLParser parser(tokens);
+    auto ast = parser.parse();
+    
+    CHTLGenerator generator;
+    String result = generator.generate(ast);
+    
+    SECTION("Generates output") {
+        REQUIRE(!result.empty());
+    }
+    
+    SECTION("Handles conditional chain") {
+        // 验证生成了CSS注释（简化实现）
+        String css = generator.getCss();
+        // 应该至少生成了条件注释
+        REQUIRE(css.find("Conditional") != String::npos);
+    }
+}

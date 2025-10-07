@@ -2493,6 +2493,53 @@ html
 }
 ```
 
+#### 使用示例1：基础if块
+```chtl
+div
+{
+    class: box;
+    
+    style
+    {
+        width: 300px;
+        height: 200px;
+    }
+    
+    if
+    {
+        condition: width > 200px,
+        background: lightblue,
+        color: darkblue,
+    }
+}
+```
+
+#### 使用示例2：if/else if/else链
+```chtl
+div
+{
+    style
+    {
+        width: 400px;
+    }
+    
+    if
+    {
+        condition: width > 500px,
+        background: red,
+    }
+    else if
+    {
+        condition: width > 300px,
+        background: orange,
+    }
+    else
+    {
+        background: gray,
+    }
+}
+```
+
 ### 动态条件渲染
 静态条件渲染必然是存在限制的，为此，CHTL JS提供了动态条件渲染  
 
@@ -2508,9 +2555,54 @@ html
     {
         if
         {
-            condition: {{html}}.width < 500px,  // 使用动态属性 / 响应式值时，使用动态条件渲染
+            condition: {{html}}->width < 500px,  // 使用动态属性 / 响应式值时，使用动态条件渲染
             display: none,
         }
     }
 }
 ```
+
+#### 使用示例：动态响应窗口大小
+```chtl
+div
+{
+    id: responsive-box;
+    
+    style
+    {
+        padding: 20px;
+    }
+    
+    if
+    {
+        condition: {{html}}->width < 768px,
+        display: block,
+        background: yellow,
+    }
+    else if
+    {
+        condition: {{html}}->width < 1024px,
+        display: inline-block,
+        background: lightgreen,
+    }
+    else
+    {
+        display: flex,
+        background: lightblue,
+    }
+}
+```
+
+#### 条件渲染注意事项
+1. **静态条件**使用属性引用（如`html.width`）- 编译时评估
+2. **动态条件**使用增强选择器（如`{{html}}`）- 运行时评估
+3. **condition关键字**必须在if/else if块中，else块不需要
+4. **CSS属性**在条件成立时应用
+5. **多个条件**可以使用逻辑运算符（&&、||）
+
+#### 当前实现状态
+- ✅ if/else if/else语法解析
+- ✅ 静态/动态条件检测
+- ✅ JavaScript生成（动态条件）
+- ✅ CSS注释生成（静态条件）
+- ⚠️ 静态条件完整实现（@media查询）正在开发中

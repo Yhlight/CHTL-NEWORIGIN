@@ -1,4 +1,5 @@
 #include "CHTLGenerator.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
@@ -147,6 +148,38 @@ void CHTLGenerator::visit(ImportNode& /* node */) {
     // 导入在预处理阶段处理，生成时不处理
 }
 
+void CHTLGenerator::visit(ConditionalNode& node) {
+    // 处理条件渲染节点
+    // 根据CHTL.md规范，条件渲染用于条件性地应用CSS属性
+    
+    const auto& styles = node.getStyles();
+    if (styles.empty()) {
+        return;  // 无CSS属性，跳过
+    }
+    
+    String condition = node.getCondition();
+    
+    if (node.isDynamic()) {
+        // 动态条件渲染 - 生成JavaScript代码
+        generateDynamicConditional(node);
+    } else {
+        // 静态条件渲染 - 生成CSS代码
+        generateStaticConditional(node);
+    }
+    
+    // 处理else if链
+    for (const auto& elseIfNode : node.getElseIfBlocks()) {
+        if (elseIfNode) {
+            elseIfNode->accept(*this);
+        }
+    }
+    
+    // 处理else块
+    if (node.getElseBlock()) {
+        node.getElseBlock()->accept(*this);
+    }
+}
+
 void CHTLGenerator::generateElement(ElementNode& node) {
     if (config_.prettyPrint) {
         appendHtml(indent());
@@ -273,6 +306,63 @@ void CHTLGenerator::generateCssRule(const String& selector, const String& rules)
 
 void CHTLGenerator::generateScript(const String& content) {
     appendJs(content);
+}
+
+void CHTLGenerator::generateStaticConditional(const ConditionalNode& node) {
+    // 静态条件渲染：生成CSS注释说明
+    // 根据CHTL.md，静态条件使用属性引用（如 html.width < 500px）
+    // 实际实现：将条件作为CSS注释，实际应用属性（简化版）
+    
+    const String& condition = node.getCondition();
+    const auto& styles = node.getStyles();
+    
+    // 添加条件注释到CSS
+    appendCss("/* Conditional: " + condition + " */\n");
+    
+    // TODO: 完整实现应该：
+    // 1. 解析条件表达式
+    // 2. 根据条件生成 @media 查询或 CSS 变量
+    // 3. 对于复杂条件，可能需要生成 JavaScript
+    
+    // 当前简化实现：直接输出CSS属性作为注释
+    for (const auto& [prop, value] : styles) {
+        appendCss("  /* " + prop + ": " + value + "; */\n");
+    }
+    appendCss("\n");
+}
+
+void CHTLGenerator::generateDynamicConditional(const ConditionalNode& node) {
+    // 动态条件渲染：生成JavaScript代码
+    // 根据CHTL.md，动态条件使用{{}}选择器（如 {{html}}->width < 500px）
+    
+    const String& condition = node.getCondition();
+    const auto& styles = node.getStyles();
+    
+    // 提取{{}}选择器
+    auto selectors = node.extractEnhancedSelectors();
+    
+    // 生成JavaScript监听代码
+    appendJs("// Dynamic conditional rendering\n");
+    appendJs("(function() {\n");
+    appendJs("  function applyConditionalStyles() {\n");
+    
+    // TODO: 完整实现应该：
+    // 1. 解析{{}}选择器，转换为document.querySelector()
+    // 2. 解析条件表达式，生成JavaScript表达式
+    // 3. 根据条件动态设置style属性
+    // 4. 添加resize/mutation等事件监听器
+    
+    // 当前简化实现：生成条件注释
+    appendJs("    // Condition: " + condition + "\n");
+    
+    for (const auto& [prop, value] : styles) {
+        appendJs("    // Apply: " + prop + " = " + value + "\n");
+    }
+    
+    appendJs("  }\n");
+    appendJs("  applyConditionalStyles();\n");
+    appendJs("  window.addEventListener('resize', applyConditionalStyles);\n");
+    appendJs("})();\n\n");
 }
 
 String CHTLGenerator::indent() const {

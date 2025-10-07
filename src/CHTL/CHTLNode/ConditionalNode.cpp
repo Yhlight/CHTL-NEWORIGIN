@@ -25,8 +25,8 @@ ConditionalNode::ConditionalNode()
     , parentSelector_("") {
 }
 
-void ConditionalNode::accept(NodeVisitor& /* visitor */) {
-    // TODO: Implement visitor pattern for ConditionalNode
+void ConditionalNode::accept(NodeVisitor& visitor) {
+    visitor.visit(*this);
 }
 
 SharedPtr<BaseNode> ConditionalNode::clone() const {

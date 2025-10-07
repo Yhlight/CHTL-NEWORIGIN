@@ -1,5 +1,7 @@
 #include "CHTLParser.h"
 #include "ExpressionParser.h"
+#include "ConditionalParser.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include "../../Util/StringUtil/StringUtil.h"
 #include "../../SharedCore/SaltBridge.h"
 #include "../CHTLTemplate/TemplateRegistry.h"
@@ -213,6 +215,15 @@ SharedPtr<ElementNode> CHTLParser::parseElement() {
         // @Style模板引用（已在parseStyle中处理）
         if (token.is(TokenType::AtStyle)) {
             advance();
+            continue;
+        }
+        
+        // if块（条件渲染）
+        if (token.getValue() == "if") {
+            auto conditional = parseConditional();
+            if (conditional) {
+                element->addChild(conditional);
+            }
             continue;
         }
         
@@ -944,6 +955,152 @@ void CHTLParser::synchronize() {
         
         advance();
     }
+}
+
+SharedPtr<BaseNode> CHTLParser::parseConditional() {
+    // 使用ConditionalParser解析条件渲染块
+    // 这里需要ConditionalParser，但它需要position参数
+    // 为了简单起见，我们直接在这里解析基础的if块结构
+    
+    // 期望'if'关键字
+    if (getCurrentToken().getValue() != "if") {
+        error("Expected 'if' keyword for conditional block");
+        return nullptr;
+    }
+    advance();  // 消耗'if'
+    
+    // 期望'{'
+    if (!check(TokenType::LeftBrace)) {
+        error("Expected '{' after 'if'");
+        return nullptr;
+    }
+    advance();  // 消耗'{'
+    
+    // 创建ConditionalNode（简化实现）
+    auto conditionalNode = std::make_shared<ConditionalNode>();
+    
+    // 解析条件块内容
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        Token token = getCurrentToken();
+        
+        // condition: 关键字
+        if (token.getValue() == "condition" && peek().is(TokenType::Colon)) {
+            advance();  // 消耗'condition'
+            advance();  // 消耗':'
+            
+            // 解析条件表达式（直到逗号或右括号）
+            std::stringstream condition;
+            bool hasDynamicSelector = false;
+            
+            while (!check(TokenType::Comma) && !check(TokenType::RightBrace) && !isAtEnd()) {
+                Token condToken = getCurrentToken();
+                
+                // 检测EnhancedSelector类型（{{}}）
+                if (condToken.is(TokenType::EnhancedSelector)) {
+                    condition << "{{" << condToken.getValue() << "}}";
+                    hasDynamicSelector = true;
+                } else {
+                    condition << condToken.getValue();
+                }
+                
+                advance();
+            }
+            
+            String conditionStr = Util::StringUtil::trim(condition.str());
+            conditionalNode->setCondition(conditionStr);
+            
+            // 检测是否是动态条件（包含EnhancedSelector token）
+            if (hasDynamicSelector || conditionStr.find("{{") != String::npos) {
+                conditionalNode->setDynamic(true);
+            }
+            
+            // 消耗逗号（如果有）
+            if (check(TokenType::Comma)) {
+                advance();
+            }
+            continue;
+        }
+        
+        // CSS属性：property: value,
+        if (token.is(TokenType::Identifier) && peek().is(TokenType::Colon)) {
+            String propName = advance().getValue();
+            advance();  // 消耗':'
+            
+            String propValue = parseAttributeValue();
+            conditionalNode->addStyle(propName, propValue);
+            
+            // 消耗逗号或分号（如果有）
+            if (check(TokenType::Comma) || check(TokenType::Semicolon)) {
+                advance();
+            }
+            continue;
+        }
+        
+        // 其他情况，跳过
+        advance();
+    }
+    
+    // 期望'}'
+    if (!check(TokenType::RightBrace)) {
+        error("Expected '}' to close 'if' block");
+        return nullptr;
+    }
+    advance();  // 消耗'}'
+    
+    // 检查是否有else if或else
+    while (getCurrentToken().getValue() == "else" && !isAtEnd()) {
+        Token elseToken = getCurrentToken();
+        advance();  // 消耗'else'
+        
+        // 检查是否是'else if'
+        if (getCurrentToken().getValue() == "if") {
+            // 递归解析else if
+            auto elseIfNode = parseConditional();
+            if (elseIfNode) {
+                auto elseIfCond = std::dynamic_pointer_cast<ConditionalNode>(elseIfNode);
+                if (elseIfCond) {
+                    conditionalNode->addElseIfBlock(elseIfCond);
+                }
+            }
+        } else if (check(TokenType::LeftBrace)) {
+            // 纯else块
+            advance();  // 消耗'{'
+            
+            auto elseNode = std::make_shared<ConditionalNode>();
+            elseNode->setBlockType(ConditionalNode::BlockType::Else);
+            
+            // 解析else块内容
+            while (!check(TokenType::RightBrace) && !isAtEnd()) {
+                Token token = getCurrentToken();
+                
+                // CSS属性
+                if (token.is(TokenType::Identifier) && peek().is(TokenType::Colon)) {
+                    String propName = advance().getValue();
+                    advance();  // 消耗':'
+                    
+                    String propValue = parseAttributeValue();
+                    elseNode->addStyle(propName, propValue);
+                    
+                    if (check(TokenType::Comma) || check(TokenType::Semicolon)) {
+                        advance();
+                    }
+                    continue;
+                }
+                
+                advance();
+            }
+            
+            expect(TokenType::RightBrace, "Expected '}' to close 'else' block");
+            conditionalNode->setElseBlock(elseNode);
+            
+            break;  // else是最后一个块
+        } else {
+            error("Expected 'if' or '{' after 'else'");
+            break;
+        }
+    }
+    
+    return conditionalNode;
 }
 
 } // namespace CHTL
