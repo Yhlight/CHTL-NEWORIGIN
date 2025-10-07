@@ -1,51 +1,30 @@
-# Build directories
+# Build artifacts
 build/
-dist/
 *.o
-*.a
 *.so
-*.dylib
+*.a
+*.exe
+*.dll
 
-# CMake
+# CMake files
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
-*.cmake
 
-# Executables
-chtl
-chtl_tests
-*.exe
+# Test files
+test.chtl
 
-# IDE
+# IDE files
 .vscode/
 .idea/
+*.suo
+*.user
+*.sln
+*.vcxproj*
+
+# Other
+*~
 *.swp
 *.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Temporary files
-/tmp/
-*.tmp
-*.log
-
-# Test outputs
-TEST_RESULTS.txt
-*.test
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-
-# Documentation builds
-docs/_build/
-*.pdf
-
-# Config (keep example)
-# .chtlrc
+*.bak

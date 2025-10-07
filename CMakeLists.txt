@@ -17,6 +17,7 @@ endif()
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/third-party
+    ${CMAKE_SOURCE_DIR}
 )
 
 # 源文件目录
@@ -116,3 +117,20 @@ endif()
 
 # 安装规则
 install(TARGETS chtl DESTINATION bin)
+
+# New CHTL Compiler
+add_executable(chtl-compiler
+    chtl-compiler/main.cpp
+    chtl-compiler/CHTL/CHTLLexer/Lexer.cpp
+    chtl-compiler/CHTL/CHTLParser/Parser.cpp
+    chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
+)
+
+# New CHTL Compiler Tests
+add_executable(chtl_compiler_tests
+    chtl-compiler/Test/CompilerTest.cpp
+    chtl-compiler/CHTL/CHTLLexer/Lexer.cpp
+    chtl-compiler/CHTL/CHTLParser/Parser.cpp
+    chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
+)
+add_test(NAME chtl_compiler_tests COMMAND chtl_compiler_tests)
