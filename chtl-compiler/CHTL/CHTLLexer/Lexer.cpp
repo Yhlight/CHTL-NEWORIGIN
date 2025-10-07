@@ -4,9 +4,13 @@
 
 static std::map<std::string, TokenType> keywords = {
     {"delete", TokenType::DeleteKeyword},
+    {"from", TokenType::FromKeyword},
+    {"as", TokenType::AsKeyword},
     {"style", TokenType::Identifier}, // Treat style as a regular identifier for now
     {"text", TokenType::Identifier}, // Treat text as a regular identifier
-    {"Template", TokenType::Identifier} // Treat Template as a regular identifier
+    {"Template", TokenType::Identifier}, // Treat Template as a regular identifier
+    {"Custom", TokenType::Identifier},
+    {"Import", TokenType::Identifier}
 };
 
 Lexer::Lexer(const std::string& source) : source(source) {}

@@ -1,0 +1,12 @@
+[Import] @Chtl from "chtl-compiler/Test/test_files/definitions.chtl";
+
+body {
+    @Element Header;
+
+    p {
+        style {
+            @Style CommonText;
+        }
+        text { "This is a test of the import system." }
+    }
+}

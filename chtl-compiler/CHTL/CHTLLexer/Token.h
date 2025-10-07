@@ -31,6 +31,8 @@ enum class TokenType {
 
     // Keywords
     DeleteKeyword,  // delete
+    FromKeyword,    // from
+    AsKeyword,      // as
 
     // Comments
     LineComment,      // //

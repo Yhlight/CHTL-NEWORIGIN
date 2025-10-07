@@ -1,0 +1,3 @@
+[Import] @Chtl from "chtl-compiler/Test/test_files/circular_b.chtl";
+
+div { }

@@ -3,7 +3,8 @@
 #include <iostream>
 #include <sstream>
 
-Parser::Parser(Lexer& lexer) : lexer(lexer) {
+Parser::Parser(Lexer& lexer, Loader& loader, const std::string& currentFile)
+    : lexer(lexer), loader(loader), currentFile(currentFile) {
     consume();
     consume(); // Initialize both currentToken and peekToken
 }
@@ -34,7 +35,11 @@ NodeList Parser::parse() {
         if (currentToken.type == TokenType::EndOfFile) break;
 
         if (currentToken.type == TokenType::LeftBracket) {
-            parseTemplateDefinition();
+            if (peekToken.value == "Import") {
+                parseImportStatement();
+            } else {
+                parseTemplateDefinition();
+            }
         } else {
             NodeList stmts = parseStatement();
             if (!stmts.empty()) {
@@ -44,6 +49,7 @@ NodeList Parser::parse() {
             }
         }
     }
+    loader.finishFile(currentFile);
     return nodes;
 }
 
@@ -294,4 +300,36 @@ NodeList Parser::parseElementUsage() {
         clonedNodes.push_back(node->clone());
     }
     return clonedNodes;
+}
+
+void Parser::parseImportStatement() {
+    eat(TokenType::LeftBracket);
+    if (currentToken.value != "Import") {
+        throw std::runtime_error("Expected 'Import' keyword.");
+    }
+    eat(TokenType::Identifier);
+    eat(TokenType::RightBracket);
+
+    // For now, we only support [Import] @Chtl from "..."
+    eat(TokenType::At);
+    if (currentToken.value != "Chtl") {
+        throw std::runtime_error("Only '@Chtl' imports are supported for now.");
+    }
+    eat(TokenType::Identifier);
+
+    if (currentToken.type != TokenType::FromKeyword) {
+        throw std::runtime_error("Expected 'from' keyword in import statement.");
+    }
+    eat(TokenType::FromKeyword);
+
+    std::string filepath = currentToken.value;
+    eat(TokenType::StringLiteral);
+
+    eat(TokenType::Semicolon);
+
+    // Recursively parse the imported file
+    std::string imported_content = loader.loadFile(filepath);
+    Lexer imported_lexer(imported_content);
+    Parser imported_parser(imported_lexer, loader, filepath);
+    imported_parser.parse(); // This will populate the static TemplateRegistry
 }

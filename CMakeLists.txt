@@ -135,4 +135,5 @@ add_executable(chtl_compiler_tests
     chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
     chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.cpp
 )
+target_compile_definitions(chtl_compiler_tests PRIVATE TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 add_test(NAME chtl_compiler_tests COMMAND chtl_compiler_tests)

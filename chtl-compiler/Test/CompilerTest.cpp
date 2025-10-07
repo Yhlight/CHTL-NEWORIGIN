@@ -5,6 +5,10 @@
 #include "chtl-compiler/CHTL/CHTLNode/ElementNode.h"
 #include "chtl-compiler/CHTL/CHTLNode/TextNode.h"
 #include "chtl-compiler/CHTL/CHTLGenerator/Generator.h"
+#include "chtl-compiler/CHTL/Loader/Loader.h"
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 TEST_CASE("New Compiler - Lexer", "[new_compiler_lexer]") {
     SECTION("Tokenizes a simple structure") {
@@ -61,7 +65,8 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
     SECTION("Parses a simple element") {
         std::string source = "div { }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -74,7 +79,8 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
     SECTION("Parses a nested element") {
         std::string source = "div { p { } }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -91,7 +97,8 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
     SECTION("Parses an element with text") {
         std::string source = "p { text { \"hello\" } }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -108,7 +115,8 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
     SECTION("Parses multiple root elements") {
         std::string source = "p { } div { }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 2);
@@ -124,7 +132,8 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
     SECTION("Parses an element with attributes") {
         std::string source = "div { id = \"main\"; class: box; }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -148,7 +157,8 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
                be ignored */
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -171,7 +181,8 @@ TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
     SECTION("Generates an element with attributes") {
         std::string source = "a { href=\"https://www.example.com\"; text { \"Click me\" } }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
         Generator generator;
         std::string html = generator.generate(nodes);
@@ -182,7 +193,8 @@ TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
     SECTION("Generates HTML with comments") {
         std::string source = "div { #this is a comment\n }";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
         Generator generator;
         std::string html = generator.generate(nodes);
@@ -204,7 +216,8 @@ TEST_CASE("New Compiler - Element Templates", "[new_compiler_element_template]")
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -234,7 +247,8 @@ TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -261,7 +275,8 @@ TEST_CASE("New Compiler - Style Templates", "[new_compiler_style_template]") {
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -294,7 +309,8 @@ TEST_CASE("New Compiler - Style Templates", "[new_compiler_style_template]") {
             }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         NodeList nodes = parser.parse();
 
         REQUIRE(nodes.size() == 1);
@@ -317,7 +333,8 @@ TEST_CASE("New Compiler - Style Templates", "[new_compiler_style_template]") {
             button { style { @Style BadButton; } }
         )";
         Lexer lexer(source);
-        Parser parser(lexer);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
         REQUIRE_THROWS(parser.parse());
     }
 }
@@ -333,5 +350,56 @@ TEST_CASE("New Compiler - Expression Evaluator", "[new_compiler_expression]") {
     SECTION("Handles mixed units correctly") {
         REQUIRE(ExpressionEvaluator::evaluate("10.5em", "+", "2") == "12.5em");
         REQUIRE_THROWS(ExpressionEvaluator::evaluate("10px", "+", "5em"));
+    }
+}
+
+TEST_CASE("New Compiler - Import System", "[new_compiler_import]") {
+    SECTION("Successfully imports and uses templates from another file") {
+        std::string base_path = TOSTRING(TEST_SOURCE_DIR);
+        if (base_path.front() == '"' && base_path.back() == '"') {
+            base_path = base_path.substr(1, base_path.length() - 2);
+        }
+        Loader loader(base_path);
+        std::string entrypoint = "chtl-compiler/Test/test_files/main.chtl";
+        std::string source = loader.loadFile(entrypoint);
+
+        Lexer lexer(source);
+        Parser parser(lexer, loader, entrypoint);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto body = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(body != nullptr);
+        REQUIRE(body->tagName == "body");
+        REQUIRE(body->children.size() == 2);
+
+        // Check that the imported @Element was used
+        auto header_div = std::dynamic_pointer_cast<ElementNode>(body->children[0]);
+        REQUIRE(header_div != nullptr);
+        REQUIRE(header_div->attributes["class"] == "header");
+
+        // Check that the imported @Style was used
+        auto p = std::dynamic_pointer_cast<ElementNode>(body->children[1]);
+        REQUIRE(p != nullptr);
+        REQUIRE(p->attributes["style"].find("font-family:Arial;") != std::string::npos);
+    }
+
+    SECTION("Detects and throws an error for circular imports") {
+        std::string base_path = TOSTRING(TEST_SOURCE_DIR);
+        if (base_path.front() == '"' && base_path.back() == '"') {
+            base_path = base_path.substr(1, base_path.length() - 2);
+        }
+        Loader loader(base_path);
+        std::string entrypoint = "chtl-compiler/Test/test_files/circular_a.chtl";
+
+        REQUIRE_THROWS_WITH(
+            [&]() {
+                std::string source = loader.loadFile(entrypoint);
+                Lexer lexer(source);
+                Parser parser(lexer, loader, entrypoint);
+                parser.parse();
+            }(),
+            Catch::Matchers::Contains("Circular dependency detected")
+        );
     }
 }

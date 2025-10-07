@@ -7,15 +7,18 @@
 #include "chtl-compiler/CHTL/CHTLNode/CommentNode.h"
 #include "chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.h"
 #include "chtl-compiler/CHTL/Expression/ExpressionParser.h"
+#include "chtl-compiler/CHTL/Loader/Loader.h"
 #include <memory>
 
 class Parser {
 public:
-    Parser(Lexer& lexer);
+    Parser(Lexer& lexer, Loader& loader, const std::string& currentFile);
     NodeList parse();
 
 private:
     Lexer& lexer;
+    Loader& loader;
+    std::string currentFile;
     Token currentToken;
     Token peekToken;
 
@@ -26,6 +29,7 @@ private:
     void parseStyleBlock(std::shared_ptr<ElementNode> element);
     NodePtr parseTemplateDefinition();
     NodeList parseElementUsage();
+    void parseImportStatement();
     NodePtr parseText();
     NodePtr parseComment();
     NodeList parseStatement();

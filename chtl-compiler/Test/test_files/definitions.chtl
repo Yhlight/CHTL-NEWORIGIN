@@ -1,0 +1,11 @@
+[Template] @Style CommonText {
+    font-family: Arial;
+    font-size: 16px;
+}
+
+[Template] @Element Header {
+    div {
+        class: "header";
+        h1 { text { "Welcome" } }
+    }
+}
