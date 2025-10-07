@@ -1,6 +1,7 @@
 # Add the test executable
 add_executable(CHTL_Tests
     main.cpp
+    LexerTest.cpp
 )
 
 # Link the test executable against the CHTL library
