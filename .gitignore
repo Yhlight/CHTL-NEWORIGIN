@@ -38,6 +38,18 @@ Thumbs.db
 TEST_RESULTS.txt
 *.test
 
+# Generated HTML/CSS/JS from examples
+examples/*.html
+examples/*.css
+examples/*.js
+!examples/advanced.html
+!examples/advanced_v2.html
+!examples/advanced_new.html
+!examples/final.html
+!examples/simple.html
+!examples/test.html
+!examples/test_selector.html
+
 # Python
 __pycache__/
 *.pyc

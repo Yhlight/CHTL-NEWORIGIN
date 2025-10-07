@@ -222,6 +222,20 @@ SharedPtr<ElementNode> CHTLParser::parseElement() {
         if (token.getValue() == "if") {
             auto conditional = parseConditional();
             if (conditional) {
+                // 设置父元素选择器用于CSS生成
+                auto condNode = std::dynamic_pointer_cast<ConditionalNode>(conditional);
+                if (condNode) {
+                    // 优先使用id，其次class，最后标签名
+                    String selector;
+                    if (element->hasAttribute("id")) {
+                        selector = "#" + element->getAttribute("id").value();
+                    } else if (element->hasAttribute("class")) {
+                        selector = "." + element->getAttribute("class").value();
+                    } else {
+                        selector = element->getTagName();
+                    }
+                    condNode->setParentSelector(selector);
+                }
                 element->addChild(conditional);
             }
             continue;

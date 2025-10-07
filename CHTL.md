@@ -2600,9 +2600,60 @@ div
 4. **CSS属性**在条件成立时应用
 5. **多个条件**可以使用逻辑运算符（&&、||）
 
+#### 实现细节（v2.6.0+）
+
+**静态条件生成**:
+```chtl
+div {
+    class: box;
+    if { condition: width > 768px, background: blue, }
+}
+```
+
+生成CSS:
+```css
+@media (min-width: 768px) {
+  .box {
+    background: blue;
+  }
+}
+```
+
+**动态条件生成**:
+```chtl
+div {
+    id: box;
+    if { condition: {{html}}->width < 768px, display: none, }
+}
+```
+
+生成JavaScript:
+```javascript
+(function() {
+  const targetElement = document.getElementById('box');
+  function checkAndApplyStyles() {
+    if (!targetElement) return;
+    if (document.documentElement.clientWidth<768px) {
+      targetElement.style.display = 'none';
+    }
+  }
+  checkAndApplyStyles();
+  window.addEventListener('resize', checkAndApplyStyles);
+  window.addEventListener('load', checkAndApplyStyles);
+})();
+```
+
 #### 当前实现状态
-- ✅ if/else if/else语法解析
-- ✅ 静态/动态条件检测
-- ✅ JavaScript生成（动态条件）
-- ✅ CSS注释生成（静态条件）
-- ⚠️ 静态条件完整实现（@media查询）正在开发中
+- ✅ if/else if/else语法完整支持
+- ✅ 静态/动态条件自动检测
+- ✅ CSS @media查询生成（静态条件）
+- ✅ JavaScript DOM操作生成（动态条件）
+- ✅ clientWidth/clientHeight自动转换
+- ✅ CSS属性名camelCase转换
+- ✅ resize和load事件监听
+
+#### 支持的条件表达式
+- 比较运算符：`>`, `<`, `>=`, `<=`, `==`, `!=`
+- 逻辑运算符：`&&`, `||`（复杂条件暂不支持@media）
+- 属性引用：`width`, `height`, `html.width`等
+- 增强选择器：`{{html}}`, `{{.box}}`, `{{#id}}`

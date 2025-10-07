@@ -1,11 +1,17 @@
 #include "CHTLGenerator.h"
+#include "ConditionalCSSGenerator.h"
 #include "../CHTLNode/ConditionalNode.h"
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
 #include <cstdio>
+#include <regex>
 
 namespace CHTL {
+
+// 辅助函数声明（文件作用域）
+static String translateConditionToJS(const String& condition, const Vector<String>& selectors);
+static String cssPropToJSProp(const String& cssProp);
 
 // CHTLGenerator实现
 CHTLGenerator::CHTLGenerator(const GeneratorConfig& config)
@@ -309,26 +315,28 @@ void CHTLGenerator::generateScript(const String& content) {
 }
 
 void CHTLGenerator::generateStaticConditional(const ConditionalNode& node) {
-    // 静态条件渲染：生成CSS注释说明
+    // 静态条件渲染：生成CSS @media查询
     // 根据CHTL.md，静态条件使用属性引用（如 html.width < 500px）
-    // 实际实现：将条件作为CSS注释，实际应用属性（简化版）
     
     const String& condition = node.getCondition();
     const auto& styles = node.getStyles();
     
-    // 添加条件注释到CSS
-    appendCss("/* Conditional: " + condition + " */\n");
-    
-    // TODO: 完整实现应该：
-    // 1. 解析条件表达式
-    // 2. 根据条件生成 @media 查询或 CSS 变量
-    // 3. 对于复杂条件，可能需要生成 JavaScript
-    
-    // 当前简化实现：直接输出CSS属性作为注释
-    for (const auto& [prop, value] : styles) {
-        appendCss("  /* " + prop + ": " + value + "; */\n");
+    if (styles.empty()) {
+        return;
     }
-    appendCss("\n");
+    
+    // 获取父元素选择器（需要在Parser中设置）
+    String parentSelector = node.getParentSelector();
+    if (parentSelector.empty()) {
+        // 如果没有父选择器，使用通用选择器
+        parentSelector = "*";
+    }
+    
+    // 使用ConditionalCSSGenerator生成@media查询
+    String mediaQuery = ConditionalCSSGenerator::generateMediaQuery(
+        condition, parentSelector, styles);
+    
+    appendCss(mediaQuery);
 }
 
 void CHTLGenerator::generateDynamicConditional(const ConditionalNode& node) {
@@ -337,32 +345,129 @@ void CHTLGenerator::generateDynamicConditional(const ConditionalNode& node) {
     
     const String& condition = node.getCondition();
     const auto& styles = node.getStyles();
+    const String& parentSelector = node.getParentSelector();
+    
+    if (styles.empty()) {
+        return;
+    }
     
     // 提取{{}}选择器
     auto selectors = node.extractEnhancedSelectors();
     
-    // 生成JavaScript监听代码
-    appendJs("// Dynamic conditional rendering\n");
+    // 生成JavaScript代码
+    appendJs("// Dynamic conditional: " + condition + "\n");
     appendJs("(function() {\n");
-    appendJs("  function applyConditionalStyles() {\n");
     
-    // TODO: 完整实现应该：
-    // 1. 解析{{}}选择器，转换为document.querySelector()
-    // 2. 解析条件表达式，生成JavaScript表达式
-    // 3. 根据条件动态设置style属性
-    // 4. 添加resize/mutation等事件监听器
+    // 获取目标元素
+    appendJs("  const targetElement = ");
+    if (!parentSelector.empty()) {
+        if (parentSelector[0] == '#') {
+            appendJs("document.getElementById('" + parentSelector.substr(1) + "')");
+        } else if (parentSelector[0] == '.') {
+            appendJs("document.querySelector('" + parentSelector + "')");
+        } else {
+            appendJs("document.querySelector('" + parentSelector + "')");
+        }
+    } else {
+        appendJs("document.body");
+    }
+    appendJs(";\n\n");
     
-    // 当前简化实现：生成条件注释
-    appendJs("    // Condition: " + condition + "\n");
+    // 生成条件检查函数
+    appendJs("  function checkAndApplyStyles() {\n");
+    appendJs("    if (!targetElement) return;\n\n");
     
+    // 解析条件并生成JavaScript条件
+    String jsCondition = translateConditionToJS(condition, selectors);
+    
+    appendJs("    if (" + jsCondition + ") {\n");
+    
+    // 应用样式
     for (const auto& [prop, value] : styles) {
-        appendJs("    // Apply: " + prop + " = " + value + "\n");
+        // 转换CSS属性名为JavaScript camelCase
+        String jsProp = cssPropToJSProp(prop);
+        appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
     }
     
-    appendJs("  }\n");
-    appendJs("  applyConditionalStyles();\n");
-    appendJs("  window.addEventListener('resize', applyConditionalStyles);\n");
+    appendJs("    }");
+    
+    // 处理else if和else（简化版）
+    if (!node.getElseIfBlocks().empty() || node.getElseBlock()) {
+        appendJs(" else {\n");
+        appendJs("      // Reset or apply else styles\n");
+        appendJs("    }");
+    }
+    
+    appendJs("\n  }\n\n");
+    
+    // 立即执行
+    appendJs("  checkAndApplyStyles();\n");
+    
+    // 添加事件监听器
+    appendJs("  window.addEventListener('resize', checkAndApplyStyles);\n");
+    appendJs("  window.addEventListener('load', checkAndApplyStyles);\n");
     appendJs("})();\n\n");
+}
+
+// 辅助方法：将CHTL条件转换为JavaScript条件
+static String translateConditionToJS(const String& condition, const Vector<String>& selectors) {
+    String jsCondition = condition;
+    
+    // 替换{{selector}}为document查询
+    for (const auto& selector : selectors) {
+        String chtlSelector = "{{" + selector + "}}";
+        String jsSelector;
+        
+        if (selector == "html") {
+            jsSelector = "document.documentElement";
+        } else if (selector[0] == '.') {
+            jsSelector = "document.querySelector('" + selector + "')";
+        } else if (selector[0] == '#') {
+            jsSelector = "document.getElementById('" + selector.substr(1) + "')";
+        } else {
+            jsSelector = "document.querySelector('" + selector + "')";
+        }
+        
+        // 替换{{selector}}->为selector.
+        size_t pos = 0;
+        while ((pos = jsCondition.find(chtlSelector + "->", pos)) != String::npos) {
+            jsCondition.replace(pos, chtlSelector.length() + 2, jsSelector + ".");
+            pos += jsSelector.length() + 1;
+        }
+    }
+    
+    // 替换->为.（如果还有剩余的）
+    size_t pos = 0;
+    while ((pos = jsCondition.find("->", pos)) != String::npos) {
+        jsCondition.replace(pos, 2, ".");
+        pos += 1;
+    }
+    
+    // 将width/height转换为clientWidth/clientHeight
+    std::regex widthRegex("\\b(\\w+)\\.width\\b");
+    jsCondition = std::regex_replace(jsCondition, widthRegex, "$1.clientWidth");
+    
+    std::regex heightRegex("\\b(\\w+)\\.height\\b");
+    jsCondition = std::regex_replace(jsCondition, heightRegex, "$1.clientHeight");
+    
+    return jsCondition;
+}
+
+// 辅助方法：将CSS属性名转换为JavaScript camelCase
+static String cssPropToJSProp(const String& cssProp) {
+    String jsProp = cssProp;
+    size_t pos = 0;
+    
+    while ((pos = jsProp.find('-', pos)) != String::npos) {
+        if (pos + 1 < jsProp.length()) {
+            jsProp[pos + 1] = toupper(jsProp[pos + 1]);
+            jsProp.erase(pos, 1);
+        } else {
+            break;
+        }
+    }
+    
+    return jsProp;
 }
 
 String CHTLGenerator::indent() const {

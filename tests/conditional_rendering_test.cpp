@@ -691,10 +691,12 @@ TEST_CASE("Conditional Rendering - End-to-end static conditional", "[conditional
         REQUIRE(result.find("<div") != String::npos);
     }
     
-    SECTION("Contains conditional CSS comment") {
-        // 当前简化实现：检查CSS注释
+    SECTION("Contains CSS @media or conditional") {
+        // 检查CSS @media查询或条件注释
         String css = generator.getCss();
-        REQUIRE(css.find("Conditional") != String::npos);
+        bool hasConditional = css.find("@media") != String::npos || 
+                              css.find("Conditional") != String::npos;
+        REQUIRE(hasConditional);
     }
 }
 
@@ -731,7 +733,10 @@ TEST_CASE("Conditional Rendering - End-to-end dynamic conditional", "[conditiona
     SECTION("Contains dynamic conditional JavaScript") {
         String js = generator.getJs();
         REQUIRE(js.find("Dynamic conditional") != String::npos);
-        REQUIRE(js.find("applyConditionalStyles") != String::npos);
+        // 函数名可能是applyConditionalStyles或checkAndApplyStyles
+        bool hasConditionalFunc = js.find("applyConditionalStyles") != String::npos ||
+                                   js.find("checkAndApplyStyles") != String::npos;
+        REQUIRE(hasConditionalFunc);
     }
     
     SECTION("Contains resize listener") {
@@ -774,9 +779,95 @@ TEST_CASE("Conditional Rendering - End-to-end with else if and else", "[conditio
     }
     
     SECTION("Handles conditional chain") {
-        // 验证生成了CSS注释（简化实现）
+        // 验证生成了CSS @media或条件注释
         String css = generator.getCss();
-        // 应该至少生成了条件注释
-        REQUIRE(css.find("Conditional") != String::npos);
+        bool hasConditional = css.find("@media") != String::npos || 
+                              css.find("Conditional") != String::npos;
+        REQUIRE(hasConditional);
+    }
+}
+
+// ============================================================================
+// Test Section 10: Enhanced Generation Tests (真实CSS/JS生成)
+// ============================================================================
+
+TEST_CASE("Conditional Rendering - Real CSS @media generation", "[conditional][enhanced][css]") {
+    String chtl = R"(
+        div
+        {
+            class: responsive;
+            
+            if
+            {
+                condition: width > 768px,
+                background: blue,
+            }
+        }
+    )";
+    
+    Lexer lexer(chtl);
+    auto tokens = lexer.tokenize();
+    CHTLParser parser(tokens);
+    auto ast = parser.parse();
+    
+    CHTLGenerator generator;
+    String result = generator.generate(ast);
+    String css = generator.getCss();
+    
+    SECTION("Generates @media query") {
+        REQUIRE(css.find("@media") != String::npos);
+    }
+    
+    SECTION("Contains min-width") {
+        REQUIRE(css.find("min-width") != String::npos);
+    }
+    
+    SECTION("Contains selector and styles") {
+        REQUIRE(css.find(".responsive") != String::npos);
+        REQUIRE(css.find("background") != String::npos);
+    }
+}
+
+TEST_CASE("Conditional Rendering - Real JavaScript DOM manipulation", "[conditional][enhanced][js]") {
+    String chtl = R"(
+        div
+        {
+            id: box;
+            
+            if
+            {
+                condition: {{html}}->width < 768px,
+                display: none,
+                background-color: red,
+            }
+        }
+    )";
+    
+    Lexer lexer(chtl);
+    auto tokens = lexer.tokenize();
+    CHTLParser parser(tokens);
+    auto ast = parser.parse();
+    
+    CHTLGenerator generator;
+    String result = generator.generate(ast);
+    String js = generator.getJs();
+    
+    SECTION("Gets target element") {
+        REQUIRE(js.find("getElementById") != String::npos);
+        REQUIRE(js.find("box") != String::npos);
+    }
+    
+    SECTION("Uses clientWidth") {
+        REQUIRE(js.find("clientWidth") != String::npos);
+    }
+    
+    SECTION("Applies styles via DOM") {
+        REQUIRE(js.find("targetElement.style") != String::npos);
+        REQUIRE(js.find("backgroundColor") != String::npos);  // camelCase
+    }
+    
+    SECTION("Has event listeners") {
+        REQUIRE(js.find("addEventListener") != String::npos);
+        REQUIRE(js.find("resize") != String::npos);
     }
 }
