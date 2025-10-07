@@ -159,30 +159,44 @@ void CHTLGenerator::visit(ConditionalNode& node) {
     // 根据CHTL.md规范，条件渲染用于条件性地应用CSS属性
     
     const auto& styles = node.getStyles();
-    if (styles.empty()) {
-        return;  // 无CSS属性，跳过
+    
+    // if块必须有条件和样式（或者是else块可以没有条件）
+    if (!node.isElseBlock() && (styles.empty() || node.getCondition().empty())) {
+        return;  // 无效的条件块
     }
     
-    String condition = node.getCondition();
+    // else块可以没有条件
+    if (node.isElseBlock() && styles.empty()) {
+        return;  // else块没有样式，跳过
+    }
     
     if (node.isDynamic()) {
         // 动态条件渲染 - 生成JavaScript代码
-        generateDynamicConditional(node);
+        // 注意：整个if/else if/else链一起生成
+        if (node.isIfBlock()) {
+            generateDynamicConditionalChain(node);
+        }
+        // else if和else块在generateDynamicConditionalChain中一起处理
     } else {
         // 静态条件渲染 - 生成CSS代码
-        generateStaticConditional(node);
-    }
-    
-    // 处理else if链
-    for (const auto& elseIfNode : node.getElseIfBlocks()) {
-        if (elseIfNode) {
-            elseIfNode->accept(*this);
+        if (!node.isElseBlock()) {
+            // if和else if块生成@media
+            generateStaticConditional(node);
+        } else {
+            // else块：作为默认样式（不在@media中）
+            generateStaticElse(node);
         }
-    }
-    
-    // 处理else块
-    if (node.getElseBlock()) {
-        node.getElseBlock()->accept(*this);
+        
+        // 递归处理else if和else
+        for (const auto& elseIfNode : node.getElseIfBlocks()) {
+            if (elseIfNode) {
+                elseIfNode->accept(*this);
+            }
+        }
+        
+        if (node.getElseBlock()) {
+            node.getElseBlock()->accept(*this);
+        }
     }
 }
 
@@ -340,22 +354,42 @@ void CHTLGenerator::generateStaticConditional(const ConditionalNode& node) {
 }
 
 void CHTLGenerator::generateDynamicConditional(const ConditionalNode& node) {
-    // 动态条件渲染：生成JavaScript代码
-    // 根据CHTL.md，动态条件使用{{}}选择器（如 {{html}}->width < 500px）
-    
-    const String& condition = node.getCondition();
+    // 已废弃：使用generateDynamicConditionalChain代替
+    // 保留此方法以兼容性
+    (void)node;
+}
+
+void CHTLGenerator::generateStaticElse(const ConditionalNode& node) {
+    // 静态else块：生成默认CSS规则（不在@media中）
     const auto& styles = node.getStyles();
     const String& parentSelector = node.getParentSelector();
     
-    if (styles.empty()) {
+    if (styles.empty() || parentSelector.empty()) {
         return;
     }
+    
+    // 生成普通CSS规则作为默认样式
+    appendCss("/* Default styles (else block) */\n");
+    appendCss(parentSelector + " {\n");
+    
+    for (const auto& [prop, value] : styles) {
+        appendCss("  " + prop + ": " + value + ";\n");
+    }
+    
+    appendCss("}\n\n");
+}
+
+void CHTLGenerator::generateDynamicConditionalChain(const ConditionalNode& node) {
+    // 生成完整的if/else if/else JavaScript链
+    const String& condition = node.getCondition();
+    const auto& styles = node.getStyles();
+    const String& parentSelector = node.getParentSelector();
     
     // 提取{{}}选择器
     auto selectors = node.extractEnhancedSelectors();
     
     // 生成JavaScript代码
-    appendJs("// Dynamic conditional: " + condition + "\n");
+    appendJs("// Dynamic conditional chain\n");
     appendJs("(function() {\n");
     
     // 获取目标元素
@@ -377,24 +411,45 @@ void CHTLGenerator::generateDynamicConditional(const ConditionalNode& node) {
     appendJs("  function checkAndApplyStyles() {\n");
     appendJs("    if (!targetElement) return;\n\n");
     
-    // 解析条件并生成JavaScript条件
+    // if块
     String jsCondition = translateConditionToJS(condition, selectors);
-    
     appendJs("    if (" + jsCondition + ") {\n");
     
-    // 应用样式
     for (const auto& [prop, value] : styles) {
-        // 转换CSS属性名为JavaScript camelCase
         String jsProp = cssPropToJSProp(prop);
         appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
     }
     
     appendJs("    }");
     
-    // 处理else if和else（简化版）
-    if (!node.getElseIfBlocks().empty() || node.getElseBlock()) {
+    // else if链
+    for (const auto& elseIfNode : node.getElseIfBlocks()) {
+        if (elseIfNode && !elseIfNode->getStyles().empty()) {
+            String elseIfCondition = translateConditionToJS(
+                elseIfNode->getCondition(), 
+                elseIfNode->extractEnhancedSelectors()
+            );
+            
+            appendJs(" else if (" + elseIfCondition + ") {\n");
+            
+            for (const auto& [prop, value] : elseIfNode->getStyles()) {
+                String jsProp = cssPropToJSProp(prop);
+                appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
+            }
+            
+            appendJs("    }");
+        }
+    }
+    
+    // else块
+    if (node.getElseBlock() && !node.getElseBlock()->getStyles().empty()) {
         appendJs(" else {\n");
-        appendJs("      // Reset or apply else styles\n");
+        
+        for (const auto& [prop, value] : node.getElseBlock()->getStyles()) {
+            String jsProp = cssPropToJSProp(prop);
+            appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
+        }
+        
         appendJs("    }");
     }
     

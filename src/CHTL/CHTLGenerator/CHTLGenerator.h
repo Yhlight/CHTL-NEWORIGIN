@@ -75,6 +75,8 @@ protected:
     // 条件渲染生成
     void generateStaticConditional(const class ConditionalNode& node);
     void generateDynamicConditional(const class ConditionalNode& node);
+    void generateStaticElse(const class ConditionalNode& node);
+    void generateDynamicConditionalChain(const class ConditionalNode& node);
 };
 
 // HTML生成器

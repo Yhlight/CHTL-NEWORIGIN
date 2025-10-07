@@ -1,0 +1,46 @@
+{
+  "name": "chtl-language-support",
+  "displayName": "CHTL Language Support",
+  "description": "CHTL (超文本模板语言) 语法支持和代码高亮",
+  "version": "0.1.0",
+  "publisher": "chtl-team",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "chtl",
+    "html",
+    "template",
+    "超文本"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chtl-lang/chtl"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "chtl",
+        "aliases": [
+          "CHTL",
+          "chtl"
+        ],
+        "extensions": [
+          ".chtl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "chtl",
+        "scopeName": "source.chtl",
+        "path": "./syntaxes/chtl.tmLanguage.json"
+      }
+    ]
+  }
+}

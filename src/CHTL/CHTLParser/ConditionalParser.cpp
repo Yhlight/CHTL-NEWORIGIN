@@ -6,6 +6,7 @@
 #include "ConditionalParser.h"
 #include "../../Util/StringUtil/StringUtil.h"
 #include <sstream>
+#include <iostream>
 
 namespace CHTL {
 
@@ -290,7 +291,13 @@ bool ConditionalParser::expectToken(size_t& currentPos, TokenType type, const St
     
     if (!matchToken(currentPos, type)) {
         if (!errorMsg.empty()) {
-            // TODO: Add error reporting
+            // 错误报告：输出到stderr
+            const Token& token = getToken(currentPos);
+            std::cerr << "[ConditionalParser Error] " << errorMsg;
+            if (isValidPosition(currentPos)) {
+                std::cerr << " at " << token.getPosition().toString();
+            }
+            std::cerr << std::endl;
         }
         return false;
     }
@@ -304,7 +311,14 @@ bool ConditionalParser::expectKeyword(size_t& currentPos, const String& keyword,
     
     if (!matchKeyword(currentPos, keyword)) {
         if (!errorMsg.empty()) {
-            // TODO: Add error reporting
+            // 错误报告：输出到stderr
+            const Token& token = getToken(currentPos);
+            std::cerr << "[ConditionalParser Error] " << errorMsg;
+            if (isValidPosition(currentPos)) {
+                std::cerr << " (got '" << token.getValue() << "' at " 
+                          << token.getPosition().toString() << ")";
+            }
+            std::cerr << std::endl;
         }
         return false;
     }

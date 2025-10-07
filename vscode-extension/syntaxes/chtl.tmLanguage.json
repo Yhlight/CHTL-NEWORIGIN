@@ -1,0 +1,160 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CHTL",
+  "scopeName": "source.chtl",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#brackets" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#html-elements" },
+    { "include": "#template-custom" },
+    { "include": "#enhanced-selectors" },
+    { "include": "#conditional-blocks" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.chtl",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.chtl",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "name": "comment.line.generator.chtl",
+          "match": "#\\s+.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.chtl",
+          "match": "\\b(if|else|except|use|from|as|inherit|delete|insert|after|before|replace)\\b"
+        },
+        {
+          "name": "keyword.other.chtl",
+          "match": "\\b(text|style|script)\\b"
+        },
+        {
+          "name": "storage.type.chtl",
+          "match": "\\[(Template|Custom|Origin|Import|Namespace|Configuration|Info|Export|Name)\\]"
+        },
+        {
+          "name": "entity.name.type.chtl",
+          "match": "@(Style|Element|Var|Html|JavaScript|Chtl|CJmod|Config|Vue|Markdown)"
+        }
+      ]
+    },
+    "brackets": {
+      "patterns": [
+        {
+          "name": "punctuation.definition.block.chtl",
+          "match": "[{}\\[\\]()]"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.chtl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.chtl",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.chtl",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.chtl",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.chtl",
+          "match": "\\b\\d+(\\.\\d+)?(px|em|rem|%|vh|vw|pt)?\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.chtl",
+          "match": "(->|&->|==|!=|<=|>=|&&|\\|\\||[+\\-*/%<>=:])"
+        }
+      ]
+    },
+    "html-elements": {
+      "patterns": [
+        {
+          "name": "entity.name.tag.html.chtl",
+          "match": "\\b(html|head|body|div|span|p|a|img|ul|ol|li|table|tr|td|th|form|input|button|textarea|select|option|h1|h2|h3|h4|h5|h6|header|footer|nav|section|article|aside|main)\\b"
+        }
+      ]
+    },
+    "template-custom": {
+      "patterns": [
+        {
+          "name": "entity.name.function.chtl",
+          "match": "\\b(Listen|Delegate|Animate|Router|ScriptLoader|Vir)\\b"
+        }
+      ]
+    },
+    "enhanced-selectors": {
+      "patterns": [
+        {
+          "name": "variable.other.enhanced-selector.chtl",
+          "begin": "\\{\\{",
+          "end": "\\}\\}",
+          "patterns": [
+            {
+              "name": "entity.name.tag.css.chtl",
+              "match": "."
+            }
+          ]
+        },
+        {
+          "name": "variable.other.responsive.chtl",
+          "begin": "\\$",
+          "end": "\\$",
+          "patterns": [
+            {
+              "name": "variable.other.chtl",
+              "match": "\\w+"
+            }
+          ]
+        }
+      ]
+    },
+    "conditional-blocks": {
+      "patterns": [
+        {
+          "name": "keyword.control.conditional.chtl",
+          "match": "\\b(if|else\\s+if|else)\\b"
+        },
+        {
+          "name": "keyword.other.condition.chtl",
+          "match": "\\bcondition\\s*:"
+        }
+      ]
+    }
+  }
+}

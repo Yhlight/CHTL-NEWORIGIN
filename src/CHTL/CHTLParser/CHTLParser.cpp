@@ -1073,6 +1073,10 @@ SharedPtr<BaseNode> CHTLParser::parseConditional() {
             if (elseIfNode) {
                 auto elseIfCond = std::dynamic_pointer_cast<ConditionalNode>(elseIfNode);
                 if (elseIfCond) {
+                    // else if块继承if块的动态状态（如果if是动态的）
+                    if (conditionalNode->isDynamic()) {
+                        elseIfCond->setDynamic(true);
+                    }
                     conditionalNode->addElseIfBlock(elseIfCond);
                 }
             }
@@ -1082,6 +1086,9 @@ SharedPtr<BaseNode> CHTLParser::parseConditional() {
             
             auto elseNode = std::make_shared<ConditionalNode>();
             elseNode->setBlockType(ConditionalNode::BlockType::Else);
+            
+            // else块继承if块的动态状态
+            elseNode->setDynamic(conditionalNode->isDynamic());
             
             // 解析else块内容
             while (!check(TokenType::RightBrace) && !isAtEnd()) {

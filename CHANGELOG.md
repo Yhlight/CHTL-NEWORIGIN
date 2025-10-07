@@ -62,6 +62,23 @@
 - ✅ CHTL.md更新 - 添加详细使用示例和注意事项
 - ✅ 条件渲染完整说明
 
+#### VSCode扩展（基础版）
+- ✅ **VSCode Language Support v0.1.0**
+  - 基础语法高亮
+  - 括号自动匹配和关闭
+  - 代码折叠支持
+  - 支持所有CHTL语法元素
+  - 支持条件渲染语法高亮
+  - package.json配置
+  - tmLanguage.json语法文件
+
+#### 代码优化
+- ✅ 修复ConditionalParser中的2个TODO
+- ✅ 修复CJMODApi unused parameter警告
+- ✅ 完善else if/else链的JavaScript生成
+- ✅ else块继承动态状态
+- ✅ 0编译警告！
+
 ### 🔧 架构清理 (Architecture Cleanup)
 - **移除CJMOD功能从CHTL JS核心**
   - ❌ 从CHTLJSToken移除: PrintMylove, INeverAway
