@@ -1,0 +1,14 @@
+{
+  "prettyPrint": false,
+  "includeComments": false,
+  "generateSourceMap": false,
+  "minify": false,
+  "outputDir": "./dist",
+  "publicPath": "/",
+  "watch": false,
+  "hotReload": false,
+  "port": 3000,
+  "enableCache": true,
+  "parallelCompile": false,
+  "maxWorkers": 4
+}

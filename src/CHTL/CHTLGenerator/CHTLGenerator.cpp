@@ -565,12 +565,24 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
         auto scriptNode = std::dynamic_pointer_cast<ScriptNode>(node);
         String content = scriptNode->getContent();
         
-        // 总是使用CHTL JS生成器处理（它会处理所有CHTL JS语法）
-        JS::JSGeneratorConfig jsConfig;
-        jsConfig.wrapIIFE = false;  // 不自动包装IIFE
-        jsConfig.prettyPrint = false;
-        JS::CHTLJSGenerator jsGen(jsConfig);
-        content = jsGen.generate(content);
+        // 检查是否包含CHTL JS语法，如果有则处理
+        bool hasCHTLJS = (content.find("{{") != String::npos || 
+                         content.find("Listen") != String::npos ||
+                         content.find("Delegate") != String::npos ||
+                         content.find("Animate") != String::npos ||
+                         content.find("Router") != String::npos ||
+                         content.find("ScriptLoader") != String::npos ||
+                         content.find("Vir") != String::npos ||
+                         content.find("&->") != String::npos ||
+                         content.find("$") != String::npos);
+        
+        if (hasCHTLJS) {
+            JS::JSGeneratorConfig jsConfig;
+            jsConfig.wrapIIFE = false;
+            jsConfig.prettyPrint = false;
+            JS::CHTLJSGenerator jsGen(jsConfig);
+            content = jsGen.generate(content);
+        }
         
         output += content;
         output += "\n\n";

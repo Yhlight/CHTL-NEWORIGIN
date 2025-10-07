@@ -10,24 +10,85 @@ CHTLJSParser::CHTLJSParser(const String& source, const JSParserConfig& config)
     : config_(config), source_(source) {}
 
 Optional<ListenBlock> CHTLJSParser::parseListenBlock(const String& code) {
-    // 查找 "->Listen" 或 ".Listen"
-    size_t listenPos = code.find("->Listen");
-    if (listenPos == String::npos) {
-        listenPos = code.find(".Listen");
-    }
-    
-    if (listenPos == String::npos) {
+    // 查找Listen关键字
+    size_t listenKeywordPos = code.find("Listen");
+    if (listenKeywordPos == String::npos) {
         return std::nullopt;
     }
     
-    // 提取目标选择器
-    String target = extractTarget(code, listenPos);
+    // 向前查找->或.（跳过空白）
+    size_t pos = listenKeywordPos;
+    while (pos > 0 && isWhitespace(code[pos - 1])) {
+        pos--;
+    }
+    
+    if (pos < 1) {
+        return std::nullopt;
+    }
+    
+    // 检查是->还是.
+    bool isArrow = (pos >= 2 && code.substr(pos - 2, 2) == "->");
+    bool isDot = (code[pos - 1] == '.');
+    
+    if (!isArrow && !isDot) {
+        return std::nullopt;
+    }
+    
+    // 提取target：从语句开始到->或.之前
+    size_t separatorPos = isArrow ? (pos - 2) : (pos - 1);
+    size_t targetStart = 0;
+    
+    // 向前查找语句起始（需要跳过{{}}）
+    int enhancedDepth = 0;
+    for (size_t i = separatorPos; i > 0; i--) {
+        char c = code[i - 1];
+        
+        // 检测{{和}}
+        if (i >= 2 && code[i-2] == '{' && code[i-1] == '{') {
+            enhancedDepth--;
+            i--;  // 跳过一个字符
+            continue;
+        }
+        if (i >= 2 && code[i-2] == '}' && code[i-1] == '}') {
+            enhancedDepth++;
+            i--;
+            continue;
+        }
+        
+        // 只有在{{}}外部时才检查分隔符
+        if (enhancedDepth == 0) {
+            if (c == ';' || c == '\n') {
+                targetStart = i;
+                break;
+            }
+            // 单个{或}（不是{{或}}）
+            if ((c == '{' || c == '}') &&
+                (i == 1 || code[i-2] != c) &&
+                (i >= code.length() || code[i] != c)) {
+                targetStart = i;
+                break;
+            }
+        }
+    }
+    
+    // 跳过起始空白
+    while (targetStart < separatorPos && isWhitespace(code[targetStart])) {
+        targetStart++;
+    }
+    
+    String target = code.substr(targetStart, separatorPos - targetStart);
+    
+    // 去除尾部空白
+    while (!target.empty() && isWhitespace(target.back())) {
+        target.pop_back();
+    }
+    
     if (target.empty()) {
         return std::nullopt;
     }
     
     // 查找 '{' 
-    size_t bracePos = code.find('{', listenPos);
+    size_t bracePos = code.find('{', listenKeywordPos);
     if (bracePos == String::npos) {
         return std::nullopt;
     }
@@ -112,14 +173,27 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findListenBlock(const String& 
         return std::nullopt;
     }
     
+    // 向前查找最近的非空白字符
+    size_t checkPos = listenPos;
+    while (checkPos > 0 && isWhitespace(code[checkPos - 1])) {
+        checkPos--;
+    }
+    
     // 确保Listen前面是-> 或 .
-    if (listenPos >= 2) {
-        String prefix = code.substr(listenPos - 2, 2);
-        if (prefix != "->" && code[listenPos - 1] != '.') {
-            // 继续查找下一个
+    if (checkPos >= 2) {
+        String prefix = code.substr(checkPos - 2, 2);
+        if (prefix != "->") {
+            if (checkPos >= 1 && code[checkPos - 1] != '.') {
+                // 继续查找下一个
+                return findListenBlock(code, listenPos + 1);
+            }
+        }
+    } else if (checkPos >= 1) {
+        if (code[checkPos - 1] != '.') {
             return findListenBlock(code, listenPos + 1);
         }
-    } else if (listenPos >= 1 && code[listenPos - 1] != '.') {
+    } else {
+        // Listen在开头，继续查找
         return findListenBlock(code, listenPos + 1);
     }
     
@@ -136,68 +210,119 @@ Optional<std::pair<size_t, size_t>> CHTLJSParser::findListenBlock(const String& 
     }
     
     // 找到目标的起始位置
-    size_t targetStart = listenPos;
-    while (targetStart > startPos && !isWhitespace(code[targetStart - 1])) {
-        targetStart--;
-        // 处理 {{...}}
-        if (code[targetStart] == '}' && targetStart >= 1 && code[targetStart - 1] == '}') {
-            // 向前查找 {{
-            while (targetStart > startPos) {
-                targetStart--;
-                if (targetStart >= 1 && code[targetStart] == '{' && code[targetStart - 1] == '{') {
-                    targetStart--;
+    // 需要从listenPos向前找到完整的语句起始
+    size_t targetStart = 0;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int enhancedSelectorDepth = 0;  // {{}}的深度
+    
+    // 从listenPos向前扫描
+    for (size_t i = listenPos; i > 0; i--) {
+        size_t idx = i - 1;
+        char c = code[idx];
+        
+        // 处理{{}}增强选择器
+        // 向前扫描时，检查当前字符和前一个字符
+        if (idx >= 1 && code[idx - 1] == '}' && c == '}') {
+            enhancedSelectorDepth++;
+            i--;  // 跳过前一个}
+            continue;
+        }
+        if (idx >= 1 && code[idx - 1] == '{' && c == '{') {
+            enhancedSelectorDepth--;
+            i--;  // 跳过前一个{
+            continue;
+        }
+        
+        if (c == ')') parenDepth++;
+        if (c == '(') parenDepth--;
+        if (c == ']') bracketDepth++;
+        if (c == '[') bracketDepth--;
+        
+        // 只有在{{}}外部且所有括号平衡时才检查分隔符
+        if (parenDepth == 0 && bracketDepth == 0 && enhancedSelectorDepth == 0) {
+            if (c == ';' || c == '\n') {
+                targetStart = idx + 1;
+                break;
+            }
+            // 单个{或}（不是{{或}}的一部分）
+            if (c == '{' || c == '}') {
+                // 检查是否是{{或}}的一部分
+                bool isDouble = (idx >= 1 && code[idx - 1] == c) || 
+                               (idx + 1 < code.length() && code[idx + 1] == c);
+                if (!isDouble) {
+                    targetStart = idx + 1;
                     break;
                 }
             }
         }
+    }
+    
+    // 跳过起始的空白
+    while (targetStart < listenPos && isWhitespace(code[targetStart])) {
+        targetStart++;
+    }
+    
+    // 查找分号（如果有）
+    size_t semiPos = code.find(';', endBracePos);
+    if (semiPos != String::npos && semiPos < endBracePos + 5) {
+        return std::make_pair(targetStart, semiPos + 1);
     }
     
     return std::make_pair(targetStart, endBracePos + 1);
 }
 
 String CHTLJSParser::extractTarget(const String& code, size_t listenPos) const {
-    // 向前查找目标
-    size_t pos = listenPos;
+    // listenPos指向->或.的起始位置
+    // 需要从这个位置向前提取完整的target表达式
     
-    // 跳过 "->" 或 "."
-    while (pos > 0 && (code[pos] == '-' || code[pos] == '>' || code[pos] == '.' || isWhitespace(code[pos]))) {
-        pos--;
-    }
+    // 从listenPos向前查找到语句的起始
+    size_t startPos = 0;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int enhancedSelectorDepth = 0;
     
-    if (pos == 0) {
-        return "";
-    }
-    
-    // 向前提取标识符或 {{...}}
-    size_t endPos = pos + 1;
-    size_t startPos = pos;
-    
-    // 如果是 }}，查找对应的 {{
-    if (pos >= 1 && code[pos] == '}' && code[pos - 1] == '}') {
-        endPos = pos + 1;
-        pos -= 2;  // 跳过 }}
+    for (size_t i = listenPos; i > 0; i--) {
+        size_t idx = i - 1;
+        char c = code[idx];
         
-        int depth = 1;
-        while (pos > 0 && depth > 0) {
-            if (code[pos] == '}' && pos >= 1 && code[pos - 1] == '}') {
-                depth++;
-                pos -= 2;
-            } else if (code[pos] == '{' && pos >= 1 && code[pos - 1] == '{') {
-                depth--;
-                if (depth == 0) {
-                    startPos = pos - 1;
-                    break;
-                }
-                pos -= 2;
-            } else {
-                pos--;
+        // 处理{{}}增强选择器
+        if (c == '}' && idx + 1 < code.length() && code[idx + 1] == '}') {
+            enhancedSelectorDepth++;
+        }
+        if (c == '{' && idx + 1 < code.length() && code[idx + 1] == '{') {
+            enhancedSelectorDepth--;
+        }
+        
+        // 更新括号深度
+        if (c == ')') parenDepth++;
+        if (c == '(') parenDepth--;
+        if (c == ']') bracketDepth++;
+        if (c == '[') bracketDepth--;
+        
+        // 只有在{{}}外且所有括号平衡时才检查分隔符
+        if (parenDepth == 0 && bracketDepth == 0 && enhancedSelectorDepth == 0) {
+            if (c == ';' || c == '\n') {
+                startPos = idx + 1;
+                break;
+            }
+            if ((c == '{' || c == '}') && 
+                !(idx + 1 < code.length() && code[idx + 1] == c)) {
+                startPos = idx + 1;
+                break;
             }
         }
-    } else {
-        // 普通标识符
-        while (startPos > 0 && isIdentifierChar(code[startPos - 1])) {
-            startPos--;
-        }
+    }
+    
+    // 跳过起始空白
+    while (startPos < listenPos && isWhitespace(code[startPos])) {
+        startPos++;
+    }
+    
+    // 提取target（从startPos到listenPos，去除尾部空白）
+    size_t endPos = listenPos;
+    while (endPos > startPos && isWhitespace(code[endPos - 1])) {
+        endPos--;
     }
     
     return code.substr(startPos, endPos - startPos);

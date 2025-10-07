@@ -23,13 +23,13 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
     // 第三步：处理Animate语法
     result = processAnimateBlocks(result);
     
-    // 第四步：处理Delegate语法
-    result = processDelegateBlocks(result);
-    
-    // 第四步：处理Listen语法 (必须在处理增强选择器之前)
+    // 第四步：处理Listen语法（在{{}}处理之前）
     result = processListenBlocks(result);
     
-    // 第五步：处理事件绑定操作符 &-> (必须在处理Listen之后，增强选择器之前)
+    // 第五步：处理Delegate语法（在{{}}处理之前）
+    result = processDelegateBlocks(result);
+    
+    // 第六步：处理事件绑定操作符 &->（在{{}}处理之前）
     result = processEventBindOperators(result);
     
     // 第六步：处理响应式值 $variable$
