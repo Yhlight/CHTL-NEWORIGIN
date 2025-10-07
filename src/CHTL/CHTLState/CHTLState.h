@@ -27,6 +27,7 @@ enum class StateType {
     Comment,           // 注释解析状态
     Expression,        // 表达式解析状态
     Selector,          // 选择器解析状态
+    Conditional,       // 条件渲染解析状态 (if/else if/else)
 };
 
 // 状态基类
@@ -159,6 +160,18 @@ public:
     
     SharedPtr<BaseNode> parse() override;
     bool canHandle(const Token& token) const override;
+};
+
+// 条件渲染解析状态
+class ConditionalState : public CHTLState {
+public:
+    ConditionalState(CHTLParser* parser);
+    
+    SharedPtr<BaseNode> parse() override;
+    bool canHandle(const Token& token) const override;
+    
+private:
+    SharedPtr<BaseNode> parseConditionalBlock();
 };
 
 } // namespace CHTL
