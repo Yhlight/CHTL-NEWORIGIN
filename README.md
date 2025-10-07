@@ -40,6 +40,14 @@
 - 🔌 Plugin system
 - 🛠️ CLI tools
 
+### v2.5 Module System
+- 📦 CMOD module system
+- 🔧 CJMOD extension API
+- 🌸 Chtholly official module (CMOD + CJMOD)
+- 🌟 Yuigahama official module (CMOD)
+- ⚙️ Professional configuration (.chtlrc)
+- 💾 Module caching & dependency management
+
 ---
 
 ## 🚀 Quick Start
