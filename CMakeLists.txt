@@ -52,6 +52,9 @@ set(THIRD_PARTY_SOURCES
     ${CMAKE_SOURCE_DIR}/third-party/miniz.c
 )
 
+# 添加第三方库包含目录
+include_directories(${CMAKE_SOURCE_DIR}/third-party)
+
 # 主可执行文件
 add_executable(chtl
     ${SRC_DIR}/main.cpp

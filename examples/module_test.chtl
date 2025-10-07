@@ -1,0 +1,203 @@
+// CHTL v2.5.0 模块系统测试示例
+// 测试珂朵莉和由比滨结衣官方模块
+
+use html5;
+
+// 导入珂朵莉模块
+[Import] @Chtl from chtl::Chtholly
+
+// 导入由比滨模块  
+[Import] @Chtl from chtl::Yuigahama
+
+html
+{
+    head
+    {
+        title
+        {
+            text: "CHTL v2.5.0 Module System Test";
+        }
+    }
+    
+    body
+    {
+        style
+        {
+            @Style ChthollyTheme;
+            
+            body
+            {
+                margin: 0;
+                padding: 0;
+            }
+        }
+        
+        // 测试珂朵莉页面布局
+        @Element ChthollyPage
+        {
+            // 主标题
+            h1
+            {
+                text: "CHTL v2.5.0 - 模块系统测试";
+                
+                style
+                {
+                    text-align: center;
+                    color: ChthollyColors(primaryDark);
+                    margin-bottom: ChthollySpacing(xl);
+                }
+            }
+            
+            // 珂朵莉卡片
+            div
+            {
+                style
+                {
+                    @Style ChthollyCard;
+                    margin-bottom: ChthollySpacing(lg);
+                }
+                
+                h2
+                {
+                    text: "珂朵莉模块测试";
+                    
+                    style
+                    {
+                        color: ChthollyColors(primary);
+                    }
+                }
+                
+                p
+                {
+                    text: "这是使用珂朵莉模块的卡片组件，具有粉红色系主题和优雅的设计。";
+                }
+                
+                // 测试珂朵莉按钮
+                button
+                {
+                    text: "珂朵莉按钮";
+                    
+                    style
+                    {
+                        @Style ChthollyButton;
+                    }
+                    
+                    script
+                    {
+                        {{&}} &-> click: () => {
+                            alert('珂朵莉按钮被点击！');
+                        };
+                    }
+                }
+            }
+            
+            // 由比滨卡片
+            div
+            {
+                style
+                {
+                    @Style YuigahamaCard;
+                    margin-bottom: YuigahamaSpacing(lg);
+                }
+                
+                h2
+                {
+                    text: "由比滨结衣模块测试";
+                    
+                    style
+                    {
+                        color: YuigahamaColors(primary);
+                    }
+                }
+                
+                p
+                {
+                    text: "这是使用由比滨模块的卡片组件，具有温暖橙色系主题和活力设计。";
+                }
+                
+                // 测试由比滨按钮
+                button
+                {
+                    text: "由比滨按钮";
+                    
+                    style
+                    {
+                        @Style YuigahamaButton;
+                    }
+                    
+                    script
+                    {
+                        {{&}} &-> click: () => {
+                            alert('由比滨按钮被点击！');
+                        };
+                    }
+                }
+            }
+            
+            // 测试珂朵莉进度条
+            div
+            {
+                h3
+                {
+                    text: "珂朵莉进度条";
+                }
+                
+                @Element ChthollyProgressBar
+                {
+                    script
+                    {
+                        {{.progress-bar}}->Listen {
+                            load: () => {
+                                {{.progress-bar}}->style.width = '75%';
+                            }
+                        };
+                    }
+                }
+            }
+            
+            // 测试手风琴组件
+            div
+            {
+                h3
+                {
+                    text: "珂朵莉手风琴";
+                }
+                
+                @Element ChthollyAccordionItem
+                {
+                    div
+                    {
+                        class: accordion-header;
+                        text: "点击展开/收起";
+                        
+                        script
+                        {
+                            {{.accordion-header}} &-> click: () => {
+                                const content = {{.accordion-content}};
+                                content->classList.toggle('active');
+                            };
+                        }
+                    }
+                    
+                    div
+                    {
+                        class: accordion-content;
+                        
+                        p
+                        {
+                            text: "这是手风琴的内容区域，使用珂朵莉模块的样式。";
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 全局脚本测试
+        script
+        {
+            console.log('CHTL v2.5.0 模块系统加载成功！');
+            console.log('珂朵莉模块：已加载');
+            console.log('由比滨结衣模块：已加载');
+        }
+    }
+}
