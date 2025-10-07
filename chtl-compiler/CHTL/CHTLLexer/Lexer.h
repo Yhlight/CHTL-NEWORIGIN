@@ -19,4 +19,7 @@ private:
     void skipWhitespace();
     Token identifier();
     Token stringLiteral();
+    Token lineComment();
+    Token blockComment();
+    Token generatorComment();
 };

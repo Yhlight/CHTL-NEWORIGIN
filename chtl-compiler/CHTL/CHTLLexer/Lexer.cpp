@@ -92,6 +92,62 @@ Token Lexer::getNextToken() {
         return {TokenType::Semicolon, ";", line, column - 1};
     }
 
+    if (current == '/') {
+        if (source[position + 1] == '/') {
+            return lineComment();
+        } else if (source[position + 1] == '*') {
+            return blockComment();
+        }
+    }
+
+    if (current == '#') {
+        return generatorComment();
+    }
+
     advance();
     return {TokenType::Unknown, std::string(1, current), line, column - 1};
+}
+
+Token Lexer::lineComment() {
+    int start_line = line;
+    int start_column = column;
+    advance(); // Consume the first /
+    advance(); // Consume the second /
+    std::string value;
+    while (currentChar() != '\0' && currentChar() != '\n') {
+        value += currentChar();
+        advance();
+    }
+    return {TokenType::LineComment, value, start_line, start_column};
+}
+
+Token Lexer::blockComment() {
+    int start_line = line;
+    int start_column = column;
+    advance(); // Consume /
+    advance(); // Consume *
+    std::string value;
+    while (currentChar() != '\0' && (currentChar() != '*' || source[position + 1] != '/')) {
+        value += currentChar();
+        advance();
+    }
+    advance(); // Consume *
+    advance(); // Consume /
+    return {TokenType::BlockComment, value, start_line, start_column};
+}
+
+Token Lexer::generatorComment() {
+    int start_line = line;
+    int start_column = column;
+    advance(); // Consume #
+    // Optional: skip a single space
+    if (currentChar() == ' ') {
+        advance();
+    }
+    std::string value;
+    while (currentChar() != '\0' && currentChar() != '\n') {
+        value += currentChar();
+        advance();
+    }
+    return {TokenType::GeneratorComment, value, start_line, start_column};
 }

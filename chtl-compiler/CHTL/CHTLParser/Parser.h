@@ -4,6 +4,7 @@
 #include "chtl-compiler/CHTL/CHTLNode/Node.h"
 #include "chtl-compiler/CHTL/CHTLNode/ElementNode.h"
 #include "chtl-compiler/CHTL/CHTLNode/TextNode.h"
+#include "chtl-compiler/CHTL/CHTLNode/CommentNode.h"
 #include <memory>
 
 class Parser {
@@ -21,5 +22,6 @@ private:
     NodePtr parseElement();
     void parseAttributes(std::shared_ptr<ElementNode> element);
     NodePtr parseText();
+    NodePtr parseComment();
     NodePtr parseStatement();
 };

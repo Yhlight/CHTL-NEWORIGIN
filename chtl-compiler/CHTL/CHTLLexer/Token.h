@@ -19,6 +19,11 @@ enum class TokenType {
     Semicolon,  // ;
     Colon,      // :
     Equal,      // =
+
+    // Comments
+    LineComment,      // //
+    BlockComment,     // /* ... */
+    GeneratorComment, // #
 };
 
 struct Token {

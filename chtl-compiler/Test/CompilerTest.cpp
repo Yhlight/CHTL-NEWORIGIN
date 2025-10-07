@@ -38,6 +38,23 @@ TEST_CASE("New Compiler - Lexer", "[new_compiler_lexer]") {
         Token t8 = lexer.getNextToken();
         REQUIRE(t8.type == TokenType::EndOfFile);
     }
+
+    SECTION("Tokenizes comments") {
+        std::string source = "// line\n/* block */\n# generator";
+        Lexer lexer(source);
+
+        Token t1 = lexer.getNextToken();
+        REQUIRE(t1.type == TokenType::LineComment);
+        REQUIRE(t1.value == " line");
+
+        Token t2 = lexer.getNextToken();
+        REQUIRE(t2.type == TokenType::BlockComment);
+        REQUIRE(t2.value == " block ");
+
+        Token t3 = lexer.getNextToken();
+        REQUIRE(t3.type == TokenType::GeneratorComment);
+        REQUIRE(t3.value == "generator");
+    }
 }
 
 TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
@@ -118,6 +135,36 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
         REQUIRE(element->attributes["id"] == "main");
         REQUIRE(element->attributes["class"] == "box");
     }
+
+    SECTION("Parses and handles comments") {
+        std::string source = R"(
+            // This should be ignored
+            div {
+                # This is a generator comment
+                p { text { "hello" } } // Another ignored comment
+            }
+            /* This block
+               should also
+               be ignored */
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto div = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(div != nullptr);
+        REQUIRE(div->tagName == "div");
+        REQUIRE(div->children.size() == 2);
+
+        auto comment = std::dynamic_pointer_cast<CommentNode>(div->children[0]);
+        REQUIRE(comment != nullptr);
+        REQUIRE(comment->content == "This is a generator comment");
+
+        auto p = std::dynamic_pointer_cast<ElementNode>(div->children[1]);
+        REQUIRE(p != nullptr);
+        REQUIRE(p->tagName == "p");
+    }
 }
 
 TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
@@ -130,5 +177,16 @@ TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
         std::string html = generator.generate(nodes);
 
         REQUIRE(html == "<a href=\"https://www.example.com\">Click me</a>");
+    }
+
+    SECTION("Generates HTML with comments") {
+        std::string source = "div { #this is a comment\n }";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+        Generator generator;
+        std::string html = generator.generate(nodes);
+
+        REQUIRE(html == "<div><!--this is a comment--></div>");
     }
 }

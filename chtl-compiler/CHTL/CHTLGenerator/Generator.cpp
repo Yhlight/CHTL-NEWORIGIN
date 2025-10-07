@@ -1,6 +1,7 @@
 #include "chtl-compiler/CHTL/CHTLGenerator/Generator.h"
 #include "chtl-compiler/CHTL/CHTLNode/ElementNode.h"
 #include "chtl-compiler/CHTL/CHTLNode/TextNode.h"
+#include "chtl-compiler/CHTL/CHTLNode/CommentNode.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -34,7 +35,7 @@ void Generator::visit(const NodePtr& node, std::stringstream& output) {
         output << "</" << elementNode->tagName << ">";
     } else if (auto textNode = std::dynamic_pointer_cast<TextNode>(node)) {
         output << textNode->content;
-    } else {
-        // For now, we don't handle other node types
+    } else if (auto commentNode = std::dynamic_pointer_cast<CommentNode>(node)) {
+        output << "<!--" << commentNode->content << "-->";
     }
 }

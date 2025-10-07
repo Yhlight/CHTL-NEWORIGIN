@@ -27,7 +27,18 @@ void Parser::eat(TokenType type) {
 NodeList Parser::parse() {
     NodeList nodes;
     while(currentToken.type != TokenType::EndOfFile) {
-        nodes.push_back(parseStatement());
+        // Skip comments that are not part of the AST
+        while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
+            consume();
+        }
+        if (currentToken.type == TokenType::EndOfFile) break;
+
+        NodePtr stmt = parseStatement();
+        if (stmt) {
+            nodes.push_back(stmt);
+        } else {
+            throw std::runtime_error("Unexpected top-level token: " + currentToken.value);
+        }
     }
     return nodes;
 }
@@ -38,6 +49,8 @@ NodePtr Parser::parseStatement() {
             return parseText();
         }
         return parseElement();
+    } else if (currentToken.type == TokenType::GeneratorComment) {
+        return parseComment();
     }
     return nullptr;
 }
@@ -51,10 +64,21 @@ NodePtr Parser::parseElement() {
     eat(TokenType::LeftBrace);
 
     while (currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+        // Skip non-generator comments
+        while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
+            consume();
+        }
+        if (currentToken.type == TokenType::RightBrace || currentToken.type == TokenType::EndOfFile) break;
+
         if (currentToken.type == TokenType::Identifier && (peekToken.type == TokenType::Colon || peekToken.type == TokenType::Equal)) {
             parseAttributes(element);
         } else {
-            element->children.push_back(parseStatement());
+            NodePtr child = parseStatement();
+            if (child) {
+                element->children.push_back(child);
+            } else {
+                 throw std::runtime_error("Unexpected token in element body: " + currentToken.value);
+            }
         }
     }
 
@@ -93,4 +117,10 @@ NodePtr Parser::parseText() {
     eat(TokenType::RightBrace);
 
     return std::make_shared<TextNode>(content);
+}
+
+NodePtr Parser::parseComment() {
+    std::string content = currentToken.value;
+    eat(TokenType::GeneratorComment);
+    return std::make_shared<CommentNode>(content);
 }
