@@ -29,6 +29,9 @@ enum class TokenType {
     Star,           // *
     Slash,          // /
 
+    // Keywords
+    DeleteKeyword,  // delete
+
     // Comments
     LineComment,      // //
     BlockComment,     // /* ... */

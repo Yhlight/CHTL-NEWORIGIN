@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <sstream>
 
 class ExpressionParser {
 public:
@@ -43,11 +44,14 @@ public:
         }
 
         // For more complex expressions, or if not a simple binary operation,
-        // just concatenate the values for now.
-        std::string result;
-        for (const auto& token : tokens) {
-            result += token.value;
+        // join the values with spaces.
+        std::stringstream result;
+        for (size_t i = 0; i < tokens.size(); ++i) {
+            result << tokens[i].value;
+            if (i < tokens.size() - 1) {
+                result << " ";
+            }
         }
-        return result;
+        return result.str();
     }
 };

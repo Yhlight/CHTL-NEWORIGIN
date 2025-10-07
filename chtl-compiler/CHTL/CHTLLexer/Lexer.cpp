@@ -1,5 +1,13 @@
 #include "Lexer.h"
 #include <cctype>
+#include <map>
+
+static std::map<std::string, TokenType> keywords = {
+    {"delete", TokenType::DeleteKeyword},
+    {"style", TokenType::Identifier}, // Treat style as a regular identifier for now
+    {"text", TokenType::Identifier}, // Treat text as a regular identifier
+    {"Template", TokenType::Identifier} // Treat Template as a regular identifier
+};
 
 Lexer::Lexer(const std::string& source) : source(source) {}
 
@@ -34,6 +42,11 @@ Token Lexer::identifier() {
         value += currentChar();
         advance();
     }
+
+    if (keywords.count(value)) {
+        return {keywords.at(value), value, start_line, start_column};
+    }
+
     return {TokenType::Identifier, value, start_line, start_column};
 }
 

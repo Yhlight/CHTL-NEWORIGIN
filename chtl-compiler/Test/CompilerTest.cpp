@@ -236,7 +236,57 @@ TEST_CASE("New Compiler - Style Templates", "[new_compiler_style_template]") {
         auto p_element = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
         REQUIRE(p_element != nullptr);
         REQUIRE(p_element->attributes.count("style") == 1);
-        REQUIRE(p_element->attributes["style"] == "font-size:16px;color:black;font-weight:bold;");
+
+        const std::string& style = p_element->attributes["style"];
+        REQUIRE(style.find("font-size:16px;") != std::string::npos);
+        REQUIRE(style.find("color:black;") != std::string::npos);
+        REQUIRE(style.find("font-weight:bold;") != std::string::npos);
+    }
+
+    SECTION("Specializes a custom style template with valueless properties and deletion") {
+        std::string source = R"(
+            [Custom] @Style BaseButton {
+                padding: 10px 15px;
+                border-radius: 5px;
+                background-color; // Valueless property
+                color: white;
+            }
+
+            button {
+                style {
+                    @Style BaseButton {
+                        background-color: blue;
+                        delete color;
+                    }
+                }
+            }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto btn = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(btn != nullptr);
+        REQUIRE(btn->attributes.count("style") == 1);
+
+        const std::string& style = btn->attributes["style"];
+        REQUIRE(style.find("background-color:blue;") != std::string::npos);
+        REQUIRE(style.find("border-radius:5px;") != std::string::npos);
+        REQUIRE(style.find("padding:10px 15px;") != std::string::npos);
+        REQUIRE(style.find("color:white;") == std::string::npos);
+    }
+
+    SECTION("Throws an error for unspecialized valueless property") {
+        std::string source = R"(
+            [Custom] @Style BadButton {
+                color;
+            }
+            button { style { @Style BadButton; } }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        REQUIRE_THROWS(parser.parse());
     }
 }
 
