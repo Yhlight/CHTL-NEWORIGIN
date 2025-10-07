@@ -20,7 +20,14 @@ std::string Generator::generate(const NodePtr& node) {
 
 void Generator::visit(const NodePtr& node, std::stringstream& output) {
     if (auto elementNode = std::dynamic_pointer_cast<ElementNode>(node)) {
-        output << "<" << elementNode->tagName << ">";
+        output << "<" << elementNode->tagName;
+
+        for (const auto& attr : elementNode->attributes) {
+            output << " " << attr.first << "=\"" << attr.second << "\"";
+        }
+
+        output << ">";
+
         for (const auto& child : elementNode->children) {
             visit(child, output);
         }

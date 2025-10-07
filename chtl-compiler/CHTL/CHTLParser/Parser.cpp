@@ -3,12 +3,18 @@
 #include <iostream>
 
 Parser::Parser(Lexer& lexer) : lexer(lexer) {
-    currentToken = this->lexer.getNextToken();
+    consume();
+    consume(); // Initialize both currentToken and peekToken
+}
+
+void Parser::consume() {
+    currentToken = peekToken;
+    peekToken = lexer.getNextToken();
 }
 
 void Parser::eat(TokenType type) {
     if (currentToken.type == type) {
-        currentToken = lexer.getNextToken();
+        consume();
     } else {
         std::string err = "Unexpected token: expected " + std::to_string((int)type) +
                           ", got " + std::to_string((int)currentToken.type) +
@@ -45,12 +51,38 @@ NodePtr Parser::parseElement() {
     eat(TokenType::LeftBrace);
 
     while (currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
-        element->children.push_back(parseStatement());
+        if (currentToken.type == TokenType::Identifier && (peekToken.type == TokenType::Colon || peekToken.type == TokenType::Equal)) {
+            parseAttributes(element);
+        } else {
+            element->children.push_back(parseStatement());
+        }
     }
 
     eat(TokenType::RightBrace);
 
     return element;
+}
+
+void Parser::parseAttributes(std::shared_ptr<ElementNode> element) {
+    std::string key = currentToken.value;
+    eat(TokenType::Identifier);
+
+    if (currentToken.type == TokenType::Colon || currentToken.type == TokenType::Equal) {
+        eat(currentToken.type);
+    } else {
+        throw std::runtime_error("Expected ':' or '=' for attribute.");
+    }
+
+    std::string value;
+    if (currentToken.type == TokenType::Identifier || currentToken.type == TokenType::StringLiteral) {
+        value = currentToken.value;
+        eat(currentToken.type);
+    } else {
+        throw std::runtime_error("Attribute value must be an identifier or a string literal.");
+    }
+
+    element->attributes[key] = value;
+    eat(TokenType::Semicolon);
 }
 
 NodePtr Parser::parseText() {

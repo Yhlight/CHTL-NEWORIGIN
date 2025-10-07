@@ -4,6 +4,7 @@
 #include "chtl-compiler/CHTL/CHTLParser/Parser.h"
 #include "chtl-compiler/CHTL/CHTLNode/ElementNode.h"
 #include "chtl-compiler/CHTL/CHTLNode/TextNode.h"
+#include "chtl-compiler/CHTL/CHTLGenerator/Generator.h"
 
 TEST_CASE("New Compiler - Lexer", "[new_compiler_lexer]") {
     SECTION("Tokenizes a simple structure") {
@@ -101,5 +102,33 @@ TEST_CASE("New Compiler - Parser", "[new_compiler_parser]") {
         auto div_element = std::dynamic_pointer_cast<ElementNode>(nodes[1]);
         REQUIRE(div_element != nullptr);
         REQUIRE(div_element->tagName == "div");
+    }
+
+    SECTION("Parses an element with attributes") {
+        std::string source = "div { id = \"main\"; class: box; }";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto element = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(element != nullptr);
+        REQUIRE(element->tagName == "div");
+        REQUIRE(element->attributes.size() == 2);
+        REQUIRE(element->attributes["id"] == "main");
+        REQUIRE(element->attributes["class"] == "box");
+    }
+}
+
+TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
+    SECTION("Generates an element with attributes") {
+        std::string source = "a { href=\"https://www.example.com\"; text { \"Click me\" } }";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+        Generator generator;
+        std::string html = generator.generate(nodes);
+
+        REQUIRE(html == "<a href=\"https://www.example.com\">Click me</a>");
     }
 }

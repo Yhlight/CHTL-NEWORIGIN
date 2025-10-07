@@ -77,6 +77,21 @@ Token Lexer::getNextToken() {
         return {TokenType::RightBrace, "}", line, column - 1};
     }
 
+    if (current == ':') {
+        advance();
+        return {TokenType::Colon, ":", line, column - 1};
+    }
+
+    if (current == '=') {
+        advance();
+        return {TokenType::Equal, "=", line, column - 1};
+    }
+
+    if (current == ';') {
+        advance();
+        return {TokenType::Semicolon, ";", line, column - 1};
+    }
+
     advance();
     return {TokenType::Unknown, std::string(1, current), line, column - 1};
 }

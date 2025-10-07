@@ -11,10 +11,14 @@ enum class TokenType {
     // Literals
     Identifier,
     StringLiteral,
+    UnquotedLiteral,
 
     // Punctuation
     LeftBrace,  // {
     RightBrace, // }
+    Semicolon,  // ;
+    Colon,      // :
+    Equal,      // =
 };
 
 struct Token {
