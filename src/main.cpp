@@ -9,7 +9,7 @@
 using namespace CHTL;
 
 void printUsage() {
-    std::cout << "CHTL Compiler v2.6.0\n";
+    std::cout << "CHTL Compiler v2.6.1\n";
     std::cout << "Usage: chtl [options] <input-file>\n\n";
     std::cout << "Options:\n";
     std::cout << "  -h, --help          Show this help message\n";
@@ -35,9 +35,10 @@ void printUsage() {
 }
 
 void printVersion() {
-    std::cout << "CHTL Compiler v2.6.0-conditional\n";
+    std::cout << "CHTL Compiler v2.6.1-vscode\n";
     std::cout << "Built with C++17\n";
     std::cout << "License: MIT\n";
+    std::cout << "Features: Conditional Rendering, CLI Tools, VSCode Extension\n";
 }
 
 void printTokens(const Vector<Token>& tokens) {

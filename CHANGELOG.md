@@ -7,6 +7,59 @@
 
 ---
 
+## [2.6.1-vscode] - 2025-10-07
+
+### ✨ VSCode扩展完善 + 代码质量提升
+
+#### 新增 Added
+- ✅ **VSCode代码片段系统**
+  - 17个常用CHTL代码片段
+  - 元素、样式、脚本片段
+  - if/else条件块片段
+  - CHTL JS语法片段（Listen, Delegate, Animate, Router）
+  - 完整页面结构片段
+
+- ✅ **VSCode命令集成**
+  - extension.js实现
+  - "CHTL: Compile Current File"命令
+  - "CHTL: Compile with Inline"命令
+  - 右键菜单集成
+  - 自动查找编译器
+
+- ✅ **VSCode任务配置**
+  - tasks.json模板
+  - 编译任务
+  - 构建编译器任务
+  - 运行测试任务
+
+- ✅ **示例代码**
+  - showcase.chtl - 功能展示示例
+  - complete_app_demo.chtl - 完整应用演示
+
+#### 改进 Improved
+- ✅ **0编译警告** - 修复CJMODApi unused parameter
+- ✅ **完善错误报告** - ConditionalParser错误输出
+- ✅ **else块完善** - 继承动态状态
+- ✅ **else if/else链** - 完整JavaScript生成
+
+#### 优化 Optimized
+- ✅ 条件链生成逻辑优化
+- ✅ else块样式应用
+- ✅ 代码清理（删除.bak文件）
+
+### 📊 项目完成度
+- CHTL核心: 95%
+- CHTL JS: 95%
+- CLI工具: 100%
+- VSCode扩展: 50% → 70% (+20%)
+- 总体: 90% → 92% (+2%)
+
+### 📖 文档 Documentation
+- ✅ v2.6.1_进度报告.md
+- ✅ vscode-extension完整文档
+
+---
+
 ## [2.6.0-conditional] - 2025-10-07
 
 ### 🎉 重大更新 - 条件渲染 + CLI工具完整实现

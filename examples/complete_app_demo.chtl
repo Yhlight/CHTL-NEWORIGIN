@@ -1,0 +1,297 @@
+// ============================================================================
+// CHTL 完整应用示例
+// 展示：所有已实现的CHTL核心功能和CHTL JS特性
+// ============================================================================
+
+// 注释演示
+// 这是单行注释
+
+/* 
+   这是多行注释
+*/
+
+# 这是生成器注释
+
+html
+{
+    head
+    {
+        title
+        {
+            text
+            {
+                CHTL完整应用示例
+            }
+        }
+        
+        // 全局样式
+        style
+        {
+            body
+            {
+                margin: 0;
+                padding: 20px;
+                @Style DefaultTheme;
+            }
+        }
+    }
+    
+    body
+    {
+        // ========================================
+        // 1. 基础元素和样式
+        // ========================================
+        div
+        {
+            id: app-container;
+            class: container;
+            
+            style
+            {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            
+            // 标题
+            h1
+            {
+                text
+                {
+                    CHTL功能演示
+                }
+                
+                style
+                {
+                    color: #2c3e50;
+                    margin-bottom: 30px;
+                }
+            }
+            
+            // ========================================
+            // 2. 条件渲染演示
+            // ========================================
+            div
+            {
+                class: responsive-section;
+                
+                style
+                {
+                    padding: 15px;
+                    margin: 20px 0;
+                    border: 2px solid #3498db;
+                }
+                
+                // 静态条件渲染
+                if
+                {
+                    condition: width > 768px,
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%),
+                    color: white,
+                }
+                else
+                {
+                    background: #ecf0f1,
+                    color: #2c3e50,
+                }
+                
+                h3
+                {
+                    text { 响应式设计演示 }
+                }
+                
+                text
+                {
+                    这个区域根据宽度显示不同样式
+                }
+            }
+            
+            // ========================================
+            // 3. 动态条件渲染演示
+            // ========================================
+            div
+            {
+                id: dynamic-box;
+                class: dynamic-section;
+                
+                style
+                {
+                    padding: 20px;
+                    margin: 20px 0;
+                    transition: all 0.3s ease;
+                }
+                
+                // 动态条件渲染
+                if
+                {
+                    condition: {{html}}->width < 768px,
+                    display: block,
+                    background: #f39c12,
+                    font-size: 14px,
+                }
+                else if
+                {
+                    condition: {{html}}->width < 1024px,
+                    display: inline-block,
+                    background: #27ae60,
+                    font-size: 16px,
+                }
+                else
+                {
+                    display: flex,
+                    background: #3498db,
+                    font-size: 18px,
+                }
+                
+                h3
+                {
+                    text { 动态响应式演示 }
+                }
+                
+                text
+                {
+                    改变浏览器窗口大小，样式会实时更新！
+                }
+            }
+            
+            // ========================================
+            // 4. CHTL JS 增强选择器演示
+            // ========================================
+            div
+            {
+                id: interactive-section;
+                class: interactive;
+                
+                style
+                {
+                    .interactive
+                    {
+                        padding: 20px;
+                        background: #ecf0f1;
+                        margin: 20px 0;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                    }
+                    
+                    &:hover
+                    {
+                        background: #bdc3c7;
+                    }
+                }
+                
+                h3
+                {
+                    text { 交互功能演示 }
+                }
+                
+                button
+                {
+                    id: demo-button;
+                    text { 点击我 }
+                    
+                    style
+                    {
+                        padding: 10px 20px;
+                        background: #3498db;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    }
+                }
+                
+                div
+                {
+                    id: click-count;
+                    text { 点击次数: 0 }
+                    
+                    style
+                    {
+                        margin-top: 10px;
+                        font-size: 18px;
+                        font-weight: bold;
+                    }
+                }
+                
+                // CHTL JS 脚本
+                script
+                {
+                    let count = 0;
+                    
+                    // 使用Listen块
+                    {{#demo-button}}->Listen {
+                        click: () => {
+                            count++;
+                            {{#click-count}}->textContent = '点击次数: ' + count;
+                        }
+                    };
+                    
+                    // 使用事件绑定操作符
+                    {{.interactive}} &-> mouseenter: () => {
+                        console.log('Mouse entered interactive section');
+                    };
+                }
+            }
+            
+            // ========================================
+            // 6. 动画演示
+            // ========================================
+            div
+            {
+                id: animation-box;
+                class: anim-box;
+                
+                style
+                {
+                    width: 100px;
+                    height: 100px;
+                    background: #e74c3c;
+                    margin: 20px 0;
+                }
+                
+                script
+                {
+                    Animate {
+                        target: {{#animation-box}},
+                        duration: 2000,
+                        begin: {
+                            opacity: 0,
+                            transform: 'scale(0.5)'
+                        },
+                        end: {
+                            opacity: 1,
+                            transform: 'scale(1)'
+                        },
+                        loop: -1,
+                        direction: alternate
+                    };
+                }
+            }
+            
+            // ========================================
+            // 7. 响应式值演示
+            // ========================================
+            div
+            {
+                class: $themeClass$;
+                
+                style
+                {
+                    padding: 20px;
+                    background: $themeBg$;
+                }
+                
+                text
+                {
+                    响应式值演示
+                }
+                
+                script
+                {
+                    let themeClass = "theme-light";
+                    let themeBg = "#f8f9fa";
+                }
+            }
+        }
+    }
+}

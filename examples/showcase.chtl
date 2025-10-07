@@ -1,0 +1,148 @@
+// CHTL 功能展示示例
+
+html
+{
+    head
+    {
+        title
+        {
+            text
+            {
+                CHTL Showcase
+            }
+        }
+    }
+    
+    body
+    {
+        div
+        {
+            id: main-container;
+            class: container;
+            
+            style
+            {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            
+            // 1. 基础元素和样式
+            h1
+            {
+                style
+                {
+                    color: #2c3e50;
+                    margin-bottom: 30px;
+                }
+                
+                text
+                {
+                    CHTL功能展示
+                }
+            }
+            
+            // 2. 条件渲染 - 静态
+            div
+            {
+                class: static-demo;
+                
+                style
+                {
+                    padding: 20px;
+                    border: 2px solid #3498db;
+                }
+                
+                if
+                {
+                    condition: width > 500px,
+                    background: lightblue,
+                }
+                
+                text
+                {
+                    静态条件演示
+                }
+            }
+            
+            // 3. 条件渲染 - 动态
+            div
+            {
+                id: dynamic-demo;
+                
+                style
+                {
+                    padding: 20px;
+                    margin-top: 20px;
+                }
+                
+                if
+                {
+                    condition: {{html}}->width < 768px,
+                    background: yellow,
+                    font-size: 14px,
+                }
+                else
+                {
+                    background: lightgreen,
+                    font-size: 16px,
+                }
+                
+                text
+                {
+                    动态条件演示 - 改变窗口大小试试
+                }
+            }
+            
+            // 4. CHTL JS - 事件监听
+            button
+            {
+                id: click-btn;
+                
+                style
+                {
+                    padding: 10px 20px;
+                    background: #3498db;
+                    color: white;
+                    border: none;
+                    cursor: pointer;
+                }
+                
+                text
+                {
+                    点击我
+                }
+            }
+            
+            div
+            {
+                id: output;
+                
+                style
+                {
+                    margin-top: 20px;
+                    padding: 10px;
+                    background: #ecf0f1;
+                }
+                
+                text
+                {
+                    点击次数: 0
+                }
+            }
+            
+            // CHTL JS 脚本
+            script
+            {
+                let clickCount = 0;
+                
+                {{#click-btn}}->Listen {
+                    click: () => {
+                        clickCount++;
+                        {{#output}}->textContent = '点击次数: ' + clickCount;
+                    }
+                };
+            }
+        }
+    }
+}
