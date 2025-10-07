@@ -119,15 +119,7 @@ std::shared_ptr<BaseNode> StyleParsingStrategy::parse(CHTLParserContext* context
                     throw std::runtime_error("Only @Style templates can be used in this context. Found: @" + itemTypeStr);
                 }
 
-                std::string templateName = context->getCurrentToken().lexeme;
-                context->advance();
-
-                std::string from_namespace;
-                if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
-                    context->advance(); // consume 'from'
-                    from_namespace = context->getCurrentToken().lexeme;
-                    context->advance(); // consume namespace
-                }
+                auto usageNode = parseTemplateUsage(context, usageType);
 
                 if (context->getCurrentToken().type == TokenType::TOKEN_SEMICOLON) {
                     context->advance();
@@ -135,7 +127,7 @@ std::shared_ptr<BaseNode> StyleParsingStrategy::parse(CHTLParserContext* context
                     throw std::runtime_error("Expected ';' after template usage.");
                 }
 
-                styleNode->addChild(std::make_shared<TemplateUsageNode>(templateName, usageType, "", from_namespace));
+                styleNode->addChild(usageNode);
             }
             else {
                 context->advance();

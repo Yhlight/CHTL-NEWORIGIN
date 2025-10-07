@@ -131,6 +131,32 @@ TEST_CASE("Parser handles element template", "[parser]") {
     REQUIRE(div->getTagName() == "div");
 }
 
+TEST_CASE("Parser handles namespaced template usage", "[parser]") {
+    SECTION("Namespace with :: operator") {
+        auto node = getFirstNode("div { @Element MyNamespace::MyTemplate; }");
+        auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
+        REQUIRE(div != nullptr);
+        REQUIRE(div->getChildren().size() == 1);
+        auto usageNode = std::dynamic_pointer_cast<CHTL::TemplateUsageNode>(div->getChildren()[0]);
+        REQUIRE(usageNode != nullptr);
+        REQUIRE(usageNode->getName() == "MyTemplate");
+        REQUIRE(usageNode->getFromNamespace() == "MyNamespace");
+        REQUIRE(usageNode->getUsageType() == CHTL::TemplateUsageType::ELEMENT);
+    }
+
+    SECTION("Namespace with from keyword") {
+        auto node = getFirstNode("div { @Element MyTemplate from MyNamespace; }");
+        auto div = std::dynamic_pointer_cast<CHTL::ElementNode>(node);
+        REQUIRE(div != nullptr);
+        REQUIRE(div->getChildren().size() == 1);
+        auto usageNode = std::dynamic_pointer_cast<CHTL::TemplateUsageNode>(div->getChildren()[0]);
+        REQUIRE(usageNode != nullptr);
+        REQUIRE(usageNode->getName() == "MyTemplate");
+        REQUIRE(usageNode->getFromNamespace() == "MyNamespace");
+        REQUIRE(usageNode->getUsageType() == CHTL::TemplateUsageType::ELEMENT);
+    }
+}
+
 TEST_CASE("Parser handles variable template usage", "[parser]") {
     auto node = getFirstNode("div { style { color: MyTheme(primary); } }");
     REQUIRE(node != nullptr);

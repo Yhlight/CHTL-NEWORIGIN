@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "../CHTLNode/TemplateUsageNode.h"
 
 namespace CHTL {
 
@@ -21,5 +22,7 @@ void parseProperties(CHTLParserContext* context, std::shared_ptr<BaseNode> paren
 
 // New function to parse a condition string
 ParsedCondition parseCondition(const std::string& conditionStr);
+
+std::shared_ptr<TemplateUsageNode> parseTemplateUsage(CHTLParserContext* context, TemplateUsageType usageType);
 
 }

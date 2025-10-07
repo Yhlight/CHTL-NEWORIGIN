@@ -6,6 +6,7 @@
 #include "SpecializationParsingStrategy.h"
 #include "ScriptParsingStrategy.h"
 #include "../CHTLParser/CHTLParserContext.h"
+#include "../CHTLParser/ParsingUtils.h"
 #include "../CHTLNode/ElementNode.h"
 #include "../CHTLNode/TextNode.h"
 #include "../CHTLNode/TemplateUsageNode.h"
@@ -84,17 +85,7 @@ std::shared_ptr<BaseNode> ElementParsingStrategy::parse(CHTLParserContext* conte
                     throw std::runtime_error("Only @Element templates can be used in this context.");
                 }
 
-                std::string templateName = context->getCurrentToken().lexeme;
-                context->advance();
-
-                std::string from_namespace;
-                if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
-                    context->advance(); // consume 'from'
-                    from_namespace = context->getCurrentToken().lexeme;
-                    context->advance(); // consume namespace
-                }
-
-                auto usageNode = std::make_shared<TemplateUsageNode>(templateName, usageType, "", from_namespace);
+                auto usageNode = parseTemplateUsage(context, usageType);
 
                 if (context->getCurrentToken().type == TokenType::TOKEN_LBRACE) {
                     context->setStrategy(std::make_unique<SpecializationParsingStrategy>());

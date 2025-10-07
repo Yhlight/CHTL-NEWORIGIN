@@ -106,4 +106,30 @@ void parseProperties(CHTLParserContext* context, std::shared_ptr<BaseNode> paren
     }
 }
 
+std::shared_ptr<TemplateUsageNode> parseTemplateUsage(CHTLParserContext* context, TemplateUsageType usageType) {
+    std::string templateName;
+    std::string from_namespace;
+
+    std::string firstPart = context->getCurrentToken().lexeme;
+    context->advance();
+
+    if (context->getCurrentToken().type == TokenType::TOKEN_COLON && context->peek(1).type == TokenType::TOKEN_COLON) {
+        context->advance();
+        context->advance();
+        from_namespace = firstPart;
+        templateName = context->getCurrentToken().lexeme;
+        context->advance();
+    }
+    else {
+        templateName = firstPart;
+        if (context->getCurrentToken().type == TokenType::TOKEN_KEYWORD_FROM) {
+            context->advance(); // consume 'from'
+            from_namespace = context->getCurrentToken().lexeme;
+            context->advance(); // consume namespace
+        }
+    }
+
+    return std::make_shared<TemplateUsageNode>(templateName, usageType, "", from_namespace);
+}
+
 }
