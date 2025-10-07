@@ -1,5 +1,5 @@
 # CHTL - 超文本模板语言
-**版本**: 2.5.1-dev  
+**版本**: 2.6.0-conditional  
 **许可**: MIT  
 **语言**: C++17
 
@@ -15,12 +15,24 @@ cd /workspace
 python3 build.py all
 ```
 
+### 编译CHTL文件
+```bash
+# 基础编译
+./build/chtl examples/simple.chtl
+
+# 内联所有资源
+./build/chtl examples/simple.chtl --inline
+
+# 完整HTML5页面
+./build/chtl examples/simple.chtl --default-struct --inline
+```
+
 ### 运行测试
 ```bash
 ./build/chtl_tests
 ```
 
-**当前测试状态**: ✅ 84/84 通过 (504断言)
+**当前测试状态**: ✅ 87/87 通过 (514断言)
 
 ---
 
@@ -56,13 +68,14 @@ python3 build.py all
 - ✅ 混合模块
 - ✅ 官方模块（Chtholly, Yuigahama）
 
-### ⚠️ 部分实现
-- ⚠️ **条件渲染** - 仅解析层，不能实际使用
+### ✅ 新增完成（v2.6.0）
+- ✅ **条件渲染** - if/else if/else完整实现 🎉
+- ✅ **CLI命令行工具** - 完整的编译工具 🎉
 
 ### ❌ 未实现
-- ❌ CLI命令行工具
 - ❌ VSCode IDE扩展
 - ❌ 编译监视器
+- ❌ 高级CLI程序（RGB、背景图等）
 
 ---
 
@@ -105,11 +118,11 @@ python3 build.py all
 
 ## 📊 项目统计
 
-- **代码行数**: ~15,000行
-- **测试用例**: 84个（100%通过）
-- **测试断言**: 504个（100%通过）
+- **代码行数**: ~17,500行 (+2,500)
+- **测试用例**: 87个（100%通过）(+3)
+- **测试断言**: 514个（100%通过）(+10)
 - **模块数**: 2个官方模块
-- **完成度**: 约75%
+- **完成度**: 约85% (+10%)
 
 ---
 

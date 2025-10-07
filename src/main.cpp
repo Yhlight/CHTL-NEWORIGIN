@@ -9,19 +9,35 @@
 using namespace CHTL;
 
 void printUsage() {
-    std::cout << "CHTL Compiler v1.0.0\n";
-    std::cout << "Usage: chtl [options] <input-file>\n";
+    std::cout << "CHTL Compiler v2.6.0\n";
+    std::cout << "Usage: chtl [options] <input-file>\n\n";
     std::cout << "Options:\n";
-    std::cout << "  -h, --help        Show this help message\n";
-    std::cout << "  -v, --version     Show version information\n";
-    std::cout << "  -o <file>         Specify output file\n";
-    std::cout << "  --tokens          Print tokens and exit\n";
-    std::cout << "  --ast             Print AST and exit\n";
+    std::cout << "  -h, --help          Show this help message\n";
+    std::cout << "  -v, --version       Show version information\n";
+    std::cout << "  -o <file>           Specify output file (default: <input>.html)\n\n";
+    
+    std::cout << "Output Options:\n";
+    std::cout << "  --inline            Inline all CSS and JS into HTML\n";
+    std::cout << "  --inline-css        Inline only CSS into HTML\n";
+    std::cout << "  --inline-js         Inline only JS into HTML\n";
+    std::cout << "  --default-struct    Generate HTML with default structure\n";
+    std::cout << "  --separate          Output separate HTML, CSS, JS files (default)\n\n";
+    
+    std::cout << "Debug Options:\n";
+    std::cout << "  --tokens            Print tokens and exit\n";
+    std::cout << "  --ast               Print AST and exit\n\n";
+    
+    std::cout << "Examples:\n";
+    std::cout << "  chtl input.chtl                  # Compile to input.html\n";
+    std::cout << "  chtl input.chtl -o output.html   # Compile to output.html\n";
+    std::cout << "  chtl input.chtl --inline         # Inline all resources\n";
+    std::cout << "  chtl input.chtl --default-struct # With <!DOCTYPE html><html>...\n";
 }
 
 void printVersion() {
-    std::cout << "CHTL Compiler v1.0.0\n";
+    std::cout << "CHTL Compiler v2.6.0-conditional\n";
     std::cout << "Built with C++17\n";
+    std::cout << "License: MIT\n";
 }
 
 void printTokens(const Vector<Token>& tokens) {
@@ -43,6 +59,11 @@ int main(int argc, char** argv) {
         String outputFile;
         bool showTokens = false;
         bool showAst = false;
+        bool inlineAll = false;
+        bool inlineCss = false;
+        bool inlineJs = false;
+        bool defaultStruct = false;
+        bool separateFiles = false;
         
         // 解析命令行参数
         for (int i = 1; i < argc; ++i) {
@@ -58,6 +79,16 @@ int main(int argc, char** argv) {
                 showTokens = true;
             } else if (arg == "--ast") {
                 showAst = true;
+            } else if (arg == "--inline") {
+                inlineAll = true;
+            } else if (arg == "--inline-css") {
+                inlineCss = true;
+            } else if (arg == "--inline-js") {
+                inlineJs = true;
+            } else if (arg == "--default-struct") {
+                defaultStruct = true;
+            } else if (arg == "--separate") {
+                separateFiles = true;
             } else if (arg == "-o") {
                 if (i + 1 < argc) {
                     outputFile = argv[++i];
@@ -120,61 +151,107 @@ int main(int argc, char** argv) {
         genConfig.prettyPrint = true;
         genConfig.includeComments = false;
         
-        String html = HtmlGenerator::generate(ast, genConfig);
-        String css = CssGenerator::generate(ast, genConfig);
-        String js = JsGenerator::generate(ast, genConfig);
+        // 根据CHTL.md规范，使用新的生成器
+        CHTLGenerator generator(genConfig);
+        String result = generator.generate(ast);
+        
+        String html = generator.getHtml();
+        String css = generator.getCss();
+        String js = generator.getJs();
         
         // 输出文件名
+        String baseName = outputFile.empty() ? 
+                          Util::FileSystem::getFileNameWithoutExtension(inputFile) : 
+                          Util::FileSystem::getFileNameWithoutExtension(outputFile);
+        
         if (outputFile.empty()) {
-            String baseName = Util::FileSystem::getFileNameWithoutExtension(inputFile);
             outputFile = baseName + ".html";
         }
         
-        // 构建完整HTML
-        std::stringstream fullHtml;
-        fullHtml << "<!DOCTYPE html>\n";
-        fullHtml << html;
-        
-        // 如果有CSS，添加style标签
-        if (!css.empty()) {
-            // 在head中插入style
-            size_t headPos = fullHtml.str().find("</head>");
-            if (headPos != String::npos) {
-                String current = fullHtml.str();
-                current.insert(headPos, "  <style>\n" + css + "  </style>\n");
-                fullHtml.str(current);
-            } else {
-                // 如果没有head，添加到开头
-                fullHtml << "<style>\n" << css << "</style>\n";
-            }
+        // 处理内联选项（根据CHTL.md 2367-2374）
+        if (inlineAll) {
+            inlineCss = true;
+            inlineJs = true;
         }
         
-        // 如果有JS，添加script标签
-        if (!js.empty()) {
-            size_t bodyEndPos = fullHtml.str().find("</body>");
-            if (bodyEndPos != String::npos) {
-                String current = fullHtml.str();
-                current.insert(bodyEndPos, "  <script>\n" + js + "  </script>\n");
-                fullHtml.str(current);
-            } else {
-                fullHtml << "<script>\n" << js << "</script>\n";
-            }
-        }
+        // 构建最终HTML
+        std::stringstream finalHtml;
         
-        // 写入文件
-        if (Util::FileSystem::writeFile(outputFile, fullHtml.str())) {
-            std::cout << "✅ Compilation successful!\n";
-            std::cout << "   Input:  " << inputFile << "\n";
-            std::cout << "   Output: " << outputFile << "\n";
-            if (!css.empty()) {
-                std::cout << "   CSS:    " << css.length() << " bytes\n";
+        // 默认结构（根据CHTL.md 2362-2365）
+        if (defaultStruct) {
+            finalHtml << "<!DOCTYPE html>\n";
+            finalHtml << "<html>\n";
+            finalHtml << "<head>\n";
+            finalHtml << "  <meta charset=\"UTF-8\">\n";
+            finalHtml << "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n";
+            finalHtml << "  <title>CHTL Page</title>\n";
+            
+            // CSS
+            if (!css.empty() && inlineCss) {
+                finalHtml << "  <style>\n" << css << "  </style>\n";
+            } else if (!css.empty() && !separateFiles) {
+                finalHtml << "  <link rel=\"stylesheet\" href=\"" << baseName << ".css\">\n";
             }
-            if (!js.empty()) {
-                std::cout << "   JS:     " << js.length() << " bytes\n";
+            
+            finalHtml << "</head>\n";
+            finalHtml << "<body>\n";
+            finalHtml << html;
+            
+            // JS
+            if (!js.empty() && inlineJs) {
+                finalHtml << "  <script>\n" << js << "  </script>\n";
+            } else if (!js.empty() && !separateFiles) {
+                finalHtml << "  <script src=\"" << baseName << ".js\"></script>\n";
             }
+            
+            finalHtml << "</body>\n";
+            finalHtml << "</html>\n";
         } else {
+            // 无默认结构（根据CHTL.md 2362-2365：默认不提供结构）
+            finalHtml << html;
+            
+            // 内联CSS
+            if (!css.empty() && inlineCss) {
+                finalHtml << "<style>\n" << css << "</style>\n";
+            }
+            
+            // 内联JS
+            if (!js.empty() && inlineJs) {
+                finalHtml << "<script>\n" << js << "</script>\n";
+            }
+        }
+        
+        // 写入HTML文件
+        if (!Util::FileSystem::writeFile(outputFile, finalHtml.str())) {
             std::cerr << "❌ Failed to write output file: " << outputFile << "\n";
             return 1;
+        }
+        
+        std::cout << "✅ Compilation successful!\n";
+        std::cout << "   Input:  " << inputFile << "\n";
+        std::cout << "   Output: " << outputFile << "\n";
+        
+        // 分离文件输出（根据CHTL.md 2368：默认得到独立的HTML，CSS，JS文件）
+        if (separateFiles || (!inlineCss && !inlineAll)) {
+            if (!css.empty()) {
+                String cssFile = baseName + ".css";
+                if (Util::FileSystem::writeFile(cssFile, css)) {
+                    std::cout << "   CSS:    " << cssFile << " (" << css.length() << " bytes)\n";
+                } else {
+                    std::cerr << "   Warning: Failed to write CSS file\n";
+                }
+            }
+        }
+        
+        if (separateFiles || (!inlineJs && !inlineAll)) {
+            if (!js.empty()) {
+                String jsFile = baseName + ".js";
+                if (Util::FileSystem::writeFile(jsFile, js)) {
+                    std::cout << "   JS:     " << jsFile << " (" << js.length() << " bytes)\n";
+                } else {
+                    std::cerr << "   Warning: Failed to write JS file\n";
+                }
+            }
         }
         
         return 0;

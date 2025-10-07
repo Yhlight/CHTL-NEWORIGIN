@@ -9,15 +9,24 @@
 
 ## [2.6.0-conditional] - 2025-10-07
 
-### ✨ 重大功能 - 条件渲染完整实现
+### ✨ 重大功能 - 条件渲染 + CLI工具
 
-#### 新增 Added
+#### 新增 Added - 条件渲染
 - ✅ **条件渲染完整功能** (CHTL Committee 3rd Period)
   - if/else if/else 语法支持
   - 静态条件渲染（CSS注释生成）
   - 动态条件渲染（JavaScript生成）
   - 条件链支持
   - 逻辑运算符（&&、||）
+
+#### 新增 Added - CLI命令行工具
+- ✅ **完整的命令行编译工具** (CHTL.md 2354-2375)
+  - 基础编译：`chtl input.chtl`
+  - 内联选项：`--inline`, `--inline-css`, `--inline-js`
+  - 默认结构：`--default-struct`
+  - 分离文件：`--separate` (默认)
+  - 帮助系统：`--help`, `--version`
+  - 调试选项：`--tokens`, `--ast`
   
 - ✅ **ConditionalNode** - 完整AST节点实现
 - ✅ **ConditionalParser** - 条件块解析器
