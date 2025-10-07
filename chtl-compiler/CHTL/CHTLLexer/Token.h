@@ -33,6 +33,9 @@ enum class TokenType {
     DeleteKeyword,  // delete
     FromKeyword,    // from
     AsKeyword,      // as
+    InsertKeyword,  // insert
+    AfterKeyword,   // after
+    BeforeKeyword,  // before
 
     // Comments
     LineComment,      // //

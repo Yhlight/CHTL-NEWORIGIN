@@ -234,6 +234,48 @@ TEST_CASE("New Compiler - Element Templates", "[new_compiler_element_template]")
         REQUIRE(p != nullptr);
         REQUIRE(p->tagName == "p");
     }
+
+    SECTION("Specializes an element template with styling, insertion, and deletion") {
+        std::string source = R"(
+            [Template] @Element MyComponent {
+                header { }
+                main { }
+                footer { }
+            }
+
+            body {
+                @Element MyComponent {
+                    header { style { color: red; } }
+                    delete footer;
+                    insert after main {
+                        p { text { "Injected paragraph" } }
+                    }
+                }
+            }
+        )";
+        Lexer lexer(source);
+        Loader loader;
+        Parser parser(lexer, loader, "test.chtl");
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto body = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(body != nullptr);
+        REQUIRE(body->children.size() == 3); // header, main, p
+
+        auto header = std::dynamic_pointer_cast<ElementNode>(body->children[0]);
+        REQUIRE(header != nullptr);
+        REQUIRE(header->tagName == "header");
+        REQUIRE(header->attributes["style"] == "color:red;");
+
+        auto main_el = std::dynamic_pointer_cast<ElementNode>(body->children[1]);
+        REQUIRE(main_el != nullptr);
+        REQUIRE(main_el->tagName == "main");
+
+        auto p_el = std::dynamic_pointer_cast<ElementNode>(body->children[2]);
+        REQUIRE(p_el != nullptr);
+        REQUIRE(p_el->tagName == "p");
+    }
 }
 
 TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {

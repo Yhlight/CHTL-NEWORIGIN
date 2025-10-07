@@ -20,4 +20,39 @@ public:
         }
         return new_node;
     }
+
+    // --- Specialization Helpers ---
+
+    std::shared_ptr<ElementNode> findChildByTag(const std::string& tag) {
+        for (const auto& child : children) {
+            if (auto element = std::dynamic_pointer_cast<ElementNode>(child)) {
+                if (element->tagName == tag) {
+                    return element;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    bool removeChildByTag(const std::string& tag) {
+        for (auto it = children.begin(); it != children.end(); ++it) {
+            if (auto element = std::dynamic_pointer_cast<ElementNode>(*it)) {
+                if (element->tagName == tag) {
+                    children.erase(it);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool insertChildrenAfter(NodePtr targetNode, const NodeList& newChildren) {
+        for (auto it = children.begin(); it != children.end(); ++it) {
+            if (*it == targetNode) {
+                children.insert(it + 1, newChildren.begin(), newChildren.end());
+                return true;
+            }
+        }
+        return false;
+    }
 };

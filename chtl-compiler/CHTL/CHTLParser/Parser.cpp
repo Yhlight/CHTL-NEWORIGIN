@@ -292,13 +292,78 @@ NodeList Parser::parseElementUsage() {
     std::string templateName = currentToken.value;
     eat(TokenType::Identifier);
 
-    eat(TokenType::Semicolon);
-
-    NodeList templateNodes = TemplateRegistry::getElementTemplate(templateName);
     NodeList clonedNodes;
+    NodeList templateNodes = TemplateRegistry::getElementTemplate(templateName);
     for (const auto& node : templateNodes) {
         clonedNodes.push_back(node->clone());
     }
+
+    // Check for specialization block
+    if (currentToken.type == TokenType::LeftBrace) {
+        eat(TokenType::LeftBrace);
+
+        while (currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+            if (currentToken.type == TokenType::InsertKeyword) {
+                eat(TokenType::InsertKeyword);
+                eat(TokenType::AfterKeyword); // Assuming 'after' for now
+
+                std::string targetTag = currentToken.value;
+                eat(TokenType::Identifier);
+
+                auto it = std::find_if(clonedNodes.begin(), clonedNodes.end(), [&](const NodePtr& n) {
+                    auto el = std::dynamic_pointer_cast<ElementNode>(n);
+                    return el && el->tagName == targetTag;
+                });
+                if (it == clonedNodes.end()) throw std::runtime_error("Target for insert not found: " + targetTag);
+
+                eat(TokenType::LeftBrace);
+                NodeList newNodes;
+                while(currentToken.type != TokenType::RightBrace) {
+                    NodeList stmts = parseStatement();
+                    newNodes.insert(newNodes.end(), stmts.begin(), stmts.end());
+                }
+                eat(TokenType::RightBrace);
+
+                clonedNodes.insert(it + 1, newNodes.begin(), newNodes.end());
+
+            } else if (currentToken.type == TokenType::DeleteKeyword) {
+                eat(TokenType::DeleteKeyword);
+                std::string tagToDelete = currentToken.value;
+                eat(TokenType::Identifier);
+
+                clonedNodes.erase(std::remove_if(clonedNodes.begin(), clonedNodes.end(), [&](const NodePtr& n) {
+                    auto el = std::dynamic_pointer_cast<ElementNode>(n);
+                    return el && el->tagName == tagToDelete;
+                }), clonedNodes.end());
+
+                eat(TokenType::Semicolon);
+
+            } else if (currentToken.type == TokenType::Identifier) { // Targeted Styling
+                std::string targetTag = currentToken.value;
+                auto it = std::find_if(clonedNodes.begin(), clonedNodes.end(), [&](const NodePtr& n) {
+                    auto el = std::dynamic_pointer_cast<ElementNode>(n);
+                    return el && el->tagName == targetTag;
+                });
+                if (it == clonedNodes.end()) throw std::runtime_error("Specialization target not found in template: " + targetTag);
+
+                auto targetElement = std::dynamic_pointer_cast<ElementNode>(*it);
+                eat(TokenType::Identifier);
+                eat(TokenType::LeftBrace);
+                if (currentToken.value == "style") {
+                    parseStyleBlock(targetElement);
+                } else {
+                    throw std::runtime_error("Only 'style' blocks are supported in target specialization for now.");
+                }
+                eat(TokenType::RightBrace);
+            } else {
+                throw std::runtime_error("Unsupported specialization statement: " + currentToken.value);
+            }
+        }
+        eat(TokenType::RightBrace);
+    } else {
+        eat(TokenType::Semicolon);
+    }
+
     return clonedNodes;
 }
 

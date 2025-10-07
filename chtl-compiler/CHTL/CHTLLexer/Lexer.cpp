@@ -6,6 +6,9 @@ static std::map<std::string, TokenType> keywords = {
     {"delete", TokenType::DeleteKeyword},
     {"from", TokenType::FromKeyword},
     {"as", TokenType::AsKeyword},
+    {"insert", TokenType::InsertKeyword},
+    {"after", TokenType::AfterKeyword},
+    {"before", TokenType::BeforeKeyword},
     {"style", TokenType::Identifier}, // Treat style as a regular identifier for now
     {"text", TokenType::Identifier}, // Treat text as a regular identifier
     {"Template", TokenType::Identifier}, // Treat Template as a regular identifier
