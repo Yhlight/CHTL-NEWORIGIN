@@ -17,8 +17,6 @@ void CHTLJSLexer::initializeKeywords() {
     keywords["Animate"] = JSTokenType::Animate;
     keywords["Router"] = JSTokenType::Router;
     keywords["ScriptLoader"] = JSTokenType::ScriptLoader;
-    keywords["PrintMylove"] = JSTokenType::PrintMylove;
-    keywords["INeverAway"] = JSTokenType::INeverAway;
     
     // JavaScript基础关键字
     keywords["const"] = JSTokenType::Const;

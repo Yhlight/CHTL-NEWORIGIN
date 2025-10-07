@@ -41,8 +41,6 @@ const char* jsTokenTypeToString(JSTokenType type) {
         case JSTokenType::Animate: return "Animate";
         case JSTokenType::Router: return "Router";
         case JSTokenType::ScriptLoader: return "ScriptLoader";
-        case JSTokenType::PrintMylove: return "PrintMylove";
-        case JSTokenType::INeverAway: return "INeverAway";
         case JSTokenType::EnhancedSelector: return "EnhancedSelector";
         case JSTokenType::Const: return "Const";
         case JSTokenType::Let: return "Let";

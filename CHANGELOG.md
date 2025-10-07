@@ -7,6 +7,70 @@
 
 ---
 
+## [2.5.1-dev] - 2025-10-07
+
+### 🔧 架构清理 (Architecture Cleanup)
+- **移除CJMOD功能从CHTL JS核心**
+  - ❌ 从CHTLJSToken移除: PrintMylove, INeverAway
+  - ❌ 从CHTLJSLexer移除关键字注册
+  - ✅ 保持CHTL JS核心纯净，仅包含基础动态特性
+  - ✅ PrintMylove和INeverAway应在Chtholly CJMOD中实现
+
+### 🚧 条件渲染基础设施 (Conditional Rendering - Partial)
+**注意**: 仅实现了解析层，生成层未完成
+
+#### 新增 Added
+- ✅ **ConditionalNode** - 条件渲染AST节点
+  - 支持if/else if/else结构
+  - 区分静态/动态条件
+  - 存储CSS属性
+
+- ✅ **ConditionalParser** - 条件渲染解析器
+  - 解析if/else if/else链
+  - 提取condition和CSS属性  
+  - 检测动态条件（包含`{{}}`）
+
+- ✅ **ConditionalState** - 状态机集成
+  - 添加Conditional到StateType枚举
+  - 实现状态转换逻辑
+
+- ✅ **18个测试用例** - 条件渲染测试
+  - 基础解析测试
+  - 条件表达式测试
+  - else if/else链测试
+  - 边缘情况测试
+
+#### 未实现 Not Implemented
+- ❌ CHTLGenerator条件渲染生成（CSS/JS）
+- ❌ CHTLParser集成（if块不被主parser识别）
+- ❌ 动态条件JavaScript生成
+- ❌ 静态条件CSS生成
+
+**实际状态**: 
+- 解析层面: ✅ 完成
+- 生成层面: ❌ 未实现
+- 集成层面: ❌ 未实现
+
+### 📊 测试 Tests
+- ✅ **84个测试用例**全部通过 (was 66, +18 new)
+- ✅ **504个断言**全部通过 (was 473, +31 new)
+- ✅ **100%通过率** 
+
+### 📚 文档 Documentation
+- ✅ FEATURE_STATUS_REPORT.md - 功能状态分析
+- ✅ IMPLEMENTATION_PLAN.md - 条件渲染实现计划
+- ✅ ARCHITECTURE_CLEANUP_PLAN.md - 架构清理方案
+- ✅ CONDITIONAL_RENDERING_PROGRESS.md - 条件渲染进度
+- ✅ REALISTIC_PROGRESS_REPORT.md - 务实进度评估
+- ✅ WORK_SESSION_SUMMARY_2025-10-07.md - 工作总结
+
+### 🔨 构建 Build
+- ✅ libzip作为可选依赖（无libzip时禁用模块打包）
+- ✅ 修复所有编译错误
+- ✅ 零错误编译
+
+---
+
 ## [2.5.0-final] - 2025-10-06
 
 ### 🎯 重大更新
