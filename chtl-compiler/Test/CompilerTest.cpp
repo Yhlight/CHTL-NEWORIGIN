@@ -190,3 +190,25 @@ TEST_CASE("New Compiler - Generator", "[new_compiler_generator]") {
         REQUIRE(html == "<div><!--this is a comment--></div>");
     }
 }
+
+TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {
+    SECTION("Parses a style block and adds it as an attribute") {
+        std::string source = R"(
+            div {
+                style {
+                    width: 100px;
+                    color: red;
+                }
+            }
+        )";
+        Lexer lexer(source);
+        Parser parser(lexer);
+        NodeList nodes = parser.parse();
+
+        REQUIRE(nodes.size() == 1);
+        auto element = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
+        REQUIRE(element != nullptr);
+        REQUIRE(element->attributes.count("style") == 1);
+        REQUIRE(element->attributes["style"] == "width:100px;color:red;");
+    }
+}

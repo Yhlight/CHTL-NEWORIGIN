@@ -1,6 +1,7 @@
 #include "chtl-compiler/CHTL/CHTLParser/Parser.h"
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 
 Parser::Parser(Lexer& lexer) : lexer(lexer) {
     consume();
@@ -72,6 +73,8 @@ NodePtr Parser::parseElement() {
 
         if (currentToken.type == TokenType::Identifier && (peekToken.type == TokenType::Colon || peekToken.type == TokenType::Equal)) {
             parseAttributes(element);
+        } else if (currentToken.type == TokenType::Identifier && currentToken.value == "style" && peekToken.type == TokenType::LeftBrace) {
+            parseStyleBlock(element);
         } else {
             NodePtr child = parseStatement();
             if (child) {
@@ -123,4 +126,33 @@ NodePtr Parser::parseComment() {
     std::string content = currentToken.value;
     eat(TokenType::GeneratorComment);
     return std::make_shared<CommentNode>(content);
+}
+
+void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
+    eat(TokenType::Identifier); // consume 'style'
+    eat(TokenType::LeftBrace);
+
+    std::stringstream style_content;
+    while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+        std::string property = currentToken.value;
+        eat(TokenType::Identifier);
+
+        eat(TokenType::Colon);
+
+        std::string value = currentToken.value;
+        eat(TokenType::Identifier);
+
+        style_content << property << ":" << value << ";";
+
+        eat(TokenType::Semicolon);
+    }
+
+    eat(TokenType::RightBrace);
+
+    // Add or append to the style attribute
+    if (element->attributes.count("style")) {
+        element->attributes["style"] += style_content.str();
+    } else {
+        element->attributes["style"] = style_content.str();
+    }
 }

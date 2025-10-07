@@ -21,6 +21,7 @@ private:
     void consume(); // A helper to advance both current and peek tokens
     NodePtr parseElement();
     void parseAttributes(std::shared_ptr<ElementNode> element);
+    void parseStyleBlock(std::shared_ptr<ElementNode> element);
     NodePtr parseText();
     NodePtr parseComment();
     NodePtr parseStatement();

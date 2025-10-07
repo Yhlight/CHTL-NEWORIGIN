@@ -30,7 +30,7 @@ Token Lexer::identifier() {
     std::string value;
     int start_line = line;
     int start_column = column;
-    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_')) {
+    while (currentChar() != '\0' && (isalnum(currentChar()) || currentChar() == '_' || currentChar() == '-' || currentChar() == '.' || currentChar() == '%')) {
         value += currentChar();
         advance();
     }
@@ -59,7 +59,7 @@ Token Lexer::getNextToken() {
         return {TokenType::EndOfFile, "", line, column};
     }
 
-    if (isalpha(current)) {
+    if (isalnum(current) || current == '_' || current == '-' || current == '.') {
         return identifier();
     }
 
