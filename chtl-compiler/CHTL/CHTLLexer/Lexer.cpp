@@ -92,13 +92,6 @@ Token Lexer::getNextToken() {
         return {TokenType::Semicolon, ";", line, column - 1};
     }
 
-    if (current == '/') {
-        if (source[position + 1] == '/') {
-            return lineComment();
-        } else if (source[position + 1] == '*') {
-            return blockComment();
-        }
-    }
 
     if (current == '#') {
         return generatorComment();
@@ -117,6 +110,31 @@ Token Lexer::getNextToken() {
     if (current == '@') {
         advance();
         return {TokenType::At, "@", line, column - 1};
+    }
+
+    if (current == '+') {
+        advance();
+        return {TokenType::Plus, "+", line, column - 1};
+    }
+
+    if (current == '-') {
+        advance();
+        return {TokenType::Minus, "-", line, column - 1};
+    }
+
+    if (current == '*') {
+        advance();
+        return {TokenType::Star, "*", line, column - 1};
+    }
+
+    if (current == '/') {
+        if (source[position + 1] == '/') {
+            return lineComment();
+        } else if (source[position + 1] == '*') {
+            return blockComment();
+        }
+        advance();
+        return {TokenType::Slash, "/", line, column - 1};
     }
 
     advance();

@@ -196,7 +196,7 @@ TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {
         std::string source = R"(
             div {
                 style {
-                    width: 100px;
+                    width: 100px + 50px;
                     color: red;
                 }
             }
@@ -209,7 +209,7 @@ TEST_CASE("New Compiler - Style Blocks", "[new_compiler_style]") {
         auto element = std::dynamic_pointer_cast<ElementNode>(nodes[0]);
         REQUIRE(element != nullptr);
         REQUIRE(element->attributes.count("style") == 1);
-        REQUIRE(element->attributes["style"] == "width:100px;color:red;");
+        REQUIRE(element->attributes["style"] == "width:150px;color:red;");
     }
 }
 
@@ -237,5 +237,19 @@ TEST_CASE("New Compiler - Style Templates", "[new_compiler_style_template]") {
         REQUIRE(p_element != nullptr);
         REQUIRE(p_element->attributes.count("style") == 1);
         REQUIRE(p_element->attributes["style"] == "font-size:16px;color:black;font-weight:bold;");
+    }
+}
+
+TEST_CASE("New Compiler - Expression Evaluator", "[new_compiler_expression]") {
+    SECTION("Evaluates simple arithmetic expressions") {
+        REQUIRE(ExpressionEvaluator::evaluate("10px", "+", "5px") == "15px");
+        REQUIRE(ExpressionEvaluator::evaluate("20", "-", "5") == "15");
+        REQUIRE(ExpressionEvaluator::evaluate("10", "*", "2.5") == "25");
+        REQUIRE(ExpressionEvaluator::evaluate("100%", "/", "2") == "50%");
+    }
+
+    SECTION("Handles mixed units correctly") {
+        REQUIRE(ExpressionEvaluator::evaluate("10.5em", "+", "2") == "12.5em");
+        REQUIRE_THROWS(ExpressionEvaluator::evaluate("10px", "+", "5em"));
     }
 }

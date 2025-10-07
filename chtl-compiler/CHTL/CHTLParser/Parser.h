@@ -6,6 +6,7 @@
 #include "chtl-compiler/CHTL/CHTLNode/TextNode.h"
 #include "chtl-compiler/CHTL/CHTLNode/CommentNode.h"
 #include "chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.h"
+#include "chtl-compiler/CHTL/Expression/ExpressionParser.h"
 #include <memory>
 
 class Parser {

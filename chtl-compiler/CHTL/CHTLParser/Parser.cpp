@@ -157,9 +157,14 @@ void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
 
             eat(TokenType::Colon);
 
-            std::string value = currentToken.value;
-            eat(TokenType::Identifier);
+            // Collect tokens for the expression until a semicolon.
+            std::vector<Token> value_tokens;
+            while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::EndOfFile) {
+                value_tokens.push_back(currentToken);
+                consume();
+            }
 
+            std::string value = ExpressionParser::parseAndEvaluate(value_tokens);
             style_content << property << ":" << value << ";";
 
             eat(TokenType::Semicolon);

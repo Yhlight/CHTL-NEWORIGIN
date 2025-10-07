@@ -23,6 +23,12 @@ enum class TokenType {
     RightBracket,   // ]
     At,             // @
 
+    // Operators
+    Plus,           // +
+    Minus,          // -
+    Star,           // *
+    Slash,          // /
+
     // Comments
     LineComment,      // //
     BlockComment,     // /* ... */
