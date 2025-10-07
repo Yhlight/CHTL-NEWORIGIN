@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
+#include <cstdio>
 
 namespace CHTL {
 
@@ -19,11 +20,23 @@ String CHTLGenerator::generate(const SharedPtr<BaseNode>& root) {
     // 组合最终输出
     std::stringstream result;
     
-    if (config_.prettyPrint) {
-        result << html_;
-    } else {
-        // 简化版：去除多余空白
-        result << html_;
+    // 输出HTML
+    result << html_;
+    
+    // 输出CSS（如果有）
+    if (!css_.empty()) {
+        if (config_.prettyPrint) {
+            result << "\n";
+        }
+        result << "<style>\n" << css_ << "</style>\n";
+    }
+    
+    // 输出JavaScript（如果有）
+    if (!js_.empty()) {
+        if (config_.prettyPrint) {
+            result << "\n";
+        }
+        result << "<script>\n" << js_ << "</script>\n";
     }
     
     return result.str();
@@ -77,8 +90,17 @@ void CHTLGenerator::visit(StyleNode& node) {
 void CHTLGenerator::visit(ScriptNode& node) {
     String content = node.getContent();
     
-    // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
-    if (content.find("{{") != String::npos) {
+    // 检查是否包含CHTL JS语法
+    if (content.find("{{") != String::npos || 
+        content.find("&") != String::npos ||
+        content.find("Listen") != String::npos ||
+        content.find("Delegate") != String::npos ||
+        content.find("Animate") != String::npos ||
+        content.find("Router") != String::npos ||
+        content.find("ScriptLoader") != String::npos ||
+        content.find("Vir") != String::npos ||
+        content.find("$") != String::npos) {
+        
         JS::JSGeneratorConfig jsConfig;
         jsConfig.wrapIIFE = false;  // 不自动包装IIFE
         jsConfig.prettyPrint = false;
@@ -281,15 +303,40 @@ void CHTLGenerator::appendJs(const String& str) {
 
 // HtmlGenerator实现
 String HtmlGenerator::generate(const SharedPtr<BaseNode>& root, const GeneratorConfig& config) {
-    String output;
+    String htmlOutput;
     if (root) {
         // 第一遍：收集所有元素和属性到SaltBridge
         collectElements(root);
         
         // 第二遍：生成HTML
-        generateNode(root, output, 0, config);
+        generateNode(root, htmlOutput, 0, config);
     }
-    return output;
+    
+    // 收集CSS
+    String cssOutput = CssGenerator::generate(root, config);
+    
+    // 收集JavaScript
+    String jsOutput = JsGenerator::generate(root, config);
+    
+    // 组合完整输出
+    std::stringstream result;
+    result << htmlOutput;
+    
+    if (!cssOutput.empty()) {
+        if (config.prettyPrint) {
+            result << "\n";
+        }
+        result << "<style>\n" << cssOutput << "</style>\n";
+    }
+    
+    if (!jsOutput.empty()) {
+        if (config.prettyPrint) {
+            result << "\n";
+        }
+        result << "<script>\n" << jsOutput << "</script>\n";
+    }
+    
+    return result.str();
 }
 
 void HtmlGenerator::collectElements(const SharedPtr<BaseNode>& node) {
@@ -518,10 +565,20 @@ void JsGenerator::collectScripts(const SharedPtr<BaseNode>& node, String& output
         auto scriptNode = std::dynamic_pointer_cast<ScriptNode>(node);
         String content = scriptNode->getContent();
         
-        // 检查是否包含增强选择器，如果有则使用CHTL JS生成器处理
-        if (content.find("{{") != String::npos || content.find("&") != String::npos) {
+        // 检查是否包含CHTL JS语法，如果有则处理
+        bool hasCHTLJS = (content.find("{{") != String::npos || 
+                         content.find("Listen") != String::npos ||
+                         content.find("Delegate") != String::npos ||
+                         content.find("Animate") != String::npos ||
+                         content.find("Router") != String::npos ||
+                         content.find("ScriptLoader") != String::npos ||
+                         content.find("Vir") != String::npos ||
+                         content.find("&->") != String::npos ||
+                         content.find("$") != String::npos);
+        
+        if (hasCHTLJS) {
             JS::JSGeneratorConfig jsConfig;
-            jsConfig.wrapIIFE = false;  // 不自动包装IIFE
+            jsConfig.wrapIIFE = false;
             jsConfig.prettyPrint = false;
             JS::CHTLJSGenerator jsGen(jsConfig);
             content = jsGen.generate(content);

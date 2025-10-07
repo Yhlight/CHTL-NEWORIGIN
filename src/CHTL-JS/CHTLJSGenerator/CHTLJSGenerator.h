@@ -3,7 +3,9 @@
 
 #include "../../Common.h"
 #include "../CHTLJSLexer/CHTLJSToken.h"
+#include "../CHTLJSParser/CHTLJSParser.h"
 #include "../../SharedCore/SaltBridge.h"
+#include "VirRegistry.h"
 
 namespace CHTL {
 namespace JS {
@@ -45,8 +47,17 @@ private:
     JSGeneratorConfig config_;
     Bridge::SaltBridge& bridge_;
     
+    // Delegate去重表
+    HashMap<String, Vector<String>> delegateRegistry_;
+    
     String wrapWithIIFE(const String& code);
     String processListenBlocks(const String& code);
+    String processEventBindOperators(const String& code);
+    String processDelegateBlocks(const String& code);
+    String processAnimateBlocks(const String& code);
+    String processRouterBlocks(const String& code);
+    String processVirDeclarations(const String& code);
+    String processScriptLoaderBlocks(const String& code);
 };
 
 } // namespace JS

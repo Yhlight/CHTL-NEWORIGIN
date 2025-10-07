@@ -37,15 +37,44 @@ file(GLOB_RECURSE CHTLJS_SOURCES
     "${SRC_DIR}/CHTL-JS/*.cpp"
 )
 
+# 确保包含新的Parser文件
+list(APPEND CHTLJS_SOURCES 
+    "${SRC_DIR}/CHTL-JS/CHTLJSParser/CHTLJSParser.cpp"
+)
+
 # 盐桥核心
 file(GLOB_RECURSE SHARED_SOURCES 
     "${SRC_DIR}/SharedCore/*.cpp"
 )
 
 # 第三方库
-set(THIRD_PARTY_SOURCES
-    ${CMAKE_SOURCE_DIR}/third-party/miniz.c
+# 使用系统 libzip
+
+# 手动查找 libzip（直接指定路径）
+find_path(LIBZIP_INCLUDE_DIR 
+    NAMES zip.h
+    PATHS /usr/include /usr/local/include
 )
+
+find_library(LIBZIP_LIBRARY 
+    NAMES zip
+    PATHS /usr/lib /usr/local/lib /usr/lib/x86_64-linux-gnu
+)
+
+if(LIBZIP_INCLUDE_DIR AND LIBZIP_LIBRARY)
+    set(LIBZIP_FOUND TRUE)
+    set(LIBZIP_INCLUDE_DIRS ${LIBZIP_INCLUDE_DIR})
+    set(LIBZIP_LIBRARIES ${LIBZIP_LIBRARY})
+    message(STATUS "Found libzip: ${LIBZIP_LIBRARY}")
+    message(STATUS "  Include: ${LIBZIP_INCLUDE_DIR}")
+    include_directories(${LIBZIP_INCLUDE_DIRS})
+else()
+    message(WARNING "libzip not found, module packing features will be disabled")
+    set(LIBZIP_FOUND FALSE)
+endif()
+
+# 添加第三方库包含目录
+include_directories(${CMAKE_SOURCE_DIR}/third-party)
 
 # 主可执行文件
 add_executable(chtl
@@ -54,8 +83,12 @@ add_executable(chtl
     ${CHTL_SOURCES}
     ${CHTLJS_SOURCES}
     ${SHARED_SOURCES}
-    ${THIRD_PARTY_SOURCES}
 )
+
+# 链接 libzip（如果可用）
+if(LIBZIP_FOUND)
+    target_link_libraries(chtl ${LIBZIP_LIBRARIES})
+endif()
 
 # 测试可执行文件
 enable_testing()
@@ -71,8 +104,12 @@ if(TEST_SOURCES)
         ${CHTL_SOURCES}
         ${CHTLJS_SOURCES}
         ${SHARED_SOURCES}
-        ${THIRD_PARTY_SOURCES}
     )
+    
+    # 链接 libzip（如果可用）
+    if(LIBZIP_FOUND)
+        target_link_libraries(chtl_tests ${LIBZIP_LIBRARIES})
+    endif()
     
     add_test(NAME chtl_tests COMMAND chtl_tests)
 endif()

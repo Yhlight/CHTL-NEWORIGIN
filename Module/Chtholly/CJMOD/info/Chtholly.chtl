@@ -1,0 +1,15 @@
+// 珂朵莉CJMOD模块信息文件
+// Chtholly CJMOD - CHTL JS扩展
+
+[Info]
+{
+    name = "chtholly-cjmod";
+    version = "1.0.0";
+    description = "珂朵莉CHTL JS扩展模块 - 提供PrintMylove、INeverAway等CHTL JS函数";
+    author = "CHTL Team";
+    license = "MIT";
+    dependencies = "";
+    category = "chtljs-extension";
+    minCHTLVersion = "2.5.0";
+    maxCHTLVersion = "3.0.0";
+}

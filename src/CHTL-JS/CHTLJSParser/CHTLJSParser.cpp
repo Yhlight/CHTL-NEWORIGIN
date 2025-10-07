@@ -1,0 +1,1645 @@
+#include "CHTLJSParser.h"
+#include <algorithm>
+#include <cctype>
+#include <iostream>
+
+namespace CHTL {
+namespace JS {
+
+CHTLJSParser::CHTLJSParser(const String& source, const JSParserConfig& config)
+    : config_(config), source_(source) {}
+
+Optional<ListenBlock> CHTLJSParser::parseListenBlock(const String& code) {
+    // 查找Listen关键字
+    size_t listenKeywordPos = code.find("Listen");
+    if (listenKeywordPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 向前查找->或.（跳过空白）
+    size_t pos = listenKeywordPos;
+    while (pos > 0 && isWhitespace(code[pos - 1])) {
+        pos--;
+    }
+    
+    if (pos < 1) {
+        return std::nullopt;
+    }
+    
+    // 检查是->还是.
+    bool isArrow = (pos >= 2 && code.substr(pos - 2, 2) == "->");
+    bool isDot = (code[pos - 1] == '.');
+    
+    if (!isArrow && !isDot) {
+        return std::nullopt;
+    }
+    
+    // 提取target：从语句开始到->或.之前
+    size_t separatorPos = isArrow ? (pos - 2) : (pos - 1);
+    size_t targetStart = 0;
+    
+    // 向前查找语句起始（需要跳过{{}}）
+    int enhancedDepth = 0;
+    for (size_t i = separatorPos; i > 0; i--) {
+        char c = code[i - 1];
+        
+        // 检测{{和}}
+        if (i >= 2 && code[i-2] == '{' && code[i-1] == '{') {
+            enhancedDepth--;
+            i--;  // 跳过一个字符
+            continue;
+        }
+        if (i >= 2 && code[i-2] == '}' && code[i-1] == '}') {
+            enhancedDepth++;
+            i--;
+            continue;
+        }
+        
+        // 只有在{{}}外部时才检查分隔符
+        if (enhancedDepth == 0) {
+            if (c == ';' || c == '\n') {
+                targetStart = i;
+                break;
+            }
+            // 单个{或}（不是{{或}}）
+            if ((c == '{' || c == '}') &&
+                (i == 1 || code[i-2] != c) &&
+                (i >= code.length() || code[i] != c)) {
+                targetStart = i;
+                break;
+            }
+        }
+    }
+    
+    // 跳过起始空白
+    while (targetStart < separatorPos && isWhitespace(code[targetStart])) {
+        targetStart++;
+    }
+    
+    String target = code.substr(targetStart, separatorPos - targetStart);
+    
+    // 去除尾部空白
+    while (!target.empty() && isWhitespace(target.back())) {
+        target.pop_back();
+    }
+    
+    if (target.empty()) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{' 
+    size_t bracePos = code.find('{', listenKeywordPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取块内容
+    String blockContent = extractBlockContent(code, bracePos);
+    if (blockContent.empty()) {
+        return std::nullopt;
+    }
+    
+    // 解析事件绑定
+    Vector<EventBinding> bindings = parseEventBindings(blockContent);
+    
+    // 创建ListenBlock
+    ListenBlock block(target);
+    block.bindings = std::move(bindings);
+    block.unordered = config_.allowUnorderedKeyValues;
+    
+    return block;
+}
+
+Vector<EventBinding> CHTLJSParser::parseEventBindings(const String& bindingsCode) {
+    Vector<EventBinding> bindings;
+    
+    // 分割绑定（考虑嵌套）
+    Vector<String> bindingStrings = splitBindings(bindingsCode);
+    
+    for (const auto& bindingStr : bindingStrings) {
+        auto binding = parseEventBinding(bindingStr);
+        if (binding.has_value()) {
+            bindings.push_back(binding.value());
+        }
+    }
+    
+    return bindings;
+}
+
+Optional<EventBinding> CHTLJSParser::parseEventBinding(const String& bindingCode) {
+    String code = trimWhitespace(bindingCode);
+    if (code.empty()) {
+        return std::nullopt;
+    }
+    
+    // 查找冒号
+    size_t colonPos = code.find(':');
+    if (colonPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取事件名
+    String eventName = code.substr(0, colonPos);
+    eventName = trimWhitespace(eventName);
+    
+    // 检查是否是可选的（以?结尾）
+    bool isOptional = false;
+    if (!eventName.empty() && eventName.back() == '?') {
+        isOptional = true;
+        eventName.pop_back();
+        eventName = trimWhitespace(eventName);
+    }
+    
+    // 提取处理器
+    String handler = code.substr(colonPos + 1);
+    handler = trimWhitespace(handler);
+    
+    // 移除末尾的逗号或分号
+    while (!handler.empty() && (handler.back() == ',' || handler.back() == ';')) {
+        handler.pop_back();
+        handler = trimWhitespace(handler);
+    }
+    
+    if (eventName.empty() || handler.empty()) {
+        return std::nullopt;
+    }
+    
+    return EventBinding(eventName, handler, isOptional);
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findListenBlock(const String& code, size_t startPos) {
+    size_t listenPos = code.find("Listen", startPos);
+    if (listenPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 向前查找最近的非空白字符
+    size_t checkPos = listenPos;
+    while (checkPos > 0 && isWhitespace(code[checkPos - 1])) {
+        checkPos--;
+    }
+    
+    // 确保Listen前面是-> 或 .
+    if (checkPos >= 2) {
+        String prefix = code.substr(checkPos - 2, 2);
+        if (prefix != "->") {
+            if (checkPos >= 1 && code[checkPos - 1] != '.') {
+                // 继续查找下一个
+                return findListenBlock(code, listenPos + 1);
+            }
+        }
+    } else if (checkPos >= 1) {
+        if (code[checkPos - 1] != '.') {
+            return findListenBlock(code, listenPos + 1);
+        }
+    } else {
+        // Listen在开头，继续查找
+        return findListenBlock(code, listenPos + 1);
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', listenPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的 '}'
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 找到目标的起始位置
+    // 需要从listenPos向前找到完整的语句起始
+    size_t targetStart = 0;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int enhancedSelectorDepth = 0;  // {{}}的深度
+    
+    // 从listenPos向前扫描
+    for (size_t i = listenPos; i > 0; i--) {
+        size_t idx = i - 1;
+        char c = code[idx];
+        
+        // 处理{{}}增强选择器
+        // 向前扫描时，检查当前字符和前一个字符
+        if (idx >= 1 && code[idx - 1] == '}' && c == '}') {
+            enhancedSelectorDepth++;
+            i--;  // 跳过前一个}
+            continue;
+        }
+        if (idx >= 1 && code[idx - 1] == '{' && c == '{') {
+            enhancedSelectorDepth--;
+            i--;  // 跳过前一个{
+            continue;
+        }
+        
+        if (c == ')') parenDepth++;
+        if (c == '(') parenDepth--;
+        if (c == ']') bracketDepth++;
+        if (c == '[') bracketDepth--;
+        
+        // 只有在{{}}外部且所有括号平衡时才检查分隔符
+        if (parenDepth == 0 && bracketDepth == 0 && enhancedSelectorDepth == 0) {
+            if (c == ';' || c == '\n') {
+                targetStart = idx + 1;
+                break;
+            }
+            // 单个{或}（不是{{或}}的一部分）
+            if (c == '{' || c == '}') {
+                // 检查是否是{{或}}的一部分
+                bool isDouble = (idx >= 1 && code[idx - 1] == c) || 
+                               (idx + 1 < code.length() && code[idx + 1] == c);
+                if (!isDouble) {
+                    targetStart = idx + 1;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // 跳过起始的空白
+    while (targetStart < listenPos && isWhitespace(code[targetStart])) {
+        targetStart++;
+    }
+    
+    // 查找分号（如果有）
+    size_t semiPos = code.find(';', endBracePos);
+    if (semiPos != String::npos && semiPos < endBracePos + 5) {
+        return std::make_pair(targetStart, semiPos + 1);
+    }
+    
+    return std::make_pair(targetStart, endBracePos + 1);
+}
+
+String CHTLJSParser::extractTarget(const String& code, size_t listenPos) const {
+    // listenPos指向->或.的起始位置
+    // 需要从这个位置向前提取完整的target表达式
+    
+    // 从listenPos向前查找到语句的起始
+    size_t startPos = 0;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int enhancedSelectorDepth = 0;
+    
+    for (size_t i = listenPos; i > 0; i--) {
+        size_t idx = i - 1;
+        char c = code[idx];
+        
+        // 处理{{}}增强选择器
+        if (c == '}' && idx + 1 < code.length() && code[idx + 1] == '}') {
+            enhancedSelectorDepth++;
+        }
+        if (c == '{' && idx + 1 < code.length() && code[idx + 1] == '{') {
+            enhancedSelectorDepth--;
+        }
+        
+        // 更新括号深度
+        if (c == ')') parenDepth++;
+        if (c == '(') parenDepth--;
+        if (c == ']') bracketDepth++;
+        if (c == '[') bracketDepth--;
+        
+        // 只有在{{}}外且所有括号平衡时才检查分隔符
+        if (parenDepth == 0 && bracketDepth == 0 && enhancedSelectorDepth == 0) {
+            if (c == ';' || c == '\n') {
+                startPos = idx + 1;
+                break;
+            }
+            if ((c == '{' || c == '}') && 
+                !(idx + 1 < code.length() && code[idx + 1] == c)) {
+                startPos = idx + 1;
+                break;
+            }
+        }
+    }
+    
+    // 跳过起始空白
+    while (startPos < listenPos && isWhitespace(code[startPos])) {
+        startPos++;
+    }
+    
+    // 提取target（从startPos到listenPos，去除尾部空白）
+    size_t endPos = listenPos;
+    while (endPos > startPos && isWhitespace(code[endPos - 1])) {
+        endPos--;
+    }
+    
+    return code.substr(startPos, endPos - startPos);
+}
+
+String CHTLJSParser::extractBlockContent(const String& code, size_t startPos) const {
+    if (startPos >= code.length() || code[startPos] != '{') {
+        return "";
+    }
+    
+    size_t endPos = findMatchingBrace(code, startPos);
+    if (endPos == String::npos) {
+        return "";
+    }
+    
+    // 返回 { 和 } 之间的内容
+    if (endPos <= startPos + 1) {
+        return "";
+    }
+    
+    return code.substr(startPos + 1, endPos - startPos - 1);
+}
+
+size_t CHTLJSParser::findMatchingBrace(const String& code, size_t leftBracePos) const {
+    if (leftBracePos >= code.length() || code[leftBracePos] != '{') {
+        return String::npos;
+    }
+    
+    int depth = 1;
+    size_t pos = leftBracePos + 1;
+    bool inString = false;
+    char stringChar = '\0';
+    bool escaped = false;
+    
+    while (pos < code.length() && depth > 0) {
+        char ch = code[pos];
+        
+        if (escaped) {
+            escaped = false;
+            pos++;
+            continue;
+        }
+        
+        if (ch == '\\') {
+            escaped = true;
+            pos++;
+            continue;
+        }
+        
+        if (inString) {
+            if (ch == stringChar) {
+                inString = false;
+            }
+        } else {
+            if (ch == '"' || ch == '\'' || ch == '`') {
+                inString = true;
+                stringChar = ch;
+            } else if (ch == '{') {
+                depth++;
+            } else if (ch == '}') {
+                depth--;
+                if (depth == 0) {
+                    return pos;
+                }
+            }
+        }
+        
+        pos++;
+    }
+    
+    return String::npos;
+}
+
+Vector<String> CHTLJSParser::splitBindings(const String& bindingsCode) const {
+    Vector<String> bindings;
+    String current;
+    
+    int parenDepth = 0;
+    int braceDepth = 0;
+    int bracketDepth = 0;  // 新增：跟踪[]深度
+    bool inString = false;
+    char stringChar = '\0';
+    bool escaped = false;
+    
+    for (size_t i = 0; i < bindingsCode.length(); i++) {
+        char ch = bindingsCode[i];
+        
+        if (escaped) {
+            current += ch;
+            escaped = false;
+            continue;
+        }
+        
+        if (ch == '\\') {
+            current += ch;
+            escaped = true;
+            continue;
+        }
+        
+        if (inString) {
+            current += ch;
+            if (ch == stringChar) {
+                inString = false;
+            }
+            continue;
+        }
+        
+        if (ch == '"' || ch == '\'' || ch == '`') {
+            current += ch;
+            inString = true;
+            stringChar = ch;
+            continue;
+        }
+        
+        if (ch == '(') {
+            parenDepth++;
+            current += ch;
+        } else if (ch == ')') {
+            parenDepth--;
+            current += ch;
+        } else if (ch == '{') {
+            braceDepth++;
+            current += ch;
+        } else if (ch == '}') {
+            braceDepth--;
+            current += ch;
+        } else if (ch == '[') {
+            bracketDepth++;  // 新增：跟踪[
+            current += ch;
+        } else if (ch == ']') {
+            bracketDepth--;  // 新增：跟踪]
+            current += ch;
+        } else if ((ch == ',' || ch == ';') && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+            // 分隔符 - 同时处理逗号和分号
+            String trimmed = trimWhitespace(current);
+            if (!trimmed.empty()) {
+                bindings.push_back(trimmed);
+            }
+            current.clear();
+        } else if (ch != ';' || parenDepth > 0 || braceDepth > 0) {
+            // 只在非顶层或非分号时添加字符
+            current += ch;
+        }
+        // 顶层的分号被忽略（已作为分隔符处理）
+    }
+    
+    // 添加最后一个
+    String trimmed = trimWhitespace(current);
+    if (!trimmed.empty()) {
+        bindings.push_back(trimmed);
+    }
+    
+    return bindings;
+}
+
+String CHTLJSParser::extractFunctionBody(const String& code, size_t startPos, size_t& endPos) const {
+    // 简化实现：查找完整的函数表达式
+    size_t pos = startPos;
+    
+    // 跳过空白
+    while (pos < code.length() && isWhitespace(code[pos])) {
+        pos++;
+    }
+    
+    if (pos >= code.length()) {
+        endPos = pos;
+        return "";
+    }
+    
+    // 处理不同类型的函数
+    // 1. 箭头函数: () => {}
+    // 2. function关键字: function() {}
+    // 3. 函数引用: handlerFunction
+    
+    size_t start = pos;
+    int parenDepth = 0;
+    int braceDepth = 0;
+    bool inString = false;
+    char stringChar = '\0';
+    
+    while (pos < code.length()) {
+        char ch = code[pos];
+        
+        if (!inString) {
+            if (ch == '"' || ch == '\'' || ch == '`') {
+                inString = true;
+                stringChar = ch;
+            } else if (ch == '(') {
+                parenDepth++;
+            } else if (ch == ')') {
+                parenDepth--;
+            } else if (ch == '{') {
+                braceDepth++;
+            } else if (ch == '}') {
+                braceDepth--;
+                if (braceDepth < 0) {
+                    break;  // 超出当前作用域
+                }
+            } else if ((ch == ',' || ch == ';') && parenDepth == 0 && braceDepth == 0) {
+                break;  // 函数结束
+            }
+        } else {
+            if (ch == stringChar && (pos == 0 || code[pos - 1] != '\\')) {
+                inString = false;
+            }
+        }
+        
+        pos++;
+    }
+    
+    endPos = pos;
+    return code.substr(start, pos - start);
+}
+
+String CHTLJSParser::trimWhitespace(const String& str) const {
+    if (str.empty()) {
+        return str;
+    }
+    
+    size_t start = 0;
+    while (start < str.length() && isWhitespace(str[start])) {
+        start++;
+    }
+    
+    if (start >= str.length()) {
+        return "";
+    }
+    
+    size_t end = str.length() - 1;
+    while (end > start && isWhitespace(str[end])) {
+        end--;
+    }
+    
+    return str.substr(start, end - start + 1);
+}
+
+bool CHTLJSParser::isWhitespace(char ch) const {
+    return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+}
+
+bool CHTLJSParser::isIdentifierChar(char ch) const {
+    return std::isalnum(static_cast<unsigned char>(ch)) || ch == '_' || ch == '$';
+}
+
+// ============= 事件绑定操作符 &-> 实现 =============
+
+Optional<EventBindOperator> CHTLJSParser::parseEventBindOperator(const String& code) {
+    // 查找 &->
+    size_t bindPos = code.find("&->");
+    if (bindPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取目标选择器（在 &-> 之前）
+    // 向前跳过空白
+    size_t targetEnd = bindPos;
+    while (targetEnd > 0 && isWhitespace(code[targetEnd - 1])) {
+        targetEnd--;
+    }
+    
+    if (targetEnd == 0) {
+        return std::nullopt;
+    }
+    
+    // 找到目标起始位置
+    size_t targetStart = targetEnd;
+    
+    // 如果是 {{...}}
+    if (targetStart >= 2 && code[targetStart - 1] == '}' && code[targetStart - 2] == '}') {
+        targetStart -= 2;  // 跳过 }}
+        
+        int depth = 1;
+        while (targetStart > 0 && depth > 0) {
+            if (targetStart >= 2 && code[targetStart - 1] == '}' && code[targetStart - 2] == '}') {
+                depth++;
+                targetStart -= 2;
+            } else if (targetStart >= 2 && code[targetStart - 1] == '{' && code[targetStart - 2] == '{') {
+                depth--;
+                if (depth == 0) {
+                    targetStart -= 2;
+                    break;
+                }
+                targetStart -= 2;
+            } else {
+                targetStart--;
+            }
+        }
+    } else {
+        // 普通标识符
+        while (targetStart > 0 && isIdentifierChar(code[targetStart - 1])) {
+            targetStart--;
+        }
+    }
+    
+    String target = code.substr(targetStart, targetEnd - targetStart);
+    target = trimWhitespace(target);
+    
+    if (target.empty()) {
+        return std::nullopt;
+    }
+    
+    // 跳过 &->
+    size_t pos = bindPos + 3;
+    while (pos < code.length() && isWhitespace(code[pos])) {
+        pos++;
+    }
+    
+    if (pos >= code.length()) {
+        return std::nullopt;
+    }
+    
+    // 检查是否是绑定块形式 &-> { ... }
+    if (code[pos] == '{') {
+        // 绑定块形式
+        String blockContent = extractBlockContent(code, pos);
+        if (blockContent.empty()) {
+            return std::nullopt;
+        }
+        
+        // 解析块内的事件绑定
+        Vector<EventBinding> bindings = parseEventBindings(blockContent);
+        
+        // 创建EventBindOperator（绑定块形式）
+        EventBindOperator op;
+        op.target = target;
+        op.isBlock = true;
+        
+        // 将所有绑定信息存储（暂时只取第一个作为示例）
+        // 实际应该返回多个EventBindOperator或修改结构
+        // 为了简化，我们将绑定块转换为多个单独的绑定
+        if (!bindings.empty()) {
+            op.eventNames.push_back(bindings[0].eventName);
+            op.handler = bindings[0].handler;
+        }
+        
+        return op;
+    }
+    
+    // 单行形式: event: handler 或 event1, event2: handler
+    // 查找冒号
+    size_t colonPos = code.find(':', pos);
+    if (colonPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取事件名称部分
+    String eventsStr = code.substr(pos, colonPos - pos);
+    Vector<String> eventNames = parseEventNames(eventsStr);
+    
+    if (eventNames.empty()) {
+        return std::nullopt;
+    }
+    
+    // 提取处理器
+    pos = colonPos + 1;
+    while (pos < code.length() && isWhitespace(code[pos])) {
+        pos++;
+    }
+    
+    size_t endPos = pos;
+    String handler = extractFunctionBody(code, pos, endPos);
+    handler = trimWhitespace(handler);
+    
+    // 移除尾部的逗号和分号
+    while (!handler.empty() && (handler.back() == ',' || handler.back() == ';')) {
+        handler.pop_back();
+        handler = trimWhitespace(handler);
+    }
+    
+    if (handler.empty()) {
+        return std::nullopt;
+    }
+    
+    return EventBindOperator(target, eventNames, handler);
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findEventBindOperator(const String& code, size_t startPos) {
+    size_t bindPos = code.find("&->", startPos);
+    if (bindPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 向前跳过空白找到目标结束位置
+    size_t targetEnd = bindPos;
+    while (targetEnd > startPos && isWhitespace(code[targetEnd - 1])) {
+        targetEnd--;
+    }
+    
+    if (targetEnd <= startPos) {
+        return std::nullopt;
+    }
+    
+    // 找到目标的起始位置
+    size_t targetStart = targetEnd;
+    
+    // 如果是 {{...}}，找到完整的增强选择器
+    if (targetStart >= 2 && code[targetStart - 1] == '}' && code[targetStart - 2] == '}') {
+        targetStart -= 2;  // 跳过 }}
+        
+        int depth = 1;
+        while (targetStart > startPos && depth > 0) {
+            if (targetStart >= 2 && code[targetStart - 1] == '}' && code[targetStart - 2] == '}') {
+                depth++;
+                targetStart -= 2;
+            } else if (targetStart >= 2 && code[targetStart - 1] == '{' && code[targetStart - 2] == '{') {
+                depth--;
+                if (depth == 0) {
+                    targetStart -= 2;
+                    break;
+                }
+                targetStart -= 2;
+            } else {
+                targetStart--;
+            }
+        }
+    } else {
+        // 普通标识符
+        while (targetStart > startPos && isIdentifierChar(code[targetStart - 1])) {
+            targetStart--;
+        }
+    }
+    
+    // 找到结束位置
+    size_t pos = bindPos + 3;
+    while (pos < code.length() && isWhitespace(code[pos])) {
+        pos++;
+    }
+    
+    size_t endPos;
+    
+    if (pos < code.length() && code[pos] == '{') {
+        // 绑定块形式
+        endPos = findMatchingBrace(code, pos);
+        if (endPos == String::npos) {
+            return std::nullopt;
+        }
+        endPos++; // 包含 }
+    } else {
+        // 单行形式: target &-> event1, event2: handler;
+        // 需要找到冒号，然后继续到分号
+        endPos = pos;
+        int parenDepth = 0, braceDepth = 0;
+        bool inString = false;
+        char stringChar = '\0';
+        bool foundColon = false;
+        
+        while (endPos < code.length()) {
+            char ch = code[endPos];
+            
+            if (!inString) {
+                if (ch == '"' || ch == '\'' || ch == '`') {
+                    inString = true;
+                    stringChar = ch;
+                } else if (ch == '(') {
+                    parenDepth++;
+                } else if (ch == ')') {
+                    parenDepth--;
+                } else if (ch == '{') {
+                    braceDepth++;
+                } else if (ch == '}') {
+                    braceDepth--;
+                } else if (ch == ':' && parenDepth == 0 && braceDepth == 0) {
+                    foundColon = true;
+                } else if (ch == ';' && parenDepth == 0 && braceDepth == 0) {
+                    endPos++;
+                    break;
+                } else if (ch == '\n' && parenDepth == 0 && braceDepth == 0 && foundColon) {
+                    // 找到了冒号后遇到换行，结束
+                    break;
+                } else if (ch == ',' && parenDepth == 0 && braceDepth == 0 && !foundColon) {
+                    // 逗号在冒号之前：是多事件列表，继续（不需要endPos++，while会自动++）
+                    // endPos++会在循环末尾自动执行
+                    // 不要break，继续循环
+                } else if (ch == ',' && parenDepth == 0 && braceDepth == 0 && foundColon) {
+                    // 逗号在冒号之后：检查是否是链式&->
+                    size_t nextPos = endPos + 1;
+                    while (nextPos < code.length() && isWhitespace(code[nextPos])) {
+                        nextPos++;
+                    }
+                    if (nextPos + 3 <= code.length() && code.substr(nextPos, 3) == "&->") {
+                        // 链式绑定
+                        endPos = nextPos + 3;
+                        foundColon = false;  // 重置，开始新的绑定
+                        continue;
+                    } else {
+                        // 不是链式绑定，结束
+                        endPos++;
+                        break;
+                    }
+                }
+            } else {
+                if (ch == stringChar && (endPos == 0 || code[endPos - 1] != '\\')) {
+                    inString = false;
+                }
+            }
+            
+            endPos++;
+        }
+    }
+    
+    return std::make_pair(targetStart, endPos);
+}
+
+Vector<String> CHTLJSParser::parseEventNames(const String& namesCode) {
+    Vector<String> names;
+    String current;
+    
+    for (size_t i = 0; i < namesCode.length(); i++) {
+        char ch = namesCode[i];
+        
+        if (ch == ',') {
+            String trimmed = trimWhitespace(current);
+            if (!trimmed.empty()) {
+                names.push_back(trimmed);
+            }
+            current.clear();
+        } else {
+            current += ch;
+        }
+    }
+    
+    // 添加最后一个
+    String trimmed = trimWhitespace(current);
+    if (!trimmed.empty()) {
+        names.push_back(trimmed);
+    }
+    
+    return names;
+}
+
+bool CHTLJSParser::isEventBindBlock(const String& code, size_t bindPos) {
+    size_t pos = bindPos + 3; // 跳过 &->
+    while (pos < code.length() && isWhitespace(code[pos])) {
+        pos++;
+    }
+    return pos < code.length() && code[pos] == '{';
+}
+
+Vector<EventBindOperator> CHTLJSParser::parseChainBinding(const String& code) {
+    Vector<EventBindOperator> operators;
+    
+    // 先找到第一个&->来获取目标
+    size_t firstBindPos = code.find("&->");
+    if (firstBindPos == String::npos) {
+        return operators;
+    }
+    
+    // 提取共同的目标
+    size_t targetEnd = firstBindPos;
+    while (targetEnd > 0 && isWhitespace(code[targetEnd - 1])) {
+        targetEnd--;
+    }
+    
+    size_t targetStart = 0;
+    if (targetEnd >= 2 && code[targetEnd - 1] == '}' && code[targetEnd - 2] == '}') {
+        targetStart = targetEnd - 2;
+        int depth = 1;
+        while (targetStart > 0 && depth > 0) {
+            if (targetStart >= 2 && code[targetStart - 1] == '}' && code[targetStart - 2] == '}') {
+                depth++;
+                targetStart -= 2;
+            } else if (targetStart >= 2 && code[targetStart - 1] == '{' && code[targetStart - 2] == '{') {
+                depth--;
+                if (depth == 0) {
+                    targetStart -= 2;
+                    break;
+                }
+                targetStart -= 2;
+            } else {
+                targetStart--;
+            }
+        }
+    } else {
+        while (targetStart < targetEnd && isWhitespace(code[targetStart])) {
+            targetStart++;
+        }
+        while (targetStart < targetEnd && !isWhitespace(code[targetStart]) && 
+               code[targetStart] != '&') {
+            targetEnd++;
+            if (targetEnd < code.length() && isIdentifierChar(code[targetEnd])) {
+                continue;
+            }
+            break;
+        }
+    }
+    
+    String sharedTarget = code.substr(targetStart, targetEnd - targetStart);
+    sharedTarget = trimWhitespace(sharedTarget);
+    
+    // 分割每个&->绑定
+    size_t pos = 0;
+    while ((pos = code.find("&->", pos)) != String::npos) {
+        // 跳过&->
+        size_t bindStart = pos + 3;
+        while (bindStart < code.length() && isWhitespace(code[bindStart])) {
+            bindStart++;
+        }
+        
+        // 找到这个绑定的结束位置（逗号或分号）
+        size_t bindEnd = bindStart;
+        int parenDepth = 0, braceDepth = 0;
+        
+        while (bindEnd < code.length()) {
+            char ch = code[bindEnd];
+            if (ch == '(') parenDepth++;
+            else if (ch == ')') parenDepth--;
+            else if (ch == '{') braceDepth++;
+            else if (ch == '}') braceDepth--;
+            else if ((ch == ',' || ch == ';') && parenDepth == 0 && braceDepth == 0) {
+                break;
+            }
+            bindEnd++;
+        }
+        
+        // 提取并解析这个绑定
+        String bindCode = code.substr(bindStart, bindEnd - bindStart);
+        auto binding = parseEventBinding(bindCode);
+        
+        if (binding.has_value()) {
+            EventBindOperator op(sharedTarget, {binding->eventName}, binding->handler);
+            operators.push_back(op);
+        }
+        
+        pos = bindEnd + 1;
+    }
+    
+    return operators;
+}
+
+// ============= Delegate事件委托实现 =============
+
+Optional<DelegateBlock> CHTLJSParser::parseDelegateBlock(const String& code) {
+    // 查找 "Delegate"
+    size_t delegateKeywordPos = code.find("Delegate");
+    if (delegateKeywordPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 向前跳过空白，找到->或.
+    size_t pos = delegateKeywordPos;
+    while (pos > 0 && isWhitespace(code[pos - 1])) {
+        pos--;
+    }
+    
+    if (pos < 1) {
+        return std::nullopt;
+    }
+    
+    // 检查是->还是.
+    size_t sepPos;
+    
+    if (pos >= 2 && code.substr(pos - 2, 2) == "->") {
+        sepPos = pos - 2;
+    } else if (code[pos - 1] == '.') {
+        sepPos = pos - 1;
+    } else {
+        return std::nullopt;
+    }
+    
+    // 提取parent（从代码开始到sepPos）
+    String parent = code.substr(0, sepPos);
+    parent = trimWhitespace(parent);
+    
+    if (parent.empty()) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'（在Delegate关键字之后）
+    size_t bracePos = code.find('{', delegateKeywordPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取块内容
+    String blockContent = extractBlockContent(code, bracePos);
+    if (blockContent.empty()) {
+        return std::nullopt;
+    }
+    
+    // 创建DelegateBlock
+    DelegateBlock block(parent);
+    
+    // 解析块内容
+    // 首先查找target键
+    size_t targetPos = blockContent.find("target");
+    if (targetPos != String::npos) {
+        // 查找target后的冒号
+        size_t colonPos = blockContent.find(':', targetPos);
+        if (colonPos != String::npos) {
+            size_t valueStart = colonPos + 1;
+            while (valueStart < blockContent.length() && isWhitespace(blockContent[valueStart])) {
+                valueStart++;
+            }
+            
+            // 检查是否是数组 [...]
+            if (valueStart < blockContent.length() && blockContent[valueStart] == '[') {
+                // 数组形式的targets
+                size_t arrayEnd = blockContent.find(']', valueStart);
+                if (arrayEnd != String::npos) {
+                    String arrayContent = blockContent.substr(valueStart + 1, arrayEnd - valueStart - 1);
+                    
+                    // 分割targets（简单实现：按逗号分割）
+                    String current;
+                    for (size_t i = 0; i < arrayContent.length(); i++) {
+                        char ch = arrayContent[i];
+                        if (ch == ',') {
+                            String target = trimWhitespace(current);
+                            if (!target.empty()) {
+                                block.targets.push_back(target);
+                            }
+                            current.clear();
+                        } else {
+                            current += ch;
+                        }
+                    }
+                    // 添加最后一个
+                    String target = trimWhitespace(current);
+                    if (!target.empty()) {
+                        block.targets.push_back(target);
+                    }
+                }
+            } else {
+                // 单个target（可能是{{}}增强选择器或普通选择器）
+                size_t valueEnd = valueStart;
+                
+                // 如果是{{}}，找到完整的}}
+                if (valueStart + 1 < blockContent.length() && 
+                    blockContent[valueStart] == '{' && blockContent[valueStart + 1] == '{') {
+                    // 查找匹配的}}
+                    int depth = 1;
+                    valueEnd = valueStart + 2;
+                    while (valueEnd + 1 < blockContent.length() && depth > 0) {
+                        if (blockContent[valueEnd] == '{' && blockContent[valueEnd + 1] == '{') {
+                            depth++;
+                            valueEnd += 2;
+                        } else if (blockContent[valueEnd] == '}' && blockContent[valueEnd + 1] == '}') {
+                            depth--;
+                            valueEnd += 2;
+                            if (depth == 0) break;
+                        } else {
+                            valueEnd++;
+                        }
+                    }
+                } else {
+                    // 普通值，查找到逗号或分号
+                    while (valueEnd < blockContent.length() && 
+                           blockContent[valueEnd] != ',' && 
+                           blockContent[valueEnd] != ';' && 
+                           blockContent[valueEnd] != '\n') {
+                        valueEnd++;
+                    }
+                }
+                
+                String target = blockContent.substr(valueStart, valueEnd - valueStart);
+                target = trimWhitespace(target);
+                if (!target.empty()) {
+                    block.targets.push_back(target);
+                }
+            }
+        }
+    }
+    
+    // 解析事件绑定（除了target键外的其他键值对）
+    // 简化实现：将整个块内容当作事件绑定解析，然后过滤掉target
+    auto allBindings = parseEventBindings(blockContent);
+    for (const auto& binding : allBindings) {
+        if (binding.eventName != "target") {
+            block.eventBindings.push_back(binding);
+        }
+    }
+    
+    return block;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findDelegateBlock(const String& code, size_t startPos) {
+    size_t delegatePos = code.find("Delegate", startPos);
+    if (delegatePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 向前查找最近的非空白字符（与Listen相同）
+    size_t checkPos = delegatePos;
+    while (checkPos > 0 && isWhitespace(code[checkPos - 1])) {
+        checkPos--;
+    }
+    
+    // 确保Delegate前面是-> 或 .
+    bool hasValidPrefix = false;
+    if (checkPos >= 2 && code.substr(checkPos - 2, 2) == "->") {
+        hasValidPrefix = true;
+    } else if (checkPos >= 1 && code[checkPos - 1] == '.') {
+        hasValidPrefix = true;
+    }
+    
+    if (!hasValidPrefix) {
+        return findDelegateBlock(code, delegatePos + 1);
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', delegatePos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的 '}'
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 找到目标的起始位置（与findListenBlock相同的逻辑）
+    size_t targetStart = 0;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+    int enhancedSelectorDepth = 0;
+    
+    // 从delegatePos向前扫描
+    for (size_t i = delegatePos; i > 0; i--) {
+        size_t idx = i - 1;
+        char c = code[idx];
+        
+        // 处理{{}}增强选择器
+        if (idx >= 1 && code[idx - 1] == '}' && c == '}') {
+            enhancedSelectorDepth++;
+            i--;
+            continue;
+        }
+        if (idx >= 1 && code[idx - 1] == '{' && c == '{') {
+            enhancedSelectorDepth--;
+            i--;
+            continue;
+        }
+        
+        if (c == ')') parenDepth++;
+        if (c == '(') parenDepth--;
+        if (c == ']') bracketDepth++;
+        if (c == '[') bracketDepth--;
+        
+        if (parenDepth == 0 && bracketDepth == 0 && enhancedSelectorDepth == 0) {
+            if (c == ';' || c == '\n') {
+                targetStart = idx + 1;
+                break;
+            }
+            if (c == '{' || c == '}') {
+                bool isDouble = (idx >= 1 && code[idx - 1] == c) || 
+                               (idx + 1 < code.length() && code[idx + 1] == c);
+                if (!isDouble) {
+                    targetStart = idx + 1;
+                    break;
+                }
+            }
+        }
+    }
+    
+    while (targetStart < delegatePos && isWhitespace(code[targetStart])) {
+        targetStart++;
+    }
+    
+    return std::make_pair(targetStart, endBracePos + 1);
+}
+
+// ============= Animate动画系统实现 =============
+
+Optional<AnimateBlock> CHTLJSParser::parseAnimateBlock(const String& code) {
+    // 查找 "Animate"
+    size_t animatePos = code.find("Animate");
+    if (animatePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', animatePos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取块内容
+    String blockContent = extractBlockContent(code, bracePos);
+    if (blockContent.empty()) {
+        return std::nullopt;
+    }
+    
+    AnimateBlock block;
+    
+    // 解析各个键值对
+    auto bindings = parseEventBindings(blockContent);
+    
+    for (const auto& binding : bindings) {
+        String key = binding.eventName;
+        String value = binding.handler;
+        
+        if (key == "target") {
+            // 处理target（可能是数组）
+            value = trimWhitespace(value);
+            if (!value.empty() && value[0] == '[') {
+                // 数组形式
+                size_t end = value.find(']');
+                if (end != String::npos) {
+                    String arrayContent = value.substr(1, end - 1);
+                    String current;
+                    for (size_t i = 0; i < arrayContent.length(); i++) {
+                        char ch = arrayContent[i];
+                        if (ch == ',') {
+                            String target = trimWhitespace(current);
+                            if (!target.empty()) {
+                                block.targets.push_back(target);
+                            }
+                            current.clear();
+                        } else {
+                            current += ch;
+                        }
+                    }
+                    String target = trimWhitespace(current);
+                    if (!target.empty()) {
+                        block.targets.push_back(target);
+                    }
+                }
+            } else {
+                block.targets.push_back(value);
+            }
+        } else if (key == "duration") {
+            block.duration = std::stoi(value);
+        } else if (key == "easing") {
+            block.easing = value;
+        } else if (key == "loop") {
+            block.loop = std::stoi(value);
+        } else if (key == "direction") {
+            block.direction = value;
+        } else if (key == "delay") {
+            block.delay = std::stoi(value);
+        } else if (key == "callback") {
+            block.callback = value;
+        } else if (key == "begin") {
+            block.begin = parseCssProperties(value);
+        } else if (key == "end") {
+            block.end = parseCssProperties(value);
+        } else if (key == "when") {
+            // 解析关键帧数组
+            value = trimWhitespace(value);
+            // 正确处理嵌套数组：when: [{ at: 0.25 }, { at: 0.5 }]
+            // 使用括号深度跟踪来处理嵌套结构
+            if (value.length() >= 2 && value[0] == '[' && value[value.length() - 1] == ']') {
+                String arrayContent = value.substr(1, value.length() - 2);
+                // 简化：按}分割关键帧
+                size_t pos = 0;
+                while (pos < arrayContent.length()) {
+                    size_t start = arrayContent.find('{', pos);
+                    if (start == String::npos) break;
+                    
+                    size_t end = findMatchingBrace(arrayContent, start);
+                    if (end == String::npos) break;
+                    
+                    String frameContent = arrayContent.substr(start + 1, end - start - 1);
+                    // std::cerr << "  frameContent: '" << frameContent << "'\n";
+                    auto frameProps = parseEventBindings(frameContent);
+                    // std::cerr << "  frameProps.size(): " << frameProps.size() << "\n";
+                    
+                    KeyFrame frame;
+                    for (const auto& prop : frameProps) {
+                        if (prop.eventName == "at") {
+                            frame.at = std::stod(prop.handler);
+                        } else {
+                            frame.properties[prop.eventName] = prop.handler;
+                        }
+                    }
+                    
+                    block.when.push_back(frame);
+                    pos = end + 1;
+                }
+            }
+        }
+    }
+    
+    return block;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findAnimateBlock(const String& code, size_t startPos) {
+    size_t animatePos = code.find("Animate", startPos);
+    if (animatePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', animatePos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的 '}'
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    return std::make_pair(animatePos, endBracePos + 1);
+}
+
+HashMap<String, String> CHTLJSParser::parseCssProperties(const String& code) {
+    HashMap<String, String> properties;
+    
+    String content = trimWhitespace(code);
+    
+    // 如果被{}包裹，去掉
+    if (!content.empty() && content[0] == '{' && content[content.length() - 1] == '}') {
+        content = content.substr(1, content.length() - 2);
+    }
+    
+    // 解析CSS属性
+    auto bindings = parseEventBindings(content);
+    for (const auto& binding : bindings) {
+        properties[binding.eventName] = binding.handler;
+    }
+    
+    return properties;
+}
+
+// ============= Router路由系统实现 =============
+
+Optional<RouterBlock> CHTLJSParser::parseRouterBlock(const String& code) {
+    // 查找 "Router"
+    size_t routerPos = code.find("Router");
+    if (routerPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', routerPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 提取块内容
+    String blockContent = extractBlockContent(code, bracePos);
+    if (blockContent.empty()) {
+        return std::nullopt;
+    }
+    
+    RouterBlock block;
+    
+    // 解析各个键值对
+    auto bindings = parseEventBindings(blockContent);
+    
+    Vector<String> urls;
+    Vector<String> pages;
+    
+    for (const auto& binding : bindings) {
+        String key = binding.eventName;
+        String value = trimWhitespace(binding.handler);
+        
+        if (key == "url") {
+            // 解析URL（可能是多个）
+            if (value.find(',') != String::npos) {
+                // 多个URL，按逗号分割
+                Vector<String> urlList;
+                String current;
+                int depth = 0;
+                for (char ch : value) {
+                    if (ch == '{' || ch == '(' || ch == '[') depth++;
+                    else if (ch == '}' || ch == ')' || ch == ']') depth--;
+                    else if (ch == ',' && depth == 0) {
+                        String url = trimWhitespace(current);
+                        if (!url.empty()) {
+                            // 移除引号
+                            if ((url.front() == '"' && url.back() == '"') ||
+                                (url.front() == '\'' && url.back() == '\'')) {
+                                url = url.substr(1, url.length() - 2);
+                            }
+                            urls.push_back(url);
+                        }
+                        current.clear();
+                        continue;
+                    }
+                    current += ch;
+                }
+                String url = trimWhitespace(current);
+                if (!url.empty()) {
+                    if ((url.front() == '"' && url.back() == '"') ||
+                        (url.front() == '\'' && url.back() == '\'')) {
+                        url = url.substr(1, url.length() - 2);
+                    }
+                    urls.push_back(url);
+                }
+            } else {
+                // 单个URL
+                if ((value.front() == '"' && value.back() == '"') ||
+                    (value.front() == '\'' && value.back() == '\'')) {
+                    value = value.substr(1, value.length() - 2);
+                }
+                urls.push_back(value);
+            }
+        } else if (key == "page") {
+            // 解析page（可能是多个）
+            if (value.find(',') != String::npos) {
+                // 多个page，按逗号分割
+                String current;
+                int depth = 0;
+                for (char ch : value) {
+                    if (ch == '{' || ch == '(' || ch == '[') depth++;
+                    else if (ch == '}' || ch == ')' || ch == ']') depth--;
+                    else if (ch == ',' && depth == 0) {
+                        String page = trimWhitespace(current);
+                        if (!page.empty()) {
+                            pages.push_back(page);
+                        }
+                        current.clear();
+                        continue;
+                    }
+                    current += ch;
+                }
+                String page = trimWhitespace(current);
+                if (!page.empty()) {
+                    pages.push_back(page);
+                }
+            } else {
+                pages.push_back(value);
+            }
+        } else if (key == "mode") {
+            block.mode = value;
+            // 移除引号
+            if ((block.mode.front() == '"' && block.mode.back() == '"') ||
+                (block.mode.front() == '\'' && block.mode.back() == '\'')) {
+                block.mode = block.mode.substr(1, block.mode.length() - 2);
+            }
+        } else if (key == "root") {
+            // 处理 root 路径
+            // root 定义 SPA 路由的根路径
+            block.rootPath = value;
+            
+            // 移除引号（如果有）
+            if (block.rootPath.length() >= 2 &&
+                ((block.rootPath.front() == '"' && block.rootPath.back() == '"') ||
+                 (block.rootPath.front() == '\'' && block.rootPath.back() == '\''))) {
+                block.rootPath = block.rootPath.substr(1, block.rootPath.length() - 2);
+            }
+        }
+    }
+    
+    // 组合URL和page
+    for (size_t i = 0; i < urls.size() && i < pages.size(); i++) {
+        block.routes.push_back(RouteRule(urls[i], pages[i]));
+    }
+    
+    return block;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findRouterBlock(const String& code, size_t startPos) {
+    size_t routerPos = code.find("Router", startPos);
+    if (routerPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找 '{'
+    size_t bracePos = code.find('{', routerPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的 '}'
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    return std::make_pair(routerPos, endBracePos + 1);
+}
+
+// ============= Vir虚对象实现 =============
+
+Optional<VirObject> CHTLJSParser::parseVirDeclaration(const String& code) {
+    size_t virPos = code.find("Vir");
+    if (virPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找对象名称（Vir之后，=之前）
+    size_t equalPos = code.find('=', virPos);
+    if (equalPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    String nameSection = code.substr(virPos + 3, equalPos - virPos - 3);
+    String name = trimWhitespace(nameSection);
+    
+    VirObject vir(name);
+    
+    // 查找源类型（Listen、Animate等）
+    size_t afterEqual = equalPos + 1;
+    while (afterEqual < code.length() && isWhitespace(code[afterEqual])) {
+        afterEqual++;
+    }
+    
+    // 检测源类型
+    if (code.substr(afterEqual, 6) == "Listen") {
+        vir.sourceType = "Listen";
+        // 解析Listen块获取成员
+        auto listenBlock = parseListenBlock(code.substr(afterEqual));
+        if (listenBlock.has_value()) {
+            for (const auto& binding : listenBlock->bindings) {
+                vir.members[binding.eventName] = binding.handler;
+            }
+        }
+    } else if (code.substr(afterEqual, 7) == "Animate") {
+        vir.sourceType = "Animate";
+        // Vir Animate不常用，暂不解析成员
+    }
+    
+    return vir;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findVirDeclaration(const String& code, size_t startPos) {
+    size_t virPos = code.find("Vir", startPos);
+    if (virPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找=
+    size_t equalPos = code.find('=', virPos);
+    if (equalPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找源类型块的结束
+    size_t afterEqual = equalPos + 1;
+    while (afterEqual < code.length() && isWhitespace(code[afterEqual])) {
+        afterEqual++;
+    }
+    
+    // 查找{
+    size_t bracePos = code.find('{', afterEqual);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找匹配的}
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    // 查找分号
+    size_t semiPos = code.find(';', endBracePos);
+    if (semiPos != String::npos && semiPos < endBracePos + 20) {
+        return std::make_pair(virPos, semiPos + 1);
+    }
+    
+    return std::make_pair(virPos, endBracePos + 1);
+}
+
+// ============= ScriptLoader实现 =============
+
+Optional<ScriptLoaderBlock> CHTLJSParser::parseScriptLoaderBlock(const String& code) {
+    size_t loaderPos = code.find("ScriptLoader");
+    if (loaderPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t bracePos = code.find('{', loaderPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    String content = code.substr(bracePos + 1, endBracePos - bracePos - 1);
+    auto bindings = splitBindings(content);
+    
+    ScriptLoaderBlock loader;
+    
+    for (const auto& binding : bindings) {
+        size_t colonPos = binding.find(':');
+        if (colonPos == String::npos) continue;
+        
+        String key = trimWhitespace(binding.substr(0, colonPos));
+        String value = trimWhitespace(binding.substr(colonPos + 1));
+        
+        // 移除引号
+        if (value.length() >= 2 && 
+            ((value[0] == '"' && value[value.length()-1] == '"') ||
+             (value[0] == '\'' && value[value.length()-1] == '\''))) {
+            value = value.substr(1, value.length() - 2);
+        }
+        
+        if (key == "src") {
+            loader.scripts.push_back(value);
+        } else if (key == "onload") {
+            loader.onload = value;
+        } else if (key == "onerror") {
+            loader.onerror = value;
+        } else if (key == "async") {
+            loader.async = (value == "true" || value == "1");
+        }
+    }
+    
+    return loader;
+}
+
+Optional<std::pair<size_t, size_t>> CHTLJSParser::findScriptLoaderBlock(const String& code, size_t startPos) {
+    size_t loaderPos = code.find("ScriptLoader", startPos);
+    if (loaderPos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t bracePos = code.find('{', loaderPos);
+    if (bracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    size_t endBracePos = findMatchingBrace(code, bracePos);
+    if (endBracePos == String::npos) {
+        return std::nullopt;
+    }
+    
+    return std::make_pair(loaderPos, endBracePos + 1);
+}
+
+} // namespace JS
+} // namespace CHTL

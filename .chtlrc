@@ -1,0 +1,175 @@
+# CHTL 配置文件 (.chtlrc)
+# CHTL Configuration File
+
+# ========================================
+# 编译器设置 - Compiler Settings
+# ========================================
+
+# CHTL版本
+chtl.version=2.5.0
+
+# 编译模式：development, production
+chtl.mode=development
+
+# 输出格式：html, inline-html
+chtl.output.format=html
+
+# 是否生成source map
+chtl.sourcemap.enabled=true
+
+# 是否启用性能监控
+chtl.performance.monitor=true
+
+# ========================================
+# 模块设置 - Module Settings
+# ========================================
+
+# 官方模块路径（相对于编译器二进制文件）
+chtl.module.official.path=./module
+
+# 用户模块路径（相对于编译文件）
+chtl.module.user.path=./module
+
+# 是否启用模块缓存
+chtl.module.cache.enabled=true
+
+# 缓存目录
+chtl.module.cache.path=./.chtl_cache/modules
+
+# 模块搜索路径（多个路径用分号分隔）
+chtl.module.search.paths=./module;./node_modules
+
+# ========================================
+# 代码生成设置 - Code Generation
+# ========================================
+
+# 是否美化输出
+chtl.codegen.pretty=true
+
+# 缩进类型：tab, space
+chtl.codegen.indent.type=space
+
+# 缩进大小
+chtl.codegen.indent.size=2
+
+# 是否生成默认HTML结构
+chtl.codegen.default.structure=false
+
+# 是否内联CSS
+chtl.codegen.inline.css=false
+
+# 是否内联JS
+chtl.codegen.inline.js=false
+
+# ========================================
+# CHTL JS 设置 - CHTL JS Settings
+# ========================================
+
+# 是否启用CHTL JS
+chtl.js.enabled=true
+
+# 是否自动包装IIFE
+chtl.js.wrap.iife=false
+
+# 是否启用严格模式
+chtl.js.strict.mode=true
+
+# ========================================
+# 优化设置 - Optimization
+# ========================================
+
+# 是否压缩CSS
+chtl.optimize.minify.css=false
+
+# 是否压缩JS
+chtl.optimize.minify.js=false
+
+# 是否移除注释
+chtl.optimize.remove.comments=false
+
+# ========================================
+# 调试设置 - Debug Settings
+# ========================================
+
+# 调试模式
+chtl.debug.mode=false
+
+# 是否显示详细日志
+chtl.debug.verbose=false
+
+# 是否保留中间文件
+chtl.debug.keep.intermediate=false
+
+# ========================================
+# 插件设置 - Plugin Settings
+# ========================================
+
+# 是否启用插件系统
+chtl.plugin.enabled=true
+
+# 插件目录
+chtl.plugin.path=./plugins
+
+# 启用的插件列表（多个插件用分号分隔）
+chtl.plugin.active=
+
+# ========================================
+# 文件监视设置 - File Watcher
+# ========================================
+
+# 是否启用文件监视
+chtl.watcher.enabled=false
+
+# 监视的文件扩展名
+chtl.watcher.extensions=.chtl;.cjjs
+
+# 忽略的目录
+chtl.watcher.ignore=node_modules;.git;build
+
+# ========================================
+# 错误报告设置 - Error Reporting
+# ========================================
+
+# 错误显示模式：simple, detailed
+chtl.error.display.mode=detailed
+
+# 是否显示错误位置上下文
+chtl.error.show.context=true
+
+# 上下文行数
+chtl.error.context.lines=3
+
+# ========================================
+# 性能设置 - Performance
+# ========================================
+
+# 最大编译时间（毫秒）
+chtl.performance.max.compile.time=30000
+
+# 最大内存使用（MB）
+chtl.performance.max.memory=512
+
+# 是否启用并行编译
+chtl.performance.parallel.compile=true
+
+# ========================================
+# 兼容性设置 - Compatibility
+# ========================================
+
+# 目标浏览器
+chtl.target.browser=modern
+
+# 是否启用polyfill
+chtl.compatibility.polyfill=false
+
+# ========================================
+# 官方模块配置 - Official Modules
+# ========================================
+
+# Chtholly模块设置
+chtl.module.chtholly.enabled=true
+chtl.module.chtholly.theme=default
+
+# Yuigahama模块设置
+chtl.module.yuigahama.enabled=true
+chtl.module.yuigahama.theme=default

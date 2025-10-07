@@ -1,0 +1,399 @@
+// 珂朵莉主模块 - CMOD部分
+// Chtholly Nota Seniorious - CMOD Components
+
+[Namespace] Chtholly
+
+// ========================================
+// 颜色变量组 - 珂朵莉的温暖色调
+// ========================================
+[Custom] @Var ChthollyColors
+{
+    // 主色调 - 粉红色系（珂朵莉的标志性颜色）
+    primary: #FFB6C1;           // 浅粉红
+    primaryDark: #FF69B4;       // 热粉红
+    primaryLight: #FFC0CB;      // 粉红
+    
+    // 辅助色
+    secondary: #87CEEB;         // 天蓝色（天空的颜色）
+    accent: #FFD700;            // 金色（阳光的颜色）
+    
+    // 背景色
+    background: #FFF5F5;        // 雪白偏粉
+    cardBg: #FFFFFF;
+    
+    // 文本色
+    textPrimary: #333333;
+    textSecondary: #666666;
+    textMuted: #999999;
+    
+    // 状态色
+    success: #90EE90;
+    warning: #FFD700;
+    error: #FFB6C1;
+    info: #87CEEB;
+    
+    // 边框色
+    border: #FFE4E1;
+    borderLight: #FFF0F5;
+    
+    // 阴影色
+    shadow: rgba(255, 182, 193, 0.3);
+}
+
+// ========================================
+// 字体变量组
+// ========================================
+[Custom] @Var ChthollyFonts
+{
+    family: "'Noto Sans SC', 'Microsoft YaHei', sans-serif";
+    familyEn: "'Crimson Text', 'Georgia', serif";
+    
+    sizeXs: 12px;
+    sizeSm: 14px;
+    sizeMd: 16px;
+    sizeLg: 18px;
+    sizeXl: 24px;
+    size2xl: 32px;
+    size3xl: 48px;
+    
+    weightLight: 300;
+    weightNormal: 400;
+    weightMedium: 500;
+    weightBold: 700;
+}
+
+// ========================================
+// 间距变量组
+// ========================================
+[Custom] @Var ChthollySpacing
+{
+    xs: 4px;
+    sm: 8px;
+    md: 16px;
+    lg: 24px;
+    xl: 32px;
+    xxl: 48px;
+}
+
+// ========================================
+// 动画变量组
+// ========================================
+[Custom] @Var ChthollyAnimations
+{
+    durationFast: 150ms;
+    durationNormal: 300ms;
+    durationSlow: 500ms;
+    
+    easingDefault: cubic-bezier(0.4, 0.0, 0.2, 1);
+    easingIn: cubic-bezier(0.4, 0.0, 1, 1);
+    easingOut: cubic-bezier(0.0, 0.0, 0.2, 1);
+    easingInOut: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+// ========================================
+// 主题样式组
+// ========================================
+[Custom] @Style ChthollyTheme
+{
+    font-family: ChthollyFonts(family);
+    color: ChthollyColors(textPrimary);
+    background-color: ChthollyColors(background);
+    line-height: 1.6;
+}
+
+// ========================================
+// 卡片样式组
+// ========================================
+[Custom] @Style ChthollyCard
+{
+    background: ChthollyColors(cardBg);
+    border-radius: 12px;
+    padding: ChthollySpacing(lg);
+    box-shadow: 0 4px 12px ChthollyColors(shadow);
+    border: 1px solid ChthollyColors(border);
+    transition: all ChthollyAnimations(durationNormal) ChthollyAnimations(easingDefault);
+}
+
+// ========================================
+// 按钮样式组
+// ========================================
+[Custom] @Style ChthollyButton
+{
+    background: ChthollyColors(primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: ChthollySpacing(sm) ChthollySpacing(lg);
+    font-size: ChthollyFonts(sizeMd);
+    font-weight: ChthollyFonts(weightMedium);
+    cursor: pointer;
+    transition: all ChthollyAnimations(durationFast) ChthollyAnimations(easingDefault);
+    box-shadow: 0 2px 8px ChthollyColors(shadow);
+}
+
+// ========================================
+// 手风琴样式组
+// ========================================
+[Custom] @Style ChthollyAccordion
+{
+    border: 1px solid ChthollyColors(border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+// ========================================
+// 手风琴元素
+// ========================================
+[Custom] @Element ChthollyAccordionItem
+{
+    div
+    {
+        class: accordion-header;
+        
+        style
+        {
+            .accordion-header
+            {
+                background: ChthollyColors(cardBg);
+                padding: ChthollySpacing(md);
+                cursor: pointer;
+                transition: background ChthollyAnimations(durationFast);
+                border-bottom: 1px solid ChthollyColors(border);
+            }
+            
+            &:hover
+            {
+                background: ChthollyColors(primaryLight);
+            }
+        }
+    }
+    
+    div
+    {
+        class: accordion-content;
+        
+        style
+        {
+            .accordion-content
+            {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height ChthollyAnimations(durationNormal) ChthollyAnimations(easingDefault);
+                background: ChthollyColors(background);
+            }
+            
+            .accordion-content.active
+            {
+                max-height: 500px;
+                padding: ChthollySpacing(md);
+            }
+        }
+    }
+}
+
+// ========================================
+// 四叶窗相册样式组
+// ========================================
+[Custom] @Style ChthollyGallery
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: ChthollySpacing(md);
+    padding: ChthollySpacing(lg);
+}
+
+// ========================================
+// 四叶窗相册项元素
+// ========================================
+[Custom] @Element ChthollyGalleryItem
+{
+    div
+    {
+        class: gallery-item;
+        
+        style
+        {
+            .gallery-item
+            {
+                position: relative;
+                overflow: hidden;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px ChthollyColors(shadow);
+                transition: transform ChthollyAnimations(durationNormal);
+                cursor: pointer;
+            }
+            
+            &:hover
+            {
+                transform: translateY(-8px);
+            }
+            
+            .gallery-item img
+            {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform ChthollyAnimations(durationNormal);
+            }
+            
+            .gallery-item:hover img
+            {
+                transform: scale(1.1);
+            }
+        }
+    }
+}
+
+// ========================================
+// 备忘录卡片样式组
+// ========================================
+[Custom] @Style ChthollyMemo
+{
+    background: linear-gradient(135deg, ChthollyColors(primaryLight) 0%, ChthollyColors(cardBg) 100%);
+    border-left: 4px solid ChthollyColors(primary);
+    padding: ChthollySpacing(lg);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px ChthollyColors(shadow);
+}
+
+// ========================================
+// 暖色笔记样式组
+// ========================================
+[Custom] @Style ChthollyNote
+{
+    background: linear-gradient(to bottom, ChthollyColors(background), ChthollyColors(cardBg));
+    border: 2px solid ChthollyColors(border);
+    border-radius: 12px;
+    padding: ChthollySpacing(xl);
+    font-family: ChthollyFonts(familyEn);
+    line-height: 1.8;
+    color: ChthollyColors(textPrimary);
+    box-shadow: 0 4px 16px ChthollyColors(shadow);
+}
+
+// ========================================
+// 进度条样式组
+// ========================================
+[Custom] @Style ChthollyProgress
+{
+    width: 100%;
+    height: 24px;
+    background: ChthollyColors(background);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid ChthollyColors(border);
+}
+
+// ========================================
+// 进度条元素
+// ========================================
+[Custom] @Element ChthollyProgressBar
+{
+    div
+    {
+        class: progress-container;
+        
+        style
+        {
+            @Style ChthollyProgress;
+        }
+        
+        div
+        {
+            class: progress-bar;
+            
+            style
+            {
+                .progress-bar
+                {
+                    height: 100%;
+                    background: linear-gradient(90deg, ChthollyColors(primary), ChthollyColors(primaryDark));
+                    transition: width ChthollyAnimations(durationSlow) ChthollyAnimations(easingDefault);
+                    border-radius: 12px;
+                }
+            }
+        }
+    }
+}
+
+// ========================================
+// 樱花雨容器样式
+// ========================================
+[Custom] @Style ChthollySakura
+{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+// ========================================
+// 鼠标特效样式
+// ========================================
+[Custom] @Style ChthollyMouse
+{
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: ChthollyColors(primary);
+    opacity: 0.6;
+    transition: all 0.1s ease;
+}
+
+// ========================================
+// 视差滚动背景样式
+// ========================================
+[Custom] @Style ChthollyParallax
+{
+    position: relative;
+    overflow: hidden;
+    min-height: 500px;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+// ========================================
+// 右键菜单样式
+// ========================================
+[Custom] @Style ChthollyContextMenu
+{
+    position: fixed;
+    background: ChthollyColors(cardBg);
+    border: 1px solid ChthollyColors(border);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px ChthollyColors(shadow);
+    padding: ChthollySpacing(sm);
+    min-width: 180px;
+    z-index: 10000;
+}
+
+// ========================================
+// 基础页面布局元素
+// ========================================
+[Custom] @Element ChthollyPage
+{
+    div
+    {
+        class: chtholly-page;
+        
+        style
+        {
+            @Style ChthollyTheme;
+            
+            .chtholly-page
+            {
+                min-height: 100vh;
+                padding: ChthollySpacing(xxl);
+            }
+        }
+    }
+}

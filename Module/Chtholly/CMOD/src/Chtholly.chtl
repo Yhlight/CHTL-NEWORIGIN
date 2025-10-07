@@ -1,0 +1,482 @@
+// 珂朵莉主模块 - Chtholly Main Module
+// 献给世界上最幸福的女孩
+
+[Namespace] Chtholly
+
+// ============= 变量组定义 =============
+
+[Custom] @Var ChthollyColors
+{
+    // 主题色 - 基于珂朵莉的天蓝色发色
+    primary: #87CEEB;        // 天蓝色
+    secondary: #FFB6C1;      // 淡粉色
+    accent: #9370DB;         // 紫色
+    
+    // 中性色
+    background: #F5F5F5;
+    surface: #FFFFFF;
+    text: #333333;
+    textLight: #666666;
+    border: #E0E0E0;
+    
+    // 状态色
+    success: #4CAF50;
+    warning: #FF9800;
+    error: #F44336;
+    info: #2196F3;
+}
+
+[Custom] @Var ChthollyFonts
+{
+    family: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif";
+    sizeBase: 16px;
+    sizeSmall: 14px;
+    sizeLarge: 18px;
+    sizeH1: 32px;
+    sizeH2: 28px;
+    sizeH3: 24px;
+}
+
+[Custom] @Var ChthollySpacing
+{
+    xs: 4px;
+    sm: 8px;
+    md: 16px;
+    lg: 24px;
+    xl: 32px;
+    xxl: 48px;
+}
+
+[Custom] @Var ChthollyAnimations
+{
+    durationFast: 0.2s;
+    durationNormal: 0.3s;
+    durationSlow: 0.5s;
+    easingDefault: ease-in-out;
+    easingSmooth: cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+// ============= 模板样式组 =============
+
+[Template] @Style ChthollyBaseText
+{
+    font-family: ChthollyFonts(family);
+    font-size: ChthollyFonts(sizeBase);
+    color: ChthollyColors(text);
+    line-height: 1.6;
+}
+
+[Template] @Style ChthollyContainer
+{
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: ChthollySpacing(lg);
+}
+
+[Template] @Style ChthollyFlexCenter
+{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+[Template] @Style ChthollyTransition
+{
+    transition: all ChthollyAnimations(durationNormal) ChthollyAnimations(easingDefault);
+}
+
+// ============= 自定义样式组 =============
+
+[Custom] @Style ChthollyCard
+{
+    background: ChthollyColors(surface);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: ChthollySpacing(lg);
+    @Style ChthollyTransition;
+}
+
+[Custom] @Style ChthollyButton
+{
+    background: ChthollyColors(primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: ChthollySpacing(sm) ChthollySpacing(lg);
+    cursor: pointer;
+    font-size: ChthollyFonts(sizeBase);
+    @Style ChthollyTransition;
+}
+
+// ============= 手风琴组件 =============
+
+[Custom] @Element ChthollyAccordionItem
+{
+    div
+    {
+        class: chtholly-accordion-item;
+        
+        style
+        {
+            .chtholly-accordion-item
+            {
+                background: ChthollyColors(surface);
+                margin-bottom: ChthollySpacing(sm);
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            }
+            
+            .chtholly-accordion-header
+            {
+                padding: ChthollySpacing(md);
+                background: linear-gradient(135deg, ChthollyColors(primary), ChthollyColors(secondary));
+                color: white;
+                cursor: pointer;
+                font-weight: 600;
+                @Style ChthollyTransition;
+            }
+            
+            .chtholly-accordion-header:hover
+            {
+                opacity: 0.9;
+            }
+            
+            .chtholly-accordion-content
+            {
+                padding: 0 ChthollySpacing(md);
+                max-height: 0;
+                overflow: hidden;
+                @Style ChthollyTransition;
+            }
+            
+            .chtholly-accordion-content.active
+            {
+                padding: ChthollySpacing(md);
+                max-height: 500px;
+            }
+        }
+        
+        div
+        {
+            class: chtholly-accordion-header;
+            text: "Accordion Title";
+        }
+        
+        div
+        {
+            class: chtholly-accordion-content;
+            text: "Accordion content goes here...";
+        }
+    }
+}
+
+// ============= 四叶窗相册 =============
+
+[Custom] @Element ChthollyGalleryItem
+{
+    div
+    {
+        class: chtholly-gallery;
+        
+        style
+        {
+            .chtholly-gallery
+            {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: ChthollySpacing(md);
+                padding: ChthollySpacing(lg);
+            }
+            
+            .chtholly-gallery-item
+            {
+                position: relative;
+                overflow: hidden;
+                border-radius: 12px;
+                aspect-ratio: 1;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                @Style ChthollyTransition;
+            }
+            
+            .chtholly-gallery-item:hover
+            {
+                transform: scale(1.05);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            }
+            
+            .chtholly-gallery-item img
+            {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        }
+        
+        div
+        {
+            class: chtholly-gallery-item;
+            
+            [Origin] @Html
+            {
+                <img src="placeholder.jpg" alt="Gallery Image">
+            }
+        }
+    }
+}
+
+// ============= 备忘录组件 =============
+
+[Custom] @Element ChthollyNotesCard
+{
+    div
+    {
+        class: chtholly-notes-card;
+        
+        style
+        {
+            .chtholly-notes-card
+            {
+                @Style ChthollyCard;
+                background: linear-gradient(135deg, #FFF8DC 0%, #FFFACD 100%);
+                position: relative;
+                min-height: 200px;
+            }
+            
+            .chtholly-notes-card::before
+            {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 20px;
+                width: 2px;
+                height: 100%;
+                background: ChthollyColors(error);
+            }
+            
+            .chtholly-notes-header
+            {
+                font-size: ChthollyFonts(sizeLarge);
+                font-weight: 700;
+                color: ChthollyColors(accent);
+                margin-bottom: ChthollySpacing(md);
+                padding-left: ChthollySpacing(lg);
+            }
+            
+            .chtholly-notes-content
+            {
+                padding-left: ChthollySpacing(lg);
+                font-size: ChthollyFonts(sizeBase);
+                color: ChthollyColors(text);
+                line-height: 1.8;
+            }
+        }
+        
+        div
+        {
+            class: chtholly-notes-header;
+            text: "Notes";
+        }
+        
+        div
+        {
+            class: chtholly-notes-content;
+            text: "Write your notes here...";
+        }
+    }
+}
+
+// ============= 进度条组件 =============
+
+[Custom] @Element ChthollyProgressBar
+{
+    div
+    {
+        class: chtholly-progress-container;
+        
+        style
+        {
+            .chtholly-progress-container
+            {
+                width: 100%;
+                height: 24px;
+                background: ChthollyColors(background);
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
+            .chtholly-progress-bar
+            {
+                height: 100%;
+                background: linear-gradient(90deg, ChthollyColors(primary), ChthollyColors(accent));
+                border-radius: 12px;
+                transition: width ChthollyAnimations(durationSlow) ChthollyAnimations(easingSmooth);
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: ChthollySpacing(sm);
+                color: white;
+                font-size: ChthollyFonts(sizeSmall);
+                font-weight: 600;
+            }
+        }
+        
+        div
+        {
+            class: chtholly-progress-bar;
+            style
+            {
+                width: 60%;
+            }
+            text: "60%";
+        }
+    }
+}
+
+// ============= 右键菜单组件 =============
+
+[Custom] @Element ChthollyContextMenu
+{
+    div
+    {
+        class: chtholly-context-menu;
+        
+        style
+        {
+            .chtholly-context-menu
+            {
+                position: fixed;
+                display: none;
+                background: ChthollyColors(surface);
+                border-radius: 8px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+                padding: ChthollySpacing(xs) 0;
+                min-width: 180px;
+                z-index: 9999;
+            }
+            
+            .chtholly-context-menu.active
+            {
+                display: block;
+            }
+            
+            .chtholly-context-menu-item
+            {
+                padding: ChthollySpacing(sm) ChthollySpacing(md);
+                cursor: pointer;
+                @Style ChthollyTransition;
+            }
+            
+            .chtholly-context-menu-item:hover
+            {
+                background: ChthollyColors(primary);
+                color: white;
+            }
+            
+            .chtholly-context-menu-divider
+            {
+                height: 1px;
+                background: ChthollyColors(border);
+                margin: ChthollySpacing(xs) 0;
+            }
+        }
+        
+        div
+        {
+            class: chtholly-context-menu-item;
+            text: "Menu Item 1";
+        }
+        
+        div
+        {
+            class: chtholly-context-menu-divider;
+        }
+        
+        div
+        {
+            class: chtholly-context-menu-item;
+            text: "Menu Item 2";
+        }
+    }
+}
+
+// ============= 樱花雨效果 =============
+
+[Custom] @Element ChthollySakura
+{
+    div
+    {
+        class: chtholly-sakura-container;
+        
+        style
+        {
+            .chtholly-sakura-container
+            {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 1000;
+                overflow: hidden;
+            }
+            
+            .chtholly-sakura
+            {
+                position: absolute;
+                width: 10px;
+                height: 10px;
+                background: radial-gradient(circle, ChthollyColors(secondary), transparent);
+                border-radius: 50%;
+                opacity: 0.7;
+                animation: sakurafall 10s linear infinite;
+            }
+        }
+        
+        [Origin] @Style
+        {
+            @keyframes sakurafall {
+                0% {
+                    top: -10%;
+                    transform: translateX(0) rotate(0deg);
+                }
+                100% {
+                    top: 110%;
+                    transform: translateX(100px) rotate(360deg);
+                }
+            }
+        }
+    }
+}
+
+// ============= 页面模板 =============
+
+[Template] @Element ChthollyPage
+{
+    html
+    {
+        head
+        {
+            [Origin] @Html
+            {
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Chtholly Theme</title>
+            }
+        }
+        
+        body
+        {
+            style
+            {
+                margin: 0;
+                padding: 0;
+                font-family: ChthollyFonts(family);
+                background: ChthollyColors(background);
+                color: ChthollyColors(text);
+            }
+        }
+    }
+}
