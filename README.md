@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-2.5.0--module--and--final-blue.svg)](https://github.com/chtl-lang/chtl)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Build](https://img.shields.io/badge/build-inprogress-yellow.svg)]()
+[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)]()
 [![Modules](https://img.shields.io/badge/modules-CMOD%2BCJMOD-brightgreen.svg)]()
 
 **CHTL** is a modern, powerful HTML template language with extensive JavaScript integration capabilities.

@@ -67,7 +67,7 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
         pos += 1;
     }
     
-    // 第五步：处理 & 引用（跳过 && 和 &->）
+    // 第五步：处理 & 引用（跳过 && 和 &->，以及位运算）
     pos = 0;
     while ((pos = result.find("&", pos)) != String::npos) {
         // 跳过 &&（逻辑运算符）
@@ -79,6 +79,38 @@ String CHTLJSGenerator::generate(const String& chtljsCode) {
         // 跳过 &->（事件绑定操作符，应该已被处理）
         if (pos + 2 < result.length() && result[pos + 1] == '-' && result[pos + 2] == '>') {
             pos += 3;
+            continue;
+        }
+        
+        // 跳过位运算符 &（前后都是数字/变量名/二进制字面量）
+        bool isBitwiseOp = false;
+        if (pos > 0 && pos + 1 < result.length()) {
+            // 检查前面是否是数字、变量名、0b、0x、0o或右括号
+            size_t before = pos - 1;
+            while (before > 0 && std::isspace(result[before])) before--;
+            
+            char prevChar = result[before];
+            bool hasValidBefore = std::isdigit(prevChar) || std::isalpha(prevChar) || 
+                                  prevChar == '_' || prevChar == ')' || prevChar == ']';
+            
+            // 检查后面是否是数字、变量名、0b、0x、0o或左括号
+            size_t after = pos + 1;
+            while (after < result.length() && std::isspace(result[after])) after++;
+            
+            if (after < result.length()) {
+                char nextChar = result[after];
+                bool hasValidAfter = std::isdigit(nextChar) || std::isalpha(nextChar) || 
+                                     nextChar == '_' || nextChar == '(' || nextChar == '[';
+                
+                // 如果前后都是有效的，可能是位运算
+                if (hasValidBefore && hasValidAfter) {
+                    isBitwiseOp = true;
+                }
+            }
+        }
+        
+        if (isBitwiseOp) {
+            pos++;
             continue;
         }
         

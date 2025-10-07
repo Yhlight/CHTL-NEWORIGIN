@@ -1,0 +1,557 @@
+// CHTL v2.5.0 - 三语言共存完整示例
+// 展示 CHTL + CHTL JS + JavaScript 如何和谐工作
+
+use html5;
+
+[Import] @Chtl from chtl::Chtholly
+[Import] @Chtl from chtl::Yuigahama
+
+html
+{
+    head
+    {
+        title
+        {
+            text: "CHTL 三语言共存示例";
+        }
+        
+        style
+        {
+            // 全局样式 - CHTL 语言
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+        }
+    }
+    
+    body
+    {
+        // CHTL 语言 - 结构定义
+        style
+        {
+            @Style ChthollyTheme;
+        }
+        
+        @Element ChthollyPage
+        {
+            // 标题卡片
+            div
+            {
+                style
+                {
+                    @Style ChthollyCard;
+                    text-align: center;
+                    margin-bottom: ChthollySpacing(xl);
+                }
+                
+                h1
+                {
+                    text: "三语言协同工作示例";
+                    
+                    style
+                    {
+                        color: ChthollyColors(primaryDark);
+                        font-size: ChthollyFonts(size3xl);
+                    }
+                }
+                
+                p
+                {
+                    text: "展示 CHTL + CHTL JS + JavaScript 的完美配合";
+                    
+                    style
+                    {
+                        color: ChthollyColors(textSecondary);
+                    }
+                }
+            }
+            
+            // 计数器示例
+            div
+            {
+                style
+                {
+                    @Style YuigahamaCard;
+                    margin-bottom: YuigahamaSpacing(lg);
+                }
+                
+                h2
+                {
+                    text: "1. 计数器示例";
+                    style { color: YuigahamaColors(primary); }
+                }
+                
+                div
+                {
+                    id: counter-display;
+                    text: "0";
+                    
+                    style
+                    {
+                        font-size: 48px;
+                        font-weight: bold;
+                        text-align: center;
+                        margin: YuigahamaSpacing(lg) 0;
+                        color: YuigahamaColors(primaryDark);
+                    }
+                }
+                
+                div
+                {
+                    style
+                    {
+                        display: flex;
+                        gap: YuigahamaSpacing(md);
+                        justify-content: center;
+                    }
+                    
+                    button
+                    {
+                        class: dec-btn;
+                        text: "-1";
+                        style { @Style YuigahamaButton; }
+                    }
+                    
+                    button
+                    {
+                        class: reset-btn;
+                        text: "重置";
+                        style { @Style ChthollyButton; }
+                    }
+                    
+                    button
+                    {
+                        class: inc-btn;
+                        text: "+1";
+                        style { @Style YuigahamaButton; }
+                    }
+                }
+                
+                script
+                {
+                    // ========================================
+                    // JavaScript 部分 - 数据模型和业务逻辑
+                    // ========================================
+                    
+                    // 状态管理（纯 JS）
+                    const counterState = {
+                        count: 0,
+                        min: 0,
+                        max: 100,
+                        history: []
+                    };
+                    
+                    // 业务逻辑函数（纯 JS）
+                    function increment() {
+                        if (counterState.count < counterState.max) {
+                            counterState.count++;
+                            counterState.history.push({
+                                action: 'increment',
+                                value: counterState.count,
+                                timestamp: Date.now()
+                            });
+                            return true;
+                        }
+                        return false;
+                    }
+                    
+                    function decrement() {
+                        if (counterState.count > counterState.min) {
+                            counterState.count--;
+                            counterState.history.push({
+                                action: 'decrement',
+                                value: counterState.count,
+                                timestamp: Date.now()
+                            });
+                            return true;
+                        }
+                        return false;
+                    }
+                    
+                    function reset() {
+                        counterState.count = 0;
+                        counterState.history = [];
+                    }
+                    
+                    // 工具函数（纯 JS）
+                    const formatNumber = (num) => {
+                        return num.toString().padStart(3, '0');
+                    };
+                    
+                    const updateDisplay = () => {
+                        const displayText = formatNumber(counterState.count);
+                        {{#counter-display}}->textContent = displayText;
+                    };
+                    
+                    // ========================================
+                    // CHTL JS 部分 - DOM 选择
+                    // ========================================
+                    
+                    const display = {{#counter-display}};
+                    const incBtn = {{.inc-btn}};
+                    const decBtn = {{.dec-btn}};
+                    const resetBtn = {{.reset-btn}};
+                    
+                    // ========================================
+                    // 混合部分 - CHTL JS 事件绑定 + JS 逻辑
+                    // ========================================
+                    
+                    incBtn &-> click: () => {
+                        if (increment()) {
+                            updateDisplay();
+                            console.log('Incremented to:', counterState.count);
+                        } else {
+                            alert('已达到最大值！');
+                        }
+                    };
+                    
+                    decBtn &-> click: () => {
+                        if (decrement()) {
+                            updateDisplay();
+                        } else {
+                            alert('已达到最小值！');
+                        }
+                    };
+                    
+                    resetBtn->Listen {
+                        click: () => {
+                            reset();
+                            updateDisplay();
+                            console.log('Counter reset');
+                        }
+                    };
+                    
+                    // ========================================
+                    // JavaScript 部分 - 初始化
+                    // ========================================
+                    
+                    updateDisplay();
+                }
+            }
+            
+            // 音乐播放器示例
+            div
+            {
+                style
+                {
+                    @Style YuigahamaCard;
+                    margin-bottom: YuigahamaSpacing(lg);
+                }
+                
+                h2
+                {
+                    text: "2. 音乐播放器示例";
+                    style { color: YuigahamaColors(primary); }
+                }
+                
+                @Element YuigahaMusicPlayerWidget
+                {
+                    script
+                    {
+                        // ========================================
+                        // JavaScript 部分 - 音乐数据和逻辑
+                        // ========================================
+                        
+                        // 播放列表（纯 JS 数组）
+                        const playlist = [
+                            {
+                                title: 'Scarborough Fair',
+                                artist: '莎拉·布莱曼',
+                                duration: 245,
+                                cover: 'cover1.jpg'
+                            },
+                            {
+                                title: 'Always With Me',
+                                artist: '木村弓',
+                                duration: 198,
+                                cover: 'cover2.jpg'
+                            }
+                        ];
+                        
+                        // 播放器状态（纯 JS 对象）
+                        const playerState = {
+                            currentIndex: 0,
+                            isPlaying: false,
+                            currentTime: 0,
+                            volume: 0.8
+                        };
+                        
+                        // 播放器逻辑（纯 JS 函数）
+                        function loadSong(index) {
+                            if (index >= 0 && index < playlist.length) {
+                                playerState.currentIndex = index;
+                                const song = playlist[index];
+                                return song;
+                            }
+                            return null;
+                        }
+                        
+                        function togglePlay() {
+                            playerState.isPlaying = !playerState.isPlaying;
+                            return playerState.isPlaying;
+                        }
+                        
+                        function nextSong() {
+                            const nextIndex = (playerState.currentIndex + 1) % playlist.length;
+                            return loadSong(nextIndex);
+                        }
+                        
+                        function prevSong() {
+                            const prevIndex = playerState.currentIndex - 1;
+                            const index = prevIndex < 0 ? playlist.length - 1 : prevIndex;
+                            return loadSong(index);
+                        }
+                        
+                        // ========================================
+                        // CHTL JS 部分 - DOM 选择
+                        // ========================================
+                        
+                        const songTitle = {{.song-title}};
+                        const songArtist = {{.song-artist}};
+                        const playBtn = {{.play-btn}};
+                        const prevBtn = {{.prev-btn}};
+                        const nextBtn = {{.next-btn}};
+                        const progressBar = {{.progress-fill}};
+                        
+                        // ========================================
+                        // 混合部分 - 事件处理
+                        // ========================================
+                        
+                        // 更新UI（混合 JS 逻辑 + CHTL JS DOM操作）
+                        function updateUI() {
+                            const song = playlist[playerState.currentIndex];
+                            songTitle->textContent = song.title;
+                            songArtist->textContent = song.artist;
+                        }
+                        
+                        // CHTL JS 事件绑定
+                        playBtn &-> click: () => {
+                            const playing = togglePlay();  // JS 函数
+                            playBtn->textContent = playing ? '⏸' : '▶';  // CHTL JS
+                            console.log(playing ? 'Playing' : 'Paused');  // JS
+                        };
+                        
+                        nextBtn &-> click: () => {
+                            const song = nextSong();  // JS 函数
+                            if (song) {
+                                updateUI();  // JS 函数
+                                console.log('Next song:', song.title);  // JS
+                            }
+                        };
+                        
+                        prevBtn &-> click: () => {
+                            const song = prevSong();
+                            if (song) {
+                                updateUI();
+                            }
+                        };
+                        
+                        // ========================================
+                        // JavaScript 部分 - 初始化和定时器
+                        // ========================================
+                        
+                        // 初始化
+                        const initSong = loadSong(0);
+                        if (initSong) {
+                            updateUI();
+                        }
+                        
+                        // 模拟播放进度（纯 JS 定时器）
+                        setInterval(() => {
+                            if (playerState.isPlaying) {
+                                playerState.currentTime++;
+                                const song = playlist[playerState.currentIndex];
+                                const progress = (playerState.currentTime / song.duration) * 100;
+                                
+                                // CHTL JS 更新进度条
+                                progressBar->style.width = progress + '%';
+                                
+                                // 自动下一首
+                                if (playerState.currentTime >= song.duration) {
+                                    playerState.currentTime = 0;
+                                    nextSong();
+                                    updateUI();
+                                }
+                            }
+                        }, 1000);
+                    }
+                }
+            }
+            
+            // API 交互示例
+            div
+            {
+                style
+                {
+                    @Style ChthollyCard;
+                }
+                
+                h2
+                {
+                    text: "3. API 交互示例";
+                    style { color: ChthollyColors(primary); }
+                }
+                
+                div
+                {
+                    id: api-result;
+                    text: "点击按钮加载数据...";
+                }
+                
+                button
+                {
+                    class: load-btn;
+                    text: "加载数据";
+                    style { @Style ChthollyButton; }
+                }
+                
+                script
+                {
+                    // JavaScript 部分 - API 调用
+                    async function fetchUserData() {
+                        try {
+                            // 模拟 API 调用
+                            return new Promise((resolve) => {
+                                setTimeout(() => {
+                                    resolve({
+                                        users: [
+                                            { id: 1, name: '珂朵莉' },
+                                            { id: 2, name: '由比滨结衣' }
+                                        ]
+                                    });
+                                }, 1000);
+                            });
+                        } catch (error) {
+                            console.error('Failed to fetch:', error);
+                            return null;
+                        }
+                    }
+                    
+                    // CHTL JS 部分 - DOM 选择
+                    const resultDiv = {{#api-result}};
+                    const loadBtn = {{.load-btn}};
+                    
+                    // 混合部分 - 事件处理
+                    loadBtn &-> click: async () => {
+                        // CHTL JS 更新UI
+                        resultDiv->textContent = '加载中...';
+                        loadBtn->disabled = true;
+                        
+                        // JS 异步调用
+                        const data = await fetchUserData();
+                        
+                        if (data && data.users) {
+                            // JS 数据处理
+                            const userList = data.users
+                                .map(u => `<div>${u.id}. ${u.name}</div>`)
+                                .join('');
+                            
+                            // CHTL JS DOM 更新
+                            resultDiv->innerHTML = userList;
+                        }
+                        
+                        // CHTL JS 恢复按钮
+                        loadBtn->disabled = false;
+                    };
+                }
+            }
+        }
+        
+        // 全局脚本
+        script
+        {
+            // ========================================
+            // JavaScript 部分 - 全局工具
+            // ========================================
+            
+            // 工具对象
+            const Utils = {
+                formatDate: (timestamp) => {
+                    return new Date(timestamp).toLocaleString('zh-CN');
+                },
+                
+                debounce: (fn, delay) => {
+                    let timer;
+                    return (...args) => {
+                        clearTimeout(timer);
+                        timer = setTimeout(() => fn(...args), delay);
+                    };
+                },
+                
+                throttle: (fn, limit) => {
+                    let inThrottle;
+                    return (...args) => {
+                        if (!inThrottle) {
+                            fn(...args);
+                            inThrottle = true;
+                            setTimeout(() => inThrottle = false, limit);
+                        }
+                    };
+                }
+            };
+            
+            // 全局状态管理
+            window.AppState = {
+                initialized: false,
+                theme: 'chtholly',
+                language: 'zh-CN'
+            };
+            
+            // ========================================
+            // 混合部分 - 全局事件监听
+            // ========================================
+            
+            // 页面加载完成
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('页面加载完成');
+                console.log('支持的语言：CHTL + CHTL JS + JavaScript');
+                
+                window.AppState.initialized = true;
+                
+                // 使用 CHTL JS
+                console.log('珂朵莉模块：已加载 🌸');
+                console.log('由比滨模块：已加载 🌟');
+            });
+            
+            // ========================================
+            // JavaScript 部分 - 性能监控
+            // ========================================
+            
+            // 性能监控
+            window.addEventListener('load', () => {
+                const perfData = performance.getEntriesByType('navigation')[0];
+                console.log('页面加载时间:', perfData.loadEventEnd - perfData.fetchStart, 'ms');
+            });
+            
+            // ========================================
+            // CHTL JS 部分 - 全局鼠标特效
+            // ========================================
+            
+            // 创建鼠标特效元素
+            const mouseEffect = document.createElement('div');
+            mouseEffect.className = 'mouse-effect';
+            mouseEffect.style.cssText = `
+                position: fixed;
+                width: 20px;
+                height: 20px;
+                background: #FFB6C1;
+                border-radius: 50%;
+                pointer-events: none;
+                opacity: 0.6;
+                transition: all 0.1s ease;
+                z-index: 9999;
+            `;
+            document.body.appendChild(mouseEffect);
+            
+            // 鼠标移动（纯 JS 事件）
+            document.addEventListener('mousemove', (e) => {
+                mouseEffect.style.left = (e.clientX - 10) + 'px';
+                mouseEffect.style.top = (e.clientY - 10) + 'px';
+            });
+            
+            console.log('🎉 CHTL v2.5.0 三语言系统初始化完成！');
+        }
+    }
+}
