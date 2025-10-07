@@ -3,6 +3,17 @@
 
 #include "../../Common.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLNode/nodes/ProgramNode.h"
+#include "../CHTLNode/nodes/ElementNode.h"
+#include "../CHTLNode/nodes/TextNode.h"
+#include "../CHTLNode/nodes/CommentNode.h"
+#include "../CHTLNode/nodes/AttributeNode.h"
+#include "../CHTLNode/nodes/StyleNode.h"
+#include "../CHTLNode/nodes/ScriptNode.h"
+#include "../CHTLNode/nodes/TemplateNode.h"
+#include "../CHTLNode/nodes/CustomNode.h"
+#include "../CHTLNode/nodes/OriginNode.h"
+#include "../CHTLNode/nodes/ImportNode.h"
 #include "../../CHTL-JS/CHTLJSGenerator/CHTLJSGenerator.h"
 
 namespace CHTL {

@@ -2,9 +2,30 @@
 #include "../../Util/StringUtil/StringUtil.h"
 #include <fstream>
 #include <sstream>
+#include <random>
+#include <string>
+#include <algorithm>
 
 namespace CHTL {
 namespace CMOD {
+
+namespace {
+std::string generate_random_string(size_t length) {
+    static const char charset[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    std::string result;
+    result.reserve(length);
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution<int> distribution(0, sizeof(charset) - 2);
+    for (size_t i = 0; i < length; ++i) {
+        result += charset[distribution(generator)];
+    }
+    return result;
+}
+} // namespace
 
 ModuleLoader::ModuleLoader() {
     officialModulePath_ = "./module";
@@ -76,8 +97,8 @@ Optional<ModuleData> ModuleLoader::loadCMODFile(const String& filePath) {
     }
     
     // 创建临时目录解包
-    String tempDir = fs::temp_directory_path().string() + "/chtl_cmod_" + 
-                     std::to_string(std::time(nullptr));
+    String tempDir = fs::temp_directory_path().string() + "/chtl_cmod_" +
+                     generate_random_string(12);
     
     // 使用 ModulePacker 解包
     ModulePacker packer;
@@ -109,8 +130,8 @@ Optional<ModuleData> ModuleLoader::loadCJMODFile(const String& filePath) {
     }
     
     // 创建临时目录解包
-    String tempDir = fs::temp_directory_path().string() + "/chtl_cjmod_" + 
-                     std::to_string(std::time(nullptr));
+    String tempDir = fs::temp_directory_path().string() + "/chtl_cjmod_" +
+                     generate_random_string(12);
     
     // 使用 ModulePacker 解包
     ModulePacker packer;

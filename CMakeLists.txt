@@ -19,32 +19,40 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third-party
 )
 
-# 源文件目录
-set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
-
-# Util工具层
-file(GLOB_RECURSE UTIL_SOURCES 
-    "${SRC_DIR}/Util/*.cpp"
-)
-
-# CHTL编译器
-file(GLOB_RECURSE CHTL_SOURCES 
-    "${SRC_DIR}/CHTL/*.cpp"
-)
-
-# CHTL JS编译器
-file(GLOB_RECURSE CHTLJS_SOURCES 
-    "${SRC_DIR}/CHTL-JS/*.cpp"
-)
-
-# 确保包含新的Parser文件
-list(APPEND CHTLJS_SOURCES 
-    "${SRC_DIR}/CHTL-JS/CHTLJSParser/CHTLJSParser.cpp"
-)
-
-# 盐桥核心
-file(GLOB_RECURSE SHARED_SOURCES 
-    "${SRC_DIR}/SharedCore/*.cpp"
+# 源文件
+set(CHTL_LIBRARY_SOURCES
+    src/Util/FileSystem/FileSystem.cpp
+    src/Util/StringUtil/StringUtil.cpp
+    src/CHTL/CHTLGenerator/CHTLGenerator.cpp
+    src/CHTL/CHTLGenerator/ConfigLoader.cpp
+    src/CHTL/CHTLLexer/GlobalMap.cpp
+    src/CHTL/CHTLLexer/Lexer.cpp
+    src/CHTL/CHTLLexer/Token.cpp
+    src/CHTL/CHTLNode/BaseNode.cpp
+    src/CHTL/CHTLNode/nodes/ProgramNode.cpp
+    src/CHTL/CHTLNode/nodes/ElementNode.cpp
+    src/CHTL/CHTLNode/nodes/TextNode.cpp
+    src/CHTL/CHTLNode/nodes/CommentNode.cpp
+    src/CHTL/CHTLNode/nodes/AttributeNode.cpp
+    src/CHTL/CHTLNode/nodes/StyleNode.cpp
+    src/CHTL/CHTLNode/nodes/ScriptNode.cpp
+    src/CHTL/CHTLNode/nodes/TemplateNode.cpp
+    src/CHTL/CHTLNode/nodes/CustomNode.cpp
+    src/CHTL/CHTLNode/nodes/OriginNode.cpp
+    src/CHTL/CHTLNode/nodes/ImportNode.cpp
+    src/CHTL/CHTLParser/CHTLParser.cpp
+    src/CHTL/CHTLParser/ExpressionParser.cpp
+    src/CHTL/CHTLState/CHTLState.cpp
+    src/CHTL/CHTLTemplate/TemplateRegistry.cpp
+    src/CHTL/CMODSystem/ModuleLoader.cpp
+    src/CHTL/CMODSystem/ModulePacker.cpp
+    src/CHTL-JS/CHTLJSGenerator/CHTLJSGenerator.cpp
+    src/CHTL-JS/CHTLJSGenerator/VirRegistry.cpp
+    src/CHTL-JS/CHTLJSLexer/CHTLJSLexer.cpp
+    src/CHTL-JS/CHTLJSLexer/CHTLJSToken.cpp
+    src/CHTL-JS/CHTLJSParser/CHTLJSParser.cpp
+    src/CHTL-JS/CJMODSystem/CJMODApi.cpp
+    src/SharedCore/SaltBridge.cpp
 )
 
 # 第三方库
@@ -77,13 +85,7 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}/third-party)
 
 # 主可执行文件
-add_executable(chtl
-    ${SRC_DIR}/main.cpp
-    ${UTIL_SOURCES}
-    ${CHTL_SOURCES}
-    ${CHTLJS_SOURCES}
-    ${SHARED_SOURCES}
-)
+add_executable(chtl src/main.cpp ${CHTL_LIBRARY_SOURCES})
 
 # 链接 libzip（如果可用）
 if(LIBZIP_FOUND)
@@ -100,10 +102,7 @@ file(GLOB_RECURSE TEST_SOURCES
 if(TEST_SOURCES)
     add_executable(chtl_tests
         ${TEST_SOURCES}
-        ${UTIL_SOURCES}
-        ${CHTL_SOURCES}
-        ${CHTLJS_SOURCES}
-        ${SHARED_SOURCES}
+        ${CHTL_LIBRARY_SOURCES}
     )
     
     # 链接 libzip（如果可用）

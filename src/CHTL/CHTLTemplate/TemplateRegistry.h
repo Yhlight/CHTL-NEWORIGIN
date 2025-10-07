@@ -3,6 +3,7 @@
 
 #include "../../Common.h"
 #include "../CHTLNode/BaseNode.h"
+#include "../CHTLNode/nodes/TemplateNode.h"
 
 namespace CHTL {
 
