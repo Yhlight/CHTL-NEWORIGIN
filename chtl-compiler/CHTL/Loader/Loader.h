@@ -14,7 +14,6 @@ public:
     std::string loadFile(const std::string& filepath) {
         std::string absolute_path = (filepath[0] == '/') ? filepath : projectRoot + "/" + filepath;
 
-        // Check for circular dependency
         if (std::find(importStack.begin(), importStack.end(), absolute_path) != importStack.end()) {
             std::string stack_str;
             for(const auto& file : importStack) {
@@ -28,7 +27,7 @@ public:
 
         std::ifstream file(absolute_path);
         if (!file.is_open()) {
-            importStack.pop_back(); // Remove from stack if file can't be opened
+            importStack.pop_back();
             throw std::runtime_error("Could not open file: " + absolute_path);
         }
 
@@ -38,7 +37,7 @@ public:
     }
 
     void finishFile(const std::string& filepath) {
-        if (!importStack.empty() && importStack.back() == filepath) {
+         if (!importStack.empty() && importStack.back() == filepath) {
             importStack.pop_back();
         }
     }

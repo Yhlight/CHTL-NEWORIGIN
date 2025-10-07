@@ -28,6 +28,16 @@ enum class TokenType {
     Minus,          // -
     Star,           // *
     Slash,          // /
+    Greater,        // >
+    Less,           // <
+    GreaterEqual,   // >=
+    LessEqual,      // <=
+    EqualEqual,     // ==
+    NotEqual,       // !=
+    And,            // &&
+    Or,             // ||
+    Not,            // !
+    Question,       // ?
 
     // Keywords
     DeleteKeyword,  // delete

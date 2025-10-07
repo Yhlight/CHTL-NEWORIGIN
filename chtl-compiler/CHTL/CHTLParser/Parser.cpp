@@ -142,78 +142,94 @@ void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
     eat(TokenType::Identifier); // consume 'style'
     eat(TokenType::LeftBrace);
 
-    std::stringstream style_content;
+    std::map<std::string, std::string> evaluated_styles;
+
     while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
         if (currentToken.type == TokenType::At) {
             eat(TokenType::At);
-            if (currentToken.value != "Style") {
-                throw std::runtime_error("Expected 'Style' keyword for template usage.");
-            }
-            eat(TokenType::Identifier); // Consume "Style"
+            if (currentToken.value != "Style") throw std::runtime_error("Expected 'Style' keyword.");
+            eat(TokenType::Identifier);
 
             std::string templateName = currentToken.value;
             eat(TokenType::Identifier);
-
             StyleTemplate final_template = TemplateRegistry::getStyleTemplate(templateName);
 
-            // Specialization
             if (currentToken.type == TokenType::LeftBrace) {
                 eat(TokenType::LeftBrace);
-                while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+                while(currentToken.type != TokenType::RightBrace) {
                     if (currentToken.type == TokenType::DeleteKeyword) {
                         eat(TokenType::DeleteKeyword);
-                        std::string prop_to_delete = currentToken.value;
+                        final_template.erase(currentToken.value);
                         eat(TokenType::Identifier);
-                        final_template.erase(prop_to_delete);
-                        eat(TokenType::Semicolon);
                     } else {
-                        std::string prop_to_specialize = currentToken.value;
+                        std::string prop_key = currentToken.value;
                         eat(TokenType::Identifier);
                         eat(TokenType::Colon);
-
                         std::vector<Token> value_tokens;
-                        while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::EndOfFile) {
+                        while(currentToken.type != TokenType::Semicolon) {
                             value_tokens.push_back(currentToken);
                             consume();
                         }
-                        std::string value = ExpressionParser::parseAndEvaluate(value_tokens);
-                        final_template[prop_to_specialize] = value;
-                        eat(TokenType::Semicolon);
+                        ExpressionParser expr_parser(value_tokens);
+                        final_template[prop_key] = expr_parser.parse()->evaluate({}); // No context for specialization
                     }
+                    eat(TokenType::Semicolon);
                 }
                 eat(TokenType::RightBrace);
-            } else { // Simple usage
+            } else {
                 eat(TokenType::Semicolon);
             }
 
-            for (const auto& pair : final_template) {
-                if (pair.second.empty()) {
-                    throw std::runtime_error("Valueless property '" + pair.first + "' from template '" + templateName + "' was not specialized.");
-                }
-                style_content << pair.first << ":" << pair.second << ";";
+            for(const auto& pair : final_template) {
+                if (pair.second.empty()) throw std::runtime_error("Valueless property not specialized: " + pair.first);
+                evaluated_styles[pair.first] = pair.second;
             }
-
-        } else { // Regular style property
+        } else {
             std::string property = currentToken.value;
             eat(TokenType::Identifier);
             eat(TokenType::Colon);
+
             std::vector<Token> value_tokens;
-            while(currentToken.type != TokenType::Semicolon && currentToken.type != TokenType::EndOfFile) {
+            while(currentToken.type != TokenType::Semicolon) {
                 value_tokens.push_back(currentToken);
                 consume();
             }
-            std::string value = ExpressionParser::parseAndEvaluate(value_tokens);
-            style_content << property << ":" << value << ";";
+
+            bool has_operator = false;
+            for(const auto& t : value_tokens) {
+                if (t.type >= TokenType::Plus && t.type <= TokenType::Question) {
+                    has_operator = true;
+                    break;
+                }
+            }
+
+            std::string value;
+            if (has_operator) {
+                ExpressionParser expr_parser(value_tokens);
+                value = expr_parser.parse()->evaluate(evaluated_styles);
+            } else {
+                std::stringstream ss;
+                for (size_t i = 0; i < value_tokens.size(); ++i) {
+                    ss << value_tokens[i].value << (i < value_tokens.size() - 1 ? " " : "");
+                }
+                value = ss.str();
+            }
+
+            evaluated_styles[property] = value;
             eat(TokenType::Semicolon);
         }
     }
-
     eat(TokenType::RightBrace);
 
+    std::stringstream final_style_string;
+    for(const auto& pair : evaluated_styles) {
+        final_style_string << pair.first << ":" << pair.second << ";";
+    }
+
     if (element->attributes.count("style")) {
-        element->attributes["style"] += style_content.str();
+        element->attributes["style"] += final_style_string.str();
     } else {
-        element->attributes["style"] = style_content.str();
+        element->attributes["style"] = final_style_string.str();
     }
 }
 
@@ -251,7 +267,27 @@ NodePtr Parser::parseTemplateDefinition() {
                     value_tokens.push_back(currentToken);
                     consume();
                 }
-                style_template[property] = ExpressionParser::parseAndEvaluate(value_tokens);
+
+                bool has_operator = false;
+                for(const auto& t : value_tokens) {
+                    if (t.type >= TokenType::Plus && t.type <= TokenType::Question) {
+                        has_operator = true;
+                        break;
+                    }
+                }
+
+                std::string value;
+                if (has_operator) {
+                    ExpressionParser expr_parser(value_tokens);
+                    value = expr_parser.parse()->evaluate({}); // No context for template defs
+                } else {
+                    std::stringstream ss;
+                    for (size_t i = 0; i < value_tokens.size(); ++i) {
+                        ss << value_tokens[i].value << (i < value_tokens.size() - 1 ? " " : "");
+                    }
+                    value = ss.str();
+                }
+                style_template[property] = value;
             } else {
                 style_template[property] = "";
             }

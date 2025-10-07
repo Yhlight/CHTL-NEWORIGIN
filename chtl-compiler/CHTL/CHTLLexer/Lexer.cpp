@@ -132,6 +132,50 @@ Token Lexer::getNextToken() {
         return {TokenType::At, "@", line, column - 1};
     }
 
+    // Handle multi-character operators first
+    if (current == '>' && source[position + 1] == '=') {
+        advance(); advance();
+        return {TokenType::GreaterEqual, ">=", line, column - 2};
+    }
+    if (current == '<' && source[position + 1] == '=') {
+        advance(); advance();
+        return {TokenType::LessEqual, "<=", line, column - 2};
+    }
+    if (current == '=' && source[position + 1] == '=') {
+        advance(); advance();
+        return {TokenType::EqualEqual, "==", line, column - 2};
+    }
+    if (current == '!' && source[position + 1] == '=') {
+        advance(); advance();
+        return {TokenType::NotEqual, "!=", line, column - 2};
+    }
+    if (current == '&' && source[position + 1] == '&') {
+        advance(); advance();
+        return {TokenType::And, "&&", line, column - 2};
+    }
+    if (current == '|' && source[position + 1] == '|') {
+        advance(); advance();
+        return {TokenType::Or, "||", line, column - 2};
+    }
+
+    // Handle single-character operators
+    if (current == '>') {
+        advance();
+        return {TokenType::Greater, ">", line, column - 1};
+    }
+    if (current == '<') {
+        advance();
+        return {TokenType::Less, "<", line, column - 1};
+    }
+    if (current == '!') {
+        advance();
+        return {TokenType::Not, "!", line, column - 1};
+    }
+    if (current == '?') {
+        advance();
+        return {TokenType::Question, "?", line, column - 1};
+    }
+
     if (current == '+') {
         advance();
         return {TokenType::Plus, "+", line, column - 1};
