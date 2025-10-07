@@ -1,0 +1,447 @@
+// 由比滨结衣主模块 - CMOD部分
+// Yuigahama Yui - CMOD Components
+
+[Namespace] Yuigahama
+
+// ========================================
+// 颜色变量组 - 由比滨的温暖橙色系
+// ========================================
+[Custom] @Var YuigahamaColors
+{
+    // 主色调 - 橙粉色系（由比滨的标志性颜色）
+    primary: #FFB347;           // 温暖橙色
+    primaryDark: #FF8C42;       // 深橙色
+    primaryLight: #FFC875;      // 浅橙色
+    
+    // 辅助色
+    secondary: #FFE4B5;         // 莫卡辛色
+    accent: #FF69B4;            // 热粉红
+    
+    // 背景色
+    background: #FFF8F0;        // 奶白色
+    cardBg: #FFFFFF;
+    
+    // 文本色
+    textPrimary: #333333;
+    textSecondary: #666666;
+    textMuted: #999999;
+    
+    // 状态色
+    success: #98D8C8;
+    warning: #FFB347;
+    error: #FF7373;
+    info: #87CEEB;
+    
+    // 边框色
+    border: #FFE4CC;
+    borderLight: #FFF0E0;
+    
+    // 阴影色
+    shadow: rgba(255, 140, 66, 0.3);
+}
+
+// ========================================
+// 字体变量组
+// ========================================
+[Custom] @Var YuigahamaFonts
+{
+    family: "'Noto Sans SC', 'Microsoft YaHei', sans-serif";
+    familyEn: "'Quicksand', 'Arial', sans-serif";
+    
+    sizeXs: 12px;
+    sizeSm: 14px;
+    sizeMd: 16px;
+    sizeLg: 18px;
+    sizeXl: 24px;
+    size2xl: 32px;
+    size3xl: 48px;
+    
+    weightLight: 300;
+    weightNormal: 400;
+    weightMedium: 500;
+    weightBold: 700;
+}
+
+// ========================================
+// 间距变量组
+// ========================================
+[Custom] @Var YuigahamaSpacing
+{
+    xs: 4px;
+    sm: 8px;
+    md: 16px;
+    lg: 24px;
+    xl: 32px;
+    xxl: 48px;
+}
+
+// ========================================
+// 动画变量组
+// ========================================
+[Custom] @Var YuigahamaAnimations
+{
+    durationFast: 150ms;
+    durationNormal: 300ms;
+    durationSlow: 500ms;
+    
+    easingDefault: cubic-bezier(0.25, 0.1, 0.25, 1);
+    easingIn: ease-in;
+    easingOut: ease-out;
+    easingInOut: ease-in-out;
+    easingBounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+// ========================================
+// 主题样式组
+// ========================================
+[Custom] @Style YuigahamaTheme
+{
+    font-family: YuigahamaFonts(family);
+    color: YuigahamaColors(textPrimary);
+    background-color: YuigahamaColors(background);
+    line-height: 1.6;
+}
+
+// ========================================
+// 卡片样式组
+// ========================================
+[Custom] @Style YuigahamaCard
+{
+    background: YuigahamaColors(cardBg);
+    border-radius: 16px;
+    padding: YuigahamaSpacing(lg);
+    box-shadow: 0 4px 16px YuigahamaColors(shadow);
+    border: 2px solid YuigahamaColors(border);
+    transition: all YuigahamaAnimations(durationNormal) YuigahamaAnimations(easingDefault);
+}
+
+// ========================================
+// 按钮样式组
+// ========================================
+[Custom] @Style YuigahamaButton
+{
+    background: YuigahamaColors(primary);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    padding: YuigahamaSpacing(md) YuigahamaSpacing(xl);
+    font-size: YuigahamaFonts(sizeMd);
+    font-weight: YuigahamaFonts(weightMedium);
+    cursor: pointer;
+    transition: all YuigahamaAnimations(durationFast) YuigahamaAnimations(easingBounce);
+    box-shadow: 0 4px 12px YuigahamaColors(shadow);
+}
+
+// ========================================
+// 音乐播放器样式组
+// ========================================
+[Custom] @Style YuigahaMusicPlayer
+{
+    background: linear-gradient(135deg, YuigahamaColors(primary) 0%, YuigahamaColors(primaryLight) 100%);
+    border-radius: 20px;
+    padding: YuigahamaSpacing(xl);
+    box-shadow: 0 8px 24px YuigahamaColors(shadow);
+    color: white;
+    max-width: 400px;
+}
+
+// ========================================
+// 音乐播放器元素
+// ========================================
+[Custom] @Element YuigahaMusicPlayerWidget
+{
+    div
+    {
+        class: music-player;
+        
+        style
+        {
+            @Style YuigahaMusicPlayer;
+            
+            .music-player
+            {
+                display: flex;
+                flex-direction: column;
+                gap: YuigahamaSpacing(md);
+            }
+        }
+        
+        // 专辑封面
+        div
+        {
+            class: album-cover;
+            
+            style
+            {
+                .album-cover
+                {
+                    width: 100%;
+                    aspect-ratio: 1;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                }
+                
+                .album-cover img
+                {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+            }
+        }
+        
+        // 歌曲信息
+        div
+        {
+            class: song-info;
+            
+            style
+            {
+                .song-info
+                {
+                    text-align: center;
+                }
+                
+                .song-title
+                {
+                    font-size: YuigahamaFonts(sizeLg);
+                    font-weight: YuigahamaFonts(weightBold);
+                    margin-bottom: YuigahamaSpacing(xs);
+                }
+                
+                .song-artist
+                {
+                    font-size: YuigahamaFonts(sizeSm);
+                    opacity: 0.9;
+                }
+            }
+            
+            div { class: song-title; }
+            div { class: song-artist; }
+        }
+        
+        // 进度条
+        div
+        {
+            class: progress-bar;
+            
+            style
+            {
+                .progress-bar
+                {
+                    width: 100%;
+                    height: 6px;
+                    background: rgba(255, 255, 255, 0.3);
+                    border-radius: 3px;
+                    overflow: hidden;
+                    cursor: pointer;
+                }
+                
+                .progress-fill
+                {
+                    height: 100%;
+                    background: white;
+                    width: 0%;
+                    transition: width 0.1s linear;
+                }
+            }
+            
+            div { class: progress-fill; }
+        }
+        
+        // 控制按钮
+        div
+        {
+            class: controls;
+            
+            style
+            {
+                .controls
+                {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: YuigahamaSpacing(lg);
+                }
+                
+                .control-btn
+                {
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 2px solid white;
+                    cursor: pointer;
+                    transition: all YuigahamaAnimations(durationFast);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .control-btn:hover
+                {
+                    background: rgba(255, 255, 255, 0.4);
+                    transform: scale(1.1);
+                }
+                
+                .play-btn
+                {
+                    width: 64px;
+                    height: 64px;
+                    background: white;
+                    color: YuigahamaColors(primary);
+                }
+            }
+            
+            button { class: control-btn prev-btn; }
+            button { class: control-btn play-btn; }
+            button { class: control-btn next-btn; }
+        }
+    }
+}
+
+// ========================================
+// 手风琴样式组
+// ========================================
+[Custom] @Style YuigahamaAccordion
+{
+    border: 2px solid YuigahamaColors(border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+// ========================================
+// 四叶窗相册样式组
+// ========================================
+[Custom] @Style YuigahamaGallery
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: YuigahamaSpacing(lg);
+    padding: YuigahamaSpacing(xl);
+}
+
+// ========================================
+// 四叶窗相册项元素
+// ========================================
+[Custom] @Element YuigahamaGalleryItem
+{
+    div
+    {
+        class: gallery-item;
+        
+        style
+        {
+            .gallery-item
+            {
+                position: relative;
+                overflow: hidden;
+                border-radius: 16px;
+                box-shadow: 0 4px 16px YuigahamaColors(shadow);
+                transition: all YuigahamaAnimations(durationNormal) YuigahamaAnimations(easingBounce);
+                cursor: pointer;
+                border: 2px solid transparent;
+            }
+            
+            &:hover
+            {
+                transform: translateY(-12px) rotate(2deg);
+                border-color: YuigahamaColors(primary);
+            }
+            
+            .gallery-item img
+            {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform YuigahamaAnimations(durationNormal);
+            }
+            
+            .gallery-item:hover img
+            {
+                transform: scale(1.15);
+            }
+        }
+    }
+}
+
+// ========================================
+// 备忘录卡片样式组
+// ========================================
+[Custom] @Style YuigahamaMemo
+{
+    background: linear-gradient(135deg, YuigahamaColors(primaryLight) 0%, YuigahamaColors(cardBg) 100%);
+    border-left: 6px solid YuigahamaColors(primary);
+    padding: YuigahamaSpacing(lg);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px YuigahamaColors(shadow);
+}
+
+// ========================================
+// 暖色笔记样式组
+// ========================================
+[Custom] @Style YuigahamaNote
+{
+    background: linear-gradient(to bottom, YuigahamaColors(background), YuigahamaColors(cardBg));
+    border: 3px solid YuigahamaColors(border);
+    border-radius: 16px;
+    padding: YuigahamaSpacing(xl);
+    font-family: YuigahamaFonts(familyEn);
+    line-height: 1.8;
+    color: YuigahamaColors(textPrimary);
+    box-shadow: 0 6px 20px YuigahamaColors(shadow);
+}
+
+// ========================================
+// 樱花雨容器样式
+// ========================================
+[Custom] @Style YuigahamaSakura
+{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+// ========================================
+// 鼠标特效样式
+// ========================================
+[Custom] @Style YuigahamaMouse
+{
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: YuigahamaColors(primary);
+    opacity: 0.7;
+    transition: all 0.15s ease;
+}
+
+// ========================================
+// 基础页面布局元素
+// ========================================
+[Custom] @Element YuigahamaPage
+{
+    div
+    {
+        class: yuigahama-page;
+        
+        style
+        {
+            @Style YuigahamaTheme;
+            
+            .yuigahama-page
+            {
+                min-height: 100vh;
+                padding: YuigahamaSpacing(xxl);
+            }
+        }
+    }
+}

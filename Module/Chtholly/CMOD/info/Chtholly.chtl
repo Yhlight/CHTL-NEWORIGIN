@@ -1,0 +1,43 @@
+// 珂朵莉模块信息文件
+// Chtholly Module - 世界上最幸福的女孩
+
+[Info]
+{
+    name = "chtholly";
+    version = "1.0.0";
+    description = "珂朵莉主题模块 - 世界上最幸福的女孩。提供精美的UI组件和实用工具。";
+    author = "CHTL Team";
+    license = "MIT";
+    dependencies = "";
+    category = "theme";
+    minCHTLVersion = "2.5.0";
+    maxCHTLVersion = "3.0.0";
+}
+
+// 导出表 - 定义向外暴露的内容
+[Export]
+{
+    // 自定义样式组
+    [Custom] @Style ChthollyPrimaryColors, ChthollySecondaryColors, 
+                    ChthollyCard, ChthollyButton, ChthollyAccordion,
+                    ChthollyGallery, ChthollyNotes, ChthollyProgress;
+    
+    // 自定义元素
+    [Custom] @Element ChthollyHeader, ChthollyFooter, ChthollyNav,
+                      ChthollyAccordionItem, ChthollyGalleryItem,
+                      ChthollyNotesCard, ChthollyProgressBar,
+                      ChthollyBackgroundEffect, ChthollyMouseEffect,
+                      ChthollyContextMenu, ChthollySakura;
+    
+    // 变量组
+    [Custom] @Var ChthollyColors, ChthollyFonts, ChthollySpacing,
+                  ChthollyAnimations, ChthollyBreakpoints;
+    
+    // 模板样式组
+    [Template] @Style ChthollyBaseText, ChthollyContainer,
+                      ChthollyFlexCenter, ChthollyTransition;
+    
+    // 模板元素
+    [Template] @Element ChthollyPage, ChthollySection,
+                        ChthollyGridLayout, ChthollyFlexLayout;
+}

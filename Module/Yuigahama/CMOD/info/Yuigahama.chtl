@@ -1,0 +1,38 @@
+// 由比滨结衣模块信息文件
+// Yuigahama Yui Module - 春物女主
+
+[Info]
+{
+    name = "yuigahama";
+    version = "1.0.0";
+    description = "由比滨结衣主题模块 - 提供温暖活泼的UI组件";
+    author = "CHTL Team";
+    license = "MIT";
+    dependencies = "";
+    category = "theme";
+    minCHTLVersion = "2.5.0";
+    maxCHTLVersion = "3.0.0";
+}
+
+// 导出表
+[Export]
+{
+    // 自定义样式组
+    [Custom] @Style YuigahamaColors, YuigahamaCard, YuigahamaButton,
+                    YuigahaMusicPlayer, YuigahamaAccordion, YuigahamaGallery,
+                    YuigahamaNotes, YuigahamaSakura, YuigahamaMouseEffect;
+    
+    // 自定义元素
+    [Custom] @Element YuigahamaHeader, YuigahamaFooter,
+                      YuigahamaMusicPlayerWidget, YuigahamaPlaylist,
+                      YuigahamaAccordionItem, YuigahamaGalleryGrid,
+                      YuigahamaNotesBoard, YuigahamaSakuraEffect;
+    
+    // 变量组
+    [Custom] @Var YuigahamaThemeColors, YuigahamaFonts,
+                  YuigahamaSpacing, YuigahamaAnimations;
+    
+    // 模板
+    [Template] @Style YuigahamaBaseLayout, YuigahamaFlexbox;
+    [Template] @Element YuigahamaPage, YuigahamaSection;
+}

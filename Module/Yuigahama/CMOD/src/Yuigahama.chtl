@@ -1,0 +1,570 @@
+// 由比滨结衣主模块 - Yuigahama Yui Main Module
+// 献给温暖活泼的结衣
+
+[Namespace] Yuigahama
+
+// ============= 变量组定义 =============
+
+[Custom] @Var YuigahamaThemeColors
+{
+    // 主题色 - 基于由比滨的温暖橙色
+    primary: #FFB347;        // 温暖橙
+    secondary: #FFD700;      // 金黄色
+    accent: #FF6B9D;         // 粉红色
+    
+    // 中性色
+    background: #FFF8F0;
+    surface: #FFFFFF;
+    text: #4A4A4A;
+    textLight: #757575;
+    border: #FFE4CC;
+    
+    // 状态色
+    success: #81C784;
+    warning: #FFB74D;
+    error: #E57373;
+    info: #64B5F6;
+}
+
+[Custom] @Var YuigahamaFonts
+{
+    family: "'Noto Sans JP', 'Hiragino Sans', sans-serif";
+    sizeBase: 16px;
+    sizeSmall: 14px;
+    sizeLarge: 18px;
+    sizeH1: 36px;
+    sizeH2: 30px;
+    sizeH3: 24px;
+}
+
+[Custom] @Var YuigahamaSpacing
+{
+    xs: 4px;
+    sm: 8px;
+    md: 16px;
+    lg: 24px;
+    xl: 32px;
+    xxl: 48px;
+}
+
+[Custom] @Var YuigahamaAnimations
+{
+    durationFast: 0.15s;
+    durationNormal: 0.25s;
+    durationSlow: 0.4s;
+    easingBounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    easingSmooth: ease-out;
+}
+
+// ============= 模板样式组 =============
+
+[Template] @Style YuigahamaBaseLayout
+{
+    font-family: YuigahamaFonts(family);
+    font-size: YuigahamaFonts(sizeBase);
+    color: YuigahamaThemeColors(text);
+    line-height: 1.7;
+}
+
+[Template] @Style YuigahamaFlexbox
+{
+    display: flex;
+    align-items: center;
+    gap: YuigahamaSpacing(md);
+}
+
+// ============= 自定义样式组 =============
+
+[Custom] @Style YuigahamaCard
+{
+    background: YuigahamaThemeColors(surface);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(255, 179, 71, 0.15);
+    padding: YuigahamaSpacing(xl);
+    border: 2px solid YuigahamaThemeColors(border);
+    transition: all YuigahamaAnimations(durationNormal) YuigahamaAnimations(easingSmooth);
+}
+
+[Custom] @Style YuigahamaButton
+{
+    background: linear-gradient(135deg, YuigahamaThemeColors(primary), YuigahamaThemeColors(secondary));
+    color: white;
+    border: none;
+    border-radius: 24px;
+    padding: YuigahamaSpacing(md) YuigahamaSpacing(xl);
+    cursor: pointer;
+    font-size: YuigahamaFonts(sizeBase);
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(255, 179, 71, 0.3);
+    transition: all YuigahamaAnimations(durationFast) YuigahamaAnimations(easingBounce);
+}
+
+// ============= 音乐播放器组件 =============
+
+[Custom] @Element YuigahaMusicPlayerWidget
+{
+    div
+    {
+        class: yuigahama-music-player;
+        
+        style
+        {
+            .yuigahama-music-player
+            {
+                @Style YuigahamaCard;
+                max-width: 400px;
+                margin: YuigahamaSpacing(lg) auto;
+            }
+            
+            .yuigahama-player-cover
+            {
+                width: 100%;
+                aspect-ratio: 1;
+                border-radius: 12px;
+                overflow: hidden;
+                margin-bottom: YuigahamaSpacing(lg);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            }
+            
+            .yuigahama-player-cover img
+            {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            
+            .yuigahama-player-info
+            {
+                margin-bottom: YuigahamaSpacing(md);
+            }
+            
+            .yuigahama-player-title
+            {
+                font-size: YuigahamaFonts(sizeLarge);
+                font-weight: 700;
+                color: YuigahamaThemeColors(primary);
+                margin-bottom: YuigahamaSpacing(xs);
+            }
+            
+            .yuigahama-player-artist
+            {
+                font-size: YuigahamaFonts(sizeBase);
+                color: YuigahamaThemeColors(textLight);
+            }
+            
+            .yuigahama-player-progress
+            {
+                width: 100%;
+                height: 6px;
+                background: YuigahamaThemeColors(border);
+                border-radius: 3px;
+                margin: YuigahamaSpacing(md) 0;
+                overflow: hidden;
+            }
+            
+            .yuigahama-player-progress-bar
+            {
+                height: 100%;
+                background: linear-gradient(90deg, YuigahamaThemeColors(primary), YuigahamaThemeColors(accent));
+                border-radius: 3px;
+                transition: width YuigahamaAnimations(durationNormal);
+            }
+            
+            .yuigahama-player-controls
+            {
+                @Style YuigahamaFlexbox;
+                justify-content: center;
+            }
+            
+            .yuigahama-player-btn
+            {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: YuigahamaThemeColors(primary);
+                color: white;
+                border: none;
+                cursor: pointer;
+                @Style YuigahamaFlexbox;
+                justify-content: center;
+                transition: all YuigahamaAnimations(durationFast);
+            }
+            
+            .yuigahama-player-btn:hover
+            {
+                transform: scale(1.1);
+                box-shadow: 0 4px 12px rgba(255, 179, 71, 0.4);
+            }
+            
+            .yuigahama-player-btn.play
+            {
+                width: 64px;
+                height: 64px;
+                background: linear-gradient(135deg, YuigahamaThemeColors(primary), YuigahamaThemeColors(accent));
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-player-cover;
+            [Origin] @Html
+            {
+                <img src="music-cover.jpg" alt="Music Cover">
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-player-info;
+            
+            div
+            {
+                class: yuigahama-player-title;
+                text: "Song Title";
+            }
+            
+            div
+            {
+                class: yuigahama-player-artist;
+                text: "Artist Name";
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-player-progress;
+            
+            div
+            {
+                class: yuigahama-player-progress-bar;
+                style
+                {
+                    width: 45%;
+                }
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-player-controls;
+            
+            button
+            {
+                class: yuigahama-player-btn;
+                text: "⏮";
+            }
+            
+            button
+            {
+                class: yuigahama-player-btn play;
+                text: "▶";
+            }
+            
+            button
+            {
+                class: yuigahama-player-btn;
+                text: "⏭";
+            }
+        }
+    }
+}
+
+// ============= 手风琴组件 =============
+
+[Custom] @Element YuigahamaAccordionItem
+{
+    div
+    {
+        class: yuigahama-accordion;
+        
+        style
+        {
+            .yuigahama-accordion
+            {
+                background: YuigahamaThemeColors(surface);
+                margin-bottom: YuigahamaSpacing(sm);
+                border-radius: 12px;
+                overflow: hidden;
+                border: 2px solid YuigahamaThemeColors(border);
+                transition: all YuigahamaAnimations(durationNormal);
+            }
+            
+            .yuigahama-accordion:hover
+            {
+                border-color: YuigahamaThemeColors(primary);
+                box-shadow: 0 4px 16px rgba(255, 179, 71, 0.2);
+            }
+            
+            .yuigahama-accordion-header
+            {
+                padding: YuigahamaSpacing(md) YuigahamaSpacing(lg);
+                background: linear-gradient(135deg, YuigahamaThemeColors(primary), YuigahamaThemeColors(secondary));
+                color: white;
+                cursor: pointer;
+                font-weight: 600;
+                @Style YuigahamaFlexbox;
+                justify-content: space-between;
+            }
+            
+            .yuigahama-accordion-icon
+            {
+                transition: transform YuigahamaAnimations(durationFast);
+            }
+            
+            .yuigahama-accordion-header.active .yuigahama-accordion-icon
+            {
+                transform: rotate(180deg);
+            }
+            
+            .yuigahama-accordion-content
+            {
+                padding: 0 YuigahamaSpacing(lg);
+                max-height: 0;
+                overflow: hidden;
+                transition: all YuigahamaAnimations(durationNormal) YuigahamaAnimations(easingSmooth);
+            }
+            
+            .yuigahama-accordion-content.active
+            {
+                padding: YuigahamaSpacing(lg);
+                max-height: 600px;
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-accordion-header;
+            
+            text: "Accordion Title";
+            
+            [Origin] @Html
+            {
+                <span class="yuigahama-accordion-icon">▼</span>
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-accordion-content;
+            text: "Content goes here...";
+        }
+    }
+}
+
+// ============= 相册组件 =============
+
+[Custom] @Element YuigahamaGalleryGrid
+{
+    div
+    {
+        class: yuigahama-gallery;
+        
+        style
+        {
+            .yuigahama-gallery
+            {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: YuigahamaSpacing(lg);
+                padding: YuigahamaSpacing(xl);
+            }
+            
+            .yuigahama-gallery-item
+            {
+                position: relative;
+                border-radius: 16px;
+                overflow: hidden;
+                aspect-ratio: 4 / 3;
+                box-shadow: 0 4px 16px rgba(255, 179, 71, 0.15);
+                transition: all YuigahamaAnimations(durationNormal) YuigahamaAnimations(easingBounce);
+            }
+            
+            .yuigahama-gallery-item:hover
+            {
+                transform: translateY(-8px) scale(1.02);
+                box-shadow: 0 12px 32px rgba(255, 179, 71, 0.3);
+            }
+            
+            .yuigahama-gallery-item img
+            {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            
+            .yuigahama-gallery-overlay
+            {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(to top, rgba(255, 179, 71, 0.9), transparent);
+                padding: YuigahamaSpacing(md);
+                color: white;
+                font-weight: 600;
+                transform: translateY(100%);
+                transition: transform YuigahamaAnimations(durationNormal);
+            }
+            
+            .yuigahama-gallery-item:hover .yuigahama-gallery-overlay
+            {
+                transform: translateY(0);
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-gallery-item;
+            
+            [Origin] @Html
+            {
+                <img src="gallery1.jpg" alt="Gallery Image">
+                <div class="yuigahama-gallery-overlay">Image Title</div>
+            }
+        }
+    }
+}
+
+// ============= 笔记板组件 =============
+
+[Custom] @Element YuigahamaNotesBoard
+{
+    div
+    {
+        class: yuigahama-notes;
+        
+        style
+        {
+            .yuigahama-notes
+            {
+                @Style YuigahamaCard;
+                background: linear-gradient(135deg, #FFFACD 0%, #FFE4B5 100%);
+                border-left: 6px solid YuigahamaThemeColors(primary);
+                min-height: 250px;
+            }
+            
+            .yuigahama-notes-header
+            {
+                font-size: YuigahamaFonts(sizeH3);
+                font-weight: 700;
+                color: YuigahamaThemeColors(primary);
+                margin-bottom: YuigahamaSpacing(lg);
+                padding-bottom: YuigahamaSpacing(sm);
+                border-bottom: 2px dashed YuigahamaThemeColors(border);
+            }
+            
+            .yuigahama-notes-content
+            {
+                font-size: YuigahamaFonts(sizeBase);
+                color: YuigahamaThemeColors(text);
+                line-height: 2;
+            }
+            
+            .yuigahama-notes-content::before
+            {
+                content: "📝 ";
+                color: YuigahamaThemeColors(primary);
+            }
+        }
+        
+        div
+        {
+            class: yuigahama-notes-header;
+            text: "My Notes";
+        }
+        
+        div
+        {
+            class: yuigahama-notes-content;
+            text: "Write something here...";
+        }
+    }
+}
+
+// ============= 樱花雨效果 =============
+
+[Custom] @Element YuigahamaSakuraEffect
+{
+    div
+    {
+        class: yuigahama-sakura-container;
+        
+        style
+        {
+            .yuigahama-sakura-container
+            {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 9999;
+                overflow: hidden;
+            }
+            
+            .yuigahama-sakura-petal
+            {
+                position: absolute;
+                width: 12px;
+                height: 12px;
+                background: radial-gradient(circle, YuigahamaThemeColors(accent), transparent);
+                border-radius: 50% 0 50% 0;
+                opacity: 0.8;
+                animation: yukifall 12s linear infinite;
+            }
+        }
+        
+        [Origin] @Style
+        {
+            @keyframes yukifall {
+                0% {
+                    top: -10%;
+                    transform: translateX(0) rotate(0deg);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 0.8;
+                }
+                90% {
+                    opacity: 0.8;
+                }
+                100% {
+                    top: 110%;
+                    transform: translateX(150px) rotate(720deg);
+                    opacity: 0;
+                }
+            }
+        }
+    }
+}
+
+// ============= 页面模板 =============
+
+[Template] @Element YuigahamaPage
+{
+    html
+    {
+        head
+        {
+            [Origin] @Html
+            {
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Yuigahama Theme</title>
+            }
+        }
+        
+        body
+        {
+            style
+            {
+                margin: 0;
+                padding: 0;
+                font-family: YuigahamaFonts(family);
+                background: YuigahamaThemeColors(background);
+                color: YuigahamaThemeColors(text);
+            }
+        }
+    }
+}
