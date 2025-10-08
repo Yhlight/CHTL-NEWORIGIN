@@ -1,0 +1,82 @@
+{
+  "name": "chtl-language-support",
+  "displayName": "CHTL Language Support",
+  "description": "CHTL (超文本模板语言) 语法支持和代码高亮",
+  "version": "0.1.0",
+  "publisher": "chtl-team",
+  "main": "./extension.js",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:chtl",
+    "onCommand:chtl.compile",
+    "onCommand:chtl.compileWithInline"
+  ],
+  "keywords": [
+    "chtl",
+    "html",
+    "template",
+    "超文本"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chtl-lang/chtl"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "chtl",
+        "aliases": [
+          "CHTL",
+          "chtl"
+        ],
+        "extensions": [
+          ".chtl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "chtl",
+        "scopeName": "source.chtl",
+        "path": "./syntaxes/chtl.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "chtl",
+        "path": "./snippets/chtl.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "chtl.compile",
+        "title": "CHTL: Compile Current File"
+      },
+      {
+        "command": "chtl.compileWithInline",
+        "title": "CHTL: Compile with Inline"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId == chtl",
+          "command": "chtl.compile",
+          "group": "chtl"
+        },
+        {
+          "when": "resourceLangId == chtl",
+          "command": "chtl.compileWithInline",
+          "group": "chtl"
+        }
+      ]
+    }
+  }
+}

@@ -1,10 +1,17 @@
 #include "CHTLGenerator.h"
+#include "ConditionalCSSGenerator.h"
+#include "../CHTLNode/ConditionalNode.h"
 #include <sstream>
 #include <iostream>
 #include <unordered_set>
 #include <cstdio>
+#include <regex>
 
 namespace CHTL {
+
+// 辅助函数声明（文件作用域）
+static String translateConditionToJS(const String& condition, const Vector<String>& selectors);
+static String cssPropToJSProp(const String& cssProp);
 
 // CHTLGenerator实现
 CHTLGenerator::CHTLGenerator(const GeneratorConfig& config)
@@ -147,6 +154,52 @@ void CHTLGenerator::visit(ImportNode& /* node */) {
     // 导入在预处理阶段处理，生成时不处理
 }
 
+void CHTLGenerator::visit(ConditionalNode& node) {
+    // 处理条件渲染节点
+    // 根据CHTL.md规范，条件渲染用于条件性地应用CSS属性
+    
+    const auto& styles = node.getStyles();
+    
+    // if块必须有条件和样式（或者是else块可以没有条件）
+    if (!node.isElseBlock() && (styles.empty() || node.getCondition().empty())) {
+        return;  // 无效的条件块
+    }
+    
+    // else块可以没有条件
+    if (node.isElseBlock() && styles.empty()) {
+        return;  // else块没有样式，跳过
+    }
+    
+    if (node.isDynamic()) {
+        // 动态条件渲染 - 生成JavaScript代码
+        // 注意：整个if/else if/else链一起生成
+        if (node.isIfBlock()) {
+            generateDynamicConditionalChain(node);
+        }
+        // else if和else块在generateDynamicConditionalChain中一起处理
+    } else {
+        // 静态条件渲染 - 生成CSS代码
+        if (!node.isElseBlock()) {
+            // if和else if块生成@media
+            generateStaticConditional(node);
+        } else {
+            // else块：作为默认样式（不在@media中）
+            generateStaticElse(node);
+        }
+        
+        // 递归处理else if和else
+        for (const auto& elseIfNode : node.getElseIfBlocks()) {
+            if (elseIfNode) {
+                elseIfNode->accept(*this);
+            }
+        }
+        
+        if (node.getElseBlock()) {
+            node.getElseBlock()->accept(*this);
+        }
+    }
+}
+
 void CHTLGenerator::generateElement(ElementNode& node) {
     if (config_.prettyPrint) {
         appendHtml(indent());
@@ -273,6 +326,203 @@ void CHTLGenerator::generateCssRule(const String& selector, const String& rules)
 
 void CHTLGenerator::generateScript(const String& content) {
     appendJs(content);
+}
+
+void CHTLGenerator::generateStaticConditional(const ConditionalNode& node) {
+    // 静态条件渲染：生成CSS @media查询
+    // 根据CHTL.md，静态条件使用属性引用（如 html.width < 500px）
+    
+    const String& condition = node.getCondition();
+    const auto& styles = node.getStyles();
+    
+    if (styles.empty()) {
+        return;
+    }
+    
+    // 获取父元素选择器（需要在Parser中设置）
+    String parentSelector = node.getParentSelector();
+    if (parentSelector.empty()) {
+        // 如果没有父选择器，使用通用选择器
+        parentSelector = "*";
+    }
+    
+    // 使用ConditionalCSSGenerator生成@media查询
+    String mediaQuery = ConditionalCSSGenerator::generateMediaQuery(
+        condition, parentSelector, styles);
+    
+    appendCss(mediaQuery);
+}
+
+void CHTLGenerator::generateDynamicConditional(const ConditionalNode& node) {
+    // 已废弃：使用generateDynamicConditionalChain代替
+    // 保留此方法以兼容性
+    (void)node;
+}
+
+void CHTLGenerator::generateStaticElse(const ConditionalNode& node) {
+    // 静态else块：生成默认CSS规则（不在@media中）
+    const auto& styles = node.getStyles();
+    const String& parentSelector = node.getParentSelector();
+    
+    if (styles.empty() || parentSelector.empty()) {
+        return;
+    }
+    
+    // 生成普通CSS规则作为默认样式
+    appendCss("/* Default styles (else block) */\n");
+    appendCss(parentSelector + " {\n");
+    
+    for (const auto& [prop, value] : styles) {
+        appendCss("  " + prop + ": " + value + ";\n");
+    }
+    
+    appendCss("}\n\n");
+}
+
+void CHTLGenerator::generateDynamicConditionalChain(const ConditionalNode& node) {
+    // 生成完整的if/else if/else JavaScript链
+    const String& condition = node.getCondition();
+    const auto& styles = node.getStyles();
+    const String& parentSelector = node.getParentSelector();
+    
+    // 提取{{}}选择器
+    auto selectors = node.extractEnhancedSelectors();
+    
+    // 生成JavaScript代码
+    appendJs("// Dynamic conditional chain\n");
+    appendJs("(function() {\n");
+    
+    // 获取目标元素
+    appendJs("  const targetElement = ");
+    if (!parentSelector.empty()) {
+        if (parentSelector[0] == '#') {
+            appendJs("document.getElementById('" + parentSelector.substr(1) + "')");
+        } else if (parentSelector[0] == '.') {
+            appendJs("document.querySelector('" + parentSelector + "')");
+        } else {
+            appendJs("document.querySelector('" + parentSelector + "')");
+        }
+    } else {
+        appendJs("document.body");
+    }
+    appendJs(";\n\n");
+    
+    // 生成条件检查函数
+    appendJs("  function checkAndApplyStyles() {\n");
+    appendJs("    if (!targetElement) return;\n\n");
+    
+    // if块
+    String jsCondition = translateConditionToJS(condition, selectors);
+    appendJs("    if (" + jsCondition + ") {\n");
+    
+    for (const auto& [prop, value] : styles) {
+        String jsProp = cssPropToJSProp(prop);
+        appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
+    }
+    
+    appendJs("    }");
+    
+    // else if链
+    for (const auto& elseIfNode : node.getElseIfBlocks()) {
+        if (elseIfNode && !elseIfNode->getStyles().empty()) {
+            String elseIfCondition = translateConditionToJS(
+                elseIfNode->getCondition(), 
+                elseIfNode->extractEnhancedSelectors()
+            );
+            
+            appendJs(" else if (" + elseIfCondition + ") {\n");
+            
+            for (const auto& [prop, value] : elseIfNode->getStyles()) {
+                String jsProp = cssPropToJSProp(prop);
+                appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
+            }
+            
+            appendJs("    }");
+        }
+    }
+    
+    // else块
+    if (node.getElseBlock() && !node.getElseBlock()->getStyles().empty()) {
+        appendJs(" else {\n");
+        
+        for (const auto& [prop, value] : node.getElseBlock()->getStyles()) {
+            String jsProp = cssPropToJSProp(prop);
+            appendJs("      targetElement.style." + jsProp + " = '" + value + "';\n");
+        }
+        
+        appendJs("    }");
+    }
+    
+    appendJs("\n  }\n\n");
+    
+    // 立即执行
+    appendJs("  checkAndApplyStyles();\n");
+    
+    // 添加事件监听器
+    appendJs("  window.addEventListener('resize', checkAndApplyStyles);\n");
+    appendJs("  window.addEventListener('load', checkAndApplyStyles);\n");
+    appendJs("})();\n\n");
+}
+
+// 辅助方法：将CHTL条件转换为JavaScript条件
+static String translateConditionToJS(const String& condition, const Vector<String>& selectors) {
+    String jsCondition = condition;
+    
+    // 替换{{selector}}为document查询
+    for (const auto& selector : selectors) {
+        String chtlSelector = "{{" + selector + "}}";
+        String jsSelector;
+        
+        if (selector == "html") {
+            jsSelector = "document.documentElement";
+        } else if (selector[0] == '.') {
+            jsSelector = "document.querySelector('" + selector + "')";
+        } else if (selector[0] == '#') {
+            jsSelector = "document.getElementById('" + selector.substr(1) + "')";
+        } else {
+            jsSelector = "document.querySelector('" + selector + "')";
+        }
+        
+        // 替换{{selector}}->为selector.
+        size_t pos = 0;
+        while ((pos = jsCondition.find(chtlSelector + "->", pos)) != String::npos) {
+            jsCondition.replace(pos, chtlSelector.length() + 2, jsSelector + ".");
+            pos += jsSelector.length() + 1;
+        }
+    }
+    
+    // 替换->为.（如果还有剩余的）
+    size_t pos = 0;
+    while ((pos = jsCondition.find("->", pos)) != String::npos) {
+        jsCondition.replace(pos, 2, ".");
+        pos += 1;
+    }
+    
+    // 将width/height转换为clientWidth/clientHeight
+    std::regex widthRegex("\\b(\\w+)\\.width\\b");
+    jsCondition = std::regex_replace(jsCondition, widthRegex, "$1.clientWidth");
+    
+    std::regex heightRegex("\\b(\\w+)\\.height\\b");
+    jsCondition = std::regex_replace(jsCondition, heightRegex, "$1.clientHeight");
+    
+    return jsCondition;
+}
+
+// 辅助方法：将CSS属性名转换为JavaScript camelCase
+static String cssPropToJSProp(const String& cssProp) {
+    String jsProp = cssProp;
+    size_t pos = 0;
+    
+    while ((pos = jsProp.find('-', pos)) != String::npos) {
+        if (pos + 1 < jsProp.length()) {
+            jsProp[pos + 1] = toupper(jsProp[pos + 1]);
+            jsProp.erase(pos, 1);
+        } else {
+            break;
+        }
+    }
+    
+    return jsProp;
 }
 
 String CHTLGenerator::indent() const {

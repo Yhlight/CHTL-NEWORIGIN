@@ -70,6 +70,7 @@ private:
     SharedPtr<CustomNode> parseCustom();
     SharedPtr<OriginNode> parseOrigin();
     SharedPtr<ImportNode> parseImport();
+    SharedPtr<BaseNode> parseConditional();  // 新增：解析条件渲染块
     
     // 辅助解析方法
     Vector<SharedPtr<BaseNode>> parseBody();

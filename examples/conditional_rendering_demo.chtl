@@ -1,0 +1,148 @@
+// ============================================================================
+// CHTL 条件渲染示例
+// 演示：if/else if/else 条件渲染功能
+// ============================================================================
+
+html
+{
+    head
+    {
+        title
+        {
+            text
+            {
+                CHTL 条件渲染演示
+            }
+        }
+    }
+    
+    body
+    {
+        // ========================================
+        // 示例1：静态条件渲染
+        // 根据元素自身属性设置样式
+        // ========================================
+        div
+        {
+            class: static-box;
+            
+            style
+            {
+                width: 300px;
+                height: 200px;
+                border: 1px solid black;
+            }
+            
+            if
+            {
+                condition: width > 200px,
+                background: lightblue,
+                color: darkblue,
+            }
+            
+            text
+            {
+                静态条件示例：当宽度 > 200px时应用样式
+            }
+        }
+        
+        // ========================================
+        // 示例2：动态条件渲染
+        // 根据窗口大小动态调整
+        // ========================================
+        div
+        {
+            id: dynamic-box;
+            
+            style
+            {
+                padding: 20px;
+                border: 2px solid red;
+            }
+            
+            if
+            {
+                condition: {{html}}->width < 768px,
+                display: block,
+                background: yellow,
+            }
+            
+            text
+            {
+                动态条件示例：窗口宽度 < 768px时显示黄色背景
+            }
+        }
+        
+        // ========================================
+        // 示例3：else if 和 else 链
+        // 多级条件判断
+        // ========================================
+        div
+        {
+            class: conditional-card;
+            
+            style
+            {
+                width: 400px;
+                padding: 15px;
+                margin: 10px;
+            }
+            
+            if
+            {
+                condition: width > 500px,
+                background: red,
+                color: white,
+            }
+            else if
+            {
+                condition: width > 300px,
+                background: orange,
+                color: black,
+            }
+            else if
+            {
+                condition: width > 200px,
+                background: yellow,
+                color: black,
+            }
+            else
+            {
+                background: lightgray,
+                color: darkgray,
+            }
+            
+            text
+            {
+                条件链示例：根据宽度显示不同颜色
+            }
+        }
+        
+        // ========================================
+        // 示例4：复杂条件表达式
+        // 使用逻辑运算符
+        // ========================================
+        div
+        {
+            class: complex-condition;
+            
+            style
+            {
+                width: 350px;
+                height: 150px;
+            }
+            
+            if
+            {
+                condition: width > 300px && height > 100px,
+                border: 3px solid green,
+                box-shadow: 0 0 10px green,
+            }
+            
+            text
+            {
+                复杂条件：宽度>300px 且 高度>100px
+            }
+        }
+    }
+}

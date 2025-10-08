@@ -51,8 +51,6 @@ enum class JSTokenType {
     Animate,            // Animate
     Router,             // Router
     ScriptLoader,       // ScriptLoader
-    PrintMylove,        // PrintMylove
-    INeverAway,         // INeverAway
     
     // 增强选择器
     EnhancedSelector,   // {{...}}

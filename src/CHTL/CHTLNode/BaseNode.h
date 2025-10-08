@@ -24,6 +24,7 @@ enum class NodeType {
     Configuration,   // 配置节点
     Expression,      // 表达式节点
     Selector,        // 选择器节点
+    Conditional,     // 条件渲染节点 (if/else if/else)
 };
 
 // AST节点基类
@@ -299,6 +300,9 @@ private:
     String alias_;
 };
 
+// 前向声明
+class ConditionalNode;
+
 // 访问者接口
 class NodeVisitor {
 public:
@@ -315,6 +319,7 @@ public:
     virtual void visit(CustomNode& node) = 0;
     virtual void visit(OriginNode& node) = 0;
     virtual void visit(ImportNode& node) = 0;
+    virtual void visit(ConditionalNode& node) { (void)node; } // 默认实现，子类可选重写
 };
 
 } // namespace CHTL

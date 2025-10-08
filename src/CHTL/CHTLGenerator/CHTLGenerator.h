@@ -43,6 +43,7 @@ public:
     void visit(CustomNode& node) override;
     void visit(OriginNode& node) override;
     void visit(ImportNode& node) override;
+    void visit(ConditionalNode& node) override;  // 新增：条件渲染节点
     
 protected:
     GeneratorConfig config_;
@@ -70,6 +71,12 @@ protected:
     
     // JS生成
     void generateScript(const String& content);
+    
+    // 条件渲染生成
+    void generateStaticConditional(const class ConditionalNode& node);
+    void generateDynamicConditional(const class ConditionalNode& node);
+    void generateStaticElse(const class ConditionalNode& node);
+    void generateDynamicConditionalChain(const class ConditionalNode& node);
 };
 
 // HTML生成器

@@ -1,0 +1,241 @@
+{
+  "CHTL HTML Element": {
+    "prefix": "element",
+    "body": [
+      "${1:div}",
+      "{",
+      "\t${2}",
+      "}"
+    ],
+    "description": "CHTL元素"
+  },
+  "CHTL Element with Style": {
+    "prefix": "element-style",
+    "body": [
+      "${1:div}",
+      "{",
+      "\tstyle",
+      "\t{",
+      "\t\t${2:width}: ${3:100px};",
+      "\t}",
+      "}"
+    ],
+    "description": "带样式的CHTL元素"
+  },
+  "CHTL Style Block": {
+    "prefix": "style",
+    "body": [
+      "style",
+      "{",
+      "\t${1:property}: ${2:value};",
+      "}"
+    ],
+    "description": "样式块"
+  },
+  "CHTL Script Block": {
+    "prefix": "script",
+    "body": [
+      "script",
+      "{",
+      "\t${1}",
+      "}"
+    ],
+    "description": "脚本块"
+  },
+  "CHTL Text Block": {
+    "prefix": "text",
+    "body": [
+      "text",
+      "{",
+      "\t${1:Text content}",
+      "}"
+    ],
+    "description": "文本块"
+  },
+  "CHTL If Block": {
+    "prefix": "if",
+    "body": [
+      "if",
+      "{",
+      "\tcondition: ${1:width > 768px},",
+      "\t${2:property}: ${3:value},",
+      "}"
+    ],
+    "description": "条件渲染if块"
+  },
+  "CHTL If-Else Chain": {
+    "prefix": "if-else",
+    "body": [
+      "if",
+      "{",
+      "\tcondition: ${1:width > 1024px},",
+      "\t${2:background}: ${3:red},",
+      "}",
+      "else if",
+      "{",
+      "\tcondition: ${4:width > 768px},",
+      "\t${5:background}: ${6:yellow},",
+      "}",
+      "else",
+      "{",
+      "\t${7:background}: ${8:blue},",
+      "}"
+    ],
+    "description": "完整的if/else if/else链"
+  },
+  "CHTL Template Style": {
+    "prefix": "template-style",
+    "body": [
+      "[Template] @Style ${1:StyleName}",
+      "{",
+      "\t${2:color}: ${3:black};",
+      "}"
+    ],
+    "description": "样式模板"
+  },
+  "CHTL Template Element": {
+    "prefix": "template-element",
+    "body": [
+      "[Template] @Element ${1:ElementName}",
+      "{",
+      "\t${2:div}",
+      "\t{",
+      "\t\t${3}",
+      "\t}",
+      "}"
+    ],
+    "description": "元素模板"
+  },
+  "CHTL Custom Style": {
+    "prefix": "custom-style",
+    "body": [
+      "[Custom] @Style ${1:StyleName}",
+      "{",
+      "\t${2:property},",
+      "\t${3:property};",
+      "}"
+    ],
+    "description": "自定义样式组"
+  },
+  "CHTL Listen Block": {
+    "prefix": "listen",
+    "body": [
+      "{{${1:selector}}}->Listen {",
+      "\t${2:click}: () => {",
+      "\t\t${3}",
+      "\t}",
+      "};"
+    ],
+    "description": "CHTL JS Listen事件监听"
+  },
+  "CHTL Delegate Block": {
+    "prefix": "delegate",
+    "body": [
+      "{{${1:parent}}}->Delegate {",
+      "\ttarget: {{${2:child}}},",
+      "\t${3:click}: () => {",
+      "\t\t${4}",
+      "\t}",
+      "};"
+    ],
+    "description": "CHTL JS Delegate事件委托"
+  },
+  "CHTL Animate Block": {
+    "prefix": "animate",
+    "body": [
+      "Animate {",
+      "\ttarget: {{${1:selector}}},",
+      "\tduration: ${2:1000},",
+      "\tbegin: {",
+      "\t\t${3:opacity}: ${4:0}",
+      "\t},",
+      "\tend: {",
+      "\t\t${5:opacity}: ${6:1}",
+      "\t}",
+      "};"
+    ],
+    "description": "CHTL JS Animate动画"
+  },
+  "CHTL Router Block": {
+    "prefix": "router",
+    "body": [
+      "Router {",
+      "\turl: \"${1:/home}\",",
+      "\tpage: {{${2:selector}}}",
+      "};"
+    ],
+    "description": "CHTL JS Router路由"
+  },
+  "CHTL Event Bind": {
+    "prefix": "bind",
+    "body": [
+      "{{${1:selector}}} &-> ${2:click}: () => {",
+      "\t${3}",
+      "};"
+    ],
+    "description": "CHTL JS 事件绑定"
+  },
+  "CHTL Import": {
+    "prefix": "import",
+    "body": [
+      "[Import] @${1:Chtl} from ${2:path}"
+    ],
+    "description": "导入语句"
+  },
+  "CHTL Namespace": {
+    "prefix": "namespace",
+    "body": [
+      "[Namespace] ${1:name}",
+      "{",
+      "\t${2}",
+      "}"
+    ],
+    "description": "命名空间"
+  },
+  "CHTL Configuration": {
+    "prefix": "configuration",
+    "body": [
+      "[Configuration]",
+      "{",
+      "\tINDEX_INITIAL_COUNT = ${1:0};",
+      "\tDEBUG_MODE = ${2:false};",
+      "}"
+    ],
+    "description": "配置组"
+  },
+  "CHTL Enhanced Selector": {
+    "prefix": "{{",
+    "body": [
+      "{{${1:selector}}}"
+    ],
+    "description": "增强选择器"
+  },
+  "CHTL Responsive Value": {
+    "prefix": "$$",
+    "body": [
+      "\\$${1:varName}\\$"
+    ],
+    "description": "响应式值"
+  },
+  "CHTL Full Page": {
+    "prefix": "chtl-page",
+    "body": [
+      "html",
+      "{",
+      "\thead",
+      "\t{",
+      "\t\ttitle",
+      "\t\t{",
+      "\t\t\ttext { ${1:Page Title} }",
+      "\t\t}",
+      "\t}",
+      "\t",
+      "\tbody",
+      "\t{",
+      "\t\t${2}",
+      "\t}",
+      "}"
+    ],
+    "description": "完整的CHTL页面结构"
+  }
+}

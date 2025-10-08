@@ -31,6 +31,10 @@ template<typename T>
 using Optional = std::optional<T>;
 template<typename K, typename V>
 using HashMap = std::unordered_map<K, V>;
+template<typename T1, typename T2>
+using Pair = std::pair<T1, T2>;
+template<typename... Types>
+using Tuple = std::tuple<Types...>;
 
 // 位置信息
 struct Position {

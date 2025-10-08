@@ -4,7 +4,11 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+// 条件编译：仅在libzip可用时包含
+#ifdef HAVE_LIBZIP
 #include <zip.h>
+#endif
 
 namespace CHTL {
 namespace CMOD {
@@ -158,6 +162,7 @@ Vector<String> ModulePacker::collectModuleFiles(const String& modulePath) {
 }
 
 bool ModulePacker::compressDirectory(const String& dirPath, const String& zipPath) {
+#ifdef HAVE_LIBZIP
     namespace fs = std::filesystem;
     
     // 使用 libzip 创建 zip 文件
@@ -216,9 +221,16 @@ bool ModulePacker::compressDirectory(const String& dirPath, const String& zipPat
     }
     
     return true;
+#else
+    // libzip 不可用时，返回false并提示
+    (void)dirPath;
+    (void)zipPath;
+    return false;
+#endif
 }
 
 bool ModulePacker::decompressZip(const String& zipPath, const String& outputDir) {
+#ifdef HAVE_LIBZIP
     namespace fs = std::filesystem;
     
     // 创建输出目录
@@ -278,6 +290,12 @@ bool ModulePacker::decompressZip(const String& zipPath, const String& outputDir)
     
     zip_close(archive);
     return true;
+#else
+    // libzip 不可用时，返回false并提示
+    (void)zipPath;
+    (void)outputDir;
+    return false;
+#endif
 }
 
 // ========================================
@@ -342,6 +360,7 @@ String CJMODPacker::generateCJMODManifest(const ModuleData& moduleData) {
 }
 
 bool CJMODPacker::compressDirectory(const String& dirPath, const String& zipPath) {
+#ifdef HAVE_LIBZIP
     // 使用 libzip
     int error = 0;
     zip_t* archive = zip_open(zipPath.c_str(), ZIP_CREATE | ZIP_TRUNCATE, &error);
@@ -383,9 +402,16 @@ bool CJMODPacker::compressDirectory(const String& dirPath, const String& zipPath
     }
     
     return true;
+#else
+    // libzip 不可用时，返回false并提示
+    (void)dirPath;
+    (void)zipPath;
+    return false;
+#endif
 }
 
 bool CJMODPacker::decompressZip(const String& zipPath, const String& outputDir) {
+#ifdef HAVE_LIBZIP
     namespace fs = std::filesystem;
     
     fs::create_directories(outputDir);
@@ -429,6 +455,12 @@ bool CJMODPacker::decompressZip(const String& zipPath, const String& outputDir) 
     
     zip_close(archive);
     return true;
+#else
+    // libzip 不可用时，返回false并提示
+    (void)zipPath;
+    (void)outputDir;
+    return false;
+#endif
 }
 
 // ========================================

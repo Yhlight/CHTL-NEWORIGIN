@@ -276,7 +276,7 @@ Arg CJMODScanner::scan(const Arg& pattern, const String& keyword, const String& 
     return scanWithTwoPointers(pattern, keyword, code);
 }
 
-Arg CJMODScanner::scanWithTwoPointers(const Arg& pattern, const String& keyword, const String& code) {
+Arg CJMODScanner::scanWithTwoPointers(const Arg& /* pattern */, const String& keyword, const String& code) {
     Arg result;
     
     // 查找关键字位置

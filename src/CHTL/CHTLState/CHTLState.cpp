@@ -69,6 +69,9 @@ SharedPtr<CHTLState> InitialState::transition(const Token& token) {
         return std::make_shared<CustomState>(parser_);
     } else if (token.isComment()) {
         return std::make_shared<CommentState>(parser_);
+    } else if (token.getValue() == "if") {
+        // 条件渲染状态 (if关键字)
+        return std::make_shared<ConditionalState>(parser_);
     }
     
     return nullptr;
@@ -199,6 +202,25 @@ SharedPtr<BaseNode> CommentState::parse() {
 
 bool CommentState::canHandle(const Token& token) const {
     return token.isComment();
+}
+
+// ConditionalState实现
+ConditionalState::ConditionalState(CHTLParser* parser)
+    : CHTLState(StateType::Conditional, parser) {}
+
+SharedPtr<BaseNode> ConditionalState::parse() {
+    return parseConditionalBlock();
+}
+
+bool ConditionalState::canHandle(const Token& token) const {
+    // 可以处理 'if', 'else if', 'else' 关键字
+    return token.getValue() == "if" || token.getValue() == "else";
+}
+
+SharedPtr<BaseNode> ConditionalState::parseConditionalBlock() {
+    // 实际解析由Parser和ConditionalParser完成
+    // 这里只是状态机的占位符
+    return nullptr;
 }
 
 } // namespace CHTL

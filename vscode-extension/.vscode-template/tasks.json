@@ -1,0 +1,83 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CHTL: Compile Current File",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/chtl",
+      "args": [
+        "${file}"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "CHTL: Compile with Inline",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/chtl",
+      "args": [
+        "${file}",
+        "--inline"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "CHTL: Compile with Default Structure",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/chtl",
+      "args": [
+        "${file}",
+        "--default-struct",
+        "--inline"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "CHTL: Build Compiler",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/build.py",
+        "build"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "CHTL: Run Tests",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/build.py",
+        "test"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
