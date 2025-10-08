@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Token.h"
+#include "../Config/ConfigurationManager.h"
 #include <string>
 
 class Lexer {

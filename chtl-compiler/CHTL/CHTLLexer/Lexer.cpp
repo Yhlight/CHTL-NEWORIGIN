@@ -1,20 +1,5 @@
 #include "Lexer.h"
 #include <cctype>
-#include <map>
-
-static std::map<std::string, TokenType> keywords = {
-    {"delete", TokenType::DeleteKeyword},
-    {"from", TokenType::FromKeyword},
-    {"as", TokenType::AsKeyword},
-    {"insert", TokenType::InsertKeyword},
-    {"after", TokenType::AfterKeyword},
-    {"before", TokenType::BeforeKeyword},
-    {"style", TokenType::Identifier}, // Treat style as a regular identifier for now
-    {"text", TokenType::Identifier}, // Treat text as a regular identifier
-    {"Template", TokenType::Identifier}, // Treat Template as a regular identifier
-    {"Custom", TokenType::Identifier},
-    {"Import", TokenType::Identifier}
-};
 
 Lexer::Lexer(const std::string& source) : source(source) {}
 
@@ -50,8 +35,10 @@ Token Lexer::identifier() {
         advance();
     }
 
-    if (keywords.count(value)) {
-        return {keywords.at(value), value, start_line, start_column};
+    const auto& keywordMap = ConfigurationManager::getInstance().getKeywordTokenMap();
+    auto it = keywordMap.find(value);
+    if (it != keywordMap.end()) {
+        return {it->second, value, start_line, start_column};
     }
 
     return {TokenType::Identifier, value, start_line, start_column};
@@ -111,7 +98,6 @@ Token Lexer::getNextToken() {
         advance();
         return {TokenType::Semicolon, ";", line, column - 1};
     }
-
 
     if (current == '#') {
         return generatorComment();

@@ -28,6 +28,8 @@ void Parser::eat(TokenType type) {
 
 NodeList Parser::parse() {
     NodeList nodes;
+    auto& config = ConfigurationManager::getInstance();
+
     while(currentToken.type != TokenType::EndOfFile) {
         while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
             consume();
@@ -35,8 +37,10 @@ NodeList Parser::parse() {
         if (currentToken.type == TokenType::EndOfFile) break;
 
         if (currentToken.type == TokenType::LeftBracket) {
-            if (peekToken.value == "Import") {
+            if (peekToken.value == config.getKeyword("KEYWORD_IMPORT")) {
                 parseImportStatement();
+            } else if (peekToken.value == config.getKeyword("KEYWORD_CONFIGURATION")) {
+                parseConfigurationBlock();
             } else {
                 parseTemplateDefinition();
             }
@@ -54,8 +58,9 @@ NodeList Parser::parse() {
 }
 
 NodeList Parser::parseStatement() {
+    auto& config = ConfigurationManager::getInstance();
     if (currentToken.type == TokenType::Identifier) {
-        if (currentToken.value == "text") {
+        if (currentToken.value == config.getKeyword("KEYWORD_TEXT")) {
             return {parseText()};
         }
         return {parseElement()};
@@ -74,6 +79,7 @@ NodePtr Parser::parseElement() {
     auto element = std::make_shared<ElementNode>(tagName);
 
     eat(TokenType::LeftBrace);
+    auto& config = ConfigurationManager::getInstance();
 
     while (currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
         while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) {
@@ -83,7 +89,7 @@ NodePtr Parser::parseElement() {
 
         if (currentToken.type == TokenType::Identifier && (peekToken.type == TokenType::Colon || peekToken.type == TokenType::Equal)) {
             parseAttributes(element);
-        } else if (currentToken.type == TokenType::Identifier && currentToken.value == "style" && peekToken.type == TokenType::LeftBrace) {
+        } else if (currentToken.type == TokenType::Identifier && currentToken.value == config.getKeyword("KEYWORD_STYLE") && peekToken.type == TokenType::LeftBrace) {
             parseStyleBlock(element);
         } else {
             NodeList children = parseStatement();
@@ -139,6 +145,7 @@ NodePtr Parser::parseComment() {
 }
 
 void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
+    auto& config = ConfigurationManager::getInstance();
     eat(TokenType::Identifier); // consume 'style'
     eat(TokenType::LeftBrace);
 
@@ -147,7 +154,7 @@ void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
     while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
         if (currentToken.type == TokenType::At) {
             eat(TokenType::At);
-            if (currentToken.value != "Style") throw std::runtime_error("Expected 'Style' keyword.");
+            if (currentToken.value != config.getKeyword("TYPE_STYLE")) throw std::runtime_error("Expected 'Style' keyword.");
             eat(TokenType::Identifier);
 
             std::string templateName = currentToken.value;
@@ -234,9 +241,10 @@ void Parser::parseStyleBlock(std::shared_ptr<ElementNode> element) {
 }
 
 NodePtr Parser::parseTemplateDefinition() {
+    auto& config = ConfigurationManager::getInstance();
     eat(TokenType::LeftBracket);
     std::string keyword = currentToken.value;
-    if (keyword != "Template" && keyword != "Custom") {
+    if (keyword != config.getKeyword("KEYWORD_TEMPLATE") && keyword != config.getKeyword("KEYWORD_CUSTOM")) {
         throw std::runtime_error("Expected 'Template' or 'Custom' keyword in definition.");
     }
     eat(TokenType::Identifier);
@@ -251,7 +259,7 @@ NodePtr Parser::parseTemplateDefinition() {
 
     eat(TokenType::LeftBrace);
 
-    if (templateType == "Style") {
+    if (templateType == config.getKeyword("TYPE_STYLE")) {
         StyleTemplate style_template;
         while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
             while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) consume();
@@ -295,7 +303,7 @@ NodePtr Parser::parseTemplateDefinition() {
         }
         TemplateRegistry::registerStyleTemplate(templateName, style_template);
 
-    } else if (templateType == "Element") {
+    } else if (templateType == config.getKeyword("TYPE_ELEMENT")) {
         NodeList element_template_nodes;
         while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
             while(currentToken.type == TokenType::LineComment || currentToken.type == TokenType::BlockComment) consume();
@@ -319,8 +327,9 @@ NodePtr Parser::parseTemplateDefinition() {
 }
 
 NodeList Parser::parseElementUsage() {
+    auto& config = ConfigurationManager::getInstance();
     eat(TokenType::At);
-    if (currentToken.value != "Element") {
+    if (currentToken.value != config.getKeyword("TYPE_ELEMENT")) {
         throw std::runtime_error("Expected 'Element' keyword for template usage.");
     }
     eat(TokenType::Identifier); // Consume "Element"
@@ -385,7 +394,7 @@ NodeList Parser::parseElementUsage() {
                 auto targetElement = std::dynamic_pointer_cast<ElementNode>(*it);
                 eat(TokenType::Identifier);
                 eat(TokenType::LeftBrace);
-                if (currentToken.value == "style") {
+                if (currentToken.value == config.getKeyword("KEYWORD_STYLE")) {
                     parseStyleBlock(targetElement);
                 } else {
                     throw std::runtime_error("Only 'style' blocks are supported in target specialization for now.");
@@ -404,8 +413,9 @@ NodeList Parser::parseElementUsage() {
 }
 
 void Parser::parseImportStatement() {
+    auto& config = ConfigurationManager::getInstance();
     eat(TokenType::LeftBracket);
-    if (currentToken.value != "Import") {
+    if (currentToken.value != config.getKeyword("KEYWORD_IMPORT")) {
         throw std::runtime_error("Expected 'Import' keyword.");
     }
     eat(TokenType::Identifier);
@@ -413,7 +423,7 @@ void Parser::parseImportStatement() {
 
     // For now, we only support [Import] @Chtl from "..."
     eat(TokenType::At);
-    if (currentToken.value != "Chtl") {
+    if (currentToken.value != config.getKeyword("TYPE_CHTL")) {
         throw std::runtime_error("Only '@Chtl' imports are supported for now.");
     }
     eat(TokenType::Identifier);
@@ -433,4 +443,42 @@ void Parser::parseImportStatement() {
     Lexer imported_lexer(imported_content);
     Parser imported_parser(imported_lexer, loader, filepath);
     imported_parser.parse(); // This will populate the static TemplateRegistry
+}
+
+void Parser::parseConfigurationBlock() {
+    auto& config = ConfigurationManager::getInstance();
+    eat(TokenType::LeftBracket);
+    eat(TokenType::Identifier); // Consume "Configuration"
+    eat(TokenType::RightBracket);
+
+    eat(TokenType::LeftBrace);
+
+    while(currentToken.type != TokenType::RightBrace && currentToken.type != TokenType::EndOfFile) {
+        std::string key = currentToken.value;
+        eat(TokenType::Identifier);
+        eat(TokenType::Equal);
+
+        if (currentToken.type == TokenType::Identifier) {
+            if (currentToken.value == "true") {
+                config.setFlag(key, true);
+                eat(TokenType::Identifier);
+            } else if (currentToken.value == "false") {
+                config.setFlag(key, false);
+                eat(TokenType::Identifier);
+            } else {
+                // Assume it's a keyword string value
+                config.setKeyword(key, currentToken.value);
+                eat(TokenType::Identifier);
+            }
+        } else if (currentToken.type == TokenType::StringLiteral) {
+             config.setKeyword(key, currentToken.value);
+             eat(TokenType::StringLiteral);
+        } else {
+            throw std::runtime_error("Unsupported value in configuration block.");
+        }
+
+        eat(TokenType::Semicolon);
+    }
+
+    eat(TokenType::RightBrace);
 }

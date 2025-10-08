@@ -126,6 +126,7 @@ add_executable(chtl-compiler
     chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
     chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.cpp
     chtl-compiler/CHTL/Expression/ExpressionParser.cpp
+    chtl-compiler/CHTL/Config/ConfigurationManager.cpp
 )
 
 # New CHTL Compiler Tests
@@ -136,6 +137,7 @@ add_executable(chtl_compiler_tests
     chtl-compiler/CHTL/CHTLGenerator/Generator.cpp
     chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.cpp
     chtl-compiler/CHTL/Expression/ExpressionParser.cpp
+    chtl-compiler/CHTL/Config/ConfigurationManager.cpp
 )
 target_compile_definitions(chtl_compiler_tests PRIVATE TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 add_test(NAME chtl_compiler_tests COMMAND chtl_compiler_tests)

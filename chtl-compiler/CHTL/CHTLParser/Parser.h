@@ -8,6 +8,7 @@
 #include "chtl-compiler/CHTL/CHTLTemplate/TemplateRegistry.h"
 #include "chtl-compiler/CHTL/Expression/ExpressionParser.h"
 #include "chtl-compiler/CHTL/Loader/Loader.h"
+#include "chtl-compiler/CHTL/Config/ConfigurationManager.h"
 #include <memory>
 
 class Parser {
@@ -30,6 +31,7 @@ private:
     NodePtr parseTemplateDefinition();
     NodeList parseElementUsage();
     void parseImportStatement();
+    void parseConfigurationBlock();
     NodePtr parseText();
     NodePtr parseComment();
     NodeList parseStatement();

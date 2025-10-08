@@ -143,7 +143,6 @@ TEST_CASE("New Compiler - Templates (Style and Element)", "[new_compiler_templat
     }
 }
 
-
 TEST_CASE("New Compiler - Import System", "[new_compiler_import]") {
     SECTION("Successfully imports and uses templates from another file") {
         std::string base_path = TOSTRING(TEST_SOURCE_DIR);
@@ -179,5 +178,30 @@ TEST_CASE("New Compiler - Import System", "[new_compiler_import]") {
             }(),
             Catch::Matchers::Contains("Circular dependency detected")
         );
+    }
+}
+
+TEST_CASE("New Compiler - Configuration System", "[new_compiler_config]") {
+    SECTION("Parses a configuration block and updates settings") {
+        ConfigurationManager::getInstance().setKeyword("KEYWORD_DELETE", "delete"); // Reset to default
+        std::string source = R"(
+            [Configuration] {
+                DEBUG_MODE = true;
+                KEYWORD_DELETE = "remove";
+            }
+            [Custom] @Style S { p; }
+            div { style { @Style S { remove p; } } }
+        )";
+        Lexer lexer(source);
+        Loader loader;
+        Parser parser = create_test_parser(lexer, loader);
+
+        REQUIRE(ConfigurationManager::getInstance().getFlag("DEBUG_MODE") == false); // Before parse
+
+        NodeList nodes = parser.parse();
+
+        REQUIRE(ConfigurationManager::getInstance().getFlag("DEBUG_MODE") == true); // After parse
+        REQUIRE(ConfigurationManager::getInstance().getKeyword("KEYWORD_DELETE") == "remove");
+        REQUIRE(nodes.size() == 1); // Check that parser used the new keyword
     }
 }
