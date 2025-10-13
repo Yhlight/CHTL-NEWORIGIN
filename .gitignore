@@ -1,0 +1,40 @@
+# 编译输出
+build/
+bin/
+lib/
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 输出文件
+output.html
+output.css
+output.js
+*.html
+*.css
+*.js
+
+# 日志
+*.log
+
+# 临时文件
+tmp/
+temp/
