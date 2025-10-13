@@ -1,0 +1,1 @@
+/usr/bin/c++ -Xlinker --dependency-file=CMakeFiles/chtl_tests.dir/link.d CMakeFiles/chtl_tests.dir/tests/test_main.cpp.o CMakeFiles/chtl_tests.dir/tests/test_lexer.cpp.o CMakeFiles/chtl_tests.dir/tests/test_parser.cpp.o CMakeFiles/chtl_tests.dir/tests/test_generator.cpp.o -o chtl_tests  libchtl.a
