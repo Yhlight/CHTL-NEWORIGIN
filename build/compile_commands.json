@@ -1,0 +1,56 @@
+[
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/include -I/workspace/src -I/workspace/third-party -std=gnu++20 -Wall -Wextra -Wpedantic -o CMakeFiles/chtl.dir/src/Lexer.cpp.o -c /workspace/src/Lexer.cpp",
+  "file": "/workspace/src/Lexer.cpp",
+  "output": "CMakeFiles/chtl.dir/src/Lexer.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/include -I/workspace/src -I/workspace/third-party -std=gnu++20 -Wall -Wextra -Wpedantic -o CMakeFiles/chtl.dir/src/Parser.cpp.o -c /workspace/src/Parser.cpp",
+  "file": "/workspace/src/Parser.cpp",
+  "output": "CMakeFiles/chtl.dir/src/Parser.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/include -I/workspace/src -I/workspace/third-party -std=gnu++20 -Wall -Wextra -Wpedantic -o CMakeFiles/chtl.dir/src/Generator.cpp.o -c /workspace/src/Generator.cpp",
+  "file": "/workspace/src/Generator.cpp",
+  "output": "CMakeFiles/chtl.dir/src/Generator.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/include -I/workspace/src -I/workspace/third-party -std=gnu++20 -Wall -Wextra -Wpedantic -o CMakeFiles/chtl.dir/src/Compiler.cpp.o -c /workspace/src/Compiler.cpp",
+  "file": "/workspace/src/Compiler.cpp",
+  "output": "CMakeFiles/chtl.dir/src/Compiler.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/include -std=gnu++20 -o CMakeFiles/chtlc.dir/app/main.cpp.o -c /workspace/app/main.cpp",
+  "file": "/workspace/app/main.cpp",
+  "output": "CMakeFiles/chtlc.dir/app/main.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/third-party -I/workspace/include -std=gnu++20 -o CMakeFiles/chtl_tests.dir/tests/test_main.cpp.o -c /workspace/tests/test_main.cpp",
+  "file": "/workspace/tests/test_main.cpp",
+  "output": "CMakeFiles/chtl_tests.dir/tests/test_main.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/third-party -I/workspace/include -std=gnu++20 -o CMakeFiles/chtl_tests.dir/tests/test_lexer.cpp.o -c /workspace/tests/test_lexer.cpp",
+  "file": "/workspace/tests/test_lexer.cpp",
+  "output": "CMakeFiles/chtl_tests.dir/tests/test_lexer.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/third-party -I/workspace/include -std=gnu++20 -o CMakeFiles/chtl_tests.dir/tests/test_parser.cpp.o -c /workspace/tests/test_parser.cpp",
+  "file": "/workspace/tests/test_parser.cpp",
+  "output": "CMakeFiles/chtl_tests.dir/tests/test_parser.cpp.o"
+},
+{
+  "directory": "/workspace/build",
+  "command": "/usr/bin/c++  -I/workspace/third-party -I/workspace/include -std=gnu++20 -o CMakeFiles/chtl_tests.dir/tests/test_generator.cpp.o -c /workspace/tests/test_generator.cpp",
+  "file": "/workspace/tests/test_generator.cpp",
+  "output": "CMakeFiles/chtl_tests.dir/tests/test_generator.cpp.o"
+}
+]

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libchtl.a CMakeFiles/chtl.dir/src/Lexer.cpp.o CMakeFiles/chtl.dir/src/Parser.cpp.o CMakeFiles/chtl.dir/src/Generator.cpp.o CMakeFiles/chtl.dir/src/Compiler.cpp.o
+/usr/bin/ranlib libchtl.a

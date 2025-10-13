@@ -1,0 +1,21 @@
+Start testing: Oct 13 18:31 UTC
+----------------------------------------------------------
+1/1 Testing: chtl_tests
+1/1 Test: chtl_tests
+Command: "/workspace/build/chtl_tests"
+Directory: /workspace/build
+"chtl_tests" start time: Oct 13 18:31 UTC
+Output:
+----------------------------------------------------------
+===============================================================================
+All tests passed (4 assertions in 3 test cases)
+
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"chtl_tests" end time: Oct 13 18:31 UTC
+"chtl_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 13 18:31 UTC
