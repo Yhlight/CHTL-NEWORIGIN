@@ -1,0 +1,74 @@
+# CHTL示例文件
+
+// 这是一个简单的CHTL示例
+html {
+    head {
+        text { CHTL示例 }
+    }
+    
+    body {
+        div {
+            id: container;
+            class: main-content;
+            
+            style {
+                width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f5f5f5;
+            }
+            
+            div {
+                class: header;
+                
+                style {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #333;
+                    margin-bottom: 20px;
+                }
+                
+                text { 欢迎使用CHTL }
+            }
+            
+            div {
+                class: content;
+                
+                style {
+                    line-height: 1.6;
+                    color: #666;
+                }
+                
+                text {
+                    CHTL是一个现代化的超文本语言，
+                    它提供了更符合开发者习惯的语法来编写HTML代码。
+                }
+            }
+            
+            div {
+                class: button;
+                
+                style {
+                    width: 200px;
+                    height: 50px;
+                    background-color: #007bff;
+                    color: white;
+                    text-align: center;
+                    line-height: 50px;
+                    border-radius: 5px;
+                    margin-top: 20px;
+                    cursor: pointer;
+                }
+                
+                script {
+                    {{.button}}->addEventListener('click', () => {
+                        console.log('按钮被点击了！');
+                        alert('欢迎使用CHTL！');
+                    });
+                }
+                
+                text { 点击我 }
+            }
+        }
+    }
+}
